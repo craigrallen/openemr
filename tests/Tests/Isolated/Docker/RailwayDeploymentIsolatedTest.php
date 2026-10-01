@@ -24,6 +24,7 @@ class RailwayDeploymentIsolatedTest extends TestCase
     private const REPO_ROOT = __DIR__ . '/../../../..';
     private const RAILWAY_DIR = self::REPO_ROOT . '/docker/railway';
     private const START_SCRIPT = self::RAILWAY_DIR . '/railway-start.sh';
+    private const READYZ_PATH = '/meta/railway/readyz.php';
 
     private const STRONG_ROOT = 'Rt7uQ2vX9pL4mN8sK3wE6yA1';
     private const STRONG_DB = 'Db5hJ8kL2nP6qR9tV3xZ7cF4';
@@ -39,6 +40,12 @@ class RailwayDeploymentIsolatedTest extends TestCase
         mkdir($this->workDir . '/oe/sites', 0700, true);
         mkdir($this->workDir . '/apache', 0700, true);
         mkdir($this->workDir . '/php', 0700, true);
+        file_put_contents(
+            $this->workDir . '/mountinfo',
+            "22 1 0:21 / / rw - overlay overlay rw\n"
+            . '98 22 254:1 / ' . $this->workDir . "/oe/sites rw,relatime - ext4 /dev/vdb rw\n"
+        );
+        file_put_contents($this->workDir . '/mountinfo-none', "22 1 0:21 / / rw - overlay overlay rw\n");
     }
 
     protected function tearDown(): void
@@ -59,10 +66,11 @@ class RailwayDeploymentIsolatedTest extends TestCase
         self::assertStringContainsString('ARG RAILWAY_GIT_COMMIT_SHA', $dockerfile);
         self::assertStringContainsString('/root/source-commit', $dockerfile);
         self::assertStringContainsString('railway-start.sh', $dockerfile);
+        self::assertStringNotContainsString('Dockerfile.dockerignore', $dockerfile);
         self::assertStringNotContainsString('OE_PASS', $dockerfile, 'no credentials baked into the image');
     }
 
-    public function testRailwayConfigUsesTheRepositoryDockerfile(): void
+    public function testRailwayConfigUsesTheRepositoryDockerfileAndReadinessGate(): void
     {
         $config = json_decode($this->read(self::RAILWAY_DIR . '/railway.json'), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($config);
@@ -70,6 +78,144 @@ class RailwayDeploymentIsolatedTest extends TestCase
             ['builder' => 'DOCKERFILE', 'dockerfilePath' => 'docker/railway/Dockerfile'],
             $config['build'] ?? null
         );
+        $deploy = $config['deploy'] ?? null;
+        self::assertIsArray($deploy);
+        self::assertSame(self::READYZ_PATH, $deploy['healthcheckPath'] ?? null, 'readiness, not the 200-on-error meta health');
+    }
+
+    /**
+     * Railway builds from GitHub's source archive, which honours export-ignore:
+     * every build input the Dockerfile copies from docker/ must survive it.
+     */
+    public function testEveryDockerfileBuildInputSurvivesTheSourceArchive(): void
+    {
+        preg_match_all('/^COPY (?!--from)(?:--\S+ )*(.+) \S+$/m', $this->read(self::RAILWAY_DIR . '/Dockerfile'), $matches);
+        $sources = ['docker/railway/Dockerfile'];
+        foreach ($matches[1] as $list) {
+            foreach (preg_split('/\s+/', trim($list)) ?: [] as $source) {
+                if (str_starts_with($source, 'docker/')) {
+                    $sources[] = rtrim($source, '/');
+                }
+            }
+        }
+        self::assertGreaterThan(5, count($sources));
+        $archived = $this->archivedPaths('docker');
+        foreach ($sources as $source) {
+            self::assertFileExists(self::REPO_ROOT . '/' . $source);
+            $found = in_array($source, $archived, true) || in_array($source . '/', $archived, true);
+            self::assertTrue($found, $source . ' would be missing from the Railway source archive');
+        }
+    }
+
+    /**
+     * Lists what `git archive` would ship for the working tree (staged, with
+     * .gitattributes, into a scratch copy of the index), as GitHub's tarball does for a pushed commit.
+     *
+     * @return list<string>
+     */
+    private function archivedPaths(string $pathspec): array
+    {
+        $git = 'git -C ' . escapeshellarg(self::REPO_ROOT);
+        $index = $this->workDir . '/index';
+        $script = 'set -e; cp "$(' . $git . ' rev-parse --path-format=absolute --git-path index)" ' . escapeshellarg($index) . '; '
+            . 'export GIT_INDEX_FILE=' . escapeshellarg($index) . '; '
+            . $git . ' add -A -- .gitattributes ' . escapeshellarg($pathspec) . '; '
+            . $git . ' archive --format=tar "$(' . $git . ' write-tree)" -- ' . escapeshellarg($pathspec) . ' | tar tf -';
+        exec('bash -c ' . escapeshellarg($script), $lines, $code);
+        self::assertSame(0, $code, 'git archive listing failed');
+        return $lines;
+    }
+
+    /**
+     * The hadolint CI job lints every docker/**\/Dockerfile* path, so nothing
+     * but real Dockerfiles may use that name.
+     */
+    public function testOnlyRealDockerfilesMatchTheHadolintGlob(): void
+    {
+        $paths = glob(self::RAILWAY_DIR . '/Dockerfile*') ?: [];
+        self::assertSame([self::RAILWAY_DIR . '/Dockerfile'], $paths);
+        self::assertMatchesRegularExpression('/^FROM /m', $this->read($paths[0]));
+    }
+
+    public function testApacheBoundaryIsAdditiveToFilesystemDenials(): void
+    {
+        $boundary = 'Hb9xW2cV5bN8mQ1zL4kJ7hG3';
+        [$code, $output] = $this->runStart(['OE_HTTP_BOUNDARY_USER' => 'tester', 'OE_HTTP_BOUNDARY_PASS' => $boundary] + $this->strongEnv());
+        self::assertSame(0, $code, $output);
+        $conf = $this->read($this->workDir . '/apache/zz-railway-boundary.conf');
+        self::assertStringContainsString('AuthMerging And', $conf);
+        self::assertStringNotContainsString('Require all granted', $conf, 'a grant in a Location would override Files/Directory denials');
+        self::assertStringContainsString(self::READYZ_PATH, $conf);
+    }
+
+    public function testRestrictiveUmaskDoesNotLeakIntoUpstreamStartup(): void
+    {
+        $this->writeStubEntrypoint("umask\n");
+        [$code, $output] = $this->runStart(
+            ['OE_HTTP_BOUNDARY_PASS' => 'Hb9xW2cV5bN8mQ1zL4kJ7hG3', 'RAILWAY_START_CHECK_ONLY' => '0'] + $this->strongEnv(),
+            'umask 0022; '
+        );
+        self::assertSame(0, $code, $output);
+        self::assertMatchesRegularExpression('/^0022$/m', $output, 'upstream must create TEMPsql_upgrade.php readable by apache');
+    }
+
+    public function testUpstreamOutputIsRedactedOnEveryStream(): void
+    {
+        $boundary = 'Hb9xW2cV5bN8mQ1zL4kJ7hG3';
+        $this->writeStubEntrypoint(
+            "echo \"unable to execute SQL: CREATE USER IDENTIFIED BY '\${MYSQL_PASS}'\"\n"
+            . "echo \"root \${MYSQL_ROOT_PASS} admin \${OE_PASS} boundary \${OE_HTTP_BOUNDARY_PASS}\" >&2\n"
+            . "exit 3\n"
+        );
+        [$code, $output] = $this->runStart(['OE_HTTP_BOUNDARY_PASS' => $boundary, 'RAILWAY_START_CHECK_ONLY' => '0'] + $this->strongEnv());
+        self::assertSame(3, $code, 'upstream failure must propagate');
+        self::assertStringContainsString("IDENTIFIED BY '[REDACTED]'", $output);
+        self::assertSame(4, substr_count($output, '[REDACTED]'), $output);
+        $this->assertNoSecretsIn($output);
+        self::assertStringNotContainsString($boundary, $output);
+    }
+
+    public function testRefusesWhenSitesIsNotAPersistentMount(): void
+    {
+        [$code, $output] = $this->runStart(['MOUNTINFO_FILE' => $this->workDir . '/mountinfo-none'] + $this->strongEnv());
+        self::assertNotSame(0, $code, $output);
+        self::assertStringContainsString('REFUSING', $output);
+        self::assertStringContainsString('not a mounted volume', $output);
+        self::assertFileDoesNotExist($this->workDir . '/oe/sites/default/sqlconf.php');
+    }
+
+    public function testWebEgressGuardDisablesNetworkPrimitives(): void
+    {
+        $ini = self::RAILWAY_DIR . '/php-railway-egress.ini';
+        self::assertFileExists($ini);
+        $probe = 'echo json_encode([ini_get("allow_url_fopen"), array_map("function_exists", '
+            . '["curl_exec", "curl_multi_exec", "fsockopen", "pfsockopen", "stream_socket_client", "socket_connect", '
+            . '"mail", "exec", "shell_exec", "system", "passthru", "popen", "proc_open"])]);';
+        $result = shell_exec('PHP_INI_SCAN_DIR= php -c ' . escapeshellarg($ini) . ' -r ' . escapeshellarg($probe));
+        self::assertIsString($result);
+        self::assertSame('["",[false,false,false,false,false,false,false,false,false,false,false,false,false]]', trim($result));
+    }
+
+    public function testReadinessReportsNotReadyWithoutVerifiedMarker(): void
+    {
+        $readyz = self::RAILWAY_DIR . '/readyz.php';
+        self::assertFileExists($readyz);
+        $env = 'RAILWAY_READY_MARKER=' . escapeshellarg($this->workDir . '/absent.json') . ' ';
+        $result = shell_exec($env . 'php -n ' . escapeshellarg($readyz));
+        self::assertIsString($result);
+        $body = json_decode($result, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertFalse($body['ready'] ?? null);
+        self::assertSame('startup verification has not completed', $body['reason'] ?? null);
+    }
+
+    public function testDockerfileServesOnlyAfterVerification(): void
+    {
+        $dockerfile = $this->read(self::RAILWAY_DIR . '/Dockerfile');
+        self::assertStringContainsString('exec /usr/local/bin/railway-serve.sh', $dockerfile);
+        self::assertStringContainsString('railway-verify.php', $dockerfile);
+        $serve = $this->read(self::RAILWAY_DIR . '/railway-serve.sh');
+        self::assertMatchesRegularExpression('/railway-verify\.php.*\n(.*\n)*.*PHP_INI_SCAN_DIR.*\n(.*\n)*exec \/usr\/sbin\/httpd -D FOREGROUND/', $serve);
     }
 
     public function testApacheDeniesInstallerAndSetupScripts(): void
@@ -113,6 +259,12 @@ class RailwayDeploymentIsolatedTest extends TestCase
             'db host missing' => [array_diff_key($strong, ['MYSQL_HOST' => true])],
             'admin user is upstream default' => [['OE_USER' => 'admin'] + $strong],
             'manual web setup requested' => [['MANUAL_SETUP' => 'yes'] + $strong],
+            'admin password with equals sign' => [['OE_PASS' => 'Ad3mF6gH9jK2=lM5nP8qR1sT4'] + $strong],
+            'db password with whitespace' => [['MYSQL_PASS' => 'Db5hJ8kL2nP6 qR9tV3xZ7cF4'] + $strong],
+            'root password with quote' => [['MYSQL_ROOT_PASS' => "Rt7uQ2vX9pL4'mN8sK3wE6yA1"] + $strong],
+            'admin password with dollar' => [['OE_PASS' => 'Ad3mF6gH9jK2$lM5nP8qR1sT4'] + $strong],
+            'admin user with whitespace' => [['OE_USER' => 'oe test admin'] + $strong],
+            'db host with whitespace' => [['MYSQL_HOST' => 'mariadb railway'] + $strong],
         ];
     }
 
@@ -139,14 +291,14 @@ class RailwayDeploymentIsolatedTest extends TestCase
         self::assertDirectoryExists($this->workDir . '/oe/sites/default/documents');
         foreach (
             [
-                'OPENEMR_SETTING_EMAIL_METHOD=SMTP',
-                'OPENEMR_SETTING_SMTP_HOST=127.0.0.1',
-                'OPENEMR_SETTING_SMTP_PORT=9',
-                'OPENEMR_SETTING_payment_gateway=InHouse',
-                'OPENEMR_SETTING_gateway_mode_production=0',
-                'OPENEMR_SETTING_medex_enable=0',
-                'OPENEMR_SETTING_phimail_enable=0',
-                'OPENEMR_SETTING_portal_onsite_two_enable=0',
+                'EMAIL_METHOD=SMTP',
+                'SMTP_HOST=127.0.0.1',
+                'SMTP_PORT=9',
+                'payment_gateway=InHouse',
+                'gateway_mode_production=0',
+                'medex_enable=0',
+                'phimail_enable=0',
+                'portal_onsite_two_enable=0',
             ] as $setting
         ) {
             self::assertStringContainsString('safety: ' . $setting, $output);
@@ -174,7 +326,7 @@ class RailwayDeploymentIsolatedTest extends TestCase
         self::assertStringNotContainsString($boundary, $output);
         $conf = $this->read($this->workDir . '/apache/zz-railway-boundary.conf');
         self::assertStringContainsString('AuthType Basic', $conf);
-        self::assertStringContainsString('meta/health', $conf);
+        self::assertStringNotContainsString('meta/health', $conf, 'health exemption must not grant past denials');
         $htpasswd = $this->read($this->workDir . '/apache/railway-boundary.htpasswd');
         self::assertStringStartsWith('tester:$apr1$', $htpasswd);
         self::assertStringNotContainsString($boundary, $htpasswd);
@@ -206,7 +358,7 @@ class RailwayDeploymentIsolatedTest extends TestCase
      * @param array<string, string> $env
      * @return array{int, string}
      */
-    private function runStart(array $env): array
+    private function runStart(array $env, string $prelude = ''): array
     {
         self::assertFileExists(self::START_SCRIPT);
         $env += [
@@ -216,9 +368,10 @@ class RailwayDeploymentIsolatedTest extends TestCase
             'SITES_TEMPLATE_DIR' => $this->workDir . '/template/sites',
             'APACHE_CONF_DIR' => $this->workDir . '/apache',
             'SITES_OWNER' => 'none',
+            'MOUNTINFO_FILE' => $this->workDir . '/mountinfo',
         ];
         $process = proc_open(
-            ['bash', self::START_SCRIPT],
+            ['bash', '-c', $prelude . 'exec bash ' . escapeshellarg(self::START_SCRIPT)],
             [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
             $pipes,
             null,
@@ -230,6 +383,12 @@ class RailwayDeploymentIsolatedTest extends TestCase
         self::assertIsString($output);
         fclose($pipes[1]);
         return [proc_close($process), $output];
+    }
+
+    private function writeStubEntrypoint(string $body): void
+    {
+        file_put_contents($this->workDir . '/oe/openemr.sh', "#!/usr/bin/env bash\n" . $body);
+        chmod($this->workDir . '/oe/openemr.sh', 0700);
     }
 
     private function assertNoSecretsIn(string $output): void

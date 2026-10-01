@@ -73,11 +73,23 @@ COPY docker/release/upgrade/ /root/
 RUN chmod 500 openemr.sh ssl.sh xdebug.sh /root/unlock_admin.sh /root/fsupgrade-*.sh \
     && chmod 000 auto_configure.php /root/unlock_admin.php
 
+# Apache may only start through railway-serve.sh (safety read-back + web
+# egress guard). Fail the build if upstream's final step ever changes shape.
+RUN test "$(grep -c '^    exec /usr/sbin/httpd -D FOREGROUND$' openemr.sh)" = 1 \
+    && sed -i 's|^    exec /usr/sbin/httpd -D FOREGROUND$|    exec /usr/local/bin/railway-serve.sh|' openemr.sh \
+    && grep -q '^    exec /usr/local/bin/railway-serve.sh$' openemr.sh \
+    && ! grep -q '/usr/sbin/httpd' openemr.sh
+
 # Railway hardening
 COPY docker/railway/php-railway.ini /etc/php${PHP_VERSION_ABBR}/conf.d/99-railway.ini
 COPY docker/railway/openemr-railway.conf /etc/apache2/conf.d/zz-openemr-railway.conf
-COPY docker/railway/railway-start.sh /usr/local/bin/railway-start.sh
-RUN chmod 500 /usr/local/bin/railway-start.sh
+COPY docker/railway/php-railway-egress.ini /etc/php${PHP_VERSION_ABBR}/railway-web.d/99-railway-egress.ini
+COPY docker/railway/railway-start.sh docker/railway/railway-serve.sh /usr/local/bin/
+COPY docker/railway/railway-safety.php docker/railway/railway-verify.php /usr/local/lib/openemr-railway/
+COPY --chown=apache:apache docker/railway/readyz.php meta/railway/readyz.php
+RUN chmod 500 /usr/local/bin/railway-start.sh /usr/local/bin/railway-serve.sh \
+    && chmod 644 /usr/local/lib/openemr-railway/railway-safety.php /usr/local/lib/openemr-railway/railway-verify.php \
+    && chmod 400 meta/railway/readyz.php
 
 # Empty-volume seed for sites/ and source provenance for read-back
 RUN mkdir -p /swarm-pieces \

@@ -17,6 +17,13 @@ docker/*                       export-ignore
 # artifacts for the released tarball.
 docker/production/            -export-ignore
 docker/production/**          -export-ignore
+# The Railway test-server build (docker/railway/Dockerfile) runs from GitHub's
+# source archive, so its inputs - including the upstream release startup it
+# reuses from docker/release/ - must survive export-ignore.
+docker/railway/               -export-ignore
+docker/railway/**             -export-ignore
+docker/release/               -export-ignore
+docker/release/**             -export-ignore
 tests/                         export-ignore
 tools/                         export-ignore
 .gitattributes                 export-ignore

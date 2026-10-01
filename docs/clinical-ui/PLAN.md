@@ -83,9 +83,17 @@ covers all of the following, or that each gap has been explicitly approved:
 | 6 | **Calendar and schedule**: actionable provider schedule and a single appointment detail surface. | `interface/main/calendar`, the appointment editor | No | Recurrence scopes, conflicts, status changes keep audit; front-desk E2E |
 | 7+ | **Service-dependent features**: AI draft review, booking conversations, payment, telehealth and certificate workflows. | Modules (e.g. Comlink), portal | **Yes**: each needs a real service contract, audit, consent and an owner | Explicit human acceptance; certificates never shown as signed without real e-signing; failure and offline states |
 
-Slice 7+ items stay out of scope until the external contract is agreed (e.g.
-the certificate issuer, unit entitlement and signing method). Nothing may
-simulate those services in production code.
+**Scope supersession (2026-10-02).** The earlier rule that kept slice 7+
+"out of scope until the external contract is agreed" is superseded. External
+onboarding (certificate issuer, unit entitlement, signing method, SMS/email,
+payment, telehealth and model providers) gates only the **live** steps:
+signing, submission to an authority, sending messages, taking payments,
+starting real calls and transmitting records to a model. It does **not** block
+independent draft and backend work: data models, drafts, templates, review
+and approval flows, recording test transports and their tests proceed now.
+Nothing may present a simulated service as real: no certificate is shown as
+signed or submitted, and no message as sent, without the real integration.
+All 22 original features are tracked in [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## Follow-ups from slice 1
 
