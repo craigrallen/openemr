@@ -90,7 +90,7 @@ start_app() {
 
 # Last log lines with every generated secret masked (should already be redacted).
 show_logs() {
-    docker logs "${app}" 2>&1 | tail -n "${1:-60}" | awk '
+    docker logs "${app}" 2>&1 | tail -n 60 | awk '
         BEGIN { split("MYSQL_ROOT_PASS MYSQL_PASS OE_PASS OE_HTTP_BOUNDARY_PASS", k, " "); for (i in k) s[i] = ENVIRON[k[i]] }
         { for (i in s) while ((p = index($0, s[i])) > 0) $0 = substr($0, 1, p - 1) "[MASKED]" substr($0, p + length(s[i])); print "    log: " $0 }'
 }

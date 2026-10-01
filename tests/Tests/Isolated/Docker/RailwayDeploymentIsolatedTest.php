@@ -287,7 +287,7 @@ class RailwayDeploymentIsolatedTest extends TestCase
         }
         [$code, $out] = self::runCommand(['bash', self::RAILWAY_DIR . '/railway-web-ini.sh', $src, $dest]);
         self::assertSame(0, $code, $out);
-        $kept = array_map('basename', glob($dest . '/*.ini') ?: []);
+        $kept = array_map(basename(...), glob($dest . '/*.ini') ?: []);
         self::assertSame(['00_curl.ini', '02_mysqli.ini', '99-railway.ini'], $kept);
     }
 
