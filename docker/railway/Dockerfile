@@ -83,8 +83,12 @@ RUN test "$(grep -c '^    exec /usr/sbin/httpd -D FOREGROUND$' openemr.sh)" = 1 
 # Railway hardening
 COPY docker/railway/php-railway.ini /etc/php${PHP_VERSION_ABBR}/conf.d/99-railway.ini
 COPY docker/railway/openemr-railway.conf /etc/apache2/conf.d/zz-openemr-railway.conf
-COPY docker/railway/php-railway-egress.ini /etc/php${PHP_VERSION_ABBR}/railway-web.d/99-railway-egress.ini
 COPY docker/railway/railway-start.sh docker/railway/railway-serve.sh /usr/local/bin/
+# Web-only PHP configuration: conf.d without SOAP/Redis, plus the egress guard
+COPY docker/railway/railway-web-ini.sh /usr/local/lib/openemr-railway/
+RUN bash /usr/local/lib/openemr-railway/railway-web-ini.sh \
+        /etc/php${PHP_VERSION_ABBR}/conf.d /etc/php${PHP_VERSION_ABBR}/railway-web.d
+COPY docker/railway/php-railway-egress.ini /etc/php${PHP_VERSION_ABBR}/railway-web.d/99-railway-egress.ini
 COPY docker/railway/railway-safety.php docker/railway/railway-verify.php /usr/local/lib/openemr-railway/
 COPY --chown=apache:apache docker/railway/readyz.php meta/railway/readyz.php
 RUN chmod 500 /usr/local/bin/railway-start.sh /usr/local/bin/railway-serve.sh \

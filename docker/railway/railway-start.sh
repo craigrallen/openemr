@@ -30,7 +30,7 @@ SITES_TEMPLATE_DIR="${SITES_TEMPLATE_DIR:-/swarm-pieces/sites}"
 APACHE_CONF_DIR="${APACHE_CONF_DIR:-/etc/apache2/conf.d}"
 SITES_OWNER="${SITES_OWNER:-apache:apache}"  # "none" skips chown (tests)
 MOUNTINFO_FILE="${MOUNTINFO_FILE:-/proc/self/mountinfo}"
-READYZ_PATH=/meta/railway/readyz.php
+READYZ_PATH=/meta/railway/readyz
 MIN_SECRET_LENGTH=16
 SECRET_NAMES="MYSQL_ROOT_PASS MYSQL_PASS OE_PASS OE_HTTP_BOUNDARY_PASS"
 

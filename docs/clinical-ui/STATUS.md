@@ -242,5 +242,5 @@ focus moves to the nearest focusable ancestor, otherwise to the body. The new
   38/38 PASS from a clean archive build against MariaDB 11.4 (RED first: archive missing
   Dockerfile, build failed as on Railway).
 - **Not verified yet:** the live Railway deployment of 081ee60. Railway's healthcheck
-  path must be `/meta/railway/readyz.php` (the old `/meta/health/readyz` is behind the
+  path must be `/meta/railway/readyz` (Railway rejects `.php` paths) (the old `/meta/health/readyz` is behind the
   boundary now and returns 401). No public domain.

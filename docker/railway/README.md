@@ -23,7 +23,7 @@ There is no `Dockerfile.dockerignore`: the CI hadolint job lints every
 |---|---|
 | Source | GitHub `craigrallen/openemr`, branch `feat/clinical-menu-launcher` |
 | Dockerfile path | `docker/railway/Dockerfile` (root directory: repository root) |
-| Healthcheck path | `/meta/railway/readyz.php` |
+| Healthcheck path | `/meta/railway/readyz` |
 | Healthcheck timeout | 1800 s (first boot installs the schema) |
 | Volume | mounted at `/var/www/localhost/htdocs/openemr/sites` |
 | Public domain | none until the secured runtime is verified |
@@ -56,14 +56,21 @@ that line changes):
 - `railway-verify.php` writes the mail/SMS/payment safety globals to the
   `globals` table and reads them back; any failure keeps Apache down
   (upstream's `setGlobalSettings || true` is not relied on);
-- Apache loads `php-railway-egress.ini` via `PHP_INI_SCAN_DIR`: web PHP has
-  `allow_url_fopen` off and no curl, socket, stream-client, mail or process
-  functions. That blocks SMTP, Twilio/FaxSMS, payment gateways, Direct and any
-  module transport regardless of runtime settings. MySQL is unaffected.
+- Apache's PHP scans only `railway-web.d`: the image's `conf.d` minus the SOAP
+  and Redis extensions (`railway-web-ini.sh`; PHP 8.5 cannot disable classes)
+  plus `php-railway-egress.ini` (`allow_url_fopen`/`allow_url_include` off; no
+  curl, socket, stream-client/server, mail, IMAP, FTP, LDAP or process
+  functions). The CLI install/upgrade keeps the full `conf.d`. MySQL is
+  unaffected.
+- One restriction set, `railway_web_guard_violations()` in `railway-safety.php`,
+  is checked before Apache starts and on every readiness probe; any listed
+  function or class still available fails closed.
 
-`readyz.php` returns 200 only when the verification marker exists, the site is
-installed and the database answers, the safety globals still match, and the
-guard is active; otherwise 503.
+`/meta/railway/readyz` (an `AliasMatch` to `readyz.php`; Railway rejects
+healthcheck paths ending in `.php`) returns 200 only when the verification
+marker exists, the site is installed and the database answers, the safety
+globals still match, and the guard is active; otherwise 503. It is the only
+URL exempt from the HTTP boundary; `/meta/railway/readyz.php` itself is 403.
 
 ## Known limits
 
@@ -71,8 +78,8 @@ guard is active; otherwise 503.
   so the guard is PHP-level. The CLI startup scripts and the optional
   `ccdaservice` Node process are not covered by it; `ccdaservice` is off by
   default.
-- PHP classes cannot be disabled; `SoapClient` could still open HTTP
-  connections. No core path uses it for messaging in this configuration.
+- Not blocked by the PHP guard: `mysqli`/PDO connections (needed for the
+  database), DNS lookups, and ImageMagick (`imagick`) URL delegates.
 
 ## Local acceptance
 

@@ -5,7 +5,7 @@
         "dockerfilePath": "docker/railway/Dockerfile"
     },
     "deploy": {
-        "healthcheckPath": "/meta/railway/readyz.php",
+        "healthcheckPath": "/meta/railway/readyz",
         "healthcheckTimeout": 1800,
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 5

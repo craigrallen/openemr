@@ -18,13 +18,14 @@ namespace OpenEMR\Tests\Isolated\Docker;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Process\Process;
 
 class RailwayDeploymentIsolatedTest extends TestCase
 {
     private const REPO_ROOT = __DIR__ . '/../../../..';
     private const RAILWAY_DIR = self::REPO_ROOT . '/docker/railway';
     private const START_SCRIPT = self::RAILWAY_DIR . '/railway-start.sh';
-    private const READYZ_PATH = '/meta/railway/readyz.php';
+    private const READYZ_PATH = '/meta/railway/readyz';
 
     private const STRONG_ROOT = 'Rt7uQ2vX9pL4mN8sK3wE6yA1';
     private const STRONG_DB = 'Db5hJ8kL2nP6qR9tV3xZ7cF4';
@@ -50,7 +51,7 @@ class RailwayDeploymentIsolatedTest extends TestCase
 
     protected function tearDown(): void
     {
-        exec('rm -rf ' . escapeshellarg($this->workDir));
+        self::runCommand(['rm', '-rf', $this->workDir]);
     }
 
     public function testDockerfileBuildsThisCheckoutWithUpstreamStartup(): void
@@ -121,9 +122,9 @@ class RailwayDeploymentIsolatedTest extends TestCase
             . 'export GIT_INDEX_FILE=' . escapeshellarg($index) . '; '
             . $git . ' add -A -- .gitattributes ' . escapeshellarg($pathspec) . '; '
             . $git . ' archive --format=tar "$(' . $git . ' write-tree)" -- ' . escapeshellarg($pathspec) . ' | tar tf -';
-        exec('bash -c ' . escapeshellarg($script), $lines, $code);
+        [$code, $output] = self::runCommand(['bash', '-c', $script]);
         self::assertSame(0, $code, 'git archive listing failed');
-        return $lines;
+        return array_values(array_filter(explode("\n", $output), static fn(string $line): bool => $line !== ''));
     }
 
     /**
@@ -191,18 +192,179 @@ class RailwayDeploymentIsolatedTest extends TestCase
         $probe = 'echo json_encode([ini_get("allow_url_fopen"), array_map("function_exists", '
             . '["curl_exec", "curl_multi_exec", "fsockopen", "pfsockopen", "stream_socket_client", "socket_connect", '
             . '"mail", "exec", "shell_exec", "system", "passthru", "popen", "proc_open"])]);';
-        $result = shell_exec('PHP_INI_SCAN_DIR= php -c ' . escapeshellarg($ini) . ' -r ' . escapeshellarg($probe));
-        self::assertIsString($result);
+        [, $result] = self::runCommand(['php', '-c', $ini, '-r', $probe], ['PHP_INI_SCAN_DIR' => '']);
         self::assertSame('["",[false,false,false,false,false,false,false,false,false,false,false,false,false]]', trim($result));
+    }
+
+    /**
+     * The egress ini must disable every function the guard requires, so the
+     * guard and the configuration it verifies cannot drift apart.
+     */
+    public function testEgressIniDisablesEveryRequiredFunction(): void
+    {
+        $required = $this->requiredDisabledFunctions();
+        foreach (['shell_exec', 'popen', 'system', 'passthru', 'pfsockopen', 'stream_socket_server', 'socket_create', 'socket_sendmsg', 'mb_send_mail', 'pcntl_exec'] as $function) {
+            self::assertContains($function, $required, $function . ' must be in the required set');
+        }
+        $ini = parse_ini_file(self::RAILWAY_DIR . '/php-railway-egress.ini');
+        self::assertIsArray($ini);
+        self::assertIsString($ini['disable_functions'] ?? null);
+        $disabled = explode(',', $ini['disable_functions']);
+        self::assertSame([], array_values(array_diff($required, $disabled)), 'egress ini misses required functions');
+    }
+
+    /**
+     * Reviewer probe: a configuration missing any one required function
+     * (e.g. shell_exec or popen left available) must not pass the guard.
+     *
+     * @return array<string, array{string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function requiredFunctionProvider(): array
+    {
+        $cases = [];
+        foreach (self::requiredDisabledFunctionsFromSource() as $function) {
+            $cases[$function] = [$function];
+        }
+        return $cases;
+    }
+
+    #[DataProvider('requiredFunctionProvider')]
+    public function testGuardRejectsConfigurationLeavingAnyRequiredFunctionAvailable(string $available): void
+    {
+        $disabled = array_values(array_diff($this->requiredDisabledFunctions(), [$available]));
+        $ini = ['allow_url_fopen=0', 'allow_url_include=0', 'disable_functions=' . implode(',', $disabled)];
+        $violations = $this->guardViolations($ini);
+        [, $exists] = self::runCommand(['php', '-n', ...self::iniArgs($ini), '-r', 'echo json_encode(function_exists($argv[1]));', $available]);
+        if (trim($exists) !== 'true') {
+            self::assertNotContains('function ' . $available, $violations);
+            return;
+        }
+        self::assertContains('function ' . $available, $violations, 'guard accepted an incomplete restriction set');
+    }
+
+    public function testGuardRejectsUrlStreams(): void
+    {
+        $violations = $this->guardViolations(['allow_url_fopen=1', 'disable_functions=' . implode(',', $this->requiredDisabledFunctions())]);
+        self::assertContains('ini allow_url_fopen', $violations);
+    }
+
+    /**
+     * PHP 8.5 has no disable_classes, so SOAP (and Redis) must be absent from
+     * the web configuration altogether; with every function disabled, a loaded
+     * SoapClient is the only thing left to reject.
+     */
+    public function testGuardRejectsAvailableSoapClientAndNothingElseUnderFullFunctionSet(): void
+    {
+        $violations = $this->guardViolations([
+            'allow_url_fopen=0',
+            'allow_url_include=0',
+            'disable_functions=' . implode(',', $this->requiredDisabledFunctions()),
+        ]);
+        [, $classes] = self::runCommand(['php', '-n', '-r', 'echo json_encode(array_values(array_filter(["SoapClient", "Redis"], "class_exists")));']);
+        $loaded = json_decode($classes, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($loaded);
+        $expected = array_map(static fn(mixed $class): string => 'class ' . (is_string($class) ? $class : ''), $loaded);
+        self::assertSame($expected, $violations);
+    }
+
+    public function testWebIniDirExcludesSoapAndRedisButKeepsOtherExtensions(): void
+    {
+        $src = $this->workDir . '/php/conf.d';
+        $dest = $this->workDir . '/php/railway-web.d';
+        mkdir($src, 0700, true);
+        $files = [
+            '00_curl.ini' => "extension=curl\n",
+            '01_soap.ini' => "extension=soap\n",
+            '02_mysqli.ini' => "extension=mysqli\n",
+            '20_redis.ini' => "extension=redis\n",
+            '21_quoted_soap.ini' => "; comment\n extension = \"soap.so\"\n",
+            '99-railway.ini' => "expose_php = Off\n",
+        ];
+        foreach ($files as $name => $body) {
+            file_put_contents($src . '/' . $name, $body);
+        }
+        [$code, $out] = self::runCommand(['bash', self::RAILWAY_DIR . '/railway-web-ini.sh', $src, $dest]);
+        self::assertSame(0, $code, $out);
+        $kept = array_map('basename', glob($dest . '/*.ini') ?: []);
+        self::assertSame(['00_curl.ini', '02_mysqli.ini', '99-railway.ini'], $kept);
+    }
+
+    public function testDockerfileServesWebPhpOnlyFromTheFilteredIniDir(): void
+    {
+        $dockerfile = $this->read(self::RAILWAY_DIR . '/Dockerfile');
+        self::assertStringContainsString('railway-web-ini.sh', $dockerfile);
+        $serve = $this->read(self::RAILWAY_DIR . '/railway-serve.sh');
+        self::assertMatchesRegularExpression('/^export PHP_INI_SCAN_DIR="\$\{web_ini_dir\}"$/m', $serve, 'web PHP must not also scan the CLI conf.d');
+        self::assertStringContainsString('railway_web_guard_active()', $serve, 'startup must use the same guard as readiness');
+        self::assertStringContainsString('railway_web_guard_active()', $this->read(self::RAILWAY_DIR . '/readyz.php'));
+    }
+
+    /**
+     * Synthetic controlled receiver on loopback: an unguarded PHP reaches it
+     * (positive control); PHP under the web egress restrictions does not,
+     * through any function or URL-stream transport.
+     */
+    public function testGuardedPhpCannotReachControlledReceiver(): void
+    {
+        $server = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        self::assertIsResource($server, $errstr ?? 'receiver listen failed');
+        stream_set_blocking($server, false);
+        $name = stream_socket_get_name($server, false);
+        self::assertIsString($name);
+        $target = 'tcp://' . $name;
+        $url = 'http://' . $name . '/';
+        $probe = '$t = $argv[1]; $u = $argv[2]; $tries = ['
+            . 'fn() => fsockopen($t), fn() => pfsockopen($t), fn() => stream_socket_client($t), '
+            . 'fn() => file_get_contents($u), fn() => fopen($u, "r"), fn() => shell_exec("curl -s --max-time 1 " . $u), '
+            . 'fn() => popen("curl -s --max-time 1 " . $u, "r"), fn() => (new SoapClient(null, ["location" => $u, "uri" => "urn:x", "connection_timeout" => 2]))->__soapCall("x", []), '
+            . 'fn() => (function () use ($u) { $c = curl_init($u); curl_setopt($c, CURLOPT_TIMEOUT, 1); curl_exec($c); })()]; '
+            . 'foreach ($tries as $try) { try { @$try(); } catch (Throwable) {} }';
+
+        $this->runProbe($probe, [], $target, $url);
+        self::assertGreaterThan(0, $this->drainConnections($server), 'positive control: unguarded PHP must reach the receiver');
+
+        $this->runProbe($probe, $this->guardIni(), $target, $url, withoutSoap: true);
+        self::assertSame(0, $this->drainConnections($server), 'guarded PHP reached the controlled receiver');
+        fclose($server);
+    }
+
+    public function testLogSecretScanDetectsSecretAfterLargeOutput(): void
+    {
+        // > 64 KiB pipe buffer before the secret, so an early-exiting grep
+        // would SIGPIPE the producer.
+        $this->writeFakeDocker('python3 -c "import sys; sys.stdout.write(\'x\' * 2000000 + \'\\n\')"; echo "leak ${OE_PASS} here"; python3 -c "import sys; sys.stdout.write(\'y\' * 2000000 + \'\\n\')"');
+        [$code, $output] = $this->runLogScan();
+        self::assertNotSame(0, $code, 'secret after large output must be detected: ' . $output);
+    }
+
+    public function testLogSecretScanFailsWhenLogsCannotBeRetrieved(): void
+    {
+        $this->writeFakeDocker('echo "Error response from daemon: No such container" >&2; exit 1');
+        [$code, $output] = $this->runLogScan();
+        self::assertNotSame(0, $code, 'retrieval failure must fail the check: ' . $output);
+    }
+
+    public function testLogSecretScanPassesCleanLargeOutput(): void
+    {
+        $this->writeFakeDocker('python3 -c "import sys; sys.stdout.write(\'x\' * 2000000 + \'\\n\')"; echo "[REDACTED]"');
+        [$code, $output] = $this->runLogScan();
+        self::assertSame(0, $code, $output);
+    }
+
+    public function testAcceptanceUsesTheLogScanHelper(): void
+    {
+        $acceptance = $this->read(self::RAILWAY_DIR . '/acceptance-test.sh');
+        self::assertStringContainsString('acceptance-lib.sh', $acceptance);
+        self::assertDoesNotMatchRegularExpression('/!\s*docker logs[^\n]*\|\s*grep -q/', $acceptance);
     }
 
     public function testReadinessReportsNotReadyWithoutVerifiedMarker(): void
     {
         $readyz = self::RAILWAY_DIR . '/readyz.php';
         self::assertFileExists($readyz);
-        $env = 'RAILWAY_READY_MARKER=' . escapeshellarg($this->workDir . '/absent.json') . ' ';
-        $result = shell_exec($env . 'php -n ' . escapeshellarg($readyz));
-        self::assertIsString($result);
+        [, $result] = self::runCommand(['php', '-n', $readyz], ['RAILWAY_READY_MARKER' => $this->workDir . '/absent.json']);
         $body = json_decode($result, true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertFalse($body['ready'] ?? null);
@@ -216,6 +378,14 @@ class RailwayDeploymentIsolatedTest extends TestCase
         self::assertStringContainsString('railway-verify.php', $dockerfile);
         $serve = $this->read(self::RAILWAY_DIR . '/railway-serve.sh');
         self::assertMatchesRegularExpression('/railway-verify\.php.*\n(.*\n)*.*PHP_INI_SCAN_DIR.*\n(.*\n)*exec \/usr\/sbin\/httpd -D FOREGROUND/', $serve);
+    }
+
+    public function testReadinessIsServedAtAnExtensionlessPathAndThePhpUrlIsDenied(): void
+    {
+        $conf = $this->read(self::RAILWAY_DIR . '/openemr-railway.conf');
+        self::assertStringContainsString('AliasMatch "^' . self::READYZ_PATH . '$" "/var/www/localhost/htdocs/openemr/meta/railway/readyz.php"', $conf);
+        self::assertMatchesRegularExpression('#<Location "' . preg_quote(self::READYZ_PATH, '#') . '\.php">\s*Require all denied\s*</Location>#', $conf);
+        self::assertStringNotContainsString('.php', self::READYZ_PATH, 'Railway rejects healthcheck paths ending in .php');
     }
 
     public function testApacheDeniesInstallerAndSetupScripts(): void
@@ -370,19 +540,129 @@ class RailwayDeploymentIsolatedTest extends TestCase
             'SITES_OWNER' => 'none',
             'MOUNTINFO_FILE' => $this->workDir . '/mountinfo',
         ];
-        $process = proc_open(
-            ['bash', '-c', $prelude . 'exec bash ' . escapeshellarg(self::START_SCRIPT)],
-            [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['redirect', 1]],
-            $pipes,
-            null,
-            $env
-        );
-        self::assertIsResource($process);
-        fclose($pipes[0]);
-        $output = stream_get_contents($pipes[1]);
-        self::assertIsString($output);
-        fclose($pipes[1]);
-        return [proc_close($process), $output];
+        // Unset inherited credentials the case did not supply.
+        $env += array_fill_keys(['MYSQL_HOST', 'MYSQL_ROOT_PASS', 'MYSQL_PASS', 'OE_USER', 'OE_PASS', 'OE_HTTP_BOUNDARY_PASS', 'MANUAL_SETUP'], false);
+        return self::runCommand(['bash', '-c', $prelude . 'exec bash ' . escapeshellarg(self::START_SCRIPT) . ' 2>&1'], $env);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function requiredDisabledFunctions(): array
+    {
+        $functions = self::requiredDisabledFunctionsFromSource();
+        self::assertNotSame([], $functions);
+        return $functions;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function requiredDisabledFunctionsFromSource(): array
+    {
+        $script = 'require ' . var_export(self::RAILWAY_DIR . '/railway-safety.php', true) . '; echo json_encode(RAILWAY_WEB_DISABLED_FUNCTIONS);';
+        [, $json] = self::runCommand(['php', '-n', '-r', $script]);
+        $functions = json_decode($json, true);
+        return is_array($functions) ? array_values(array_filter($functions, is_string(...))) : [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function guardIni(): array
+    {
+        return ['allow_url_fopen=0', 'allow_url_include=0', 'disable_functions=' . implode(',', $this->requiredDisabledFunctions())];
+    }
+
+    /**
+     * @param list<string> $ini
+     * @return list<string>
+     */
+    private function guardViolations(array $ini): array
+    {
+        $script = 'require ' . var_export(self::RAILWAY_DIR . '/railway-safety.php', true) . '; echo json_encode(railway_web_guard_violations());';
+        [, $json] = self::runCommand(['php', '-n', ...self::iniArgs($ini), '-r', $script]);
+        $violations = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($violations);
+        return array_values(array_filter($violations, is_string(...)));
+    }
+
+    /**
+     * @param list<string> $ini
+     */
+    private function runProbe(string $probe, array $ini, string $target, string $url, bool $withoutSoap = false): void
+    {
+        if ($withoutSoap) {
+            // The host PHP may have SOAP compiled in, which the container's web
+            // configuration excludes; mirror that by removing the class.
+            $probe = str_replace('fn() => (new SoapClient(', 'fn() => (new RailwayNoSoapClient(', $probe);
+        }
+        self::runCommand(['php', '-n', ...self::iniArgs($ini), '-d', 'default_socket_timeout=1', '-r', $probe, $target, $url], [], 60);
+    }
+
+    /**
+     * @param resource $server
+     */
+    private function drainConnections($server): int
+    {
+        $count = 0;
+        while (($conn = @stream_socket_accept($server, 0.2)) !== false) {
+            $count++;
+            fclose($conn);
+        }
+        return $count;
+    }
+
+    private function writeFakeDocker(string $body): void
+    {
+        mkdir($this->workDir . '/bin', 0700, true);
+        file_put_contents($this->workDir . '/bin/docker', "#!/usr/bin/env bash\n" . $body . "\n");
+        chmod($this->workDir . '/bin/docker', 0700);
+    }
+
+    /**
+     * @return array{int, string}
+     */
+    private function runLogScan(): array
+    {
+        $lib = self::RAILWAY_DIR . '/acceptance-lib.sh';
+        self::assertFileExists($lib);
+        $script = 'set -euo pipefail; source ' . escapeshellarg($lib) . '; '
+            . 'if logs_free_of_secrets app ' . escapeshellarg($this->workDir . '/app.log') . '; then exit 0; else exit 1; fi';
+        $env = [
+            'PATH' => $this->workDir . '/bin:' . (getenv('PATH') ?: '/usr/bin:/bin'),
+            'MYSQL_ROOT_PASS' => self::STRONG_ROOT,
+            'MYSQL_PASS' => self::STRONG_DB,
+            'OE_PASS' => self::STRONG_ADMIN,
+            'OE_HTTP_BOUNDARY_PASS' => 'Hb9xW2cV5bN8mQ1zL4kJ7hG3',
+        ];
+        return self::runCommand(['bash', '-c', $script], $env);
+    }
+
+    /**
+     * @param list<string> $command
+     * @param array<string, string|false> $env merged over the inherited environment; false unsets
+     * @return array{int, string} exit code and stdout followed by stderr
+     */
+    private static function runCommand(array $command, array $env = [], float $timeout = 120): array
+    {
+        $process = new Process($command, null, $env, null, $timeout);
+        $process->run();
+        return [$process->getExitCode() ?? -1, $process->getOutput() . $process->getErrorOutput()];
+    }
+
+    /**
+     * @param list<string> $ini
+     * @return list<string>
+     */
+    private static function iniArgs(array $ini): array
+    {
+        $args = [];
+        foreach ($ini as $setting) {
+            $args[] = '-d';
+            $args[] = $setting;
+        }
+        return $args;
     }
 
     private function writeStubEntrypoint(string $body): void

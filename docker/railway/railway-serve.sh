@@ -7,8 +7,9 @@
 # setGlobalSettings. Apache only starts if:
 #   - railway-verify.php applied the safety globals and read them back, and
 #     wrote the readiness marker;
-#   - the web-only PHP egress guard (no outbound sockets, URL streams or
-#     process spawning) is in effect for the configuration Apache will load.
+#   - the web-only PHP egress guard (no outbound sockets, URL streams, SOAP,
+#     Redis or process spawning) is in effect for the configuration Apache
+#     will load, checked by the same railway_web_guard_active() as readiness.
 #
 # @package   OpenEMR
 # @link      https://www.open-emr.org
@@ -31,8 +32,9 @@ rm -f "${marker}"
 php /usr/local/lib/openemr-railway/railway-verify.php || refuse "safety verification failed"
 
 # Web requests only: the CLI install/upgrade above runs without the guard.
-export PHP_INI_SCAN_DIR=":${web_ini_dir}"
-php -r 'exit(ini_get("allow_url_fopen") || function_exists("curl_exec") || function_exists("proc_open") ? 1 : 0);' \
+# The web scan dir replaces conf.d: it is conf.d minus SOAP/Redis plus the guard.
+export PHP_INI_SCAN_DIR="${web_ini_dir}"
+php -r 'require "/usr/local/lib/openemr-railway/railway-safety.php"; exit(railway_web_guard_active() ? 0 : 1);' \
     || refuse "web egress guard is not in effect"
 
 echo "Starting Apache (safety settings verified, web egress guard active)"

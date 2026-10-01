@@ -15,7 +15,8 @@
 #     again when a safety global drifts;
 #   - the HTTP boundary is additive: sensitive paths stay 403 with valid
 #     boundary credentials;
-#   - web PHP cannot open outbound connections or spawn processes;
+#   - web PHP cannot open outbound connections (no SOAP/Redis) or spawn
+#     processes;
 #   - no generated secret appears in container logs;
 #   - admin login works, and survives container replacement with a schema
 #     migration (run by upstream as apache) on the same volume;
@@ -37,7 +38,7 @@ image="${RAILWAY_ACCEPTANCE_IMAGE:-openemr-railway-acceptance:local}"
 run="oerwy${RANDOM}$$"
 net="${run}-net" db="${run}-db" app="${run}-app" sites="${run}-sites"
 oe_root=/var/www/localhost/htdocs/openemr
-readyz=/meta/railway/readyz.php
+readyz=/meta/railway/readyz
 failures=0
 
 MYSQL_ROOT_PASS=$(openssl rand -hex 16)
@@ -123,10 +124,9 @@ login_works() {
     grep -qi 'tabs/main\.php' "${tmp}/login.headers" "${tmp}/login.html"
 }
 
-no_secrets_in_logs() {
-    ! docker logs "${app}" 2>&1 | grep -qF \
-        -e "${MYSQL_ROOT_PASS}" -e "${MYSQL_PASS}" -e "${OE_PASS}" -e "${OE_HTTP_BOUNDARY_PASS}"
-}
+# shellcheck source=docker/railway/acceptance-lib.sh
+source "${repo}/docker/railway/acceptance-lib.sh"
+no_secrets_in_logs() { logs_free_of_secrets "${app}" "${tmp}/app.log"; }
 
 # --- refusals (no database needed) -------------------------------------------
 docker network create "${net}" >/dev/null
@@ -150,6 +150,8 @@ check "fresh install becomes ready" wait_ready
 base="http://$(app_port)"
 
 check "readiness endpoint needs no boundary credentials" test "$(http_code "${base}${readyz}")" = 200
+check "readiness .php URL is denied (403), only the extensionless path is exempt" \
+    test "$(http_code "${base}${readyz}.php")" = 403
 check "boundary challenges anonymous requests" test "$(http_code "${base}/interface/login/login.php")" = 401
 check "boundary admits valid credentials" test "$(authed -o /dev/null -w '%{http_code}' "${base}/interface/login/login.php?site=default")" = 200
 for path in setup.php admin.php sql_upgrade.php sql_patch.php acl_upgrade.php ippf_upgrade.php acl_setup.php \
@@ -167,6 +169,7 @@ docker exec -i -u apache "${app}" sh -c "cat > ${oe_root}/${probe}" <<'PHP'
 <?php
 echo json_encode([
     'url_fopen' => (bool) ini_get('allow_url_fopen'),
+    'classes' => array_values(array_filter(['SoapClient', 'Redis'], 'class_exists')),
     'remote_read' => @file_get_contents('http://1.1.1.1/') !== false,
     'network_functions' => array_values(array_filter(
         ['curl_exec', 'curl_multi_exec', 'fsockopen', 'pfsockopen', 'stream_socket_client', 'socket_connect',
@@ -178,7 +181,7 @@ PHP
 egress=$(authed "${base}/${probe}")
 docker exec "${app}" rm -f "${oe_root}/${probe}"
 check "web PHP has no outbound network or process primitives" \
-    test "${egress}" = '{"url_fopen":false,"remote_read":false,"network_functions":[]}'
+    test "${egress}" = '{"url_fopen":false,"classes":[],"remote_read":false,"network_functions":[]}'
 
 for setting in EMAIL_METHOD:SMTP SMTP_HOST:127.0.0.1 SMTP_PORT:9 payment_gateway:InHouse \
     gateway_mode_production:0 medex_enable:0 phimail_enable:0 portal_onsite_two_enable:0; do

@@ -16,6 +16,25 @@ declare(strict_types=1);
 const RAILWAY_READY_MARKER_DEFAULT = '/run/openemr-railway/ready.json';
 const RAILWAY_SQLCONF_DEFAULT = '/var/www/localhost/htdocs/openemr/sites/default/sqlconf.php';
 
+/**
+ * Web egress guard, checked identically before Apache starts and on every
+ * readiness probe. php-railway-egress.ini must disable every function here.
+ */
+const RAILWAY_WEB_DISABLED_FUNCTIONS = [
+    'curl_exec', 'curl_multi_exec',
+    'fsockopen', 'pfsockopen', 'stream_socket_client', 'stream_socket_server',
+    'socket_create', 'socket_connect', 'socket_sendto', 'socket_sendmsg',
+    'ftp_connect', 'ftp_ssl_connect', 'ldap_connect',
+    'mail', 'mb_send_mail', 'imap_open', 'imap_mail',
+    'exec', 'shell_exec', 'system', 'passthru', 'popen', 'proc_open', 'pcntl_exec', 'pcntl_fork',
+];
+
+/**
+ * Classes that open outbound connections. PHP 8.5 cannot disable classes, so
+ * railway-web-ini.sh leaves their extensions out of the web configuration.
+ */
+const RAILWAY_WEB_ABSENT_CLASSES = ['SoapClient', 'Redis'];
+
 function railway_env(string $name, string $default): string
 {
     $value = getenv($name);
@@ -128,15 +147,31 @@ function railway_mismatched_settings(mysqli $db, array $expected): array
     return $mismatched;
 }
 
-function railway_web_guard_active(): bool
+/**
+ * @return list<string> every restriction that is not in effect; empty when guarded
+ */
+function railway_web_guard_violations(): array
 {
-    if (filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
-        return false;
-    }
-    foreach (['curl_exec', 'fsockopen', 'stream_socket_client', 'socket_connect', 'proc_open', 'exec', 'mail'] as $function) {
-        if (function_exists($function)) {
-            return false;
+    $violations = [];
+    foreach (['allow_url_fopen', 'allow_url_include'] as $setting) {
+        if (filter_var(ini_get($setting), FILTER_VALIDATE_BOOLEAN)) {
+            $violations[] = 'ini ' . $setting;
         }
     }
-    return true;
+    foreach (RAILWAY_WEB_DISABLED_FUNCTIONS as $function) {
+        if (function_exists($function)) {
+            $violations[] = 'function ' . $function;
+        }
+    }
+    foreach (RAILWAY_WEB_ABSENT_CLASSES as $class) {
+        if (class_exists($class, false)) {
+            $violations[] = 'class ' . $class;
+        }
+    }
+    return $violations;
+}
+
+function railway_web_guard_active(): bool
+{
+    return railway_web_guard_violations() === [];
 }
