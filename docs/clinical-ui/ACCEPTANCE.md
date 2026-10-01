@@ -35,7 +35,7 @@ does not establish parity; see [STATUS.md](STATUS.md).
 
 | # | Feature | Status | Existing evidence | Acceptance test to close |
 |---|---|---|---|---|
-| 7 | Create certificates for Swedish authorities within OpenEMR | Not started | Official-template collection area exists outside the repo (`certificates/official`), provenance not yet validated | Service test: certificate draft generated from patient/encounter data; never shown as submitted |
+| 7 | Create certificates for Swedish authorities within OpenEMR | Not started | Official FK originals acquired and hash/parser-validated in mission `certificates/official`; certificate preparation is not implemented | Service test: certificate draft generated from patient/encounter data; never shown as submitted |
 | 8 | Import and use Försäkringskassan certificate templates | Not started | — | Import test with an official template (source URL, retrieval date, document ID, version, SHA256 recorded); fields map and render |
 | 9 | Digital handwritten-style signature using a method that meets the authority's requirements | Not started; **external gate** for signing | — | A drawn image is **not** accepted as electronic signing. Acceptance requires the authority-approved method; until onboarding, only unsigned drafts may be produced |
 
@@ -57,7 +57,7 @@ does not establish parity; see [STATUS.md](STATUS.md).
 | # | Feature | Status | Existing evidence | Acceptance test to close |
 |---|---|---|---|---|
 | 18 | Link every booking to its payment information and show amount paid | Not started | — | Service + E2E: booking shows linked payment total from existing billing data; no live gateway |
-| 19 | Booking confirmations by SMS, email or both | Not started; **live sending is externally gated** | Railway test server blocks all outbound sends (see `docker/railway/README.md`) | Service test with a recording transport: channel choice honoured, consent checked; no message leaves the test server |
+| 19 | Booking confirmations by SMS, email or both | Not started; **live sending is externally gated** | Test infrastructure has fail-closed safety settings and web transport guards, not a universal network-egress guarantee (see `docker/railway/README.md`) | Service test with a recording transport: channel choice honoured, consent checked; no message leaves the test server |
 | 20 | Patient-to-booking-staff chat | Not started (portal messaging to build on) | — | E2E: portal patient message reaches booking staff queue; reply visible to patient |
 
 ## Documentation assistance
@@ -71,5 +71,5 @@ does not establish parity; see [STATUS.md](STATUS.md).
 
 | Item | Status | Evidence |
 |---|---|---|
-| Railway test server built from this fork | In progress | Isolated tests and container acceptance (`docker/railway/acceptance-test.sh`); live deployment not yet verified — see [STATUS.md](STATUS.md) |
+| Railway test server built from this fork | Verified infrastructure, not clinical acceptance | HTTPS/admin login/private DB/durable volumes and app+DB restart persistence verified at `1601840`; see [STATUS.md](STATUS.md). Newer coverage/doc-only commits require fresh deployment readback |
 | Slice 1 "All menus" launcher | Partial (additive, CI pending) | Jest/jsdom tests; no live browser or parity check yet |

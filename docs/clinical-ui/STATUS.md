@@ -1,6 +1,6 @@
 # Clinical UI — slice 1 status: "All menus" launcher
 
-Branch: `feat/clinical-menu-launcher` (uncommitted working tree; nothing pushed).
+Branch: `feat/clinical-menu-launcher`, pushed to `craigrallen/openemr`; draft PR [#4](https://github.com/craigrallen/openemr/pull/4). See the latest checkpoint below; historical test records retain their original limitations.
 Date: 2026-10-01.
 
 This is the first production slice of the researched redesign only. It does
@@ -241,6 +241,55 @@ focus moves to the nearest focusable ancestor, otherwise to the body. The new
   (RED first: 17 failures). Container acceptance `docker/railway/acceptance-test.sh`
   38/38 PASS from a clean archive build against MariaDB 11.4 (RED first: archive missing
   Dockerfile, build failed as on Railway).
-- **Not verified yet:** the live Railway deployment of 081ee60. Railway's healthcheck
-  path must be `/meta/railway/readyz` (Railway rejects `.php` paths) (the old `/meta/health/readyz` is behind the
-  boundary now and returns 401). No public domain.
+- **Historical checkpoint:** live deployment of 081ee60 was not yet verified then.
+  Railway requires the extensionless path `/meta/railway/readyz`.
+
+## Verified test deployment and coverage repair — 2026-10-02
+
+- Test URL: https://openemr-testing.up.railway.app — synthetic-data testing only,
+  not approved for clinical use. HTTP boundary and OpenEMR both use generated
+  credentials held outside the repository. No credentials are published here.
+- Authorized Railway project `014ebcd7-0f23-42b3-b017-b21a41660f12`, workspace
+  `5f5802b0-af5a-4de1-a2bc-2ff9a0e7b3ab`, testing environment
+  `ed77713f-2a78-4b13-9c83-bef83f3d67b1`. Only this project was provisioned.
+- Verified deployment `472f23d8-353f-46fd-8c4d-1bdf9bf64820` is SUCCESS, source
+  `craigrallen/openemr`, branch `feat/clinical-menu-launcher`, runtime commit
+  `1601840ab0a3c679157c922a11d79e58533aa230`. Provider PORT explicitly set to 80
+  to match Apache; without it the provider healthcheck could not reach Apache.
+- App service `f8e0da1e-d57b-4b21-9b2e-1e18871f5033`, sites volume instance
+  `d31644ce-c25a-4033-8ca2-821060cec5d9` READY. DB service
+  `f65c53bf-a4f5-4fbf-a0ee-16df16dac1c6`, volume instance
+  `2a2deed9-785c-4f02-bd16-f0e102b99574` READY, no public domain or TCP proxy.
+  DB hostname `mariadb.railway.internal` read back; private networking ACTIVE.
+- Actual runtime DB: OpenEMR 8.5.0, schema 546, 283 tables, zero patients.
+  Random admin login passed locally and over public HTTPS; anonymous login 401,
+  ready endpoint 200, installer/admin/upgrader/documents direct access 403 even
+  with boundary authentication. Restarted app AND DB; login, DB counts and
+  synthetic document checksum match before/after restart.
+- Hardened startup verifies safety globals before Apache; web PHP removes SOAP
+  and Redis extensions and checks the complete restricted function/class set.
+  These are defense-in-depth application guards, not a provider network firewall
+  or universal proof against every possible outbound path. External integrations
+  remain disabled/unconfigured; no real sends, payments or submissions tested.
+- Controller container acceptance: 39 PASS, zero failures. Focused isolated
+  deployment suite: 67 tests passed. Independent Astra reviewed the final guard
+  changes; no remaining blocking findings reported. Historical failed-first
+  evidence and raw controller outputs retained in the mission verification area.
+- Codecov diagnosis: the launcher test harness used dynamic function evaluation,
+  bypassing Jest source instrumentation: 230 statements, zero recorded hits
+  despite passing behavior tests. Changed the loader to a real module require;
+  full JS suite 20 suites / 316 tests passed with coverage. Launcher now records
+  223/230 statements and 95/115 branches. CI generates/uploads JS lcov using
+  the existing whole-source scope; no thresholds, exclusions or gates weakened.
+  Coverage repair committed as `7185f97`; hosted report must still be read back
+  on that exact head. It does not establish browser/role parity.
+- Official FK forms 7804, 7800, 7801, 7802, 7426, 7427, 7472 acquired from the
+  authority index. Mission `certificates/official/manifest.json` stores source,
+  retrieval time, printed versions, SHA-256 and parser metadata. All seven parse
+  as XFA PDF 1.7; field filling/render/import usability remains unverified.
+  Inera Webcert reference retained; issuer/SITHS/HSA/onboarding and clinical/legal
+  approval remain prerequisites for genuine signing/submission.
+- PR #4 remains draft and unmerged. No old UI retired. All 22 acceptance rows
+  remain open. Next: verify latest CI/Codecov and test deployment, exercise the
+  launcher in real browser/admin/restricted/module contexts, then take the next
+  bounded additive design/backend slice. The redesign is NOT complete.
