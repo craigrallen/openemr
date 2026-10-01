@@ -14,7 +14,7 @@
  *    filters replaced by their source strings;
  *  - the shipped menu JSON definitions for recursive coverage.
  *
- * Run with: npx jest tests/js/menu-launcher.test.js
+ * Run with: node_modules/.bin/jest tests/js/menu-launcher.test.js
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -29,8 +29,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const MENU_DIR = path.join(ROOT, 'interface/main/tabs/menu/menus');
 const MENU_FILES = ['standard.json', 'front_office.json', 'answering_service.json', 'chart_review.json'];
 
-const launcherSrc = fs.readFileSync(path.join(ROOT, 'interface/main/tabs/js/menu_launcher.js'), 'utf8');
-new Function('window', launcherSrc)(global.window);
+require('../../interface/main/tabs/js/menu_launcher.js');
 const Launcher = global.window.OpenEMRMenuLauncher;
 
 /**

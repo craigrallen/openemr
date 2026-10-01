@@ -51,4 +51,10 @@ jobs:
     - name: NPM CI
       run: npm ci
     - name: Run Unit Tests
-      run: npm run test:js
+      run: npm run test:js-coverage
+    - name: Upload coverage
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@v7
+      with:
+        files: coverage/js-unit/lcov.info
+        token: ${{ secrets.CODECOV_TOKEN }}
