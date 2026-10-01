@@ -227,3 +227,20 @@ focus moves to the nearest focusable ancestor, otherwise to the body. The new
 - After a click on a non-interactive part of the dialog, focus is on the
   dialog itself. Escape and Tab work, but the arrow keys and Enter only act
   from the search field, so the user presses Tab (or clicks the field) first.
+
+## Railway test server — 2026-10-02 (commit 081ee60)
+
+- **Root cause of failed deployment dcd8ee59:** `.gitattributes` `docker/* export-ignore`
+  removed `docker/railway/` from GitHub's source archive that Railway builds from.
+  Fixed with carve-outs for `docker/railway/**` and `docker/release/**`; covered by an
+  isolated test that lists a real `git archive`.
+- **Hadolint CI:** `Dockerfile.dockerignore` removed (it matched `docker/**/Dockerfile*`);
+  lint gate unchanged; isolated test asserts only real Dockerfiles match.
+- **Review HIGH/MEDIUM items 1–7 fixed** (see `docker/railway/README.md`).
+- **Evidence:** isolated `RailwayDeploymentIsolatedTest` 31 tests / 309 assertions OK
+  (RED first: 17 failures). Container acceptance `docker/railway/acceptance-test.sh`
+  38/38 PASS from a clean archive build against MariaDB 11.4 (RED first: archive missing
+  Dockerfile, build failed as on Railway).
+- **Not verified yet:** the live Railway deployment of 081ee60. Railway's healthcheck
+  path must be `/meta/railway/readyz.php` (the old `/meta/health/readyz` is behind the
+  boundary now and returns 401). No public domain.
