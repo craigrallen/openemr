@@ -383,6 +383,7 @@ $twig = ServiceContainer::getTwig();
     <script src="js/patient_data_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/therapy_group_data_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/tabs_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
+    <script src="js/menu_launcher.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/application_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/frame_proxies.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/dialog_utils.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
@@ -517,6 +518,7 @@ $twig = ServiceContainer::getTwig();
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
+            <?php echo $twig->render("interface/main/tabs/menu_launcher.html.twig", []); ?>
             <?php if (OEGlobalsBag::getInstance()->get('search_any_patient') != 'none') : ?>
                 <form name="frm_search_globals" class="form-inline">
                     <div class="input-group">
@@ -550,6 +552,16 @@ $twig = ServiceContainer::getTwig();
     </div>
     <script>
         ko.applyBindings(app_view_model);
+
+        // Searchable "All menus" launcher over the same live menu tree; the dropdown menu is unchanged.
+        const menuLauncherRoot = document.querySelector('[data-oe-menu-launcher="root"]');
+        if (menuLauncherRoot) {
+            OpenEMRMenuLauncher.create({
+                root: menuLauncherRoot,
+                menu: app_view_model.application_data.menu,
+                groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
+            });
+        }
 
         $(function () {
             $('.dropdown-toggle').dropdown();
