@@ -48,7 +48,7 @@ $logoService = new LogoService();
 $menuLogo = $logoService->getLogo('core/menu/primary/');
 $versionService = new VersionService();
 $softwareVersion = text((string) $versionService->getSoftwareVersion());
-$clinicalUiAssetVersion = '20261002';
+$clinicalUiAssetVersion = '20261002-areas';
 // Registration status and options.
 $productRegistration = new ProductRegistrationService();
 $product_row = $productRegistration->getProductDialogStatus();
@@ -521,6 +521,11 @@ $twig = ServiceContainer::getTwig();
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
+            <div class="workbench-areas" role="group" aria-label="<?php echo xla('Work areas'); ?>" data-workbench-areas>
+                <button type="button" class="workbench-area" data-workbench-area="Work" aria-controls="workbenchRail" aria-pressed="true"><?php echo xlt('Work'); ?></button>
+                <button type="button" class="workbench-area" data-workbench-area="Patient" aria-controls="workbenchRail" aria-pressed="false"><?php echo xlt('Patient'); ?></button>
+                <button type="button" class="workbench-area" data-workbench-area="Practice" aria-controls="workbenchRail" aria-pressed="false"><?php echo xlt('Practice'); ?></button>
+            </div>
             <button type="button" class="workbench-mobile-toggle" data-workbench-mobile-toggle aria-controls="workbenchRail" aria-expanded="false"><?php echo xlt('Navigation'); ?></button>
             <?php if (OEGlobalsBag::getInstance()->get('search_any_patient') != 'none') : ?>
                 <form name="frm_search_globals" class="form-inline">
@@ -552,6 +557,7 @@ $twig = ServiceContainer::getTwig();
                 data-msg-encounter="<?php echo xla('You must first select or create an encounter.'); ?>"
                 data-msg-group="<?php echo xla('You must first select a therapy group.'); ?>"
                 data-msg-group-encounter="<?php echo xla('You must first select a therapy group encounter.'); ?>"
+                data-msg-area-empty="<?php echo xla('No navigation is available in this area for your account.'); ?>"
                 data-msg-unavailable="<?php echo xla('This menu item is not available.'); ?>"
                 data-group-work="<?php echo xla('Work'); ?>" data-group-patient="<?php echo xla('Patient'); ?>" data-group-practice="<?php echo xla('Practice'); ?>">
                 <div class="workbench-rail-top">

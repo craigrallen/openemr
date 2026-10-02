@@ -370,6 +370,24 @@ trait BaseTrait
     /** @param non-empty-list<string> $labels */
     private function goToWorkbenchMenuLink(array $labels): void
     {
+        // Only the selected area's section is visible, so pick the area that
+        // owns the target action first. Static area controls distinguish the
+        // new shell; the correlated XPath waits for its rendered target too.
+        $areaButton = MainMenuSelectors::workbenchAreaButton($labels);
+        if ($this->client->findElements(WebDriverBy::cssSelector('[data-workbench-areas] [data-workbench-area]')) !== []) {
+            $area = $this->client->wait(30)->until(
+                WebDriverExpectedCondition::elementToBeClickable(
+                    WebDriverBy::xpath($areaButton)
+                )
+            );
+            if (!$area instanceof WebDriverElement) {
+                throw new RuntimeException('Workbench area button was not clickable');
+            }
+            if ($area->getAttribute('aria-pressed') !== 'true') {
+                $area->click();
+            }
+        }
+
         // Opening each summary reveals the next branch and ultimately the
         // action. The scoped path avoids same-named actions in other sections.
         for ($length = 1; $length < count($labels); $length++) {

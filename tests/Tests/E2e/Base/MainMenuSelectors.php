@@ -43,6 +43,19 @@ final class MainMenuSelectors
         return $path . '/button[@data-workbench-action and normalize-space(.)=' . self::literal($action) . ']';
     }
 
+    /**
+     * The area button owning the first matching action's section. Matches
+     * nothing for markup without area buttons or grouped sections.
+     *
+     * @param list<string> $labels
+     */
+    public static function workbenchAreaButton(array $labels): string
+    {
+        return '//button[@data-workbench-area and @data-workbench-area=('
+            . self::workbenchAction($labels)
+            . ')[1]/ancestor::section[@data-workbench-group][1]/@data-workbench-group]';
+    }
+
     private static function literal(string $value): string
     {
         if (!str_contains($value, "'")) {

@@ -36,6 +36,12 @@
         var mobileToggle = root.querySelector('[data-workbench-mobile-toggle]');
         var mobileClose = root.querySelector('[data-workbench-mobile-close]');
         var title = root.querySelector('[data-workbench-title]');
+        var areas = root.querySelector('[data-workbench-areas]');
+        var areaButtons = Array.from(root.querySelectorAll('[data-workbench-area]')).filter(function (button) {
+            return GROUPS.indexOf(button.dataset.workbenchArea) !== -1;
+        });
+        // Untranslated group key; only section visibility follows it, never the DOM tree.
+        var area = 'Work';
         var dispatch = options.dispatch || window.menuActionClick;
         var storage = options.storage || window.localStorage;
         var active = null;
@@ -81,6 +87,7 @@
             root.ownerDocument.body.classList.toggle('workbench-active', !legacy);
             modeButton.textContent = legacy ? modeButton.dataset.workbenchLabel : modeButton.dataset.legacyLabel;
             modeButton.setAttribute('aria-pressed', legacy ? 'true' : 'false');
+            if (areas) areas.hidden = legacy;
             try { storage.setItem('openemr.navigation.mode', legacy ? 'legacy' : 'workbench'); } catch { /* private browsing */ }
         }
 
@@ -156,6 +163,16 @@
             host.appendChild(button);
         }
 
+        function applyArea() {
+            var searching = !!query().trim();
+            tree.querySelectorAll('[data-workbench-group]').forEach(function (section) {
+                section.hidden = !searching && section.dataset.workbenchGroup !== area;
+            });
+            areaButtons.forEach(function (button) {
+                button.setAttribute('aria-pressed', button.dataset.workbenchArea === area ? 'true' : 'false');
+            });
+        }
+
         var renderer = ko.computed(function () {
             var nodes = options.menu();
             var needle = query().trim();
@@ -174,15 +191,18 @@
             actionComputeds = [];
             GROUPS.forEach(function (group) {
                 var members = nodes.filter(function (node) { return groupFor(node) === group && (!relevant || relevant.has(node)); });
-                if (!members.length) return;
+                if (!members.length && relevant) return;
                 var section = element('section', 'workbench-group');
                 section.setAttribute('data-workbench-group', group);
                 var heading = element('h2', 'workbench-group-title', rail.dataset['group' + group] || group);
                 section.appendChild(heading);
                 members.forEach(function (node) { appendNode(node, [], section, needle, 0, relevant); });
+                // An ACL-filtered area stays selectable and says why it is empty.
+                if (!members.length) section.appendChild(element('p', 'workbench-empty', rail.dataset.msgAreaEmpty || ''));
                 fragment.appendChild(section);
             });
             tree.replaceChildren(fragment);
+            applyArea();
             if (!needle) tree.querySelectorAll('.workbench-branch').forEach(function (branch) {
                 if (openNodes.has(branch.__workbenchNode)) branch.open = true;
             });
@@ -198,6 +218,14 @@
         }) : null;
 
         function onInput() { query(search.value); }
+        function onArea(event) {
+            area = event.currentTarget.dataset.workbenchArea;
+            if (search.value) {
+                search.value = '';
+                query('');
+            }
+            applyArea();
+        }
         function onMode() { setMode(!legacy); }
         function onMobile() {
             var open = !root.classList.contains('workbench-mobile-open');
@@ -235,6 +263,7 @@
         }
         function onMobileClose() { closeMobile(true); }
         search.addEventListener('input', onInput);
+        areaButtons.forEach(function (button) { button.addEventListener('click', onArea); });
         modeButton.addEventListener('click', onMode);
         mobileToggle.addEventListener('click', onMobile);
         mobileClose.addEventListener('click', onMobileClose);
@@ -251,6 +280,7 @@
             closeMobile(false);
             if (titleRenderer) titleRenderer.dispose();
             search.removeEventListener('input', onInput);
+            areaButtons.forEach(function (button) { button.removeEventListener('click', onArea); });
             modeButton.removeEventListener('click', onMode);
             mobileToggle.removeEventListener('click', onMobile);
             mobileClose.removeEventListener('click', onMobileClose);
