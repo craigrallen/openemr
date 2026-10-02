@@ -24,8 +24,8 @@ body.workbench-active { width: 100% !important;
 
 #mainBox:not(.workbench-legacy) > nav {
   flex: 0 0 auto;
-  min-height: 54px;
-  padding: 6px 20px !important;
+  min-height: 66px;
+  padding: 0 26px !important;
   gap: 12px;
   background: var(--wb-paper) !important;
   border-bottom: 1px solid var(--wb-line);
@@ -47,6 +47,33 @@ body.workbench-active { width: 100% !important;
   white-space: nowrap;
 }
 #mainBox:not(.workbench-legacy) .workbench-mobile-toggle { display: none; }
+
+/* Work areas: the reference's top-level .top nav, as native toggle buttons. */
+#mainBox:not(.workbench-legacy) .workbench-areas {
+  display: flex;
+  align-self: stretch;
+  gap: 8px;
+  margin-inline-end: 20px;
+}
+
+#mainBox:not(.workbench-legacy) .workbench-area {
+  min-height: 66px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--wb-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#mainBox:not(.workbench-legacy) .workbench-area:hover { color: var(--wb-petrol);
+  background: var(--wb-pale); }
+
+#mainBox:not(.workbench-legacy) .workbench-area[aria-pressed='true'] { color: var(--wb-petrol);
+  border-bottom-color: var(--wb-petrol);
+  font-weight: 700; }
 
 #mainBox:not(.workbench-legacy) .workbench-layout { display: flex;
   flex: 1 1 auto;
@@ -83,7 +110,7 @@ body.workbench-active { width: 100% !important;
 #mainBox:not(.workbench-legacy) .workbench-rail {
   width: 206px;
   flex: 0 0 206px;
-  padding: 16px 10px 22px;
+  padding: 22px 12px;
   overflow-y: auto;
   min-height: 0;
   background: #f8fafb;
@@ -112,6 +139,11 @@ body.workbench-active { width: 100% !important;
   font-size: 12px;
 }
 #mainBox:not(.workbench-legacy) .workbench-group { margin: 12px 0 19px; }
+#mainBox .workbench-group[hidden] { display: none; }
+
+#mainBox:not(.workbench-legacy) .workbench-empty { margin: 0 8px;
+  color: var(--wb-muted);
+  font-size: 12px; }
 
 #mainBox:not(.workbench-legacy) .workbench-notice:not(:empty) { padding: 8px;
   margin: 0 0 8px;
@@ -229,6 +261,7 @@ body:has(#mainBox.workbench-legacy) {
 
 #mainBox.workbench-legacy > nav { flex-wrap: wrap; }
 
+#mainBox.workbench-legacy .workbench-areas,
 #mainBox.workbench-legacy .workbench-rail,
 #mainBox.workbench-legacy .workbench-layout,
 #mainBox.workbench-legacy .workbench-content-head,
@@ -259,8 +292,17 @@ body:has(#mainBox.workbench-legacy) {
 
 @media (width <= 760px) {
   #mainBox:not(.workbench-legacy) > nav { flex-wrap: wrap;
+    min-height: 0;
     padding: 6px 10px !important; }
   #mainBox:not(.workbench-legacy) .workbench-mobile-toggle { display: inline-block; }
+
+  #mainBox:not(.workbench-legacy) .workbench-areas { order: 10;
+    flex: 1 0 100%;
+    gap: 2px;
+    margin: 0;
+    overflow-x: auto; }
+
+  #mainBox:not(.workbench-legacy) .workbench-area { min-height: 44px; }
 
   #mainBox:not(.workbench-legacy) .workbench-rail {
     position: fixed;

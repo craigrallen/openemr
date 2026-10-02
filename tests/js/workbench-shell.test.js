@@ -33,7 +33,7 @@ let shell;
 let app;
 let dispatch;
 function setup(objects = sample) {
-    document.body.innerHTML = '<div id="mainBox"><nav><div id="mainMenu"></div><button data-workbench-mode data-workbench-label="Workbench navigation" data-legacy-label="Legacy navigation">Legacy navigation</button><button data-workbench-mobile-toggle>Navigation</button></nav><div id="workbench"><div data-workbench-backdrop></div><aside id="workbenchRail" data-msg-patient="Select a patient" data-msg-encounter="Select an encounter" data-msg-unavailable="Unavailable"><button data-workbench-mobile-close>Close</button><input type="search" data-workbench-search><p id="workbenchNotice" role="status" aria-live="polite" data-workbench-notice></p><div data-workbench-tree></div></aside><main id="workbenchContent"><div id="attendantData"></div><div class="workbench-content-head"></div><div id="tabs_div"></div><div id="mainFrames_div"><div id="framesDisplay"><iframe></iframe></div></div></main></div></div>';
+    document.body.innerHTML = '<div id="mainBox"><nav><div id="mainMenu"></div><div role="group" aria-label="Work areas" data-workbench-areas><button type="button" data-workbench-area="Work" aria-pressed="false">Arbeit</button><button type="button" data-workbench-area="Patient" aria-pressed="false">Patient</button><button type="button" data-workbench-area="Practice" aria-pressed="false">Praxis</button></div><button data-workbench-mode data-workbench-label="Workbench navigation" data-legacy-label="Legacy navigation">Legacy navigation</button><button data-workbench-mobile-toggle>Navigation</button></nav><div id="workbench"><div data-workbench-backdrop></div><aside id="workbenchRail" data-msg-area-empty="Nothing in this area" data-msg-patient="Select a patient" data-msg-encounter="Select an encounter" data-msg-unavailable="Unavailable"><button data-workbench-mobile-close>Close</button><input type="search" data-workbench-search><p id="workbenchNotice" role="status" aria-live="polite" data-workbench-notice></p><div data-workbench-tree></div></aside><main id="workbenchContent"><div id="attendantData"></div><div class="workbench-content-head"></div><div id="tabs_div"></div><div id="mainFrames_div"><div id="framesDisplay"><iframe></iframe></div></div></main></div></div>';
     app = { application_data: { patient: ko.observable(null), therapy_group: ko.observable(null) } };
     const menu = liveMenu(objects, app);
     dispatch = jest.fn();
@@ -297,4 +297,152 @@ test('runtime menu insert retains branch state and focus on existing action', ()
     expect(document.querySelector('.workbench-branch').open).toBe(true);
     expect(document.activeElement.textContent).toBe('Popup');
     expect(Array.from(document.querySelectorAll('[data-workbench-action]')).some(button => button.textContent === 'Extra')).toBe(true);
+});
+
+const areaButton = key => document.querySelector(`[data-workbench-area="${key}"]`);
+const section = key => document.querySelector(`[data-workbench-group="${key}"]`);
+const visibleGroups = () => Array.from(document.querySelectorAll('[data-workbench-group]')).filter(s => !s.hidden).map(s => s.dataset.workbenchGroup);
+const actionLabels = () => Array.from(document.querySelectorAll('[data-workbench-action]')).map(b => b.textContent);
+function type(value) {
+    const search = document.querySelector('[data-workbench-search]');
+    search.value = value;
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+test('work areas default to Work with native pressed buttons while every group stays in the DOM', () => {
+    setup();
+    expect(visibleGroups()).toEqual(['Work']);
+    expect(['Work', 'Patient', 'Practice'].map(key => areaButton(key).getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+    expect(document.querySelectorAll('[data-workbench-group]')).toHaveLength(3);
+    expect(actionLabels()).toEqual(['Calendar', 'New Form', 'Popup', 'Settings']);
+    expect(document.querySelectorAll('[role="tab"], [role="tablist"]')).toHaveLength(0);
+    expect(areaButton('Work').tagName).toBe('BUTTON');
+});
+
+test('switching areas changes group visibility only and keeps action identity and original dispatch', () => {
+    const menu = setup();
+    const before = Array.from(document.querySelectorAll('[data-workbench-action]'));
+    const sections = Array.from(document.querySelectorAll('[data-workbench-group]'));
+    areaButton('Practice').click();
+    expect(visibleGroups()).toEqual(['Practice']);
+    expect(areaButton('Practice').getAttribute('aria-pressed')).toBe('true');
+    expect(areaButton('Work').getAttribute('aria-pressed')).toBe('false');
+    areaButton('Patient').click();
+    expect(visibleGroups()).toEqual(['Patient']);
+    expect(Array.from(document.querySelectorAll('[data-workbench-action]'))).toEqual(before);
+    expect(Array.from(document.querySelectorAll('[data-workbench-group]'))).toEqual(sections);
+    areaButton('Practice').click();
+    section('Practice').querySelector('.workbench-branch').open = true;
+    section('Practice').querySelector('[data-workbench-action]').click();
+    expect(dispatch.mock.calls[0][0]).toBe(menu()[2].children()[0]);
+});
+
+test('area switches never mutate, reparent or reload the content and iframe tree', () => {
+    setup();
+    const main = document.querySelector('#workbenchContent');
+    const iframe = main.querySelector('iframe');
+    const ancestry = [];
+    for (let node = iframe; node; node = node.parentElement) ancestry.push([node, node.parentElement]);
+    const observer = new MutationObserver(() => {});
+    observer.observe(main, { childList: true, subtree: true, attributes: true });
+    const spies = ['appendChild', 'insertBefore', 'removeChild', 'replaceChildren'].map(name => jest.spyOn(main, name));
+    const load = jest.fn();
+    iframe.addEventListener('load', load);
+    ['Patient', 'Practice', 'Work', 'Practice'].forEach(key => areaButton(key).click());
+    expect(visibleGroups()).toEqual(['Practice']);
+    expect(observer.takeRecords()).toHaveLength(0);
+    observer.disconnect();
+    spies.forEach(spy => { expect(spy).not.toHaveBeenCalled(); spy.mockRestore(); });
+    expect(main.querySelector('iframe')).toBe(iframe);
+    expect(ancestry.every(([node, parent]) => node.parentElement === parent)).toBe(true);
+    expect(load).not.toHaveBeenCalled();
+});
+
+test('sidebar search is global across areas and clearing it restores the selected area', () => {
+    setup();
+    areaButton('Practice').click();
+    type('calendar');
+    expect(visibleGroups()).toEqual(['Work']);
+    expect(actionLabels()).toEqual(['Calendar']);
+    type('e');
+    expect(visibleGroups()).toEqual(['Work', 'Patient', 'Practice']);
+    expect(areaButton('Practice').getAttribute('aria-pressed')).toBe('true');
+    type('');
+    expect(visibleGroups()).toEqual(['Practice']);
+    expect(actionLabels()).toEqual(['Calendar', 'New Form', 'Popup', 'Settings']);
+});
+
+test('choosing an area while searching clears the search and shows that area', () => {
+    setup();
+    type('settings');
+    areaButton('Patient').click();
+    expect(document.querySelector('[data-workbench-search]').value).toBe('');
+    expect(visibleGroups()).toEqual(['Patient']);
+});
+
+test('an ACL-filtered area with no actions remains selectable and explains itself', () => {
+    setup([{ label: 'Calendar', url: '/calendar', target: 'cal', requirement: 0, children: [] }]);
+    areaButton('Practice').click();
+    expect(visibleGroups()).toEqual(['Practice']);
+    expect(section('Practice').querySelector('.workbench-empty').textContent).toBe('Nothing in this area');
+    expect(section('Practice').querySelectorAll('[data-workbench-action]')).toHaveLength(0);
+    type('cal');
+    expect(visibleGroups()).toEqual(['Work']);
+});
+
+test('area controls belong to workbench mode only', () => {
+    setup();
+    const areas = document.querySelector('[data-workbench-areas]');
+    areaButton('Patient').click();
+    expect(areas.hidden).toBe(false);
+    document.querySelector('[data-workbench-mode]').click();
+    expect(areas.hidden).toBe(true);
+    document.querySelector('[data-workbench-mode]').click();
+    expect(areas.hidden).toBe(false);
+    expect(visibleGroups()).toEqual(['Patient']);
+});
+
+test('mobile drawer keeps the selected area through Escape and dispatch', () => {
+    setup();
+    areaButton('Practice').click();
+    const toggle = document.querySelector('[data-workbench-mobile-toggle]');
+    toggle.click();
+    expect(visibleGroups()).toEqual(['Practice']);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.activeElement).toBe(toggle);
+    toggle.click();
+    section('Practice').querySelector('[data-workbench-action]').click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    expect(visibleGroups()).toEqual(['Practice']);
+});
+
+test('main.php renders native work-area buttons with stable keys and translated labels', () => {
+    const php = fs.readFileSync(path.join(root, 'interface/main/tabs/main.php'), 'utf8');
+    const nav = php.slice(php.indexOf('<nav class="navbar'), php.indexOf('</nav>'));
+    const start = nav.lastIndexOf('<div', nav.indexOf('data-workbench-areas'));
+    expect(start).toBeGreaterThan(-1);
+    const group = nav.slice(start, nav.indexOf('</div>', start));
+    expect(group).toMatch(/^<div class="workbench-areas" role="group"/);
+    expect(group).toContain("aria-label=\"<?php echo xla('Work areas'); ?>\"");
+    const buttons = Array.from(group.matchAll(/<button([^>]*)>(.*?)<\/button>/g));
+    expect(buttons.map(b => b[1].match(/data-workbench-area="([^"]+)"/)[1])).toEqual(['Work', 'Patient', 'Practice']);
+    buttons.forEach(([, attrs, label]) => {
+        expect(attrs).toMatch(/type="button"/);
+        expect(attrs).toMatch(/aria-controls="workbenchRail"/);
+        expect(label).toMatch(/^<\?php echo xlt\('(Work|Patient|Practice)'\); \?>$/);
+    });
+    expect(nav.indexOf('data-workbench-areas')).toBeLessThan(nav.indexOf('id="userData"'));
+    expect(php).toMatch(/data-msg-area-empty="<\?php echo xla\('[^']+'\); \?>"/);
+    expect(php).not.toContain("$clinicalUiAssetVersion = '20261002';");
+});
+
+test('work-area CSS follows the 66px top bar and 206px rail with current, hover and legacy rules', () => {
+    const css = fs.readFileSync(path.join(root, 'interface/main/tabs/css/workbench_shell.css'), 'utf8');
+    expect(css).toMatch(/#mainBox:not\(\.workbench-legacy\) > nav\s*\{[^}]*min-height:\s*66px/s);
+    expect(css).toMatch(/#mainBox:not\(\.workbench-legacy\) \.workbench-rail\s*\{[^}]*flex:\s*0 0 206px/s);
+    expect(css).toMatch(/\.workbench-area\[aria-pressed='true'\]\s*\{[^}]*border-bottom-color:\s*var\(--wb-petrol\)/s);
+    expect(css).toMatch(/\.workbench-area:hover/);
+    expect(css).toMatch(/#mainBox\.workbench-legacy \.workbench-areas[^{]*\{[^}]*display:\s*none/s);
+    expect(css).toMatch(/\.workbench-group\[hidden\]\s*\{[^}]*display:\s*none/s);
 });
