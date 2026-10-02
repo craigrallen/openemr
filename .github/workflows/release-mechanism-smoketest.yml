@@ -100,6 +100,32 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-interaction
 
+    # CompatibilityMutator requires `rel-820` or `origin/rel-820` to
+    # resolve. Forks usually mirror master but not the rel branches, so
+    # on a fork neither ref exists and the job fails on every master
+    # push. When origin lacks it, fetch the branch read-only from the
+    # canonical public upstream (anonymous, no token -- the checkout's
+    # persist-credentials: false is unaffected) into the local branch
+    # refs/heads/rel-820, the first candidate the mutator probes. Only
+    # a local ref in this runner is written; nothing is pushed.
+    # REL_BRANCH must match --rel-branch below (enforced by
+    # tests/Tests/Isolated/Ci/ReleaseSmoketestRelBranchIsolatedTest.php).
+    - name: Ensure rel-820 is resolvable (fetch from upstream on forks)
+      id: rel-branch-ref
+      env:
+        REL_BRANCH: rel-820
+        UPSTREAM_URL: https://github.com/openemr/openemr.git
+      run: |
+        for candidate in "$REL_BRANCH" "origin/$REL_BRANCH"; do
+          if git rev-parse --verify --quiet "${candidate}^{commit}" > /dev/null; then
+            echo "${candidate} already resolves; no fetch needed"
+            exit 0
+          fi
+        done
+        echo "${REL_BRANCH} not on origin; fetching from ${UPSTREAM_URL}"
+        git fetch --no-tags "$UPSTREAM_URL" "+refs/heads/${REL_BRANCH}:refs/heads/${REL_BRANCH}"
+        git rev-parse --verify "${REL_BRANCH}^{commit}"
+
     - name: Run openemr:release-prep against rel-820 (smoketest)
       env:
         # Explicit GH_TOKEN mirrors release-amendment.yml's env-block
