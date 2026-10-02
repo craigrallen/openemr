@@ -103,6 +103,26 @@ test.each(['standard.json', 'front_office.json', 'answering_service.json', 'char
     }
 );
 
+test('shipped Admin Clinic Calendar is reachable through the hierarchical sidebar', () => {
+    const objects = JSON.parse(fs.readFileSync(path.join(root, 'interface/main/tabs/menu/menus/standard.json'), 'utf8'));
+    setup(objects);
+    const admin = Array.from(document.querySelectorAll('[data-workbench-tree] > section > details'))
+        .find(branch => branch.querySelector(':scope > summary').textContent === 'Admin');
+    expect(admin).toBeDefined();
+    expect(admin.open).toBe(false);
+    expect(admin.getAttribute('open')).toBeNull();
+    admin.open = true;
+    const clinic = Array.from(admin.querySelectorAll(':scope > .workbench-children > details'))
+        .find(branch => branch.querySelector(':scope > summary').textContent === 'Clinic');
+    expect(clinic).toBeDefined();
+    clinic.open = true;
+    const calendar = Array.from(clinic.querySelectorAll(':scope > .workbench-children > button[data-workbench-action]'))
+        .find(button => button.textContent === 'Calendar');
+    expect(calendar).toBeDefined();
+    calendar.click();
+    expect(dispatch).toHaveBeenCalledTimes(1);
+});
+
 test('legacy switch, mobile toggle, Escape and focus are accessible', () => {
     setup();
     const mode = document.querySelector('[data-workbench-mode]');
