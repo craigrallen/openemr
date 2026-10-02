@@ -389,6 +389,8 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
     Header::setupHeader(['common', 'utility']);
     require_once($srcdir . "/options.js.php");
     ?>
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>">
+    <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" defer></script>
     <script>
         // Process click on diagnosis for referential cds popup.
         function referentialCdsClick(codetype, codevalue) {
@@ -1054,7 +1056,7 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
     <title><?php echo xlt("Dashboard{{patient file}}"); ?></title>
 </head>
 
-<body class="mt-1 patient-demographic bg-light">
+<body class="mt-1 patient-demographic bg-light oe-clinical-record">
     <?php
     // Create and fire the patient demographics view event
     $viewEvent = new ViewEvent($pid);

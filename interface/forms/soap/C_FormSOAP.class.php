@@ -40,6 +40,7 @@ class C_FormSOAP extends Controller
             'soap_form.twig',
             [
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
+                "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]
@@ -57,6 +58,7 @@ class C_FormSOAP extends Controller
             'soap_form.twig',
             [
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
+                "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]

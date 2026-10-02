@@ -2,9 +2,11 @@
 <head>
 <title>{{ 'SOAP'|xlt }}</title>
     {{ setupHeader() }}
+    <link rel="stylesheet" href="{{ FORM_ACTION|attr }}/interface/clinical-workspace/workspace.css?v={{ assetVersion|attr_url }}">
+    <script src="{{ FORM_ACTION|attr }}/interface/clinical-workspace/mode.js?v={{ assetVersion|attr_url }}" defer></script>
 </head>
-<body>
-    <div class="container mt-3">
+<body class="oe-clinical-soap">
+    <div class="container mt-3 oe-soap-document">
         <div class="row">
             <div class="col-12">
                 <h2>{{'SOAP'|xlt}}</h2>

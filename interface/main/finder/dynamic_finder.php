@@ -82,6 +82,8 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <head>
     <?php Header::setupHeader(['datatables', 'datatables-colreorder', 'datatables-dt', 'datatables-bs']); ?>
     <title><?php echo xlt("Patient Finder"); ?></title>
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>">
+    <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" defer></script>
 <style>
     /* Finder Processing style */
     div.dataTables_wrapper div.dataTables_processing {
@@ -390,7 +392,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     });
     ?>
 </head>
-<body>
+<body class="oe-clinical-finder">
 <?php
 
 function rp()
