@@ -436,6 +436,7 @@
         },
         findBlockingNode: findBlockingNode,
         filterEntries: filterEntries,
+        requirementMessage: requirementMessage,
         create: create,
     };
 }(window));

@@ -384,6 +384,7 @@ $twig = ServiceContainer::getTwig();
     <script src="js/therapy_group_data_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/tabs_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/menu_launcher.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
+    <script src="js/workbench_shell.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/application_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/frame_proxies.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/dialog_utils.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
@@ -470,6 +471,7 @@ $twig = ServiceContainer::getTwig();
         min-width: max-content;     /* expands to fit the widest item */
       }
     </style>
+    <link rel="stylesheet" href="css/workbench_shell.css?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>">
 </head>
 
 <body class="min-vw-100">
@@ -514,11 +516,12 @@ $twig = ServiceContainer::getTwig();
                     echo '<span class="navbar-brand">' . $logoImg . '</span>' . "\n";
                 }
             } ?>
-            <button class="navbar-toggler mr-auto" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler mr-auto workbench-legacy-only" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
             <?php echo $twig->render("interface/main/tabs/menu_launcher.html.twig", []); ?>
+            <button type="button" class="workbench-mobile-toggle" data-workbench-mobile-toggle aria-controls="workbenchRail" aria-expanded="false"><?php echo xlt('Navigation'); ?></button>
             <?php if (OEGlobalsBag::getInstance()->get('search_any_patient') != 'none') : ?>
                 <form name="frm_search_globals" class="form-inline">
                     <div class="input-group">
@@ -532,15 +535,42 @@ $twig = ServiceContainer::getTwig();
             <?php endif; ?>
             <!--Below is the user data section that contains the user information and the attendant data-->
             <span id="userData" data-bind="template: {name: 'user-data-template', data: application_data}"></span>
+            <button type="button" class="workbench-mode-button" data-workbench-mode
+                data-legacy-label="<?php echo xla('Legacy navigation'); ?>"
+                data-workbench-label="<?php echo xla('Workbench navigation'); ?>"><?php echo xlt('Legacy navigation'); ?></button>
             <?php
             // fire off a nav event
             $dispatcher?->dispatch(new RenderEvent(), RenderEvent::EVENT_BODY_RENDER_NAV);
             ?>
         </nav>
-        <div id="attendantData" class="body_title acck" data-bind="template: {name: app_view_model.attendant_template_type, data: application_data}"></div>
-        <div class="body_title pt-1" id="tabs_div" data-bind="template: {name: 'tabs-controls', data: application_data}"></div>
-        <div class="mainFrames d-flex flex-row" id="mainFrames_div">
-            <div id="framesDisplay" data-bind="template: {name: 'tabs-frames', data: application_data}"></div>
+        <div id="workbench" class="workbench-layout">
+            <div class="workbench-backdrop" data-workbench-backdrop aria-hidden="true"></div>
+            <aside id="workbenchRail" class="workbench-rail" aria-label="<?php echo xla('Main navigation'); ?>"
+                data-workbench-unavailable="<?php echo xla('Select the required patient or encounter first.'); ?>"
+                data-msg-patient="<?php echo xla('You must first select or add a patient.'); ?>"
+                data-msg-patient-or-group="<?php echo xla('You must first select or add a patient or therapy group.'); ?>"
+                data-msg-encounter="<?php echo xla('You must first select or create an encounter.'); ?>"
+                data-msg-group="<?php echo xla('You must first select a therapy group.'); ?>"
+                data-msg-group-encounter="<?php echo xla('You must first select a therapy group encounter.'); ?>"
+                data-msg-unavailable="<?php echo xla('This menu item is not available.'); ?>"
+                data-group-work="<?php echo xla('Work'); ?>" data-group-patient="<?php echo xla('Patient'); ?>" data-group-practice="<?php echo xla('Practice'); ?>">
+                <div class="workbench-rail-top">
+                    <strong><?php echo xlt('Navigation'); ?></strong>
+                    <button type="button" data-workbench-mobile-close aria-label="<?php echo xla('Close navigation'); ?>">&times;</button>
+                </div>
+                <label for="workbenchSearch" class="sr-only"><?php echo xlt('Search navigation'); ?></label>
+                <input id="workbenchSearch" type="search" data-workbench-search placeholder="<?php echo xla('Search navigation'); ?>" autocomplete="off">
+                <p id="workbenchNotice" class="workbench-notice" role="status" aria-live="polite" data-workbench-notice></p>
+                <div data-workbench-tree></div>
+            </aside>
+            <main class="workbench-main" id="workbenchContent">
+                <div id="attendantData" class="body_title acck" data-bind="template: {name: app_view_model.attendant_template_type, data: application_data}"></div>
+                <div class="workbench-content-head"><span data-workbench-title><?php echo xlt('Workspace'); ?></span></div>
+                <div class="body_title pt-1" id="tabs_div" data-bind="template: {name: 'tabs-controls', data: application_data}"></div>
+                <div class="mainFrames d-flex flex-row" id="mainFrames_div">
+                    <div id="framesDisplay" data-bind="template: {name: 'tabs-frames', data: application_data}"></div>
+                </div>
+            </main>
         </div>
         <?php echo $twig->render("product_registration/product_registration_modal.html.twig", [
             'webroot' => OEGlobalsBag::getInstance()->getWebRoot(),
@@ -562,6 +592,12 @@ $twig = ServiceContainer::getTwig();
                 groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
             });
         }
+        OpenEMRWorkbenchShell.create({
+            root: document.getElementById('mainBox'),
+            menu: app_view_model.application_data.menu,
+            tabs: app_view_model.application_data.tabs.tabsList,
+            groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
+        });
 
         $(function () {
             $('.dropdown-toggle').dropdown();
