@@ -32,9 +32,12 @@ namespace OpenEMR\Tests\Api;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Psr7\Uri;
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Tests\Api\OAuth\RedirectTrace;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\DomCrawler\Crawler;
 
 class AuthorizationGrantPublicClientPkceTest extends TestCase
@@ -197,44 +200,31 @@ class AuthorizationGrantPublicClientPkceTest extends TestCase
         );
     }
 
+    /**
+     * Isolates the registration -> authorize GET -> login page stage
+     * (the stage that 403'd in CI) from credential login, consent, and
+     * token exchange. Does not submit credentials.
+     */
+    #[Test]
+    public function testAuthorizeGetRendersLoginFormForRegisteredPublicClient(): void
+    {
+        $http = $this->buildClient();
+        $loginPage = $this->requestLoginPage(
+            $http,
+            $this->registerPublicClient($http),
+            self::deriveS256Challenge(self::generatePkceVerifier())
+        );
+        [$loginCsrf, $loginAction] = $this->parseLoginForm(
+            new Crawler((string) $loginPage->getBody()),
+            'login page'
+        );
+        $this->assertNotSame('', $loginCsrf, 'Login form should carry a CSRF token');
+        $this->assertNotSame('', $loginAction, 'Login form should have an action');
+    }
+
     private function runFlowThroughConsent(Client $http, string $codeChallenge): string
     {
-        // DCR a public client (application_type=web). OpenEMR returns
-        // is_confidential=0 for these — no client_secret in the response.
-        $reg = $http->post($this->baseUrl . '/oauth2/default/registration', [
-            'headers' => ['Content-Type' => 'application/json'],
-            'json' => [
-                'application_type' => 'web',
-                'redirect_uris' => [self::REDIRECT_URI],
-                'client_name' => 'AuthorizationGrantPublicClientPkceTest-' . bin2hex(random_bytes(3)),
-                // OpenEMR DCR restricts token_endpoint_auth_method to
-                // client_secret_basic | client_secret_post | private_key_jwt
-                // even for public clients — see AuthorizationController
-                // registerClient() validation. application_type=web is
-                // what flips the client to is_confidential=0 (no secret).
-                'token_endpoint_auth_method' => 'client_secret_post',
-                'contacts' => ['e2e@test.example'],
-                'scope' => 'openid fhirUser',
-            ],
-        ]);
-        $this->assertSame(200, $reg->getStatusCode(), 'DCR should succeed for public client');
-        $clientData = json_decode((string) $reg->getBody(), true);
-        $this->assertIsArray($clientData);
-        $this->assertIsString($clientData['client_id']);
-        $this->clientId = $clientData['client_id'];
-
-        $authUrl = '/oauth2/default/authorize?' . http_build_query([
-            'client_id' => $this->clientId,
-            'redirect_uri' => self::REDIRECT_URI,
-            'response_type' => 'code',
-            'scope' => 'openid fhirUser',
-            'state' => self::STATE,
-            'nonce' => self::NONCE,
-            'code_challenge' => $codeChallenge,
-            'code_challenge_method' => 'S256',
-        ]);
-        $loginPage = $http->get($this->baseUrl . $authUrl);
-        $this->assertSame(200, $loginPage->getStatusCode());
+        $loginPage = $this->requestLoginPage($http, $this->registerPublicClient($http), $codeChallenge);
         [$loginCsrf, $loginAction] = $this->parseLoginForm(
             new Crawler((string) $loginPage->getBody()),
             'login page'
@@ -274,6 +264,61 @@ class AuthorizationGrantPublicClientPkceTest extends TestCase
         $this->assertArrayHasKey('code', $callbackQuery);
         $this->assertIsString($callbackQuery['code']);
         return $callbackQuery['code'];
+    }
+
+    private function registerPublicClient(Client $http): string
+    {
+        // DCR a public client (application_type=web). OpenEMR returns
+        // is_confidential=0 for these — no client_secret in the response.
+        $reg = $http->post($this->baseUrl . '/oauth2/default/registration', [
+            'headers' => ['Content-Type' => 'application/json'],
+            'json' => [
+                'application_type' => 'web',
+                'redirect_uris' => [self::REDIRECT_URI],
+                'client_name' => 'AuthorizationGrantPublicClientPkceTest-' . bin2hex(random_bytes(3)),
+                // OpenEMR DCR restricts token_endpoint_auth_method to
+                // client_secret_basic | client_secret_post | private_key_jwt
+                // even for public clients — see AuthorizationController
+                // registerClient() validation. application_type=web is
+                // what flips the client to is_confidential=0 (no secret).
+                'token_endpoint_auth_method' => 'client_secret_post',
+                'contacts' => ['e2e@test.example'],
+                'scope' => 'openid fhirUser',
+            ],
+        ]);
+        $this->assertSame(200, $reg->getStatusCode(), 'DCR should succeed for public client');
+        $clientData = json_decode((string) $reg->getBody(), true);
+        $this->assertIsArray($clientData);
+        $this->assertIsString($clientData['client_id']);
+        $this->clientId = $clientData['client_id'];
+        return $this->clientId;
+    }
+
+    /**
+     * GET /authorize, following redirects to the login page. On a non-200
+     * the assertion message carries a sanitized per-hop redirect trace
+     * (method, scheme, origin match, allowlisted route class, status).
+     */
+    private function requestLoginPage(Client $http, string $clientId, string $codeChallenge): ResponseInterface
+    {
+        $authUrl = '/oauth2/default/authorize?' . http_build_query([
+            'client_id' => $clientId,
+            'redirect_uri' => self::REDIRECT_URI,
+            'response_type' => 'code',
+            'scope' => 'openid fhirUser',
+            'state' => self::STATE,
+            'nonce' => self::NONCE,
+            'code_challenge' => $codeChallenge,
+            'code_challenge_method' => 'S256',
+        ]);
+        $trace = new RedirectTrace(new Uri($this->baseUrl));
+        $loginPage = $http->get($this->baseUrl . $authUrl, ['on_stats' => $trace->onStats(...)]);
+        $this->assertSame(
+            200,
+            $loginPage->getStatusCode(),
+            'Authorize GET (following redirects) should render the login page — ' . $trace->summary()
+        );
+        return $loginPage;
     }
 
     /**
