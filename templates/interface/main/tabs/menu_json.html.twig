@@ -21,6 +21,8 @@
     {
         var self=this;
         self.label=ko.observable(object.label);
+        self.sourceLabel=object.sourceLabel || object.label;
+        self.menu_id=object.menu_id;
 
         self.header=false;
         if('url' in object )

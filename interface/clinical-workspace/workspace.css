@@ -1,0 +1,324 @@
+/* Patient-facing pages only. The mode controller adds this class inside an active workbench. */
+body.oe-clinical-workspace {
+  --oe-ink: #17343b;
+  --oe-muted: #526a70;
+  --oe-line: #d9e4e2;
+  --oe-paper: #fff;
+  --oe-canvas: #f3f7f5;
+  --oe-petrol: #086878;
+
+  background: var(--oe-canvas) !important;
+  color: var(--oe-ink);
+  font-family: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+body.oe-clinical-workspace #container_div,
+body.oe-clinical-workspace .oe-soap-document {
+  max-width: 1480px;
+  padding-right: clamp(1rem, 2vw, 2rem);
+  padding-left: clamp(1rem, 2vw, 2rem);
+}
+
+body.oe-clinical-workspace h1,
+body.oe-clinical-workspace h2,
+body.oe-clinical-workspace h3,
+body.oe-clinical-workspace h4 {
+  color: var(--oe-ink);
+  letter-spacing: -0.025em;
+}
+
+body.oe-clinical-workspace #container_div > .navbar {
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  background: var(--oe-paper) !important;
+  border: 1px solid var(--oe-line);
+  border-radius: 0.5rem;
+}
+
+body.oe-clinical-workspace #container_div > .navbar .navbar-brand {
+  margin-right: 0.8rem;
+  color: var(--oe-ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  white-space: normal;
+}
+
+body.oe-clinical-workspace .btn-primary,
+body.oe-clinical-workspace .btn-add {
+  background: var(--oe-petrol);
+  border-color: var(--oe-petrol);
+  color: #fff;
+}
+
+body.oe-clinical-workspace .btn-primary:hover,
+body.oe-clinical-workspace .btn-add:hover {
+  background: #075363;
+  border-color: #075363;
+}
+
+body.oe-clinical-workspace a {
+  color: #086878;
+}
+
+body.oe-clinical-workspace :focus-visible {
+  outline: 2px solid var(--oe-petrol);
+  outline-offset: 2px;
+}
+
+/* Finder: preserve the DataTables search, per-column filters and row handlers. */
+body.oe-clinical-finder.oe-clinical-workspace #container_div {
+  margin-top: 1rem !important;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .nav-tabs {
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--oe-line);
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .nav-tabs .nav-link {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--oe-muted);
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .nav-tabs .nav-link.active {
+  background: transparent;
+  border-bottom-color: var(--oe-petrol);
+  color: var(--oe-ink);
+  font-weight: 650;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .tab-content {
+  padding: 1rem 0;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .table-responsive,
+body.oe-clinical-finder.oe-clinical-workspace #recent .table {
+  overflow-x: auto;
+  background: var(--oe-paper);
+  border: 1px solid var(--oe-line);
+  border-radius: 0.5rem;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace #pt_table,
+body.oe-clinical-finder.oe-clinical-workspace #recent table {
+  width: 100% !important;
+  min-width: 640px;
+  margin: 0;
+  border-collapse: collapse;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace #recent th,
+body.oe-clinical-finder.oe-clinical-workspace #pt_table thead th {
+  padding: 0.7rem 0.9rem;
+  background: #edf4f2;
+  border-color: var(--oe-line) !important;
+  color: var(--oe-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace #pt_table td,
+body.oe-clinical-finder.oe-clinical-workspace #recent td {
+  padding: 0.72rem 0.9rem;
+  border-color: var(--oe-line) !important;
+  vertical-align: middle;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace #pt_table tbody tr,
+body.oe-clinical-finder.oe-clinical-workspace #recent tbody tr {
+  background: var(--oe-paper) !important;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace #pt_table tbody tr:hover,
+body.oe-clinical-finder.oe-clinical-workspace #recent tbody tr:hover {
+  background: #eaf5f3 !important;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .dataTables_wrapper > .dataTables_filter,
+body.oe-clinical-finder.oe-clinical-workspace .dataTables_wrapper > .dataTables_length {
+  margin: 0 0 0.8rem;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .dataTables_filter input,
+body.oe-clinical-finder.oe-clinical-workspace #advanced_search input {
+  min-height: 2.35rem;
+  background: #fff;
+  border: 1px solid #a9c2bf;
+  border-radius: 0.35rem;
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .mytopdiv {
+  padding: 0.8rem 0;
+  color: var(--oe-muted);
+}
+
+body.oe-clinical-finder.oe-clinical-workspace .mytopdiv label {
+  margin-right: 1rem;
+}
+
+/* Patient record: leave every dashboard card and its action in the DOM. */
+body.oe-clinical-record.oe-clinical-workspace #container_div {
+  padding-top: 0.7rem;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .main {
+  margin-top: 1rem;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card {
+  height: 100%;
+  margin-bottom: 0.8rem;
+  background: var(--oe-paper);
+  border: 1px solid var(--oe-line);
+  border-radius: 0.55rem;
+  box-shadow: 0 1px 2px rgb(25 53 56 / 5%);
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card-header {
+  padding: 0.8rem 1rem;
+  background: #f8fbfa;
+  border-bottom: 1px solid var(--oe-line);
+  border-radius: 0.55rem 0.55rem 0 0;
+  color: var(--oe-ink);
+  font-weight: 650;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card-body {
+  padding: 0.9rem 1rem;
+  line-height: 1.55;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card-body.p-1 {
+  padding: 0.9rem 1rem !important;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card-title {
+  padding-bottom: 0.65rem !important;
+  border-bottom: 1px solid var(--oe-line);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+/* Colored alert cards (e.g. the deceased banner) keep their Bootstrap text color. */
+body.oe-clinical-record.oe-clinical-workspace .card:not(.bg-danger, .bg-warning, .bg-success, .bg-info, .bg-primary, .bg-dark, .text-white) .card-title {
+  color: var(--oe-ink);
+}
+
+body.oe-clinical-record.oe-clinical-workspace .card-title a {
+  color: inherit;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .list-group-item {
+  padding: 0.55rem 0.75rem !important;
+  background: transparent;
+  border-color: var(--oe-line);
+}
+
+body.oe-clinical-record.oe-clinical-workspace .section-header-dynamic {
+  padding: 0.6rem 0;
+  color: var(--oe-ink);
+  font-weight: 650;
+}
+
+body.oe-clinical-record.oe-clinical-workspace section {
+  padding: 0.75rem;
+  background: var(--oe-paper);
+  border: 1px solid var(--oe-line);
+  border-radius: 0.45rem;
+}
+
+body.oe-clinical-record.oe-clinical-workspace .nav-tabs {
+  background: #f9fcfb;
+  border-color: var(--oe-line);
+}
+
+/* SOAP: the existing named fields, validation and save/cancel controls stay intact. */
+body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document {
+  max-width: 880px;
+  margin-top: 1.5rem !important;
+  margin-bottom: 2rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  background: var(--oe-paper);
+  border: 1px solid var(--oe-line);
+  border-radius: 0.6rem;
+  box-shadow: 0 2px 8px rgb(25 53 56 / 5%);
+}
+
+body.oe-clinical-soap.oe-clinical-workspace h2 {
+  margin-bottom: 1.3rem;
+  font-size: 1.65rem;
+  font-weight: 650;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace fieldset {
+  margin: 0 0 1.3rem;
+  padding: 0;
+  border: 0;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace legend {
+  margin-bottom: 0.5rem;
+  color: var(--oe-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace fieldset .container {
+  max-width: none;
+  padding: 0;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace textarea.form-control {
+  width: 100%;
+  min-height: 9rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #b9cbc8;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: var(--oe-ink);
+  font-size: 1rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace .btn-group {
+  gap: 0.55rem;
+}
+
+body.oe-clinical-soap.oe-clinical-workspace .btn-group .btn {
+  border-radius: 0.35rem !important;
+}
+
+@media (width <= 640px) {
+  body.oe-clinical-workspace #container_div,
+  body.oe-clinical-workspace .oe-soap-document {
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+  }
+
+  body.oe-clinical-finder.oe-clinical-workspace .dataTables_wrapper > .dataTables_filter,
+  body.oe-clinical-finder.oe-clinical-workspace .dataTables_wrapper > .dataTables_length {
+    float: none;
+    text-align: left;
+  }
+
+  body.oe-clinical-finder.oe-clinical-workspace .table-responsive,
+  body.oe-clinical-finder.oe-clinical-workspace #recent .table {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document {
+    margin-top: 0.7rem !important;
+  }
+}

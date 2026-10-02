@@ -55,6 +55,10 @@ abstract class MenuRole implements MenuRoleInterface
             // label directly into an anchor and an id attribute without
             // escaping, so labels must be HTML-safe at rest.
             $rawLabel = $entry->label ?? null;
+            // Keep category provenance for alternate navigation layouts after translation.
+            if ($entry instanceof \stdClass) {
+                $entry->sourceLabel = htmlspecialchars(is_string($rawLabel) ? $rawLabel : '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            }
             // @phpstan-ignore argument.type (menu labels are dynamic content)
             $entry->label = xlt(is_string($rawLabel) ? $rawLabel : '');
             // Recursive update of children
