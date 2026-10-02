@@ -1,0 +1,198 @@
+{#
+ # Searchable "All menus" launcher for the main tabs shell.
+ #
+ # Markup only; behaviour lives in interface/main/tabs/js/menu_launcher.js,
+ # which indexes the live Knockout menu tree and dispatches menuActionClick.
+ # Every menu label is inserted by that script with textContent.
+ #
+ # @package   OpenEMR
+ # @link      https://www.open-emr.org
+ # @author    Craig Allen <craig@interconnected.au>
+ # @copyright Copyright (c) 2026 Craig Allen <craig@interconnected.au>
+ # @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
+ #}
+<div class="oe-menu-launcher" data-oe-menu-launcher="root"
+    data-msg-patient="{{ 'You must first select or add a patient.'|xla }}"
+    data-msg-patient-or-group="{{ 'You must first select or add a patient or therapy group.'|xla }}"
+    data-msg-encounter="{{ 'You must first select or create an encounter.'|xla }}"
+    data-msg-group="{{ 'You must first select a therapy group.'|xla }}"
+    data-msg-group-encounter="{{ 'You must first select a therapy group encounter.'|xla }}"
+    data-msg-unavailable="{{ 'This menu item is not available.'|xla }}"
+    data-msg-count="{{ 'Matching menu items'|xla }}">
+    <button type="button" class="oe-menu-launcher__trigger btn btn-sm" data-oe-menu-launcher="trigger"
+        aria-haspopup="dialog" aria-expanded="false" aria-controls="oeMenuLauncherDialog">
+        <i class="fa fa-search" aria-hidden="true"></i>
+        <span>{{ 'All menus'|xlt }}</span>
+    </button>
+    <div class="oe-menu-launcher__overlay" data-oe-menu-launcher="overlay" hidden>
+        <div class="oe-menu-launcher__dialog" id="oeMenuLauncherDialog" role="dialog" aria-modal="true" aria-labelledby="oeMenuLauncherTitle" tabindex="-1">
+            <div class="oe-menu-launcher__head">
+                <h2 class="oe-menu-launcher__title" id="oeMenuLauncherTitle">{{ 'All menus'|xlt }}</h2>
+                <button type="button" class="oe-menu-launcher__close" data-oe-menu-launcher="close" aria-label="{{ 'Close'|xla }}">
+                    <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <label class="sr-only" for="oeMenuLauncherSearch">{{ 'Search menus'|xlt }}</label>
+            <input type="search" class="oe-menu-launcher__search" id="oeMenuLauncherSearch" data-oe-menu-launcher="search"
+                role="combobox" aria-expanded="true" aria-controls="oeMenuLauncherResults" aria-autocomplete="list"
+                autocomplete="off" spellcheck="false" placeholder="{{ 'Search menus by name or section'|xla }}">
+            <p class="oe-menu-launcher__status" data-oe-menu-launcher="status" role="status" aria-live="polite"></p>
+            <ul class="oe-menu-launcher__results" id="oeMenuLauncherResults" data-oe-menu-launcher="results" role="listbox" aria-label="{{ 'Menu items'|xla }}"></ul>
+            <p class="oe-menu-launcher__empty" data-oe-menu-launcher="empty" hidden>{{ 'No menu items match your search.'|xlt }}</p>
+        </div>
+    </div>
+</div>
+<style>
+  .oe-menu-launcher {
+    --oe-ml-ink: #1c2b31;
+    --oe-ml-muted: #5a6b72;
+    --oe-ml-line: #d5dde1;
+    --oe-ml-surface: #f6f8f9;
+    --oe-ml-petrol: #0d5c68;
+    --oe-ml-petrol-soft: #e3eff1;
+    --oe-ml-amber: #8a5a00;
+    display: flex;
+    align-items: center;
+  }
+
+  .oe-menu-launcher__trigger {
+    color: var(--oe-ml-petrol);
+    border: 1px solid var(--oe-ml-line);
+    background: #fff;
+    white-space: nowrap;
+  }
+
+  .oe-menu-launcher__trigger:hover,
+  .oe-menu-launcher__trigger:focus {
+    color: #fff;
+    background: var(--oe-ml-petrol);
+  }
+
+  .oe-menu-launcher__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8vh 1rem 1rem;
+    background: rgb(28 43 49 / 32%);
+  }
+
+  .oe-menu-launcher__overlay[hidden] {
+    display: none;
+  }
+
+  .oe-menu-launcher__dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 40rem;
+    max-height: 80vh;
+    color: var(--oe-ml-ink);
+    background: #fff;
+    border: 1px solid var(--oe-ml-line);
+    border-radius: 6px;
+    box-shadow: 0 12px 32px rgb(28 43 49 / 18%);
+  }
+
+  /* tabindex="-1" only catches pointer focus on non-interactive parts. */
+  .oe-menu-launcher__dialog:focus {
+    outline: none;
+  }
+
+  .oe-menu-launcher__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.875rem 0.25rem;
+  }
+
+  .oe-menu-launcher__title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .oe-menu-launcher__close {
+    padding: 0.25rem 0.5rem;
+    color: var(--oe-ml-muted);
+    background: none;
+    border: 0;
+    border-radius: 4px;
+  }
+
+  .oe-menu-launcher__search {
+    margin: 0.25rem 0.875rem 0;
+    padding: 0.4375rem 0.625rem;
+    font-size: 0.9375rem;
+    color: var(--oe-ml-ink);
+    background: var(--oe-ml-surface);
+    border: 1px solid var(--oe-ml-line);
+    border-radius: 4px;
+  }
+
+  .oe-menu-launcher__close:focus-visible,
+  .oe-menu-launcher__search:focus {
+    outline: 2px solid var(--oe-ml-petrol);
+    outline-offset: 1px;
+  }
+
+  .oe-menu-launcher__status {
+    min-height: 1.25rem;
+    margin: 0.375rem 0.875rem 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--oe-ml-muted);
+  }
+
+  .oe-menu-launcher__results {
+    flex: 1 1 auto;
+    margin: 0;
+    padding: 0 0.375rem 0.5rem;
+    overflow-y: auto;
+    list-style: none;
+    border-top: 1px solid var(--oe-ml-line);
+  }
+
+  .oe-menu-launcher__option {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.5rem;
+    margin-top: 2px;
+    padding: 0.375rem 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    border-inline-start: 3px solid transparent;
+  }
+
+  .oe-menu-launcher__option[aria-selected='true'] {
+    background: var(--oe-ml-petrol-soft);
+    border-inline-start-color: var(--oe-ml-petrol);
+  }
+
+  .oe-menu-launcher__label {
+    font-weight: 500;
+  }
+
+  .oe-menu-launcher__path {
+    font-size: 0.8125rem;
+    color: var(--oe-ml-muted);
+  }
+
+  .oe-menu-launcher__requirement {
+    flex-basis: 100%;
+    font-size: 0.75rem;
+    color: var(--oe-ml-amber);
+  }
+
+  .oe-menu-launcher__option[aria-disabled='true'] .oe-menu-launcher__label {
+    color: var(--oe-ml-muted);
+  }
+
+  .oe-menu-launcher__empty {
+    margin: 0;
+    padding: 1rem 0.875rem 1.25rem;
+    color: var(--oe-ml-muted);
+  }
+</style>
