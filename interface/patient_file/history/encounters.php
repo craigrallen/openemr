@@ -27,6 +27,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Billing\InvoiceSummary;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Forms\FormLocator;
 use OpenEMR\Common\Forms\FormReportRenderer;
@@ -146,7 +147,7 @@ function showDocument(&$drow): void
         return;
     }
 
-    echo "<tr class='text docrow' id='" . attr($drow['id']) . "'data-toggle='tooltip' data-placement='top' title='" . xla('View document') . "'>\n";
+    echo "<tr class='text docrow' tabindex='0' id='" . attr($drow['id']) . "'data-toggle='tooltip' data-placement='top' title='" . xla('View document') . "'>\n";
 
   // show date
     echo "<td>" . text(oeFormatShortDate($docdate)) . "</td>\n";
@@ -196,14 +197,21 @@ function generatePageElement($start, $pagesize, $billing, $issue, $text): void
 <head>
 <!-- Main style sheet comes after the page-specific stylesheet to facilitate overrides. -->
 <?php if ($session->get('language_direction') == "rtl") { ?>
-  <link rel="stylesheet" href="<?php echo OEGlobalsBag::getInstance()->getKernel()->getThemesRelative(); ?>/misc/rtl_encounters.css?v=<?php echo OEGlobalsBag::getInstance()->get('v_js_includes'); ?>" />
+  <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getKernel()->getThemesRelative()); ?>/misc/rtl_encounters.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" />
 <?php } else { ?>
-  <link rel="stylesheet" href="<?php echo OEGlobalsBag::getInstance()->getKernel()->getThemesRelative(); ?>/misc/encounters.css?v=<?php echo OEGlobalsBag::getInstance()->get('v_js_includes'); ?>" />
+  <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getKernel()->getThemesRelative()); ?>/misc/encounters.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" />
 <?php } ?>
 <!-- Not sure why we don't want this ui to be B.S responsive. -->
 <?php Header::setupHeader(['no_textformat']); ?>
+<?php
+$clinicalAssets = new ClinicalWorkspaceAssets();
+$clinicalTooltipAssets = new ClinicalWorkspaceAssets(dirname(__DIR__, 3) . '/library/js');
+?>
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url($clinicalAssets->version('visit-history.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.js?v=<?php echo attr_url($clinicalAssets->version('visit-history.js')); ?>" defer></script>
 
-<script src="<?php echo OEGlobalsBag::getInstance()->getWebRoot() ?>/library/js/ajtooltip.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>"></script>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url($clinicalTooltipAssets->version('ajtooltip.js')); ?>"></script>
 
 <script>
 
@@ -267,7 +275,7 @@ window.onload = function() {
 }
 </script>
 </head>
-<body>
+<body class="oe-clinical-history">
 <div class="container-fluid mt-3" id="encounters"> <!-- large outer DIV -->
     <span class='title'>
         <?php
@@ -301,6 +309,7 @@ window.onload = function() {
 
     ?>
 
+    <span class="oe-history-toolbar">
     <?php if ($billing_view) { ?>
         <a href='encounters.php?billing=0&issue=<?php echo $issue . $getStringForPage; ?>' class="btn btn-small btn-info" onclick='top.restoreSession()' style='font-size: 11px'><?php echo xlt('To Clinical View'); ?></a>
     <?php } else { ?>
@@ -309,8 +318,8 @@ window.onload = function() {
     &nbsp; &nbsp;
      <a  href='#' id='printbutton' class='btn btn-secondary btn-print'>  <?php echo xlt('Print page'); ?>   </a>
 
-    <span class="float-right">
-        <?php echo xlt('Results per page'); ?>:
+    <span class="float-right oe-history-page-size">
+        <label for="selPagesize"><?php echo xlt('Results per page'); ?>:</label>
         <select class="form-control" id="selPagesize" billing="<?php echo attr($billing_view); ?>" issue="<?php echo attr($issue); ?>" pagestart="<?php echo attr($pagestart); ?>" >
             <?php
             $pagesizes = [5, 10, 15, 20, 25, 50, 0];
@@ -330,6 +339,7 @@ window.onload = function() {
             }
             ?>
         </select>
+    </span>
     </span>
 
     <br />
@@ -463,6 +473,7 @@ window.onload = function() {
             }
 
 
+            echo "<caption class='oe-history-pagination'>";
             if (($pagesize > 0) && ($pagestart > 0)) {
                 generatePageElement($pagestart - $pagesize, $pagesize, $billing_view, $issue, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
             }
@@ -471,6 +482,7 @@ window.onload = function() {
             if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
                 generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
             }
+            echo "</caption>";
 
 
             $res4 = sqlStatement($query, $sqlBindArray);
@@ -529,7 +541,7 @@ window.onload = function() {
                 }
 
                     $rawdata = $result4['encounter'] . "~" . oeFormatShortDate($raw_encounter_date);
-                    echo "<tr class='encrow text' id='" . attr($rawdata) . "'>\n";
+                    echo "<tr class='encrow text' tabindex='0' id='" . attr($rawdata) . "'>\n";
 
                     // show encounter date
                     echo "<td class='align-top' data-toggle='tooltip' data-placement='top' title='" . attr(xl('View encounter') . ' ' . $pid . "." . $result4['encounter']) . "'>" . text(oeFormatShortDate($raw_encounter_date)) . "</td>\n";
@@ -894,6 +906,9 @@ $(function () {
     $(".docrow").on("mouseover", function() { $(this).toggleClass("highlight"); });
     $(".docrow").on("mouseout", function() { $(this).toggleClass("highlight"); });
     $(".docrow").on("click", function() { todocument(this.id); });
+    if (window.oeVisitHistory) {
+        oeVisitHistory.bindRowKeyboard(document, { openEncounter: toencounter, openDocument: todocument });
+    }
 
     $(".billing_note_text").on("mouseover", function() { $(this).toggleClass("billing_note_text_highlight"); });
     $(".billing_note_text").on("mouseout", function() { $(this).toggleClass("billing_note_text_highlight"); });

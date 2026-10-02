@@ -1,0 +1,170 @@
+/* Visit History inside the active workbench. Presentation only; no row or cell is removed. */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-history {
+    --oe-history-ink: #17343b;
+    --oe-history-muted: #526a70;
+    --oe-history-line: #d9e4e2;
+    --oe-history-paper: #fff;
+    --oe-history-canvas: #f3f7f5;
+    --oe-history-petrol: #086878;
+
+    background: var(--oe-history-canvas);
+    color: var(--oe-history-ink);
+    font-family: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters {
+    max-width: 1560px;
+    margin-inline: auto;
+    padding-inline: clamp(0.75rem, 2vw, 2rem);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .title {
+    display: block;
+    margin-block: 0 0.8rem;
+    color: var(--oe-history-ink);
+    font-size: clamp(1.4rem, 2vw, 1.85rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .heading {
+    display: block;
+    margin-block: 0.9rem 0.65rem;
+    color: var(--oe-history-muted);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0;
+    border-block: 1px solid var(--oe-history-line);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-page-size {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline-start: auto;
+    color: var(--oe-history-muted);
+    float: none !important;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-page-size label {
+    margin: 0;
+    white-space: normal;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters #selPagesize {
+    width: auto;
+    min-width: 5rem;
+    border-color: var(--oe-history-line);
+    border-radius: 0.3rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-toolbar .btn {
+    border-radius: 0.3rem;
+    font-size: 0.84rem !important;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-toolbar .btn-info {
+    background: var(--oe-history-petrol);
+    border-color: var(--oe-history-petrol);
+    color: #fff;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters #printbutton {
+    background: var(--oe-history-paper);
+    border-color: var(--oe-history-line);
+    color: var(--oe-history-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    background: var(--oe-history-paper);
+    border: 1px solid var(--oe-history-line);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .table {
+    min-width: 980px;
+    margin: 0;
+    padding: 0 !important;
+    background: var(--oe-history-paper);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-pagination {
+    padding: 0.65rem 0.7rem;
+    background: var(--oe-history-paper);
+    caption-side: top;
+    color: var(--oe-history-muted);
+    font-size: 0.83rem;
+    font-weight: 600;
+    text-align: start;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .oe-history-pagination a {
+    padding-inline: 0.3rem;
+    color: var(--oe-history-petrol);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .table thead th {
+    padding: 0.65rem 0.7rem;
+    background: #eaf2f0;
+    border-block-end: 1px solid var(--oe-history-line);
+    color: var(--oe-history-ink);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .table td {
+    padding: 0.65rem 0.7rem;
+    border-color: var(--oe-history-line);
+    font-size: 0.86rem;
+    line-height: 1.4;
+    vertical-align: top;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .table .billing_note {
+    min-width: 15rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .encrow:hover,
+  body.oe-clinical-workspace.oe-clinical-history #encounters .encrow.highlight,
+  body.oe-clinical-workspace.oe-clinical-history #encounters .docrow:hover,
+  body.oe-clinical-workspace.oe-clinical-history #encounters .docrow.highlight {
+    background: #f2f8f7;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .encrow:focus-visible,
+  body.oe-clinical-workspace.oe-clinical-history #encounters .docrow:focus-visible,
+  body.oe-clinical-workspace.oe-clinical-history #encounters :is(a, button, select):focus-visible {
+    outline: 2px solid var(--oe-history-petrol);
+    outline-offset: 2px;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .billing_note_text {
+    padding: 0.45rem 0.6rem;
+    background: #f3f7f5;
+    border: 1px solid var(--oe-history-line) !important;
+    border-radius: 0.25rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-history #encounters .billing_note_text_highlight {
+    background: #e3f0ef;
+  }
+}

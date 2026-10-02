@@ -126,6 +126,14 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         );
     }
 
+    #[Test]
+    public function visitHistoryKeyboardScriptIsVersioned(): void
+    {
+        $this->writeAsset('visit-history.js', 1_700_000_456);
+
+        self::assertSame('1700000456', (new ClinicalWorkspaceAssets($this->directory))->version('visit-history.js'));
+    }
+
     private function writeAsset(string $name, int $mtime): void
     {
         $path = $this->directory . '/' . $name;
