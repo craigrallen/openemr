@@ -205,9 +205,13 @@ body.oe-clinical-record.oe-clinical-workspace .card-body.p-1 {
 body.oe-clinical-record.oe-clinical-workspace .card-title {
   padding-bottom: 0.65rem !important;
   border-bottom: 1px solid var(--oe-line);
-  color: var(--oe-ink);
   font-size: 0.96rem;
   font-weight: 700;
+}
+
+/* Colored alert cards (e.g. the deceased banner) keep their Bootstrap text color. */
+body.oe-clinical-record.oe-clinical-workspace .card:not(.bg-danger, .bg-warning, .bg-success, .bg-info, .bg-primary, .bg-dark, .text-white) .card-title {
+  color: var(--oe-ink);
 }
 
 body.oe-clinical-record.oe-clinical-workspace .card-title a {

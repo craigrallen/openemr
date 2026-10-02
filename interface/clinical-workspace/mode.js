@@ -23,6 +23,32 @@
         }
     }
 }(typeof window === 'undefined' ? null : window, function () {
+    const MAX_ANCESTORS = 8;
+
+    // Routes such as SOAP sit in load_form.php inside encounter_top.php inside main.php,
+    // so the workbench body may be several frames up. Walk same-origin ancestors and
+    // return the nearest body carrying workbench-active, else the topmost reachable one.
+    function findWorkbenchHost(self, start, origin) {
+        const seen = new Set([self]);
+        let host = null;
+        let current = start;
+        for (let depth = 0; depth < MAX_ANCESTORS && current && !seen.has(current); depth++) {
+            seen.add(current);
+            let next;
+            try {
+                // A cross-origin ancestor cannot authorize this presentation mode.
+                if (current.location.origin !== origin || !current.document.body) break;
+                host = current.document.body;
+                if (host.classList.contains('workbench-active')) break;
+                next = current.parent;
+            } catch {
+                break;
+            }
+            current = next;
+        }
+        return host;
+    }
+
     function createModeController({ body, parentWindow, origin, observe, mode }) {
         let observer;
         let active = false;
@@ -35,17 +61,12 @@
 
         if (mode === 'workbench') {
             update(true);
-        } else if (parentWindow && parentWindow !== (body.ownerDocument.defaultView)) {
-            try {
-                if (parentWindow.location.origin === origin && parentWindow.document.body) {
-                    const parentBody = parentWindow.document.body;
-                    const sync = () => update(parentBody.classList.contains('workbench-active'));
-                    sync();
-                    observer = observe(parentBody, sync);
-                }
-            } catch {
-                // A cross-origin parent cannot authorize this presentation mode.
-                update(false);
+        } else {
+            const hostBody = findWorkbenchHost(body.ownerDocument.defaultView, parentWindow, origin);
+            if (hostBody) {
+                const sync = () => update(hostBody.classList.contains('workbench-active'));
+                sync();
+                observer = observe(hostBody, sync);
             }
         }
 
