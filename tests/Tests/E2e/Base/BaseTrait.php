@@ -23,6 +23,7 @@ use Facebook\WebDriver\Exception\UnexpectedAlertOpenException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverBy;
+use Facebook\WebDriver\WebDriverElement;
 use Facebook\WebDriver\WebDriverExpectedCondition;
 use OpenEMR\Tests\E2e\Xpaths\XpathsConstants;
 use RuntimeException;
@@ -297,6 +298,36 @@ trait BaseTrait
     {
         // ensure on main page (ie. not in an iframe)
         $this->client->switchTo()->defaultContent();
+        $mainBoxClasses = (string) $this->client->findElement(WebDriverBy::id('mainBox'))->getAttribute('class');
+        if (!preg_match('/(?:^|\s)workbench-legacy(?:\s|$)/', $mainBoxClasses)) {
+            $this->goToWorkbenchMenuLink(explode('||', $menuLink));
+        } else {
+            $this->goToLegacyMainMenuLink($menuLink);
+        }
+
+        if ($acceptAlert) {
+            // Accept any JavaScript alert/confirm that appears after clicking.
+            // Some menu items (e.g., "Create Visit") show a confirm dialog if
+            // a visit already exists for the patient today. Handle immediately
+            // after clicking to prevent the alert from blocking subsequent
+            // WebDriver operations.
+            try {
+                $this->client->wait(2)->until(function ($driver) {
+                    try {
+                        $driver->switchTo()->alert()->accept();
+                        return true;
+                    } catch (\Throwable) {
+                        return false;
+                    }
+                });
+            } catch (TimeoutException) {
+                // No alert appeared, which is fine
+            }
+        }
+    }
+
+    private function goToLegacyMainMenuLink(string $menuLink): void
+    {
         // go to and click the menu link
         $menuLinkSequenceArray = explode('||', $menuLink);
         $counter = 0;
@@ -334,26 +365,39 @@ trait BaseTrait
             $element->click();
             $counter++;
         }
+    }
 
-        if ($acceptAlert) {
-            // Accept any JavaScript alert/confirm that appears after clicking.
-            // Some menu items (e.g., "Create Visit") show a confirm dialog if
-            // a visit already exists for the patient today. Handle immediately
-            // after clicking to prevent the alert from blocking subsequent
-            // WebDriver operations.
-            try {
-                $this->client->wait(2)->until(function ($driver) {
-                    try {
-                        $driver->switchTo()->alert()->accept();
-                        return true;
-                    } catch (\Throwable) {
-                        return false;
-                    }
-                });
-            } catch (TimeoutException) {
-                // No alert appeared, which is fine
+    /** @param non-empty-list<string> $labels */
+    private function goToWorkbenchMenuLink(array $labels): void
+    {
+        // Opening each summary reveals the next branch and ultimately the
+        // action. The scoped path avoids same-named actions in other sections.
+        for ($length = 1; $length < count($labels); $length++) {
+            $branch = MainMenuSelectors::workbenchBranch(array_slice($labels, 0, $length));
+            $summary = $this->client->wait(30)->until(
+                WebDriverExpectedCondition::elementToBeClickable(
+                    WebDriverBy::xpath($branch . '/summary')
+                )
+            );
+            if (!$summary instanceof WebDriverElement) {
+                throw new RuntimeException('Workbench branch summary was not clickable');
+            }
+            $details = $this->client->findElement(WebDriverBy::xpath($branch));
+            // Drivers can return false or null for an absent boolean attribute.
+            if (in_array($details->getAttribute('open'), [null, false, 'false'], true)) {
+                $summary->click();
             }
         }
+
+        $action = $this->client->wait(30)->until(
+            WebDriverExpectedCondition::elementToBeClickable(
+                WebDriverBy::xpath(MainMenuSelectors::workbenchAction($labels))
+            )
+        );
+        if (!$action instanceof WebDriverElement) {
+            throw new RuntimeException('Workbench menu action was not clickable');
+        }
+        $action->click();
     }
 
     private function goToUserMenuLink(string $menuTreeIcon): void
