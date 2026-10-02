@@ -1,0 +1,222 @@
+{
+  "seed_key": "demo-v1",
+  "description": "SYNTHETIC DEMO DATA for the OpenEMR test server. Fictional people and events; not clinical records.",
+  "facility": {"name": "SYNTHETIC DEMO Clinic (test only)", "street": "1 Synthetic Way", "city": "Demoville", "postal_code": "00000", "country_code": "SE", "pos_code": 11},
+  "staff": [
+    {"key": "dr-lind", "username": "synth-dr-lind", "fname": "Demo", "lname": "Lind (SYNTHETIC)", "title": "Dr.", "specialty": "General practice (synthetic)", "authorized": 1, "calendar": 1},
+    {"key": "dr-berg", "username": "synth-dr-berg", "fname": "Demo", "lname": "Berg (SYNTHETIC)", "title": "Dr.", "specialty": "Internal medicine (synthetic)", "authorized": 1, "calendar": 1},
+    {"key": "rn-ek", "username": "synth-rn-ek", "fname": "Demo", "lname": "Ek, Nurse (SYNTHETIC)", "title": "RN", "specialty": "Nursing (synthetic)", "authorized": 0, "calendar": 1},
+    {"key": "fd-holm", "username": "synth-fd-holm", "fname": "Demo", "lname": "Holm, Front Desk (SYNTHETIC)", "title": "", "specialty": "Reception and billing (synthetic)", "authorized": 0, "calendar": 0}
+  ],
+  "insurers": [
+    {"key": "ins-alpha", "name": "SYNTHETIC Demo Health Insurance Alpha", "ins_type_code": 2},
+    {"key": "ins-beta", "name": "SYNTHETIC Demo Supplemental Beta", "ins_type_code": 2}
+  ],
+  "lab": {
+    "name": "SYNTHETIC DEMO In-House Lab (no transport)",
+    "tests": [
+      {"code": "SYN-HBA1C", "name": "HbA1c (synthetic demo)", "standard_code": "LOINC:4548-4", "units": "mmol/mol", "range": "20-42"},
+      {"code": "SYN-CRP", "name": "C-reactive protein (synthetic demo)", "standard_code": "LOINC:1988-5", "units": "mg/L", "range": "0-5"},
+      {"code": "SYN-HB", "name": "Haemoglobin (synthetic demo)", "standard_code": "LOINC:718-7", "units": "g/L", "range": "117-153"}
+    ]
+  },
+  "provider_blocks": [
+    {"key": "in-office-lind", "provider": "dr-lind", "category": "in_office", "day": -7, "time": "08:00", "minutes": 540, "repeat": "workday", "until_day": 18, "title": "In Office (synthetic schedule)"},
+    {"key": "lunch-lind", "provider": "dr-lind", "category": "lunch", "day": -7, "time": "12:00", "minutes": 60, "repeat": "workday", "until_day": 18, "title": "Lunch (synthetic schedule)"},
+    {"key": "in-office-berg", "provider": "dr-berg", "category": "in_office", "day": -7, "time": "09:00", "minutes": 480, "repeat": "workday", "until_day": 18, "title": "In Office (synthetic schedule)"},
+    {"key": "ooo-berg", "provider": "dr-berg", "category": "out_of_office", "day": 3, "time": "13:00", "minutes": 240, "repeat": "none", "title": "Out of office: training (synthetic)"},
+    {"key": "vacation-berg", "provider": "dr-berg", "category": "vacation", "day": 11, "time": "00:00", "minutes": 0, "repeat": "none", "allday": true, "title": "Vacation (synthetic)"},
+    {"key": "reserved-lind", "provider": "dr-lind", "category": "reserved", "day": 2, "time": "15:00", "minutes": 30, "repeat": "none", "title": "Reserved: admin time (synthetic)"}
+  ],
+  "clinic_events": [
+    {"key": "closed-staffday", "category": "closed", "day": 12, "title": "Clinic closed: staff day (synthetic)"},
+    {"key": "holiday-demo", "category": "holidays", "day": 19, "title": "Public holiday placeholder (synthetic)"}
+  ],
+  "office_notes": [
+    {"key": "note-1", "body": "[SYNTHETIC DEMO] Front desk: printer toner replaced. Demo office note for UI testing."}
+  ],
+  "patients": [
+    {
+      "pubpid": "SYNTH-DEMO-0001", "fname": "Astrid", "lname": "Demo-Andersson (SYNTHETIC)", "dob": "1968-04-12", "sex": "Female",
+      "street": "10 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "astrid.demo-0001@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-lind", "notes": "Synthetic demo patient: chronic care, labs, payments.",
+      "insurance": [{"type": "primary", "insurer": "ins-alpha", "policy_number": "SYNTH-POL-0001", "group_number": "SYNTH-GRP-01", "copay": "20"},
+                    {"type": "secondary", "insurer": "ins-beta", "policy_number": "SYNTH-POL-0001-B", "group_number": "SYNTH-GRP-02", "copay": "0"}],
+      "history": {"tobacco": "Never smoker (synthetic)|never|", "coffee": "2 cups/day (synthetic)", "alcohol": "Occasional (synthetic)", "exercise_patterns": "Walks 30 min daily (synthetic)", "history_father": "Hypertension (synthetic)", "relatives_diabetes": "Mother (synthetic)"},
+      "issues": [
+        {"key": "htn", "type": "medical_problem", "title": "Essential hypertension (synthetic)", "diagnosis": "ICD10:I10", "day": -900, "encounter": "e1"},
+        {"key": "t2dm", "type": "medical_problem", "title": "Type 2 diabetes mellitus (synthetic)", "diagnosis": "ICD10:E11.9", "day": -600, "encounter": "e1"},
+        {"key": "pcn", "type": "allergy", "title": "Penicillin (synthetic)", "reaction": "hives", "severity_al": "moderate", "day": -3000},
+        {"key": "amlo-list", "type": "medication", "title": "Amlodipine 5 mg (synthetic)", "day": -800},
+        {"key": "appy", "type": "surgery", "title": "Appendectomy (synthetic)", "day": -9000},
+        {"key": "glucometer", "type": "medical_device", "title": "Blood glucose meter (synthetic)", "day": -500},
+        {"key": "concern-diet", "type": "health_concern", "title": "Concern about diet adherence (synthetic)", "day": -30}
+      ],
+      "prescriptions": [
+        {"drug": "Amlodipine 5 mg oral tablet (synthetic)", "rxnorm": "197361", "dosage": "1", "quantity": "30", "refills": 2, "route": "PO", "note": "Synthetic demo prescription; not transmitted.", "day": -3, "encounter": "e1"},
+        {"drug": "Metformin 500 mg oral tablet (synthetic)", "rxnorm": "861007", "dosage": "1", "quantity": "60", "refills": 1, "route": "PO", "note": "Synthetic demo prescription; not transmitted.", "day": -3, "encounter": "e1"}
+      ],
+      "immunizations": [{"cvx": "141", "day": -10, "lot": "SYNTH-LOT-01", "manufacturer": "Synthetic Vaccines (demo)", "note": "Seasonal influenza (synthetic)"}],
+      "appointments": [
+        {"category": "established_patient", "day": -3, "time": "09:00", "status": ">", "provider": "dr-lind", "title": "Diabetes follow-up (synthetic)"},
+        {"category": "established_patient", "day": 8, "time": "09:00", "status": "-", "provider": "dr-lind", "title": "Lab review (synthetic)"}
+      ],
+      "encounters": [
+        {"key": "e1", "day": -3, "time": "09:00", "reason": "Diabetes and blood pressure follow-up (synthetic)", "category": "established_patient", "provider": "dr-lind",
+          "forms": {
+            "vitals": {"bps": "142", "bpd": "88", "weight": "176.4", "height": "65.0", "temperature": "98.4", "pulse": "76", "respiration": "14", "oxygen_saturation": "98", "BMI": "29.4", "note": "Synthetic vitals"},
+            "soap": {"subjective": "[SYNTHETIC] Feels well; occasional morning headache.", "objective": "[SYNTHETIC] BP 142/88, no oedema.", "assessment": "[SYNTHETIC] Hypertension suboptimal; T2DM.", "plan": "[SYNTHETIC] Continue amlodipine, add metformin, HbA1c."},
+            "clinical_notes": [{"code": "LOINC:11506-3", "codetext": "Progress note", "description": "[SYNTHETIC] Progress note for demo purposes.", "clinical_notes_type": "progress_note", "clinical_notes_category": ""}],
+            "care_plan": [{"code": "SNOMED-CT:698360004", "codetext": "Diabetes self management plan", "description": "[SYNTHETIC] Diet and activity goals.", "care_plan_type": "goal", "plan_status": "active"}],
+            "misc_billing_options": {"employment_related": "0", "auto_accident": "0", "other_accident": "0", "comments": "Synthetic demo claim options"}
+          },
+          "fees": [
+            {"code_type": "CPT4", "code": "99213", "text": "Office visit, established (synthetic)", "fee": "95.00", "justify": "ICD10|I10:"},
+            {"code_type": "ICD10", "code": "I10", "text": "Essential (primary) hypertension", "fee": "0.00"},
+            {"code_type": "ICD10", "code": "E11.9", "text": "Type 2 diabetes mellitus without complications", "fee": "0.00"}
+          ],
+          "copay": {"amount": "20.00", "method": "cash"},
+          "payments": [
+            {"payer": "patient", "amount": "20.00", "method": "cash", "code": "99213"},
+            {"payer": "insurance", "insurer": "ins-alpha", "amount": "55.00", "adjustment": "20.00", "method": "check_payment", "reference": "SYNTH-EOB-0001", "code": "99213"}
+          ],
+          "lab_order": {"lab_tests": ["SYN-HBA1C", "SYN-CRP"], "diagnosis": "ICD10:E11.9", "results": [
+            {"code": "SYN-HBA1C", "value": "53", "abnormal": "high"},
+            {"code": "SYN-CRP", "value": "2", "abnormal": "no"}
+          ]}
+        }
+      ],
+      "documents": [{"category": "Lab Report", "name": "SYNTHETIC-lab-summary-0001.txt", "text": "SYNTHETIC DEMO DOCUMENT - not a real lab report.\nHbA1c 53 mmol/mol (synthetic).", "encounter": "e1"}],
+      "messages": [{"to": "dr-lind", "from": "rn-ek", "title": "Lab Results", "body": "[SYNTHETIC] HbA1c back, please review.", "status": "New"}],
+      "transactions": [{"form_id": "LBTref", "day": -3, "fields": {"refer_date": "@day:-3", "refer_from": "@user:dr-lind", "refer_to": "@user:dr-berg", "body": "[SYNTHETIC] Referral to internal medicine for diabetes review.", "refer_diag": "ICD10:E11.9"}}]
+    },
+    {
+      "pubpid": "SYNTH-DEMO-0002", "fname": "Bertil", "lname": "Demo-Berglund (SYNTHETIC)", "dob": "1955-11-03", "sex": "Male",
+      "street": "12 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "bertil.demo-0002@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-berg", "notes": "Synthetic demo patient: respiratory visit, ROS forms, no-show.",
+      "insurance": [{"type": "primary", "insurer": "ins-alpha", "policy_number": "SYNTH-POL-0002", "group_number": "SYNTH-GRP-01", "copay": "20"}],
+      "history": {"tobacco": "Former smoker (synthetic)|quit|", "alcohol": "None (synthetic)"},
+      "issues": [
+        {"key": "copd", "type": "medical_problem", "title": "COPD (synthetic)", "diagnosis": "ICD10:J44.9", "day": -1200, "encounter": "e1"},
+        {"key": "dental-1", "type": "dental", "title": "Dental caries, molar (synthetic)", "day": -60}
+      ],
+      "prescriptions": [{"drug": "Salbutamol 100 mcg inhaler (synthetic)", "rxnorm": "745679", "dosage": "2 puffs", "quantity": "1", "refills": 3, "route": "INH", "note": "Synthetic demo prescription; not transmitted.", "day": -1, "encounter": "e1"}],
+      "immunizations": [],
+      "appointments": [
+        {"category": "office_visit", "day": -1, "time": "10:00", "status": "@", "provider": "dr-berg", "title": "Cough (synthetic)"},
+        {"category": "office_visit", "day": -8, "time": "10:30", "status": "?", "provider": "dr-berg", "title": "Missed follow-up (synthetic no-show)"},
+        {"category": "no_show", "day": -8, "time": "10:30", "status": "?", "provider": "dr-berg", "title": "No Show marker (synthetic)"}
+      ],
+      "encounters": [
+        {"key": "e1", "day": -1, "time": "10:00", "reason": "Productive cough for 5 days (synthetic)", "category": "office_visit", "provider": "dr-berg",
+          "forms": {
+            "vitals": {"bps": "128", "bpd": "80", "weight": "190.0", "height": "70.0", "temperature": "100.1", "pulse": "92", "respiration": "20", "oxygen_saturation": "94", "note": "Synthetic vitals"},
+            "ros": {"fever": "YES", "chills": "NO", "cough": "YES", "sputum": "YES", "shortness_of_breath": "YES", "wheezing": "YES", "chest_pain": "NO"},
+            "reviewofs": {"fever": "on", "chills": "", "shortness_of_breath": "on", "emphysema": "on", "additional_notes": "[SYNTHETIC] Checklist ROS for demo."},
+            "observation": [{"code": "LOINC:59408-5", "observation": "Oxygen saturation (synthetic)", "ob_value": "94", "ob_unit": "%", "description": "[SYNTHETIC] Pulse oximetry", "code_type": "LOINC", "ob_type": "physical_exam_vital"}],
+            "dictation": {"dictation": "[SYNTHETIC DICTATION] Patient reports cough with sputum. Lungs: scattered wheeze.", "additional_notes": "Synthetic"},
+            "clinical_instructions": {"instruction": "[SYNTHETIC] Use inhaler as needed; return if breathless at rest."}
+          },
+          "fees": [
+            {"code_type": "CPT4", "code": "99214", "text": "Office visit, established, moderate (synthetic)", "fee": "130.00", "justify": "ICD10|J44.9:"},
+            {"code_type": "ICD10", "code": "J44.9", "text": "Chronic obstructive pulmonary disease, unspecified", "fee": "0.00"}
+          ],
+          "payments": [],
+          "lab_order": {"lab_tests": ["SYN-CRP"], "diagnosis": "ICD10:J44.9", "results": [{"code": "SYN-CRP", "value": "18", "abnormal": "high"}]}
+        }
+      ],
+      "documents": [{"category": "Medical Record", "name": "SYNTHETIC-referral-letter-0002.txt", "text": "SYNTHETIC DEMO DOCUMENT - draft referral letter, unsigned, not legally effective."}],
+      "messages": [{"to": "dr-berg", "from": "fd-holm", "title": "Insurance", "body": "[SYNTHETIC] Patient asks about coverage of inhaler.", "status": "New"}],
+      "transactions": [{"form_id": "LBTptreq", "day": -1, "fields": {"body": "[SYNTHETIC] Patient requests copy of visit summary."}}]
+    },
+    {
+      "pubpid": "SYNTH-DEMO-0003", "fname": "Cecilia", "lname": "Demo-Carlsson (SYNTHETIC)", "dob": "1990-02-20", "sex": "Female",
+      "street": "14 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "cecilia.demo-0003@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-lind", "notes": "Synthetic demo patient: new patient, preventive care, cancellations.",
+      "insurance": [], "history": {"tobacco": "Never smoker (synthetic)|never|", "exercise_patterns": "Runs 3x/week (synthetic)"},
+      "issues": [{"key": "lactose", "type": "allergy", "title": "Lactose intolerance (synthetic)", "reaction": "bloating", "severity_al": "mild", "day": -2000}],
+      "prescriptions": [], "immunizations": [{"cvx": "115", "day": -2, "lot": "SYNTH-LOT-02", "manufacturer": "Synthetic Vaccines (demo)", "note": "Tdap (synthetic)"}],
+      "appointments": [
+        {"category": "new_patient", "day": -2, "time": "14:00", "status": ">", "provider": "dr-lind", "title": "New patient visit (synthetic)"},
+        {"category": "preventive_care_services", "day": 1, "time": "11:00", "status": "x", "provider": "dr-lind", "title": "Preventive visit (synthetic, cancelled)"},
+        {"category": "preventive_care_services", "day": 4, "time": "11:00", "status": "%", "provider": "dr-lind", "title": "Rebooked preventive visit (synthetic, cancelled <24h)"},
+        {"category": "preventive_care_services", "day": 9, "time": "11:00", "status": "^", "provider": "dr-lind", "title": "Preventive visit (synthetic, pending)"}
+      ],
+      "encounters": [
+        {"key": "e1", "day": -2, "time": "14:00", "reason": "New patient intake (synthetic)", "category": "new_patient", "provider": "dr-lind",
+          "forms": {
+            "vitals": {"bps": "112", "bpd": "70", "weight": "134.0", "height": "66.0", "temperature": "98.2", "pulse": "64", "respiration": "12", "oxygen_saturation": "99", "note": "Synthetic vitals"},
+            "functional_cognitive_status": [{"code": "SNOMED-CT:66557003", "codetext": "Independent with activities of daily living", "description": "[SYNTHETIC] Fully independent."}],
+            "soap": {"subjective": "[SYNTHETIC] New patient, no complaints.", "objective": "[SYNTHETIC] Normal exam.", "assessment": "[SYNTHETIC] Healthy adult.", "plan": "[SYNTHETIC] Routine preventive care."}
+          },
+          "fees": [{"code_type": "CPT4", "code": "99203", "text": "Office visit, new patient (synthetic)", "fee": "150.00", "justify": "ICD10|Z00.00:"},
+                   {"code_type": "ICD10", "code": "Z00.00", "text": "Encounter for general adult medical examination without abnormal findings", "fee": "0.00"}],
+          "payments": [{"payer": "patient", "amount": "150.00", "method": "credit_card", "code": "99203"}]
+        }
+      ],
+      "documents": [{"category": "Patient Information", "name": "SYNTHETIC-intake-questionnaire-0003.txt", "text": "SYNTHETIC DEMO DOCUMENT - intake answers (fictional)."}],
+      "messages": [],
+      "transactions": [{"form_id": "LBTphreq", "day": -2, "fields": {"body": "[SYNTHETIC] Physician request: obtain prior records (fictional)."}}]
+    },
+    {
+      "pubpid": "SYNTH-DEMO-0004", "fname": "David", "lname": "Demo-Dahl (SYNTHETIC)", "dob": "1979-07-30", "sex": "Male",
+      "street": "16 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "david.demo-0004@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-berg", "notes": "Synthetic demo patient: behavioural assessment, today's flow board.",
+      "insurance": [{"type": "primary", "insurer": "ins-beta", "policy_number": "SYNTH-POL-0004", "group_number": "SYNTH-GRP-02", "copay": "10"}],
+      "history": {"alcohol": "2 drinks/week (synthetic)"},
+      "issues": [{"key": "anx", "type": "medical_problem", "title": "Generalized anxiety disorder (synthetic)", "diagnosis": "ICD10:F41.1", "day": -400, "encounter": "e1"}],
+      "prescriptions": [], "immunizations": [],
+      "appointments": [
+        {"category": "health_and_behavioral_assessment", "day": 4, "time": "13:30", "status": "<", "provider": "dr-berg", "title": "Assessment (synthetic, in exam room)"},
+        {"category": "health_and_behavioral_assessment", "day": 4, "time": "13:30", "status": "-", "provider": "dr-berg", "title": "Double-booked slot (synthetic conflict)"}
+      ],
+      "encounters": [
+        {"key": "e1", "day": 4, "time": "13:30", "reason": "Health and behavioural assessment (synthetic)", "category": "health_and_behavioral_assessment", "provider": "dr-berg",
+          "forms": {"clinical_notes": [{"code": "LOINC:34109-9", "codetext": "Evaluation note", "description": "[SYNTHETIC] Screening questionnaire discussed; fictional scores.", "clinical_notes_type": "evaluation_note", "clinical_notes_category": ""}]},
+          "fees": [{"code_type": "CPT4", "code": "96156", "text": "Health behavior assessment (synthetic)", "fee": "110.00", "justify": "ICD10|F41.1:"},
+                   {"code_type": "ICD10", "code": "F41.1", "text": "Generalized anxiety disorder", "fee": "0.00"}],
+          "payments": []
+        }
+      ],
+      "documents": [], "messages": [{"to": "dr-berg", "from": "dr-lind", "title": "Other", "body": "[SYNTHETIC] Please see Demo-Dahl this week.", "status": "Read"}],
+      "transactions": [{"form_id": "LBTlegal", "day": 0, "fields": {"body": "[SYNTHETIC] Consent form placeholder; not legally effective."}}]
+    },
+    {
+      "pubpid": "SYNTH-DEMO-0005", "fname": "Elsa", "lname": "Demo-Ek (SYNTHETIC)", "dob": "2016-05-09", "sex": "Female",
+      "street": "18 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "guardian.demo-0005@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-lind", "notes": "Synthetic paediatric demo patient: eye services appointment, immunizations.",
+      "insurance": [{"type": "primary", "insurer": "ins-alpha", "policy_number": "SYNTH-POL-0005", "group_number": "SYNTH-GRP-01", "copay": "0"}],
+      "history": {},
+      "issues": [],
+      "prescriptions": [],
+      "immunizations": [{"cvx": "03", "day": -5, "lot": "SYNTH-LOT-03", "manufacturer": "Synthetic Vaccines (demo)", "note": "MMR (synthetic)"}],
+      "appointments": [{"category": "ophthalmological_services", "day": 2, "time": "08:30", "status": "-", "provider": "dr-lind", "title": "Vision screening (synthetic)"}],
+      "encounters": [], "documents": [], "messages": [],
+      "transactions": [{"form_id": "LBTbill", "day": 0, "fields": {"body": "[SYNTHETIC] Billing note: guardian is policy holder (fictional)."}}]
+    },
+    {
+      "pubpid": "SYNTH-DEMO-0006", "fname": "Fredrik", "lname": "Demo-Falk (SYNTHETIC)", "dob": "1948-01-15", "sex": "Male",
+      "street": "20 Synthetic Street", "city": "Demoville", "postal_code": "00000", "email": "fredrik.demo-0006@patient.invalid", "phone_cell": "",
+      "language": "English", "provider": "dr-berg", "notes": "Synthetic demo patient: unpaid charge with anaemia lab, arrived-late flow.",
+      "insurance": [{"type": "primary", "insurer": "ins-beta", "policy_number": "SYNTH-POL-0006", "group_number": "SYNTH-GRP-02", "copay": "15"}],
+      "history": {"tobacco": "Current smoker (synthetic)|current|"},
+      "issues": [{"key": "anaemia", "type": "medical_problem", "title": "Iron deficiency anaemia (synthetic)", "diagnosis": "ICD10:D50.9", "day": -90, "encounter": "e1"},
+                 {"key": "pacemaker", "type": "medical_device", "title": "Cardiac pacemaker (synthetic)", "day": -2500}],
+      "prescriptions": [{"drug": "Ferrous sulfate 200 mg tablet (synthetic)", "rxnorm": "310325", "dosage": "1", "quantity": "28", "refills": 0, "route": "PO", "note": "Synthetic demo prescription; not transmitted.", "day": 0, "encounter": "e1"}],
+      "immunizations": [],
+      "appointments": [{"category": "office_visit", "day": 0, "time": "15:00", "status": "~", "provider": "dr-berg", "title": "Fatigue (synthetic, arrived late)"}],
+      "encounters": [
+        {"key": "e1", "day": 0, "time": "15:00", "reason": "Fatigue (synthetic)", "category": "office_visit", "provider": "dr-berg",
+          "forms": {"vitals": {"bps": "118", "bpd": "72", "weight": "160.0", "height": "68.0", "pulse": "98", "respiration": "16", "oxygen_saturation": "97", "note": "Synthetic vitals"}},
+          "fees": [{"code_type": "CPT4", "code": "99213", "text": "Office visit, established (synthetic)", "fee": "95.00", "justify": "ICD10|D50.9:"},
+                   {"code_type": "ICD10", "code": "D50.9", "text": "Iron deficiency anemia, unspecified", "fee": "0.00"}],
+          "payments": [],
+          "lab_order": {"lab_tests": ["SYN-HB"], "diagnosis": "ICD10:D50.9", "results": [{"code": "SYN-HB", "value": "98", "abnormal": "low"}]}
+        }
+      ],
+      "documents": [{"category": "Patient Photograph", "name": "SYNTHETIC-placeholder-0006.txt", "text": "SYNTHETIC DEMO DOCUMENT - placeholder in place of a photograph."}],
+      "messages": [{"to": "dr-berg", "from": "rn-ek", "title": "Lab Results", "body": "[SYNTHETIC] Low haemoglobin result, review today.", "status": "New"}],
+      "transactions": []
+    }
+  ]
+}
