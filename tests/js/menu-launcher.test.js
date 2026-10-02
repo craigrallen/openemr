@@ -959,18 +959,13 @@ describe('main tabs shell wiring', () => {
         expect(launcher).toBeGreaterThan(tabs);
     });
 
-    test('keeps the dropdown menu and adds the launcher beside it', () => {
-        const dropdown = mainPhp.indexOf("template: {name: 'menu-template', data: application_data}");
-        const render = mainPhp.indexOf('interface/main/tabs/menu_launcher.html.twig');
-        expect(dropdown).toBeGreaterThan(-1);
-        expect(render).toBeGreaterThan(dropdown);
+    test('keeps the dropdown menu without rendering the retired launcher button', () => {
+        expect(mainPhp).toContain("template: {name: 'menu-template', data: application_data}");
+        expect(mainPhp).not.toContain('interface/main/tabs/menu_launcher.html.twig');
     });
 
-    test('creates the launcher over the live menu after bindings are applied', () => {
-        const bind = mainPhp.indexOf('ko.applyBindings(app_view_model);');
-        const create = mainPhp.indexOf('OpenEMRMenuLauncher.create(');
-        expect(create).toBeGreaterThan(bind);
-        expect(mainPhp.slice(create, create + 300)).toContain('menu: app_view_model.application_data.menu');
+    test('does not mount the retired launcher in the main shell', () => {
+        expect(mainPhp).not.toContain('OpenEMRMenuLauncher.create(');
     });
 });
 
