@@ -30,6 +30,7 @@ final readonly class ClinicalWorkspaceAssets
         'appointment.css',
         'mode.js',
         'visit-history.css',
+        'visit-history.js',
     ];
 
     private string $directory;

@@ -19,7 +19,7 @@ test('real Visit History route loads escaped, independently versioned assets and
     expect(php).toContain('use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;');
     expect(php).toContain('$clinicalAssets = new ClinicalWorkspaceAssets();');
     expect(php).toContain("$clinicalTooltipAssets = new ClinicalWorkspaceAssets(dirname(__DIR__, 3) . '/library/js');");
-    for (const asset of ['visit-history.css', 'mode.js']) {
+    for (const asset of ['visit-history.css', 'mode.js', 'visit-history.js']) {
         const url = php.split('\n').find(line => line.includes(`/interface/clinical-workspace/${asset}?v=`));
         expect(url).toContain(`attr_url($clinicalAssets->version('${asset}'))`);
         expect(url).not.toMatch(/filemtime|__DIR__/);
@@ -91,5 +91,5 @@ test('page keeps source workflows and permission gates in their existing branche
     expect(php).toContain("<caption class='oe-history-pagination'>");
     expect(php).toMatch(/class='encrow text'[^>]*tabindex='0'/);
     expect(php).toMatch(/class='text docrow'[^>]*tabindex='0'/);
-    expect(php).toMatch(/\.encrow, \.docrow.*keydown/s);
+    expect(php).toContain('oeVisitHistory.bindRowKeyboard(document, { openEncounter: toencounter, openDocument: todocument });');
 });

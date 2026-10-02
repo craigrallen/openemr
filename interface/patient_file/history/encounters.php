@@ -209,6 +209,7 @@ $clinicalTooltipAssets = new ClinicalWorkspaceAssets(dirname(__DIR__, 3) . '/lib
 ?>
 <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url($clinicalAssets->version('visit-history.css')); ?>">
 <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.js?v=<?php echo attr_url($clinicalAssets->version('visit-history.js')); ?>" defer></script>
 
 <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url($clinicalTooltipAssets->version('ajtooltip.js')); ?>"></script>
 
@@ -905,12 +906,9 @@ $(function () {
     $(".docrow").on("mouseover", function() { $(this).toggleClass("highlight"); });
     $(".docrow").on("mouseout", function() { $(this).toggleClass("highlight"); });
     $(".docrow").on("click", function() { todocument(this.id); });
-    $(".encrow, .docrow").on("keydown", function(event) {
-        if (event.target !== this || (event.key !== "Enter" && event.key !== " ")) return;
-        event.preventDefault();
-        if ($(this).hasClass("encrow")) toencounter(this.id);
-        else todocument(this.id);
-    });
+    if (window.oeVisitHistory) {
+        oeVisitHistory.bindRowKeyboard(document, { openEncounter: toencounter, openDocument: todocument });
+    }
 
     $(".billing_note_text").on("mouseover", function() { $(this).toggleClass("billing_note_text_highlight"); });
     $(".billing_note_text").on("mouseout", function() { $(this).toggleClass("billing_note_text_highlight"); });
