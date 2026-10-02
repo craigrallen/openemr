@@ -51,6 +51,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\BC\Utilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Calendar\DayOfWeek;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -130,8 +131,9 @@ $eventDispatcher = OEGlobalsBag::getInstance()->getKernel()->getEventDispatcher(
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <?php Header::setupHeader(['common', 'datetime-picker', 'opener']); ?>
 <!-- Workbench presentation: inert unless mode.js finds an active same-origin workbench host. -->
-<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/appointment.css?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . '/../../clinical-workspace/appointment.css') ?: 0)); ?>">
-<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . '/../../clinical-workspace/mode.js') ?: 0)); ?>" defer></script>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/appointment.css?v=<?php echo attr_url($clinicalAssets->version('appointment.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 <title><?php echo $eid ? xlt('Edit') : xlt('Add New{{Event}}') ?> <?php echo xlt('Event');?></title>
 
 <!-- validation library -->
