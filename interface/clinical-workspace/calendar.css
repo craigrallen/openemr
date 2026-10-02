@@ -1,0 +1,197 @@
+/*
+ * PostCalendar day/week/month screens inside an active workbench only.
+ * mode.js adds oe-clinical-workspace; header.html.twig adds oe-clinical-calendar.
+ *
+ * Presentation only. Event, category, status, facility and holiday colours stay
+ * inline or theme-owned. Slot rows, provider headers and the toolbar keep their
+ * theme heights because event top/height, the click-to-book marker and the fixed
+ * sidebar offset are computed against them.
+ */
+body.oe-clinical-workspace.oe-clinical-calendar {
+  --oe-ink: #17343b;
+  --oe-muted: #526a70;
+  --oe-line: #d9e4e2;
+  --oe-paper: #fff;
+  --oe-canvas: #f3f7f5;
+  --oe-petrol: #086878;
+  --oe-petrol-deep: #075363;
+  --oe-petrol-wash: #e3f0ef;
+
+  background: var(--oe-canvas);
+  color: var(--oe-ink);
+}
+
+/* Toolbar: functions, date navigation, view picker */
+body.oe-clinical-workspace.oe-clinical-calendar .container-fluid.sticky-top {
+  background: var(--oe-paper);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight {
+  background: var(--oe-paper);
+  border-bottom-color: var(--oe-line);
+  color: var(--oe-ink);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-primary {
+  background: var(--oe-petrol);
+  border-color: var(--oe-petrol);
+  border-radius: 0.375rem;
+  color: #fff;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-primary:hover,
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-primary:focus {
+  background: var(--oe-petrol-deep);
+  border-color: var(--oe-petrol-deep);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-primary:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgb(8 104 120 / 35%);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-outline-dark {
+  border-color: var(--oe-line);
+  border-radius: 0.375rem;
+  color: var(--oe-ink);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #topToolbarRight .btn-outline-dark:hover {
+  background: var(--oe-petrol-wash);
+  color: var(--oe-ink);
+}
+
+/* The theme marks the selected view with a 2px .currentview border; keep the width. */
+body.oe-clinical-workspace.oe-clinical-calendar #viewPicker .btn-primary.currentview {
+  background: var(--oe-paper);
+  border-color: var(--oe-petrol);
+  color: var(--oe-petrol-deep);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #dateNAV {
+  color: var(--oe-ink);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #dateNAV a,
+body.oe-clinical-workspace.oe-clinical-calendar #dateNAV .chevron_color {
+  color: var(--oe-petrol);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #dateNAV a:hover .chevron_color {
+  color: var(--oe-petrol-deep);
+}
+
+/* Sidebar: mini calendar, providers and facilities */
+body.oe-clinical-workspace.oe-clinical-calendar .sidebar-wrapper {
+  background: var(--oe-canvas);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker,
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker {
+  background: var(--oe-paper);
+  border: 1px solid var(--oe-line);
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  color: var(--oe-ink);
+}
+
+/* The theme sizes both panels as content-box percentages; inset them within the sidebar. */
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker {
+  box-sizing: border-box;
+  margin: 0.5rem 5% 0.4rem;
+  padding: 0.25rem 0.4rem;
+  width: auto;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker .tdMonthName-small {
+  color: var(--oe-ink);
+  font-weight: 600;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker .tdNav {
+  color: var(--oe-petrol);
+  font-weight: 600;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker tr:nth-child(2) .tdDOW-small {
+  color: var(--oe-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker {
+  color: var(--oe-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-left: 5%;
+  margin-right: 5%;
+  padding: 0.45rem 0.6rem 0.2rem;
+  text-transform: uppercase;
+  width: auto;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_facility,
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username {
+  border-color: var(--oe-line);
+  border-radius: 0.375rem;
+  color: var(--oe-ink);
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  margin-top: 0.25rem;
+  text-transform: none;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_facility:focus,
+body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username:focus {
+  border-color: var(--oe-petrol);
+  box-shadow: 0 0 0 0.2rem rgb(8 104 120 / 20%);
+}
+
+/* Booking surface: chrome only. Events and slot rows keep theme geometry and colours. */
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal {
+  background-color: var(--oe-canvas);
+  border-left-color: var(--oe-line);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .providerheader {
+  background-color: var(--oe-petrol);
+  border-bottom-color: var(--oe-petrol-deep);
+  color: #fff;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .providerday {
+  border-color: var(--oe-line);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .timeslot a {
+  color: var(--oe-muted);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .timeslot a:hover,
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .timeslot a:focus {
+  color: var(--oe-petrol-deep);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .week_dateheader:not(.week_currday) a,
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .month_dateheader {
+  color: var(--oe-ink);
+}
+
+/* Today's week column header keeps light-on-dark contrast in the petrol palette. */
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .week_currday {
+  background-color: var(--oe-petrol);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .week_dateheader.week_currday a {
+  color: #fff;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .week_dateheader.week_currday a:hover {
+  color: var(--oe-petrol-wash);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #bigCal .week_dateheader:not(.week_currday) a:hover {
+  color: var(--oe-petrol-deep);
+}
