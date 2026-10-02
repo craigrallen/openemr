@@ -51,9 +51,9 @@ switch ($search_any_type) {
     var patient_picture_default_url = <?php echo json_encode(OEGlobalsBag::getInstance()->getKernel()->getImagesRelative() . '/patient-picture-default.png'); ?>;
 </script>
 <script type="text/html" id="patient-data-template">
-    <div class="d-lg-inline-flex w-100">
-        <div class="flex-fill">
-            <div class="float-left mx-2">
+    <div class="d-lg-inline-flex w-100 workbench-identity">
+        <div class="flex-fill workbench-identity-main">
+            <div class="float-left mx-2 workbench-identity-picture">
                 <!-- ko if: patient -->
                 <div data-bind="with: patient" class="patientPicture">
                     <img data-bind="attr: {src: patient_picture}"
@@ -66,6 +66,7 @@ switch ($search_any_type) {
             </div>
             <div class="form-group">
                 <!-- ko if: patient -->
+                <div class="workbench-identity-patient" role="group" aria-label="<?php echo xla("Patient"); ?>">
                 <?php
                 $classes = "";
                 $closeAnchorClasses = '';
@@ -102,29 +103,31 @@ switch ($search_any_type) {
                 ?>
                     <a class="ptName <?php echo $classes ?? ''; ?> " data-bind="click:refreshPatient,with: patient" href="#" title="<?php echo xla("To Dashboard") ?>">
                         <span data-bind="text: pname()"></span>
-                        <<?php echo $pubpidElement;?> class="text-muted">(<span data-bind="text: pubpid"></span>)</<?php echo $pubpidElement;?>>
+                        <<?php echo $pubpidElement;?> class="text-muted workbench-identity-id"><span class="sr-only workbench-identity-label"><?php echo xlt("External ID"); ?></span>(<span data-bind="text: pubpid"></span>)</<?php echo $pubpidElement;?>>
                     </a>
                     <?php echo ($closeElement !== '') ? "<$closeElement class=\"$closeElementClass\">" : ''; ?>
-                    <a href="#" class="pt-1<?php echo (($classes ?? '') !== "") ? " " . $classes : "";?> <?php echo ($closeAnchorClasses !== "") ? " " . $closeAnchorClasses : ""; ?>" data-bind="click:clearPatient" title="<?php echo xla("Close Patient Chart") ?>">
-                        <i class="fa fa-times<?php echo ($closeIconClass !== "") ? " " . $closeIconClass : ""; ?>"></i>
+                    <a href="#" class="pt-1<?php echo (($classes ?? '') !== "") ? " " . $classes : "";?> <?php echo ($closeAnchorClasses !== "") ? " " . $closeAnchorClasses : ""; ?>" data-bind="click:clearPatient" title="<?php echo xla("Close Patient Chart") ?>" aria-label="<?php echo xla("Close Patient Chart") ?>">
+                        <i class="fa fa-times<?php echo ($closeIconClass !== "") ? " " . $closeIconClass : ""; ?>" aria-hidden="true"></i>
                     </a>
                     <?php echo ($closeElement !== '') ? "</$closeElement>" : ''; ?>
                 <?php echo "</$wrapperElement>"; ?>
 
-                <div class="mt-2">
+                <div class="mt-2 workbench-identity-dob">
                     <span data-bind="text:patient().str_dob()"></span>
                 </div>
+                </div><!-- workbench-identity-patient -->
                 <!-- /ko -->
             </div>
         </div>
 
-        <div class="flex-fill ml-2">
+        <div class="flex-fill ml-2 workbench-identity-encounter-column">
             <!-- ko if: patient -->
             <!-- ko with: patient -->
+            <div class="workbench-identity-encounter" role="group" aria-label="<?php echo xla("Encounter"); ?>">
             <div class="btn-group btn-group-sm">
                 <a class="btn btn-sm btn-secondary" data-bind="click: clickEncounterList" href="#"
-                    title="<?php echo xla("Visit History"); ?>">
-                    <i class="fas fa-history"></i>
+                    title="<?php echo xla("Visit History"); ?>" aria-label="<?php echo xla("Visit History"); ?>">
+                    <i class="fas fa-history" aria-hidden="true"></i>
                 </a>
                 <div class="btn-group dropdown">
                 <button class="btn btn-secondary btn-sm dropdown-toggle"
@@ -142,15 +145,15 @@ switch ($search_any_type) {
                             <span data-bind="text:category"></span>
                         </a>
                         <a href="#" class="dropdown-item" data-bind="click:reviewEncounterEvent">
-                            <i class="fa fa-rotate-left"></i>&nbsp;<?php echo xlt("Review"); ?>
+                            <i class="fa fa-rotate-left" aria-hidden="true"></i>&nbsp;<?php echo xlt("Review"); ?>
                         </a>
                     </li>
                     <!-- /ko -->
                 </ul>
             </div>
                 <a class="btn btn-sm btn-secondary" data-bind="click: clickNewEncounter" href="#"
-                    title="<?php echo xla("New Encounter"); ?>">
-                    <i class="fa fa-plus"></i>
+                    title="<?php echo xla("New Encounter"); ?>" aria-label="<?php echo xla("New Encounter"); ?>">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
                 </a>
             </div>
 
@@ -169,18 +172,19 @@ switch ($search_any_type) {
                 </div>
 
             <!-- /ko --><!-- encounter -->
+            </div><!-- workbench-identity-encounter -->
             <!-- /ko --><!-- with patient -->
             <!-- /ko --><!-- patient -->
         </div>
 
-        <div class="flex-column mx-2">
+        <div class="flex-column mx-2 workbench-identity-user">
             <!-- ko if: user -->
             <!-- ko with: user -->
             <!-- ko if:messages() -->
             <span class="mr-auto">
                 <a class="btn btn-secondary btn-sm" href="#" data-bind="click: viewMessages"
                     title="<?php echo xla("View Messages"); ?>">
-                    <i class="fa fa-envelope"></i>&nbsp;<span class="badge badge-primary" style="display:inline" data-bind="text: messages()"></span>
+                    <i class="fa fa-envelope" aria-hidden="true"></i><span class="sr-only"><?php echo xlt("View Messages"); ?></span>&nbsp;<span class="badge badge-primary" style="display:inline" data-bind="text: messages()"></span>
                 </a>
             </span>
             <!-- /ko --><!-- messages -->
@@ -198,21 +202,21 @@ switch ($search_any_type) {
                 <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="portalMsgAlerts">
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewPortalMail">
-                            <i class="fa fa-envelope"></i>&nbsp;<?php echo xlt("Portal Mail"); ?>&nbsp;
+                            <i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<?php echo xlt("Portal Mail"); ?>&nbsp;
                             <span class="badge badge-success" style="display:inline" data-bind="text: portalMail()"></span>
                         </a>
                     </li>
                     <li class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewPortalAudits">
-                            <i class="fa fa-align-justify"></i>&nbsp;<?php echo xlt("Portal Audits"); ?>&nbsp;
+                            <i class="fa fa-align-justify" aria-hidden="true"></i>&nbsp;<?php echo xlt("Portal Audits"); ?>&nbsp;
                             <span class="badge badge-success" style="display:inline" data-bind="text: portalAudits()"></span>
                         </a>
                     </li>
                     <li class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewPortalPayments">
-                            <i class="fa fa-credit-card"></i>&nbsp;<?php echo xlt("Portal Payments"); ?>&nbsp;<span class="badge badge-success" style="display:inline" data-bind="text: portalPayments()"></span>
+                            <i class="fa fa-credit-card" aria-hidden="true"></i>&nbsp;<?php echo xlt("Portal Payments"); ?>&nbsp;<span class="badge badge-success" style="display:inline" data-bind="text: portalPayments()"></span>
                         </a>
                     </li>
                 </ul>
@@ -232,14 +236,14 @@ switch ($search_any_type) {
                 <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="servicesMsgAlerts">
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewFaxCount">
-                            <i class="fa fa-solid fa-fax"></i>&nbsp;<?php echo xlt("Pending Faxes"); ?>&nbsp;
+                            <i class="fa fa-solid fa-fax" aria-hidden="true"></i>&nbsp;<?php echo xlt("Pending Faxes"); ?>&nbsp;
                             <span class="badge badge-success" style="display:inline" data-bind="text: faxAlerts()"></span>
                         </a>
                     </li>
                     <li class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewSmsCount">
-                            <i class="fa fa-sms"></i>&nbsp;<?php echo xlt("Pending SMS"); ?>&nbsp;
+                            <i class="fa fa-sms" aria-hidden="true"></i>&nbsp;<?php echo xlt("Pending SMS"); ?>&nbsp;
                             <span class="badge badge-success" style="display:inline" data-bind="text: smsAlerts()"></span>
                         </a>
                     </li>
