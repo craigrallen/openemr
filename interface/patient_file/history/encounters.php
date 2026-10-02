@@ -202,10 +202,10 @@ function generatePageElement($start, $pagesize, $billing, $issue, $text): void
 <?php } ?>
 <!-- Not sure why we don't want this ui to be B.S responsive. -->
 <?php Header::setupHeader(['no_textformat']); ?>
-<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url(filemtime(__DIR__ . "/../../clinical-workspace/visit-history.css")); ?>">
-<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(filemtime(__DIR__ . "/../../clinical-workspace/mode.js")); ?>" defer></script>
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../clinical-workspace/visit-history.css") ?: 0)); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../clinical-workspace/mode.js") ?: 0)); ?>" defer></script>
 
-<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url(filemtime(__DIR__ . "/../../../library/js/ajtooltip.js")); ?>"></script>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../../library/js/ajtooltip.js") ?: 0)); ?>"></script>
 
 <script>
 
