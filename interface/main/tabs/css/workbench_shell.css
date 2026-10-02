@@ -215,10 +215,45 @@ body.workbench-active { width: 100% !important;
   min-height: 0;
   background: var(--wb-canvas); }
 
+html:has(#mainBox.workbench-legacy),
+body:has(#mainBox.workbench-legacy) {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#mainBox.workbench-legacy {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#mainBox.workbench-legacy > nav { flex-wrap: wrap; }
+
 #mainBox.workbench-legacy .workbench-rail,
 #mainBox.workbench-legacy .workbench-layout,
 #mainBox.workbench-legacy .workbench-content-head,
 #mainBox.workbench-legacy .workbench-mobile-toggle { display: none; }
+
+/* Browsers without Element.moveBefore keep the iframe's ancestor chain in
+   place. Flatten only the visual wrappers, then mirror the full/compact theme
+   rules that normally target direct children of #mainBox. */
+#mainBox.workbench-static-legacy.workbench-legacy .workbench-layout { display: contents; }
+
+#mainBox.workbench-static-legacy.workbench-legacy .workbench-main { display: contents; }
+
+#mainBox.workbench-static-legacy.workbench-legacy #workbenchContent > :is(#attendantData, #tabs_div, #mainFrames_div) {
+  flex: 0 1 auto;
+  margin: 0;
+}
+
+#mainBox.workbench-static-legacy.workbench-legacy #mainFrames_div {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  z-index: 3;
+}
 
 #mainBox .workbench-backdrop { display: none; }
 

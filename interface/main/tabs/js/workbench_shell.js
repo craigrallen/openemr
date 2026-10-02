@@ -44,6 +44,7 @@
         var actionComputeds = [];
         var originalNodes = ['attendantData', 'tabs_div', 'mainFrames_div'].map(function (id) { return root.querySelector('#' + id); });
         var contentHead = root.querySelector('.workbench-content-head');
+        var canMovePreservingState = typeof root.moveBefore === 'function' && typeof main.moveBefore === 'function';
         var focusReturn = mobileToggle;
         var strings = {
             patient: rail.dataset.msgPatient || rail.dataset.workbenchUnavailable,
@@ -59,13 +60,23 @@
         function setMode(isLegacy) {
             closeMobile(false);
             legacy = isLegacy;
-            if (legacy) {
-                originalNodes.forEach(function (node) { if (node) root.insertBefore(node, layout); });
-            } else {
-                originalNodes.forEach(function (node) { if (node) main.appendChild(node); });
-                if (contentHead && originalNodes[0]) main.insertBefore(contentHead, originalNodes[1]);
+            // Ordinary DOM reparenting reloads nested browsing contexts, even when
+            // the iframe element itself is reused. Leave the tree in place unless
+            // the browser provides the state-preserving move primitive.
+            if (canMovePreservingState && legacy) {
+                originalNodes.forEach(function (node) {
+                    if (node && node.parentElement !== root) root.moveBefore(node, layout);
+                });
+            } else if (canMovePreservingState) {
+                if (originalNodes[0] && originalNodes[0].parentElement !== main) {
+                    main.moveBefore(originalNodes[0], contentHead || main.firstChild);
+                }
+                originalNodes.slice(1).forEach(function (node) {
+                    if (node && node.parentElement !== main) main.moveBefore(node, null);
+                });
             }
             root.classList.toggle('workbench-legacy', legacy);
+            root.classList.toggle('workbench-static-legacy', legacy && !canMovePreservingState);
             root.ownerDocument.documentElement.classList.toggle('workbench-active', !legacy);
             root.ownerDocument.body.classList.toggle('workbench-active', !legacy);
             modeButton.textContent = legacy ? modeButton.dataset.workbenchLabel : modeButton.dataset.legacyLabel;

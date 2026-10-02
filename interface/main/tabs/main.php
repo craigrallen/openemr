@@ -48,6 +48,7 @@ $logoService = new LogoService();
 $menuLogo = $logoService->getLogo('core/menu/primary/');
 $versionService = new VersionService();
 $softwareVersion = text((string) $versionService->getSoftwareVersion());
+$clinicalUiAssetVersion = '20261002';
 // Registration status and options.
 $productRegistration = new ProductRegistrationService();
 $product_row = $productRegistration->getProductDialogStatus();
@@ -383,8 +384,8 @@ $twig = ServiceContainer::getTwig();
     <script src="js/patient_data_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/therapy_group_data_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/tabs_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
-    <script src="js/menu_launcher.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
-    <script src="js/workbench_shell.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
+    <script src="js/menu_launcher.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>"></script>
+    <script src="js/workbench_shell.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>"></script>
     <script src="js/application_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/frame_proxies.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/dialog_utils.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
@@ -471,7 +472,7 @@ $twig = ServiceContainer::getTwig();
         min-width: max-content;     /* expands to fit the widest item */
       }
     </style>
-    <link rel="stylesheet" href="css/workbench_shell.css?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>">
+    <link rel="stylesheet" href="css/workbench_shell.css?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>">
 </head>
 
 <body class="min-vw-100">

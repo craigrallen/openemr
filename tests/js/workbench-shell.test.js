@@ -142,17 +142,79 @@ test('workbench viewport chain is bounded and categories start collapsed', () =>
     expect(Array.from(document.querySelectorAll('.workbench-branch')).every(branch => !branch.open)).toBe(true);
 });
 
-test('legacy mode moves original live nodes back to direct children in order', () => {
+test('without moveBefore, switching modes never reparents the live iframe or its ancestors', () => {
     setup();
     const box = document.querySelector('#mainBox');
     const ids = ['attendantData', 'tabs_div', 'mainFrames_div'];
     const nodes = ids.map(id => document.getElementById(id));
+    const originalParents = nodes.map(node => node.parentElement);
+    const insert = jest.spyOn(box, 'insertBefore');
+    const boxAppend = jest.spyOn(box, 'appendChild');
+    const main = document.querySelector('#workbenchContent');
+    const append = jest.spyOn(main, 'appendChild');
+    const mainInsert = jest.spyOn(main, 'insertBefore');
     document.querySelector('[data-workbench-mode]').click();
-    expect(nodes.map(node => node.parentElement)).toEqual([box, box, box]);
-    expect(nodes.map(node => node.id)).toEqual(ids);
-    expect(nodes[2].querySelector('iframe')).toBeTruthy();
+    expect(box.classList.contains('workbench-static-legacy')).toBe(true);
+    expect(nodes.map(node => node.parentElement)).toEqual(originalParents);
     document.querySelector('[data-workbench-mode]').click();
-    expect(nodes.every(node => node.parentElement.id === 'workbenchContent')).toBe(true);
+    expect(nodes.map(node => node.parentElement)).toEqual(originalParents);
+    expect(insert).not.toHaveBeenCalled();
+    expect(boxAppend).not.toHaveBeenCalled();
+    expect(append).not.toHaveBeenCalled();
+    expect(mainInsert).not.toHaveBeenCalled();
+    insert.mockRestore();
+    boxAppend.mockRestore();
+    append.mockRestore();
+    mainInsert.mockRestore();
+});
+
+test('native moveBefore keeps direct-child legacy order and uses no ordinary reparenting', () => {
+    const nativeMove = Element.prototype.moveBefore;
+    const moves = [];
+    Element.prototype.moveBefore = function (node, before) {
+        moves.push([this, node, before]);
+        if (before) this.insertBefore(node, before);
+        else this.appendChild(node);
+    };
+    try {
+        setup();
+        const box = document.querySelector('#mainBox');
+        const nodes = ['attendantData', 'tabs_div', 'mainFrames_div'].map(id => document.getElementById(id));
+        moves.length = 0;
+        document.querySelector('[data-workbench-mode]').click();
+        expect(nodes.map(node => node.parentElement)).toEqual([box, box, box]);
+        expect(nodes.map(node => node.id)).toEqual(['attendantData', 'tabs_div', 'mainFrames_div']);
+        expect(moves).toHaveLength(3);
+        expect(moves.every(move => move[0] === box)).toBe(true);
+        document.querySelector('[data-workbench-mode]').click();
+        expect(nodes.every(node => node.parentElement.id === 'workbenchContent')).toBe(true);
+        expect(moves).toHaveLength(6);
+        expect(box.classList.contains('workbench-static-legacy')).toBe(false);
+    } finally {
+        if (nativeMove) Element.prototype.moveBefore = nativeMove;
+        else delete Element.prototype.moveBefore;
+    }
+});
+
+test('static legacy fallback exposes original nodes as flex items with full and compact frame rules', () => {
+    const css = fs.readFileSync(path.join(root, 'interface/main/tabs/css/workbench_shell.css'), 'utf8');
+    expect(css).toMatch(/#mainBox\.workbench-static-legacy\.workbench-legacy \.workbench-layout\s*\{[^}]*display:\s*contents/s);
+    expect(css).toMatch(/#mainBox\.workbench-static-legacy\.workbench-legacy \.workbench-main\s*\{[^}]*display:\s*contents/s);
+    expect(css).toMatch(/#mainBox\.workbench-static-legacy\.workbench-legacy #mainFrames_div\s*\{[^}]*flex:\s*1 0 auto/s);
+});
+
+test('legacy toolbar wraps rather than stretching the viewport with the mode switch', () => {
+    const css = fs.readFileSync(path.join(root, 'interface/main/tabs/css/workbench_shell.css'), 'utf8');
+    expect(css).toMatch(/#mainBox\.workbench-legacy\s*\{[^}]*min-width:\s*0/s);
+    expect(css).toMatch(/#mainBox\.workbench-legacy\s*>\s*nav\s*\{[^}]*flex-wrap:\s*wrap/s);
+});
+
+test('clinical UI scripts use the same changed asset version in main.php', () => {
+    const php = fs.readFileSync(path.join(root, 'interface/main/tabs/main.php'), 'utf8');
+    expect(php).toMatch(/\$clinicalUiAssetVersion\s*=\s*'[^']+'/);
+    for (const asset of ['menu_launcher.js', 'workbench_shell.js']) {
+        expect(php).toContain(`js/${asset}?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>`);
+    }
 });
 
 test('blocked descendant explains the ancestor requirement without dispatch', () => {
