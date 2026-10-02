@@ -521,7 +521,6 @@ $twig = ServiceContainer::getTwig();
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
-            <?php echo $twig->render("interface/main/tabs/menu_launcher.html.twig", []); ?>
             <button type="button" class="workbench-mobile-toggle" data-workbench-mobile-toggle aria-controls="workbenchRail" aria-expanded="false"><?php echo xlt('Navigation'); ?></button>
             <?php if (OEGlobalsBag::getInstance()->get('search_any_patient') != 'none') : ?>
                 <form name="frm_search_globals" class="form-inline">
@@ -584,15 +583,6 @@ $twig = ServiceContainer::getTwig();
     <script>
         ko.applyBindings(app_view_model);
 
-        // Searchable "All menus" launcher over the same live menu tree; the dropdown menu is unchanged.
-        const menuLauncherRoot = document.querySelector('[data-oe-menu-launcher="root"]');
-        if (menuLauncherRoot) {
-            OpenEMRMenuLauncher.create({
-                root: menuLauncherRoot,
-                menu: app_view_model.application_data.menu,
-                groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
-            });
-        }
         OpenEMRWorkbenchShell.create({
             root: document.getElementById('mainBox'),
             menu: app_view_model.application_data.menu,
