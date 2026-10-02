@@ -158,7 +158,20 @@ body.oe-clinical-workspace.oe-clinical-calendar #bigCal {
 body.oe-clinical-workspace.oe-clinical-calendar .providerheader {
   background-color: var(--oe-petrol);
   border-bottom-color: var(--oe-petrol-deep);
-  color: #fff;
+}
+
+/*
+ * Dark and solar themes force provider header and close-button text dark with !important
+ * (ajax_calendar_sass.scss); match it here so the name and close control stay readable on petrol.
+ * UI chrome only: event, status and facility colours are never forced.
+ */
+body.oe-clinical-workspace.oe-clinical-calendar .providerheader,
+body.oe-clinical-workspace.oe-clinical-calendar .providerheader .providerXbtn {
+  color: #fff !important;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .providerheader .providerXbtn:hover {
+  color: var(--oe-petrol-wash) !important;
 }
 
 body.oe-clinical-workspace.oe-clinical-calendar #bigCal .providerday {

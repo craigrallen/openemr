@@ -181,6 +181,19 @@ describe('calendar.css preserves clinical meaning and booking geometry', () => {
         });
     });
 
+    test('provider header and its close control stay white on petrol over the dark/solar theme !important override', () => {
+        // ajax_calendar_sass.scss forces `.providerheader` / `.providerXbtn` colour with !important in dark and solar
+        // themes; without a matching scoped override that dark text lands on the petrol header (~2.4:1).
+        const forced = (sel) => calendarRules().filter((r) => r.selector === `${SCOPE} ${sel}` && r.prop === 'color' && r.important);
+        expect(forced('.providerheader').map((r) => r.value)).toEqual(['#fff']);
+        expect(forced('.providerheader .providerXbtn').map((r) => r.value)).toEqual(['#fff']);
+        expect(forced('.providerheader .providerXbtn:hover').length).toBe(1);
+        // Only these UI-chrome selectors may use !important; the outer week/day unselect-all button is not on petrol.
+        const chrome = new Set(['.providerheader', '.providerheader .providerXbtn', '.providerheader .providerXbtn:hover'].map((s) => `${SCOPE} ${s}`));
+        const important = calendarRules().filter((r) => r.important);
+        expect(important.filter((r) => !chrome.has(r.selector) || r.prop !== 'color')).toEqual([]);
+    });
+
     test('hides nothing and never forces clinical colours with !important', () => {
         const rules = calendarRules();
         expect(rules.filter((r) => r.prop === 'display' && r.value === 'none')).toEqual([]);

@@ -33,6 +33,8 @@ The stylesheet does not set colour, background or a `!important` rule on:
 - holiday cells or labels,
 - coloured text inside events.
 
+The only `!important` rules are the provider header text and its close control (`.providerheader`, `.providerheader .providerXbtn`). Dark and solar themes force those dark with `!important` in `ajax_calendar_sass.scss`, which would leave them unreadable (about 2.4:1) on the petrol header, so they are forced white instead. The outer unselect-all `.providerXbtn` in the time column is not on petrol and keeps its theme colour.
+
 So category colours (inline `background-color`), the other-facility grey, no-show strikethrough, status text and facility colours all render exactly as before.
 
 It also does not change any height, padding, margin, border width, font size, position or display on:
