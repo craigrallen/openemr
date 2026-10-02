@@ -51,6 +51,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\BC\Utilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Calendar\DayOfWeek;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -129,6 +130,10 @@ $eventDispatcher = OEGlobalsBag::getInstance()->getKernel()->getEventDispatcher(
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <?php Header::setupHeader(['common', 'datetime-picker', 'opener']); ?>
+<!-- Workbench presentation: inert unless mode.js finds an active same-origin workbench host. -->
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/appointment.css?v=<?php echo attr_url($clinicalAssets->version('appointment.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 <title><?php echo $eid ? xlt('Edit') : xlt('Add New{{Event}}') ?> <?php echo xlt('Event');?></title>
 
 <!-- validation library -->
@@ -1114,9 +1119,9 @@ $eventDispatcher->dispatch(new AppointmentRenderEvent($row), AppointmentRenderEv
     }
 </style>
 </head>
-<body class="add-edit-event">
+<body class="add-edit-event oe-clinical-appointment">
 <div class="container-fluid">
-<nav class='mb-3'>
+<nav class="mb-3 oe-appt-tabs">
     <?php
         $provider_class = '';
         $group_class = '';
@@ -1239,7 +1244,7 @@ $classpati = '';
 </div>
 <?php
 if (empty($_GET['prov']) && empty($_GET['group'])) { ?>
-    <div class="jumbotron jumbotron-fluid px-2 py-2 my-2" id="patient_details">
+    <div class="jumbotron jumbotron-fluid px-2 py-2 my-2 oe-appt-subject" id="patient_details">
         <div class="form-group">
             <label for="form_patient"><?php echo xlt('Patient'); ?>:</label>
             <input class='form-control' type='text' name='form_patient' id="form_patient" style='cursor:pointer;' placeholder='<?php echo xla('Click to select'); ?>' value='<?php echo is_null($patientname) ? '' : attr($patientname); ?>' onclick='sel_patient()' title='<?php echo xla('Click to select patient'); ?>' />
@@ -1284,7 +1289,7 @@ if (empty($_GET['prov']) && empty($_GET['group'])) { ?>
 <?php } ?>
 <?php
 if ($_GET['group'] === true && $have_group_global_enabled) { ?>
-    <div class="form-row mx-2" id="group_details">
+    <div class="form-row mx-2 oe-appt-subject" id="group_details">
         <div class="col-sm form-group">
             <label for='form_group'><?php echo xlt('Group'); ?>:</label>
             <input class='form-control' type='text' size='10' name='form_group' id="form_group" style='cursor:pointer;cursor:hand' placeholder='<?php echo xla('Click to select'); ?>' value='<?php echo is_null($groupname) ? '' : attr($groupname); ?>' onclick='sel_group()' title='<?php echo xla('Click to select group'); ?>' readonly />
@@ -1423,7 +1428,7 @@ function isRegularRepeat($repeat): bool
     repeating mechanism is being used, and load settings accordingly.
     */
 ?>
-<div class="jumbotron jumbotron-fluid px-3 py-4 my-2">
+<div class="jumbotron jumbotron-fluid px-3 py-4 my-2 oe-appt-schedule">
     <div class="form-row mb-sm-2">
         <div class='col-sm-2 form-check form-check-inline'>
             <input type='radio' class='form-check-input' name='form_allday' onclick='set_allday()' value='1' id='rballday1'<?php echo ($thisduration == 1440) ? " checked" : ""; ?> />
@@ -1449,7 +1454,7 @@ function isRegularRepeat($repeat): bool
     <div class="form-row mb-sm-2">
         <div class="col-sm form-check-inline">
             <input class='form-check-input' type='checkbox' name='form_repeat' id="form_repeat" onclick='set_repeat(this)' value='1'<?php echo (isRegularRepeat($repeats)) ? " checked" : ""; ?>/>
-            <label class='form-check-label' id='tdrepeat1'><?php echo xlt('Repeats'); ?></label>
+            <label class='form-check-label' for='form_repeat' id='tdrepeat1'><?php echo xlt('Repeats'); ?></label>
         </div>
         <input type='hidden' name='form_repeat_exdate' id='form_repeat_exdate' value='<?php echo attr($repeatexdate ?? ''); ?>' />
         <!-- dates excluded from the repeat -->
@@ -1561,7 +1566,7 @@ function isRegularRepeat($repeat): bool
 <?php
 if (empty($_GET['prov'])) { ?>
     <div class="col-sm form-group">
-        <label><?php echo xlt('Room Number'); ?>:</label>
+        <label for='form_room'><?php echo xlt('Room Number'); ?>:</label>
         <?php
             echo generate_select_list('form_room', 'patient_flow_board_rooms', $pcroom, xl('Room Number'));
         ?>
@@ -1570,8 +1575,8 @@ if (empty($_GET['prov'])) { ?>
 </div><!-- status row -->
 <div class="form-row mx-2">
     <div class="col-sm form-group">
-        <label><?php echo xlt('Comments'); ?>:</label>
-        <input class='form-control' type='text' name='form_comments' value='<?php echo attr($hometext); ?>' title='<?php echo xla('Optional information about this event'); ?>' />
+        <label for='form_comments'><?php echo xlt('Comments'); ?>:</label>
+        <input class='form-control' type='text' name='form_comments' id='form_comments' value='<?php echo attr($hometext); ?>' title='<?php echo xla('Optional information about this event'); ?>' />
     </div>
 </div>
 <?php
@@ -1590,7 +1595,7 @@ if (empty($_GET['prov'])) { ?>
         <input type="button" class="btn btn-primary" id="current_event" value="<?php echo xla('Current'); ?>" />
     </div>
 </div>
-<div class="form-row mx-2 mt-3">
+<div class="form-row mx-2 mt-3 oe-appt-actions">
     <input class="col-sm mx-sm-2 my-2 my-sm-auto btn btn-primary" type='button' name='form_save' id='form_save' value='<?php echo xla('Save'); ?>' />
     <?php if (!(OEGlobalsBag::getInstance()->getBoolean('select_multi_providers'))) { //multi providers appt is not supported by check slot avail window, so skip ?>
         <input class="col-sm mx-sm-2 my-2 my-sm-auto btn btn-secondary" type='button' id='find_available' value='<?php echo xla('Find Available{{Provider}}'); ?>' />
