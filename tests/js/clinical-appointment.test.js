@@ -97,8 +97,12 @@ describe('appointment editor keeps every existing control', () => {
 describe('appointment editor loads the workbench presentation', () => {
     test('head links appointment.css and the shared mode.js, escaped and cache-busted', () => {
         const src = source();
-        const asset = (file) => `<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/${file}?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . '/../../clinical-workspace/${file}') ?: 0)); ?>`;
+        const asset = (file) => `<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/${file}?v=<?php echo attr_url($clinicalAssets->version('${file}')); ?>`;
         const head = src.slice(src.indexOf('<head>'), src.indexOf('</head>'));
+        expect(src).toContain('use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;');
+        expect(head).toContain('<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>');
+        // Versions come from the helper; no filesystem root may appear in a served URL.
+        expect(head).not.toMatch(/filemtime|__DIR__/);
         expect(head).toContain(`<link rel="stylesheet" href="${asset('appointment.css')}">`);
         expect(head).toContain(`<script src="${asset('mode.js')}" defer></script>`);
         // After the theme so the scoped rules win on equal specificity.
