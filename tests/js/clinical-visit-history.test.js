@@ -16,10 +16,17 @@ const scope = 'body.oe-clinical-workspace.oe-clinical-history';
 test('real Visit History route loads escaped, independently versioned assets and keeps its direct-page fallback', () => {
     const php = source();
     expect(php).toMatch(/<body class="oe-clinical-history">/);
+    expect(php).toContain('use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;');
+    expect(php).toContain('$clinicalAssets = new ClinicalWorkspaceAssets();');
+    expect(php).toContain("$clinicalTooltipAssets = new ClinicalWorkspaceAssets(dirname(__DIR__, 3) . '/library/js');");
     for (const asset of ['visit-history.css', 'mode.js']) {
-        expect(php).toContain(`/interface/clinical-workspace/${asset}?v=`);
-        expect(php).toMatch(new RegExp(`filemtime\\(__DIR__ \\. "/\\.\\./\\.\\./clinical-workspace/${asset.replace('.', '\\.')}"\\)`));
+        const url = php.split('\n').find(line => line.includes(`/interface/clinical-workspace/${asset}?v=`));
+        expect(url).toContain(`attr_url($clinicalAssets->version('${asset}'))`);
+        expect(url).not.toMatch(/filemtime|__DIR__/);
     }
+    const tooltipUrl = php.split('\n').find(line => line.includes('/library/js/ajtooltip.js?v='));
+    expect(tooltipUrl).toContain("attr_url($clinicalTooltipAssets->version('ajtooltip.js'))");
+    expect(tooltipUrl).not.toMatch(/filemtime|__DIR__/);
     expect(php).toMatch(/attr\(OEGlobalsBag::getInstance\(\)->getWebRoot\(\)\)/);
 
     document.body.className = 'oe-clinical-history';

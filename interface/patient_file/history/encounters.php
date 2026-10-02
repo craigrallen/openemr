@@ -27,6 +27,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Billing\InvoiceSummary;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Forms\FormLocator;
 use OpenEMR\Common\Forms\FormReportRenderer;
@@ -202,10 +203,14 @@ function generatePageElement($start, $pagesize, $billing, $issue, $text): void
 <?php } ?>
 <!-- Not sure why we don't want this ui to be B.S responsive. -->
 <?php Header::setupHeader(['no_textformat']); ?>
-<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../clinical-workspace/visit-history.css") ?: 0)); ?>">
-<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../clinical-workspace/mode.js") ?: 0)); ?>" defer></script>
+<?php
+$clinicalAssets = new ClinicalWorkspaceAssets();
+$clinicalTooltipAssets = new ClinicalWorkspaceAssets(dirname(__DIR__, 3) . '/library/js');
+?>
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/visit-history.css?v=<?php echo attr_url($clinicalAssets->version('visit-history.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 
-<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url(sprintf('%d', filemtime(__DIR__ . "/../../../library/js/ajtooltip.js") ?: 0)); ?>"></script>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/library/js/ajtooltip.js?v=<?php echo attr_url($clinicalTooltipAssets->version('ajtooltip.js')); ?>"></script>
 
 <script>
 
