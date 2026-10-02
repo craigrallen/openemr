@@ -8,11 +8,12 @@
  * - Only INSERT and SELECT are issued (plus the core helpers the seeder needs:
  *   UuidRegistry, the `sequences` counter and Document storage, which are the
  *   same code paths the UI uses).
- * - begin/commit/rollback wrap one ADODB transaction on the shared connection,
- *   so uuid_registry rows, sequence bumps and document rows roll back too.
- *   Document FILES are not transactional: rollback() deletes the files this
- *   gateway wrote (and their now-empty pid directory). A hard crash between
- *   write and rollback can still orphan files; see docs/clinical-ui/DEMO-DATA.md.
+ * - transactional() runs the work inside QueryUtils::inTransaction() on the
+ *   shared connection, so uuid_registry rows, sequence bumps and document rows
+ *   roll back too. Document FILES are not transactional: when the work (or the
+ *   commit) throws, the files this gateway wrote are deleted before the
+ *   exception is rethrown; empty pid directories may remain. A hard crash
+ *   between write and rollback can still orphan files; see docs/clinical-ui/DEMO-DATA.md.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -50,33 +51,40 @@ final class OpenEmrSeedGateway implements SeedGateway
         $this->documentFactory = $documentFactory ?? static fn(): \Document => new \Document();
     }
 
-    public function begin(): void
-    {
-        QueryUtils::startTransaction();
-        $this->inTransaction = true;
-        $this->writtenFiles = [];
-    }
-
-    public function commit(): void
-    {
-        QueryUtils::commitTransaction();
-        $this->inTransaction = false;
-        $this->writtenFiles = [];
-    }
-
-    public function rollback(): void
+    /**
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public function transactional(callable $work): mixed
     {
         if ($this->inTransaction) {
-            QueryUtils::rollbackTransaction();
-            $this->inTransaction = false;
+            throw new \LogicException('Nested seed transactions are not supported.');
         }
-        // Document rows rolled back with the transaction; remove only the files this run wrote.
+        $this->inTransaction = true;
+        $this->writtenFiles = [];
+        try {
+            // Core commits on return and rolls back/rethrows observed failures.
+            // The legacy driver does not surface every COMMIT failure; see the
+            // documented test-only limitation rather than claiming acknowledgement.
+            return QueryUtils::inTransaction($work);
+        } catch (\Throwable $e) {
+            // Document rows rolled back with the transaction; remove only the files this run wrote.
+            $this->removeWrittenFiles();
+            throw $e;
+        } finally {
+            $this->inTransaction = false;
+            $this->writtenFiles = [];
+        }
+    }
+
+    private function removeWrittenFiles(): void
+    {
         foreach ($this->writtenFiles as $file) {
             if (is_file($file)) {
                 unlink($file);
             }
         }
-        $this->writtenFiles = [];
     }
 
     public function insert(string $table, array $row): int
@@ -92,7 +100,7 @@ final class OpenEmrSeedGateway implements SeedGateway
         $sql = 'INSERT INTO ' . $escapedTable . ' (' . implode(', ', $columns) . ') VALUES ('
             . implode(', ', array_fill(0, count($row), '?')) . ')';
         $id = QueryUtils::sqlInsert($sql, array_values($row));
-        return $this->autoIncrement($table) && is_numeric($id) ? (int) $id : 0;
+        return $this->autoIncrement($table) ? $id : 0;
     }
 
     public function findOne(string $table, array $criteria): ?array
@@ -106,7 +114,7 @@ final class OpenEmrSeedGateway implements SeedGateway
     {
         [$where, $binds] = $this->where($table, $criteria);
         $rows = QueryUtils::fetchRecords('SELECT * FROM ' . $this->table($table) . $where, $binds, true);
-        return array_values(array_map($this->scalarRow(...), $rows));
+        return array_map($this->scalarRow(...), $rows);
     }
 
     public function maxValue(string $table, string $column): int
@@ -121,7 +129,7 @@ final class OpenEmrSeedGateway implements SeedGateway
     public function newUuid(string $table): string
     {
         $uuid = UuidRegistry::getRegistryForTable($table)->createUuid();
-        if (!is_string($uuid) || strlen($uuid) !== 16) {
+        if (strlen($uuid) !== 16) {
             throw new RuntimeException('UuidRegistry did not return a 16-byte uuid.');
         }
         return $uuid;
@@ -145,7 +153,7 @@ final class OpenEmrSeedGateway implements SeedGateway
         // Core persist() otherwise HelpfulDie()s (exit) on SQL failure, skipping rollback().
         $document->setThrowExceptionOnError(true);
         try {
-            $error = $document->createDocument($pid, $categoryId, $filename, $mimetype, $data);
+            $error = $document->createDocument((string) $pid, $categoryId, $filename, $mimetype, $data);
         } catch (\Throwable $e) {
             // The file is written before the uuid/persist steps that can throw.
             $this->trackWrittenFile($document);

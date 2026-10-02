@@ -25,7 +25,6 @@ declare(strict_types=1);
 namespace OpenEMR\Demo\Seed;
 
 use DateTimeImmutable;
-use Throwable;
 
 final class DemoSeeder
 {
@@ -45,7 +44,7 @@ final class DemoSeeder
     private array $tests = [];
     /** @var array<string, array{id: int, duration: int}> */
     private array $calendarCategories = [];
-    private string $now;
+    private readonly string $now;
 
     public function __construct(private readonly SeedGateway $gateway, private readonly DemoCalendar $calendar)
     {
@@ -74,15 +73,10 @@ final class DemoSeeder
         $this->insurers = [];
         $this->tests = [];
         $this->calendarCategories = [];
-        $db->begin();
-        try {
+        return $db->transactional(function (): SeedReport {
             $this->run();
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollback();
-            throw $e;
-        }
-        return $this->report;
+            return $this->report;
+        });
     }
 
     private function run(): void
@@ -268,7 +262,12 @@ final class DemoSeeder
     /** @return array{id: int, username: string} */
     private function frontDesk(): array
     {
-        return $this->user(Val::str($this->fixture->staff[array_key_last($this->fixture->staff)], 'key'));
+        $staff = $this->fixture->staff;
+        $last = array_key_last($staff);
+        if ($last === null) {
+            throw new InvalidFixtureException('Fixture defines no staff.');
+        }
+        return $this->user(Val::str($staff[$last], 'key'));
     }
 
     /**

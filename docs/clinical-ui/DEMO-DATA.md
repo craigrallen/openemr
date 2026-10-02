@@ -57,8 +57,8 @@ documents (thumbnail paths).
 
 ## Failure behaviour
 
-- Any failure rolls back the DB transaction and unlinks only the document
-  files this run wrote. Core `Document` persistence is switched to throwing
+- Observed exceptions roll back the DB transaction and unlink only the document
+  files this run wrote. The gateway now uses the repository's `QueryUtils::inTransaction()` wrapper rather than deprecated manual transaction methods. The underlying legacy ADODB/mysqli commit path does not surface every COMMIT failure; commit acknowledgement and cleanup under such an unreported failure remain an inherited, unverified limitation. This is a test-only seeder, not a production-safe commit guarantee. Independent review raised this limitation; no core database behavior was broadened during the CI repair. Core `Document` persistence is switched to throwing
   (`setThrowExceptionOnError(true)`) so an SQL failure no longer `HelpfulDie()`s
   past the rollback; files written before a uuid/persist exception are tracked
   and removed. Error-string returns from core are never treated as our file
@@ -81,8 +81,8 @@ See `CoverageManifest` for the authoritative list. The live inventory's nine gap
 
 | Suite | Result | Context |
 |---|---|---|
-| Isolated `tests/Tests/Isolated/Demo` | 86 tests / 412 assertions PASS | Controller rerun with `vendor/bin/phpunit -c phpunit-isolated.xml tests/Tests/Isolated/Demo/Seed` |
-| Real CLI/database/storage integration | 9 tests / 156 assertions PASS | Controller restored disposable baseline, disabled `rx_send_email`, and ran both suites as `apache` with `--no-configuration --bootstrap vendor/autoload.php --do-not-cache-result`; includes duplicate rerun, relationships/UUIDs, mid-run rollback, post-file-write failure cleanup and preservation of preexisting document contents |
+| Isolated `tests/Tests/Isolated/Demo` | 87 tests / 525 assertions PASS | Controller rerun with `vendor/bin/phpunit -c phpunit-isolated.xml tests/Tests/Isolated/Demo/Seed` |
+| Real CLI/database/storage integration | 9 tests / 343 assertions PASS | Controller restored disposable baseline, disabled `rx_send_email`, and ran both suites as `apache` with `--no-configuration --bootstrap vendor/autoload.php --do-not-cache-result`; includes duplicate rerun, relationships/UUIDs, mid-run rollback, post-file-write failure cleanup and preservation of preexisting document contents |
 | PHPCS | PASS | `vendor/bin/phpcs --report=summary src/Demo contrib/util/demo-seed tests/Tests/Isolated/Demo tests/Tests/Demo` |
 | Live Railway read-back | PASS | 6 synthetic patients, 183 tracked entries, expected fixture/relationships verified, rerun 0 inserts; 9 coverage gaps retained |
 

@@ -19,11 +19,18 @@ namespace OpenEMR\Demo\Seed;
 
 interface SeedGateway
 {
-    public function begin(): void;
-
-    public function commit(): void;
-
-    public function rollback(): void;
+    /**
+     * Run $work using the gateway's transaction implementation: request commit
+     * when it returns, roll back writes and gateway-owned document files when
+     * it throws, then rethrow. Nested calls are not supported. Commit
+     * acknowledgement is limited by the underlying database driver; this port
+     * does not promise to detect failures the driver does not report.
+     *
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public function transactional(callable $work): mixed;
 
     /**
      * @param array<string, scalar|null> $row

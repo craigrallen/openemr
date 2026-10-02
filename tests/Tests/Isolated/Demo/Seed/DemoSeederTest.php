@@ -108,6 +108,8 @@ final class DemoSeederTest extends TestCase
 
     /**
      * Deleting any seeded table (or its non-encounter subset) must make verification fail.
+     *
+     * @param array<string, string> $criteria
      */
     #[DataProvider('deletionProvider')]
     public function testVerifierFailsWhenSeededRecordsAreRemoved(string $table, array $criteria): void

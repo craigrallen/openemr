@@ -20,13 +20,25 @@ declare(strict_types=1);
 namespace OpenEMR\Tests\Demo\Seed;
 
 use mysqli;
+use mysqli_result;
+use OpenEMR\Demo\Seed\FixtureLoader;
+use OpenEMR\Demo\Seed\Val;
 use PHPUnit\Framework\Attributes\Depends;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Process\Process;
 
 final class DemoSeedContainerTest extends TestCase
 {
     private const SEED_KEY = 'SYNTHETIC-DEMO-SEED demo-v1';
     /** Tables the seeder writes, plus core side tables it drives. */
+    /**
+     * Gate and seed variables the CLI reads. Each is unset in the child unless a
+     * test passes it explicitly, so the parent shell cannot open or close the gate.
+     */
+    private const GATE_ENV = [
+        'APP_ENV', 'OPENEMR_ENV', 'RAILWAY_ENVIRONMENT_NAME',
+        'OPENEMR_DEMO_SEED_ALLOWED', 'OPENEMR_DEMO_SEED_TARGET', 'OPENEMR_DEMO_SEED_MARKER',
+    ];
     private const TABLES = [
         'ar_activity', 'ar_session', 'billing', 'categories_to_documents', 'documents', 'facility', 'form_care_plan',
         'form_clinical_instructions', 'form_clinical_notes', 'form_dictation', 'form_encounter',
@@ -60,10 +72,68 @@ final class DemoSeedContainerTest extends TestCase
         return self::$db ?? throw new \LogicException('No database connection.');
     }
 
+    private static function query(string $sql): mysqli_result
+    {
+        $result = self::db()->query($sql);
+        if (!$result instanceof mysqli_result) {
+            throw new \RuntimeException('Query did not return a result set: ' . $sql);
+        }
+        return $result;
+    }
+
     private static function scalar(string $sql): string
     {
-        $row = self::db()->query($sql)->fetch_row();
-        return (string) ($row[0] ?? '');
+        $row = self::query($sql)->fetch_row();
+        $value = is_array($row) ? ($row[0] ?? null) : null;
+        return match (true) {
+            $value === null => '',
+            is_string($value) => $value,
+            is_int($value) => (string) $value,
+            default => throw new \UnexpectedValueException('Non-scalar result for: ' . $sql),
+        };
+    }
+
+    private static function intScalar(string $sql): int
+    {
+        $value = self::scalar($sql);
+        if (!ctype_digit($value)) {
+            throw new \UnexpectedValueException('Non-integer result for: ' . $sql);
+        }
+        return (int) $value;
+    }
+
+    /** @return array<string, int> */
+    private static function intMap(mixed $value): array
+    {
+        self::assertIsArray($value);
+        $map = [];
+        foreach ($value as $key => $n) {
+            self::assertIsString($key);
+            self::assertIsInt($n);
+            $map[$key] = $n;
+        }
+        return $map;
+    }
+
+    /** @return array<string, string> sha256 by path for every file under $directory */
+    private static function fileSnapshot(string $directory): array
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+            if (!$file instanceof \SplFileInfo) {
+                throw new \UnexpectedValueException('Directory iterator yielded a non-file entry.');
+            }
+            if ($file->isFile()) {
+                $hash = hash_file('sha256', $file->getPathname());
+                if ($hash === false) {
+                    throw new \RuntimeException('Cannot hash ' . $file->getPathname());
+                }
+                $files[$file->getPathname()] = $hash;
+            }
+        }
+        ksort($files);
+        return $files;
     }
 
     /** @return array<string, int> */
@@ -71,7 +141,7 @@ final class DemoSeedContainerTest extends TestCase
     {
         $c = [];
         foreach (self::TABLES as $t) {
-            $c[$t] = (int) self::scalar("SELECT COUNT(*) FROM `{$t}`");
+            $c[$t] = self::intScalar("SELECT COUNT(*) FROM `{$t}`");
         }
         return $c;
     }
@@ -86,12 +156,10 @@ final class DemoSeedContainerTest extends TestCase
         if ($confirm) {
             $cmd[] = '--confirm-synthetic-seed=default';
         }
-        $base = ['PATH' => (string) getenv('PATH'), 'HOME' => (string) getenv('HOME')];
-        $proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, self::root(), $base + $env);
-        self::assertIsResource($proc);
-        $out = (string) stream_get_contents($pipes[1]);
-        $err = (string) stream_get_contents($pipes[2]);
-        return [proc_close($proc), $out, $err];
+        // Process inherits the parent environment; false unsets a variable in the child.
+        $process = new Process($cmd, self::root(), $env + array_fill_keys(self::GATE_ENV, false), null, 300);
+        $code = $process->run();
+        return [$code, $process->getOutput(), $process->getErrorOutput()];
     }
 
     /** @return array<string, string> */
@@ -109,7 +177,10 @@ final class DemoSeedContainerTest extends TestCase
         return self::counts();
     }
 
-    /** @param array<string, int> $baseline */
+    /**
+     * @param array<string, int> $baseline
+     * @return array<string, int> baseline counts
+     */
     #[Depends('testPreconditionDatabaseHasNoSyntheticDataAndVerifyFails')]
     public function testSeedWithoutGateIsRefusedAndWritesNothing(array $baseline): array
     {
@@ -124,37 +195,28 @@ final class DemoSeedContainerTest extends TestCase
         return $baseline;
     }
 
-    /** @param array<string, int> $baseline */
+    /**
+     * @param array<string, int> $baseline
+     * @return array<string, int> baseline counts
+     */
     #[Depends('testSeedWithoutGateIsRefusedAndWritesNothing')]
     public function testConflictMidRunRollsBackEveryInsert(array $baseline): array
     {
         // An unmarked patient holding the LAST fixture pubpid: facility, users, lab,
         // calendar and earlier patients are inserted before the conflict is hit.
-        $fixture = json_decode((string) file_get_contents(self::root() . '/contrib/util/demo-seed/fixtures/synthetic-demo-v1.json'), true);
-        self::assertIsArray($fixture);
-        $last = end($fixture['patients']);
-        self::assertIsArray($last);
-        $pubpid = self::db()->real_escape_string((string) $last['pubpid']);
+        $patients = FixtureLoader::fromFile(self::root() . '/contrib/util/demo-seed/fixtures/synthetic-demo-v1.json')->patients;
+        $last = end($patients);
+        self::assertIsArray($last, 'fixture must define patients');
+        $pubpid = self::db()->real_escape_string(Val::str($last, 'pubpid'));
         self::db()->query("INSERT INTO patient_data (pid, pubpid, fname, lname) VALUES (999999, '{$pubpid}', 'Unrelated', 'Existing')");
         $before = self::counts();
         $seqBefore = self::scalar('SELECT id FROM sequences');
         $docsDir = self::root() . '/sites/default/documents';
         // Empty directories are permitted after rollback; every file and its
         // contents must be unchanged, including documents present beforehand.
-        $fileSnapshot = static function (string $directory): array {
-            $files = [];
-            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $files[$file->getPathname()] = hash_file('sha256', $file->getPathname());
-                }
-            }
-            ksort($files);
-            return $files;
-        };
-        $filesBefore = $fileSnapshot($docsDir);
+        $filesBefore = self::fileSnapshot($docsDir);
         [$code, , $err] = self::cli('seed', self::allowEnv(), true);
-        self::assertSame($filesBefore, $fileSnapshot($docsDir), 'rollback must remove only its document files and preserve existing contents');
+        self::assertSame($filesBefore, self::fileSnapshot($docsDir), 'rollback must remove only its document files and preserve existing contents');
         $after = self::counts();
         $seqAfter = self::scalar('SELECT id FROM sequences');
         self::db()->query('DELETE FROM patient_data WHERE pid = 999999');
@@ -166,7 +228,10 @@ final class DemoSeedContainerTest extends TestCase
         return $baseline;
     }
 
-    /** @param array<string, int> $baseline */
+    /**
+     * @param array<string, int> $baseline
+     * @return array<string, int> counts after seeding
+     */
     #[Depends('testConflictMidRunRollsBackEveryInsert')]
     public function testDryRunWritesNothingAndSeedInsertsExactlyThePlan(array $baseline): array
     {
@@ -181,10 +246,12 @@ final class DemoSeedContainerTest extends TestCase
         $seeded = json_decode($out, true);
         self::assertIsArray($seeded);
         self::assertSame([], $seeded['verify_failures']);
-        self::assertSame($plan['would_insert'], $seeded['inserted']);
+        $wouldInsert = self::intMap($plan['would_insert'] ?? null);
+        self::assertSame($wouldInsert, self::intMap($seeded['inserted'] ?? null));
 
         $after = self::counts();
-        foreach ($plan['would_insert'] as $table => $n) {
+        foreach ($wouldInsert as $table => $n) {
+            self::assertArrayHasKey($table, $baseline, "{$table} is tracked");
             self::assertSame($baseline[$table] + $n, $after[$table], "row delta for {$table}");
         }
         return $after;
@@ -244,7 +311,7 @@ final class DemoSeedContainerTest extends TestCase
     #[Depends('testRerunIsIdempotentAndVerifyPasses')]
     public function testDocumentsAreStoredAndReadable(): void
     {
-        $res = self::db()->query("SELECT d.id, d.url, d.storagemethod, d.foreign_id, c.category_id FROM documents d LEFT JOIN categories_to_documents c ON c.document_id = d.id WHERE d.foreign_id IN (SELECT pid FROM patient_data WHERE genericname1 = 'synthetic_demo_seed')");
+        $res = self::query("SELECT d.id, d.url, d.storagemethod, d.foreign_id, c.category_id FROM documents d LEFT JOIN categories_to_documents c ON c.document_id = d.id WHERE d.foreign_id IN (SELECT pid FROM patient_data WHERE genericname1 = 'synthetic_demo_seed')");
         $n = 0;
         while ($row = $res->fetch_assoc()) {
             $n++;

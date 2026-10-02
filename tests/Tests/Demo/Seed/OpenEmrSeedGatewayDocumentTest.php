@@ -18,6 +18,7 @@ declare(strict_types=1);
 namespace OpenEMR\Tests\Demo\Seed;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Process\Process;
 
 final class OpenEmrSeedGatewayDocumentTest extends TestCase
 {
@@ -26,9 +27,14 @@ final class OpenEmrSeedGatewayDocumentTest extends TestCase
         if (getenv('DEMO_SEED_CONTAINER_TEST') !== 'disposable-local') {
             self::markTestSkipped('Set DEMO_SEED_CONTAINER_TEST=disposable-local to run against a disposable database.');
         }
-        $output = shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/probe/document-failure-probe.php') . ' 2>&1');
-        $r = json_decode(is_string($output) ? trim((string) strrchr("\n" . trim($output), "\n")) : '', true);
-        self::assertIsArray($r, 'probe output: ' . (string) $output);
+        // Same PHP binary, no shell; the probe inherits DEMO_SEED_CONTAINER_TEST.
+        $process = new Process([PHP_BINARY, __DIR__ . '/probe/document-failure-probe.php'], null, null, null, 300);
+        $process->run();
+        $output = $process->getOutput();
+        $lines = preg_split('/\R/', trim($output));
+        $last = is_array($lines) ? end($lines) : false;
+        $r = json_decode(is_string($last) ? $last : '', true);
+        self::assertIsArray($r, 'probe output: ' . $output . $process->getErrorOutput());
         self::assertGreaterThan(0, $r['pid'], 'needs one seeded synthetic patient');
         self::assertTrue($r['threw'], 'injected persist failure must surface as an exception');
         self::assertSame('injected persist failure after file write', $r['previous']);

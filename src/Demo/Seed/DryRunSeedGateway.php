@@ -24,16 +24,16 @@ final class DryRunSeedGateway implements SeedGateway
     {
     }
 
-    public function begin(): void
+    /**
+     * Nothing is written, so there is nothing to commit or roll back.
+     *
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public function transactional(callable $work): mixed
     {
-    }
-
-    public function commit(): void
-    {
-    }
-
-    public function rollback(): void
-    {
+        return $work();
     }
 
     public function insert(string $table, array $row): int

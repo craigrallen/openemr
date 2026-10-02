@@ -35,7 +35,7 @@ final readonly class DemoCalendar
 
     public function at(int $offset, string $time): DateTimeImmutable
     {
-        [$h, $m] = array_map('intval', explode(':', $time) + [1 => '0']);
+        [$h, $m] = array_map(intval(...), explode(':', $time) + [1 => '0']);
         return $this->day($offset)->setTime($h, $m);
     }
 

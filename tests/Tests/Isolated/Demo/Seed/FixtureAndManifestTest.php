@@ -33,8 +33,53 @@ final class FixtureAndManifestTest extends TestCase
         self::assertIsString($json);
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($data);
-        /** @var array<string, mixed> $data */
+        $out = [];
+        foreach ($data as $key => $value) {
+            self::assertIsString($key, 'fixture root keys must be strings');
+            $out[$key] = $value;
+        }
+        return $out;
+    }
+
+    /**
+     * Return $data with the value at $path replaced; the path must already exist
+     * below its last segment so a typo cannot silently make a case vacuous.
+     *
+     * @param array<string, mixed> $data
+     * @param list<int|string> $path
+     * @return array<string, mixed>
+     */
+    private static function with(array $data, string $key, array $path, mixed $value): array
+    {
+        $data[$key] = $path === [] ? $value : self::withIn($data[$key] ?? null, $path, $value);
         return $data;
+    }
+
+    /** @param non-empty-list<int|string> $path */
+    private static function withIn(mixed $node, array $path, mixed $value): mixed
+    {
+        if (!is_array($node)) {
+            throw new \LogicException('Fixture path does not exist.');
+        }
+        $key = array_shift($path);
+        $node[$key] = $path === [] ? $value : self::withIn($node[$key] ?? null, $path, $value);
+        return $node;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param list<int|string> $path
+     */
+    private static function at(array $data, string $key, array $path): mixed
+    {
+        $node = $data[$key] ?? null;
+        foreach ($path as $segment) {
+            if (!is_array($node) || !array_key_exists($segment, $node)) {
+                throw new \LogicException('Fixture path does not exist.');
+            }
+            $node = $node[$segment];
+        }
+        return $node;
     }
 
     public function testDefaultFixtureIsValid(): void
@@ -45,64 +90,49 @@ final class FixtureAndManifestTest extends TestCase
     }
 
     /**
-     * @param callable(array<string, mixed>): array<string, mixed> $mutate
+     * @param list<int|string> $path
      */
     #[DataProvider('malformedProvider')]
-    public function testMalformedFixturesAreRejected(callable $mutate): void
+    public function testMalformedFixturesAreRejected(string $key, array $path, mixed $value): void
     {
         $this->expectException(InvalidFixtureException::class);
-        FixtureLoader::fromArray($mutate(self::raw()));
+        FixtureLoader::fromArray(self::with(self::raw(), $key, $path, $value));
     }
 
     /**
-     * @return array<string, array{callable(array<string, mixed>): array<string, mixed>}>
+     * @return array<string, array{string, list<int|string>, mixed}>
      *
      * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
      */
     public static function malformedProvider(): array
     {
+        $vitals = [0, 'encounters', 0, 'forms', 'vitals'];
         return [
-            'missing seed key' => [static function (array $f): array {
-                unset($f['seed_key']);
-                return $f;
-            }],
-            'real-looking email' => [static function (array $f): array {
-                $f['patients'][0]['email'] = 'someone@example.se';
-                return $f;
-            }],
-            'swedish personal identity number in notes' => [static function (array $f): array {
-                $f['patients'][0]['notes'] = 'pnr 19121212-1212';
-                return $f;
-            }],
-            'phone number' => [static function (array $f): array {
-                $f['patients'][0]['phone_cell'] = '+46 70 123 45 67';
-                return $f;
-            }],
-            'unsynthetic pubpid' => [static function (array $f): array {
-                $f['patients'][0]['pubpid'] = '0001';
-                return $f;
-            }],
-            'unsafe form column' => [static function (array $f): array {
-                $f['patients'][0]['encounters'][0]['forms']['vitals']['pid; DROP'] = '1';
-                return $f;
-            }],
-            'seeder managed column override' => [static function (array $f): array {
-                $f['patients'][0]['encounters'][0]['forms']['vitals']['pid'] = '1';
-                return $f;
-            }],
-            'unknown provider reference' => [static function (array $f): array {
-                $f['patients'][0]['encounters'][0]['provider'] = 'nobody';
-                return $f;
-            }],
-            'date too far from current week' => [static function (array $f): array {
-                $f['patients'][0]['appointments'][0]['day'] = 400;
-                return $f;
-            }],
-            'duplicate patient key' => [static function (array $f): array {
-                $f['patients'][1]['pubpid'] = $f['patients'][0]['pubpid'];
-                return $f;
-            }],
+            'malformed seed key' => ['seed_key', [], 'Not A Key!'],
+            'real-looking email' => ['patients', [0, 'email'], 'someone@example.se'],
+            'swedish personal identity number in notes' => ['patients', [0, 'notes'], 'pnr 19121212-1212'],
+            'phone number' => ['patients', [0, 'phone_cell'], '+46 70 123 45 67'],
+            'unsynthetic pubpid' => ['patients', [0, 'pubpid'], '0001'],
+            'unsafe form column' => ['patients', [...$vitals, 'pid; DROP'], '1'],
+            'seeder managed column override' => ['patients', [...$vitals, 'pid'], '1'],
+            'unknown provider reference' => ['patients', [0, 'encounters', 0, 'provider'], 'nobody'],
+            'date too far from current week' => ['patients', [0, 'appointments', 0, 'day'], 400],
         ];
+    }
+
+    public function testMissingSeedKeyIsRejected(): void
+    {
+        $fixture = self::raw();
+        unset($fixture['seed_key']);
+        $this->expectException(InvalidFixtureException::class);
+        FixtureLoader::fromArray($fixture);
+    }
+
+    public function testDuplicatePatientKeyIsRejected(): void
+    {
+        $fixture = self::raw();
+        $this->expectException(InvalidFixtureException::class);
+        FixtureLoader::fromArray(self::with($fixture, 'patients', [1, 'pubpid'], self::at($fixture, 'patients', [0, 'pubpid'])));
     }
 
     public function testCalendarIsAnchoredToCurrentWeek(): void

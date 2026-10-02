@@ -17,9 +17,9 @@ declare(strict_types=1);
 
 namespace OpenEMR\Demo\Seed;
 
-final class SeedVerifier
+final readonly class SeedVerifier
 {
-    public function __construct(private readonly SeedGateway $db)
+    public function __construct(private SeedGateway $db)
     {
     }
 

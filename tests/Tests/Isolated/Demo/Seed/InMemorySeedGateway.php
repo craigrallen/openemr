@@ -34,10 +34,12 @@ final class InMemorySeedGateway implements SeedGateway
 
     /** @var array<string, list<array<string, scalar|null>>> */
     private array $tables = [];
-    /** Pre-existing deployment reference data (mirrors the Railway inventory); excluded from tableCounts(). */
+    /**
+     * Pre-existing deployment reference data (mirrors the Railway inventory); excluded from tableCounts().
+     *
+     * @var array<string, list<array<string, scalar|null>>>
+     */
     private array $reference = [];
-    /** @var list<array<string, list<array<string, scalar|null>>>> */
-    private array $snapshots = [];
     private int $sequence = 0;
     private int $inserts = 0;
     public int $openTransactions = 0;
@@ -64,22 +66,23 @@ final class InMemorySeedGateway implements SeedGateway
         }
     }
 
-    public function begin(): void
+    /**
+     * @template T
+     * @param callable(): T $work
+     * @return T
+     */
+    public function transactional(callable $work): mixed
     {
-        $this->snapshots[] = $this->tables;
+        $snapshot = $this->tables;
         $this->openTransactions++;
-    }
-
-    public function commit(): void
-    {
-        array_pop($this->snapshots);
-        $this->openTransactions--;
-    }
-
-    public function rollback(): void
-    {
-        $this->tables = array_pop($this->snapshots) ?? [];
-        $this->openTransactions--;
+        try {
+            return $work();
+        } catch (\Throwable $e) {
+            $this->tables = $snapshot;
+            throw $e;
+        } finally {
+            $this->openTransactions--;
+        }
     }
 
     public function insert(string $table, array $row): int
@@ -143,20 +146,29 @@ final class InMemorySeedGateway implements SeedGateway
         return $id;
     }
 
-    /** Test-only mutation: remove rows matching $criteria (all rows when empty). */
+    /**
+     * Test-only mutation: remove rows matching $criteria (all rows when empty).
+     *
+     * @param array<string, scalar|null> $criteria
+     */
     public function deleteWhere(string $table, array $criteria = []): void
     {
         $this->tables[$table] = array_values(array_filter(
             $this->tables[$table] ?? [],
-            static fn(array $row): bool => $criteria !== [] && array_diff_assoc(array_map('strval', $criteria), array_map('strval', array_intersect_key($row, $criteria))) !== [],
+            static fn(array $row): bool => $criteria !== [] && array_diff_assoc(array_map(strval(...), $criteria), array_map(strval(...), array_intersect_key($row, $criteria))) !== [],
         ));
     }
 
-    /** Test-only mutation: set $values on rows matching $criteria. */
+    /**
+     * Test-only mutation: set $values on rows matching $criteria.
+     *
+     * @param array<string, scalar|null> $criteria
+     * @param array<string, scalar|null> $values
+     */
     public function updateWhere(string $table, array $criteria, array $values): void
     {
         foreach ($this->tables[$table] ?? [] as $i => $row) {
-            if (array_diff_assoc(array_map('strval', $criteria), array_map('strval', array_intersect_key($row, $criteria))) === []) {
+            if (array_diff_assoc(array_map(strval(...), $criteria), array_map(strval(...), array_intersect_key($row, $criteria))) === []) {
                 $this->tables[$table][$i] = $values + $row;
             }
         }
@@ -171,7 +183,7 @@ final class InMemorySeedGateway implements SeedGateway
     /** @return array<string, int> */
     public function tableCounts(): array
     {
-        $counts = array_map('count', $this->tables);
+        $counts = array_map(count(...), $this->tables);
         ksort($counts);
         return $counts;
     }

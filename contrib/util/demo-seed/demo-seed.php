@@ -9,7 +9,10 @@
  * `seed` additionally requires the environment gate in SafetyGate and the
  * runtime safety marker (OPENEMR_DEMO_SEED_MARKER, default
  * /run/openemr-railway/ready.json) to match the database globals.
- * Exit codes: 0 ok, 1 verification failure, 2 refused/invalid, 3 error.
+ * Exit codes: 0 ok, 1 verification failure, 2 refused/invalid, 3 error
+ * (database/gateway exception, logged via the PSR-3 logger). PHP Errors are
+ * not caught here; they reach OpenEMR's error handler with a non-zero exit.
+ * Either way a seed run is rolled back before the process exits.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -20,7 +23,10 @@
 
 declare(strict_types=1);
 
+use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Common\Http\CurrentRequest;
+use OpenEMR\Common\Http\HttpRestRequest;
 use OpenEMR\Demo\Seed\CoverageManifest;
 use OpenEMR\Demo\Seed\DemoCalendar;
 use OpenEMR\Demo\Seed\DemoSeeder;
@@ -58,8 +64,14 @@ $fail = static function (string $message, int $code): never {
     exit($code);
 };
 
-/** @var list<string> $args */
-$args = array_values(array_slice($argv, 1));
+$request = HttpRestRequest::createFromGlobals();
+$args = [];
+foreach (array_slice($request->server->all('argv'), 1) as $arg) {
+    if (!is_string($arg)) {
+        $fail('command-line arguments must be strings.', 2);
+    }
+    $args[] = $arg;
+}
 $mode = SeedMode::tryFrom($args[0] ?? '') ?? $fail('usage: demo-seed.php <inventory|dry-run|seed|verify> --site=<site> [--fixture=<path>] [--confirm-synthetic-seed=<site>]', 2);
 $option = static function (string $name, string $default = '') use ($args): string {
     foreach ($args as $a) {
@@ -74,10 +86,7 @@ if (preg_match('/^[A-Za-z0-9_-]+$/', $site) !== 1) {
     $fail('--site=<site> is required.', 2);
 }
 
-$env = [];
-foreach (getenv() as $k => $v) {
-    $env[(string) $k] = (string) $v;
-}
+$env = getenv();
 try {
     SafetyGate::assertAllowed($mode, $env, $args, PHP_SAPI, $site);
     $fixture = FixtureLoader::fromFile($option('fixture', FixtureLoader::defaultPath()));
@@ -85,8 +94,11 @@ try {
     $fail($e->getMessage(), 2);
 }
 
-// Bootstrap OpenEMR only after the environment gate passed.
-$_GET['site'] = $site;
+// Bootstrap OpenEMR only after the environment gate passed. globals.php selects
+// the site from the query string, so publish the validated --site there.
+$request->query->set('site', $site);
+$request->overrideGlobals();
+CurrentRequest::set($request);
 $ignoreAuth = true;
 $sessionAllowWrite = true;
 require_once __DIR__ . '/../../../interface/globals.php';
@@ -99,23 +111,45 @@ $clock = new class implements \Psr\Clock\ClockInterface {
     }
 };
 $calendar = new DemoCalendar($clock);
+/** @param list<scalar> $binds */
+$count = static function (string $sql, array $binds = []): int {
+    $value = QueryUtils::fetchSingleValue($sql, 'c', $binds);
+    if (!is_numeric($value)) {
+        throw new RuntimeException('Count query returned a non-numeric value.');
+    }
+    return (int) $value;
+};
+/**
+ * @param list<mixed> $column
+ * @return list<string>
+ */
+$strings = static function (array $column): array {
+    $out = [];
+    foreach ($column as $value) {
+        if (!is_string($value)) {
+            throw new RuntimeException('Expected a string column value.');
+        }
+        $out[] = $value;
+    }
+    return $out;
+};
 
 try {
     switch ($mode) {
         case SeedMode::Inventory:
-            $registry = QueryUtils::fetchTableColumn("SELECT directory FROM registry WHERE state = 1 ORDER BY directory", 'directory');
-            $lbf = QueryUtils::fetchTableColumn("SELECT grp_form_id FROM layout_group_properties WHERE grp_group_id = '' AND grp_activity = 1 ORDER BY grp_form_id", 'grp_form_id');
+            $registry = $strings(QueryUtils::fetchTableColumn("SELECT directory FROM registry WHERE state = 1 ORDER BY directory", 'directory'));
+            $lbf = $strings(QueryUtils::fetchTableColumn("SELECT grp_form_id FROM layout_group_properties WHERE grp_group_id = '' AND grp_activity = 1 ORDER BY grp_form_id", 'grp_form_id'));
             $entries = [];
             foreach (CoverageManifest::entries() as $e) {
                 $entries[] = ['key' => $e->key, 'status' => $e->status->value, 'tables' => $e->tables, 'reason' => $e->reason];
             }
             $out([
                 'mode' => $mode->value,
-                'patients_total' => (int) QueryUtils::fetchSingleValue('SELECT COUNT(*) AS c FROM patient_data', 'c'),
-                'patients_synthetic' => (int) QueryUtils::fetchSingleValue('SELECT COUNT(*) AS c FROM patient_data WHERE genericname1 = ? AND genericval1 = ?', 'c', [DemoSeeder::PATIENT_MARKER_NAME, $fixture->seedKey]),
+                'patients_total' => $count('SELECT COUNT(*) AS c FROM patient_data'),
+                'patients_synthetic' => $count('SELECT COUNT(*) AS c FROM patient_data WHERE genericname1 = ? AND genericval1 = ?', [DemoSeeder::PATIENT_MARKER_NAME, $fixture->seedKey]),
                 'enabled_forms' => $registry,
                 'lbf_forms' => $lbf,
-                'unclassified' => CoverageManifest::unclassified(array_map(strval(...), $registry), array_map(strval(...), $lbf)),
+                'unclassified' => CoverageManifest::unclassified($registry, $lbf),
                 'coverage' => $entries,
             ]);
             exit(0);
@@ -129,7 +163,12 @@ try {
             $marker = is_string($raw) ? json_decode($raw, true) : null;
             $values = [];
             foreach (QueryUtils::fetchRecords('SELECT gl_name, gl_value FROM globals', [], true) as $g) {
-                $values[(string) $g['gl_name']] = (string) $g['gl_value'];
+                $name = $g['gl_name'] ?? null;
+                $value = $g['gl_value'] ?? null;
+                if (!is_string($name) || !is_string($value)) {
+                    throw new RuntimeException('Unexpected non-string globals row.');
+                }
+                $values[$name] = $value;
             }
             SafetyGate::assertRuntimeMarker(is_array($marker) ? $marker : null, $values);
             $report = (new DemoSeeder($gateway, $calendar))->seed($fixture);
@@ -144,7 +183,8 @@ try {
     }
 } catch (SeedRefusedException | SeedConflictException | InvalidFixtureException $e) {
     $fail($e->getMessage(), 2);
-} catch (\Throwable $e) {
-    error_log('demo-seed failed: ' . $e::class . ' ' . $e->getMessage());
-    $fail('seeding failed and was rolled back; see the PHP error log.', 3);
+} catch (RuntimeException | LogicException $e) {
+    // Database and gateway failures; PHP Errors propagate to OpenEMR's error handler.
+    ServiceContainer::getLogger()->error('demo-seed failed', ['mode' => $mode->value, 'exception' => $e]);
+    $fail('seeding failed and was rolled back; see the OpenEMR log.', 3);
 }
