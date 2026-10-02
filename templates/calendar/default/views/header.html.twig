@@ -23,5 +23,8 @@
     {% endif %}
     <!-- the javascript used for the ajax_* style calendars -->
     <script src="{{ webroot }}/library/js/calendarDirectSelect.js?v={{ assetVersion|attr_url }}"></script>
+    {# Workbench presentation: inert unless mode.js finds an active same-origin workbench host. -#}
+    <link rel="stylesheet" href="{{ webroot }}/interface/clinical-workspace/calendar.css?v={{ assetVersion|attr_url }}">
+    <script src="{{ webroot }}/interface/clinical-workspace/mode.js?v={{ assetVersion|attr_url }}" defer></script>
 </head>
-<body class="{{ body_class|default('') }} calsearch_body w-100">
+<body class="{{ body_class|default('') }} calsearch_body w-100 oe-clinical-calendar">
