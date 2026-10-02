@@ -30,7 +30,7 @@ The test reads the real `soap_form.twig` and turns it into HTML with a small sta
 It covers:
 - **Input-only edits:** for each of the four fields, an `input` event with no `keyup` sets `top.isSoapEdit`. The `insertFromPaste`, `deleteByCut`, `insertFromDrop`, `insertReplacementText` and `insertCompositionText` (with `isComposing`) input types all set it as well.
 - **No false dirty state:** `keyup` still sets the flag, and loading the form or focusing a field does not.
-- **Text preservation:** saved values with leading, trailing and internal whitespace, tabs, CRLF, HTML-special characters and an empty field come back unchanged after `|text` escaping. Typed text (including a misspelling) is not rewritten by the handler.
+- **Text preservation:** saved values with leading, trailing and internal whitespace, tabs, CRLF, HTML-special characters and an empty field come back unchanged after `|text` escaping. Typed text (including double spaces and a newline) is not rewritten by the handler.
 - **Labels:** each textarea has the ID `soap-<name>`, and IDs are unique across the document. Its `aria-labelledby` points to the `<legend>` of its own fieldset, whose text is the translated legend string.
 - **Unchanged attributes:** no spellcheck/autocorrect attributes; `cols`, `rows` and `class` unchanged.
 - **Save, close, session and CSRF contracts:**

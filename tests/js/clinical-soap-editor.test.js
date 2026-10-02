@@ -128,7 +128,7 @@ describe('SOAP editor template dirty tracking', () => {
             // HTML parsing normalises CRLF to LF and drops one leading newline only.
             const expected = SAVED[name].replace(/\r\n/g, '\n');
             expect(el.value).toBe(expected);
-            const typed = el.value + '  teh  \n';
+            const typed = el.value + '  hi  \n';
             el.value = typed;
             fireInput(el, { inputType: 'insertText' });
             expect(el.value).toBe(typed);
