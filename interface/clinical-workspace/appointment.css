@@ -1,0 +1,226 @@
+/*
+ * Add/edit appointment dialog (interface/main/calendar/add_edit_event.php) inside an
+ * active workbench only. mode.js adds oe-clinical-workspace; the PHP body adds
+ * oe-clinical-appointment. Screen only, so printing the dialog stays legacy.
+ *
+ * Presentation only. No control is hidden or moved: EnableForm/DisableForm toggle
+ * the form's direct children and the category/status scripts toggle inline display.
+ * Danger buttons, the recurrence alert, the DOB warning, the patient infobox and the
+ * category/status/preferred-category selects keep their theme colours.
+ */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-appointment {
+    --oe-ink: #17343b;
+    --oe-muted: #526a70;
+    --oe-line: #d9e4e2;
+    --oe-paper: #fff;
+    --oe-canvas: #f3f7f5;
+    --oe-petrol: #086878;
+    --oe-petrol-deep: #075363;
+    --oe-petrol-wash: #e3f0ef;
+    --oe-ring: 0 0 0 0.2rem rgb(8 104 120 / 35%);
+
+    background: var(--oe-canvas);
+    color: var(--oe-ink);
+    font-size: 0.875rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .container-fluid {
+    padding-block: 0.75rem 0;
+    padding-inline: 0.75rem;
+  }
+
+  /* Patient / Provider / Group tabs: underline segmented control */
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-tabs .nav-tabs {
+    background: var(--oe-paper);
+    border: 1px solid var(--oe-line);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-tabs .nav-link {
+    border: 0;
+    border-block-end: 2px solid transparent;
+    border-radius: 0;
+    color: var(--oe-muted);
+    font-weight: 600;
+    padding-block: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-tabs .nav-link:hover {
+    background: var(--oe-petrol-wash);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-tabs .nav-link.active {
+    background: var(--oe-paper);
+    border-block-end-color: var(--oe-petrol);
+    color: var(--oe-petrol-deep);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-tabs .nav-link:focus-visible {
+    box-shadow: inset var(--oe-ring);
+  }
+
+  /* Field labels: compact, muted, above the control */
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-subject .form-group > label,
+  body.oe-clinical-workspace.oe-clinical-appointment form > .form-row > .form-group > label {
+    color: var(--oe-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin-block-end: 0.25rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .form-group {
+    margin-block-end: 0.75rem;
+  }
+
+  /* Inputs and selects (category/status options keep their own rendering) */
+  body.oe-clinical-workspace.oe-clinical-appointment .form-control,
+  body.oe-clinical-workspace.oe-clinical-appointment select.input-sm {
+    border: 1px solid var(--oe-line);
+    border-radius: 0.375rem;
+    max-width: 100%;
+    min-height: calc(1.5em + 0.75rem + 2px);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .form-control:focus,
+  body.oe-clinical-workspace.oe-clinical-appointment select.input-sm:focus {
+    border-color: var(--oe-petrol);
+    box-shadow: var(--oe-ring);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .form-check-input {
+    accent-color: var(--oe-petrol);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .form-check-input:focus-visible {
+    box-shadow: var(--oe-ring);
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Bound responsive overflow inside the dialog frame */
+  body.oe-clinical-workspace.oe-clinical-appointment .form-row > [class*='col'] {
+    min-width: 0;
+  }
+
+  /* Patient or group being booked: a quiet paper strip with a petrol edge */
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-subject {
+    background: var(--oe-paper);
+    border: 1px solid var(--oe-line);
+    border-inline-start: 3px solid var(--oe-petrol);
+    border-radius: 0.5rem;
+    margin-block: 0 0.75rem;
+    margin-inline: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-subject .form-group {
+    margin-block-end: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-subject #form_patient,
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-subject #form_group {
+    font-weight: 600;
+  }
+
+  /* When: date, time, duration, recurrence and weekdays as one bordered panel */
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-schedule {
+    background: var(--oe-paper);
+    border: 1px solid var(--oe-line);
+    border-radius: 0.5rem;
+    margin-block: 0 0.75rem;
+    margin-inline: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-schedule > .form-row {
+    align-items: center;
+    row-gap: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-schedule > .form-row + .form-row {
+    border-block-start: 1px solid var(--oe-line);
+    margin-block-start: 0.5rem;
+    padding-block-start: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-schedule .col-form-label {
+    color: var(--oe-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: end;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-schedule .form-check-label {
+    font-weight: 600;
+  }
+
+  /* Weekday checkboxes as chips; the native checkbox stays visible and focusable */
+  body.oe-clinical-workspace.oe-clinical-appointment #days {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment #days > .form-check-inline {
+    border: 1px solid var(--oe-line);
+    border-radius: 999px;
+    margin-inline-end: 0;
+    padding-block: 0.125rem;
+    padding-inline: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment #days > .form-check-inline:focus-within {
+    border-color: var(--oe-petrol);
+    box-shadow: var(--oe-ring);
+  }
+
+  /* Action region: stays reachable at the bottom of the dialog frame */
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions {
+    background: var(--oe-paper);
+    border-block-start: 1px solid var(--oe-line);
+    gap: 0.5rem;
+    inset-block-end: 0;
+    margin-inline: -0.75rem;
+    padding-block: 0.625rem;
+    padding-inline: 0.75rem;
+    position: sticky;
+    z-index: 2;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn {
+    border-radius: 0.375rem;
+    font-weight: 600;
+    margin-inline: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn-primary {
+    background: var(--oe-petrol);
+    border-color: var(--oe-petrol);
+    color: #fff;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn-primary:hover,
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn-primary:focus {
+    background: var(--oe-petrol-deep);
+    border-color: var(--oe-petrol-deep);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn-secondary {
+    background: var(--oe-paper);
+    border-color: var(--oe-line);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn-secondary:hover {
+    background: var(--oe-petrol-wash);
+    border-color: var(--oe-petrol);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-appointment .oe-appt-actions .btn:focus-visible {
+    box-shadow: var(--oe-ring);
+  }
+}
