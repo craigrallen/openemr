@@ -34,6 +34,10 @@ use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
  */
 final readonly class CalendarRenderDataBuilder
 {
+    /**
+     * @param ClinicalWorkspaceAssets $assets Per-file cache versions for the
+     *                                        clinical-workspace assets a view links directly.
+     */
     public function __construct(
         public CalendarViewModel $viewModel,
         private ClinicalWorkspaceAssets $assets = new ClinicalWorkspaceAssets(),
@@ -911,6 +915,8 @@ final readonly class CalendarRenderDataBuilder
             'isHolidayDay'            => $isHolidayDay,
             'providers'               => $providersGrid,
             'webroot'                 => $webroot,
+            'workdayCssVersion'       => $this->assets->version('calendar-workday.css'),
+            'workdayJsVersion'        => $this->assets->version('calendar-workday.js'),
         ];
     }
 

@@ -151,6 +151,17 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function calendarWorkdayAssetsAreVersionedPerFile(): void
+    {
+        $this->writeAsset('calendar-workday.css', 1_700_000_700);
+        $this->writeAsset('calendar-workday.js', 1_700_000_800);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700000700', $assets->version('calendar-workday.css'));
+        self::assertSame('1700000800', $assets->version('calendar-workday.js'));
+    }
+
+    #[Test]
     public function finderStylesheetIsVersioned(): void
     {
         $this->writeAsset('finder.css', 1_700_000_789);
