@@ -38,6 +38,7 @@ final readonly class ClinicalWorkspaceAssets
         'soap-reference.js',
         'visit-history.css',
         'visit-history.js',
+        'workspace.css',
     ];
 
     private string $directory;

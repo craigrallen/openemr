@@ -172,6 +172,73 @@ class TwigTemplateRenderTest extends TestCase
     }
 
     /**
+     * Every dashboard card's toggle reports the body's real initial state, keeps its Bootstrap
+     * target, and a forced-open (critical) card can never render with a hidden body.
+     */
+    #[Test]
+    #[DataProvider('cardCollapseStateProvider')]
+    public function cardToggleMatchesInitialBodyState(bool $initiallyCollapsed, bool $forceAlwaysOpen, bool $expectOpen): void
+    {
+        $html = self::twigEnvironment()->render('patient/card/care_plan.html.twig', [
+            'id' => 'card_care_plan',
+            'title' => 'Care Plan',
+            'initiallyCollapsed' => $initiallyCollapsed,
+            'forceAlwaysOpen' => $forceAlwaysOpen,
+            'auth' => false,
+            'card_bg_color' => '',
+            'card_text_color' => '',
+            'pid' => 1,
+            'rows' => [],
+            'mostRecentDate' => null,
+            'encounter' => null,
+        ]);
+
+        $dom = new \DOMDocument();
+        self::assertTrue($dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NONET));
+        $xpath = new \DOMXPath($dom);
+        $toggles = $xpath->query('//h6[contains(@class, "card-title")]/a[@aria-controls="card_care_plan"]');
+        self::assertNotFalse($toggles);
+        self::assertSame(1, $toggles->length);
+        $toggle = $toggles->item(0);
+        self::assertInstanceOf(\DOMElement::class, $toggle);
+        $body = $dom->getElementById('card_care_plan');
+        self::assertInstanceOf(\DOMElement::class, $body);
+        $bodyClasses = explode(' ', $body->getAttribute('class'));
+        $icons = $xpath->query('.//i', $toggle);
+        self::assertNotFalse($icons);
+        $icon = $icons->item(0);
+        self::assertInstanceOf(\DOMElement::class, $icon);
+        $iconClasses = preg_split('/\s+/', trim($icon->getAttribute('class'))) ?: [];
+
+        self::assertContains('collapse', $bodyClasses);
+        self::assertSame($expectOpen, in_array('show', $bodyClasses, true));
+        self::assertSame($expectOpen ? 'true' : 'false', $toggle->getAttribute('aria-expanded'));
+        self::assertContains($expectOpen ? 'fa-compress' : 'fa-expand', $iconClasses);
+        self::assertSame('#card_care_plan', $icon->getAttribute('data-target'));
+        if ($forceAlwaysOpen) {
+            self::assertFalse($toggle->hasAttribute('data-toggle'));
+            return;
+        }
+        self::assertSame('collapse', $toggle->getAttribute('data-toggle'));
+        self::assertSame('#card_care_plan', $toggle->getAttribute('data-target'));
+    }
+
+    /**
+     * @return array<string, array{bool, bool, bool}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function cardCollapseStateProvider(): array
+    {
+        return [
+            'open by preference' => [false, false, true],
+            'collapsed by preference' => [true, false, false],
+            'always open' => [false, true, true],
+            'always open ignores a collapsed preference' => [true, true, true],
+        ];
+    }
+
+    /**
      * The day/week/month sidebar toggle is a named button controlling the sidebar, keeps its
      * original href/handler, and the state helper loads after that handler on screen views only.
      */
@@ -864,6 +931,24 @@ class TwigTemplateRenderTest extends TestCase
                 'encounter' => 12,
             ],
             $fixtureDir . '/care-plan-card-populated.html',
+        ];
+
+        yield 'patient/card care plan collapsed' => [
+            'patient/card/care_plan.html.twig',
+            [
+                'id' => 'card_care_plan',
+                'title' => 'Care Plan',
+                'initiallyCollapsed' => true,
+                'forceAlwaysOpen' => false,
+                'auth' => false,
+                'card_bg_color' => '',
+                'card_text_color' => '',
+                'pid' => 1,
+                'rows' => [],
+                'mostRecentDate' => null,
+                'encounter' => null,
+            ],
+            $fixtureDir . '/care-plan-card-collapsed.html',
         ];
 
         // The SOAP form calls getters on a FormSOAP; a stand-in keeps the render database-free.
