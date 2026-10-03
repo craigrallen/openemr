@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const process = require('node:process');
 const postcss = require('postcss');
 const { createModeController } = require('../../interface/clinical-workspace/mode.js');
 
@@ -213,5 +214,112 @@ describe('calendar.css preserves clinical meaning and booking geometry', () => {
         expect(rules.filter((r) => r.prop === 'display' && r.value === 'none' && !mediaException(r))).toEqual([]);
         expect(rules.filter((r) => r.prop === 'visibility' || r.prop === 'pointer-events')).toEqual([]);
         expect(rules.filter((r) => r.important && /\.event|#facilityColor/.test(r.selector))).toEqual([]);
+    });
+});
+
+describe('calendar toolbar and mini calendar fit the workbench frame', () => {
+    // Bootstrap's md breakpoint, where the theme's col-md-3/6/3 toolbar split starts.
+    const DESKTOP = '(min-width: 768px)';
+
+    function rulesWithMedia() {
+        const rules = [];
+        postcss.parse(fs.readFileSync(cssPath, 'utf8')).walkRules((rule) => {
+            const media = rule.parent.type === 'atrule' && rule.parent.name === 'media' ? rule.parent.params : null;
+            rule.selectors.forEach((selector) => {
+                rule.walkDecls((decl) => rules.push({ selector, media, prop: decl.prop, value: decl.value }));
+            });
+        });
+        return rules;
+    }
+
+    function decls(selector, media) {
+        return Object.fromEntries(rulesWithMedia()
+            .filter((r) => r.selector === `${SCOPE} ${selector}` && r.media === media)
+            .map((r) => [r.prop, r.value]));
+    }
+
+    test.each(['day', 'week', 'month'])('%s toolbar keeps every function, navigation and view control', (view) => {
+        loadFixture(`calendar-${view}-screen-empty.html`);
+        const toolbar = document.getElementById('topToolbarRight');
+        expect([...toolbar.children].map((el) => el.id)).toEqual(['functions', 'dateNAV', 'viewPicker']);
+        expect(document.querySelectorAll('#functions #menu-toggle, #functions a[title="New Appointment"], #functions a[title="Search Appointment"]')).toHaveLength(3);
+        expect(document.querySelectorAll(`#dateNAV a[id^="prev${view}"], #dateNAV a[id^="next${view}"]`)).toHaveLength(2);
+        const picker = [...document.querySelectorAll('#viewPicker a')].map((a) => a.id || a.title);
+        expect(picker).toEqual(['printview', 'Refresh', 'dayview', 'weekview', 'monthview']);
+    });
+
+    test.each(['day', 'week', 'month'])('%s mini calendar is a seven-column table inside the scrolling wrapper', (view) => {
+        loadFixture(`calendar-${view}-screen-empty.html`);
+        const table = document.querySelector('#datePicker .table-responsive > table');
+        // The empty fixtures render the month/navigation and weekday rows; live QA covers the date rows.
+        const rows = [...table.rows];
+        expect(rows.length).toBeGreaterThanOrEqual(2);
+        rows.forEach((row) => {
+            expect([...row.cells].reduce((n, td) => n + td.colSpan, 0)).toBe(7);
+        });
+    });
+
+    test('desktop toolbar sizes the function and view groups to their buttons and lets the date take the rest', () => {
+        // The theme fixes #viewPicker at 25%, too narrow for print/refresh/Day/Week/Month in the workbench frame.
+        // Its @extend .col-md-* also brings Bootstrap's `width: 100%`, which an `auto` flex basis would adopt
+        // and stack the three groups, so the width has to be released too.
+        expect(decls('#functions', DESKTOP)).toEqual({ flex: '0 1 auto', 'max-width': 'none', width: 'auto' });
+        // In 768-945px frames the three groups can exceed one row (Today button, long dates). The date keeps
+        // its intrinsic width (auto basis, no shrink, no min-width: 0) so the heading and both chevrons never
+        // wrap; whole groups wrap instead, and #viewPicker goes to the end edge, clear of the fixed sidebar.
+        expect(decls('#viewPicker', DESKTOP)).toEqual({ flex: '0 1 auto', 'margin-inline-start': 'auto', 'max-width': 'none', width: 'auto' });
+        expect(decls('#dateNAV', DESKTOP)).toEqual({ flex: '1 0 auto', 'max-width': 'none', width: 'auto' });
+    });
+
+    test('below the desktop breakpoint the toolbar keeps the theme stacking that #bottomLeft offsets assume', () => {
+        const sizing = /^(flex|flex-basis|flex-grow|flex-shrink|flex-wrap|width|min-width|max-width|order)$/;
+        const offending = rulesWithMedia().filter((r) => r.media !== DESKTOP && sizing.test(r.prop)
+            && /(#topToolbarRight|#functions|#dateNAV|#viewPicker)/.test(r.selector));
+        expect(offending).toEqual([]);
+    });
+
+    test('media queries use prefix notation for older supported browsers', () => {
+        const params = [];
+        postcss.parse(fs.readFileSync(cssPath, 'utf8')).walkAtRules('media', (at) => params.push(at.params));
+        expect(params).toContain(DESKTOP);
+        expect(params.filter((p) => /[<>]/.test(p))).toEqual([]);
+        expect(fs.readFileSync(cssPath, 'utf8')).not.toMatch(/stylelint-disable/);
+    });
+
+    test('stylelint enforces prefix media notation for calendar.css only', () => {
+        const config = JSON.parse(fs.readFileSync(path.join(repo, '.stylelintrc.json'), 'utf8'));
+        expect(config.rules['media-feature-range-notation']).toBeUndefined();
+        expect(config.overrides).toEqual([{
+            files: ['interface/clinical-workspace/calendar.css'],
+            rules: { 'media-feature-range-notation': 'prefix' },
+        }]);
+    });
+
+    test.each([
+        ['prefix', '@media (min-width: 768px) {\n  a {\n    color: red;\n  }\n}\n', 0],
+        ['range', '@media (width >= 768px) {\n  a {\n    color: red;\n  }\n}\n', 1],
+    ])('stylelint on calendar.css accepts %s notation only when it is prefix', (_name, code, expected) => {
+        // The real stylelint CLI with the repo config; its Node API cannot load under the jsdom environment.
+        const { spawnSync } = require('child_process');
+        const cli = path.join(path.dirname(require.resolve('stylelint/package.json')), 'bin/stylelint.mjs');
+        const run = spawnSync(process.execPath, [cli, '--formatter', 'json', '--stdin-filename', cssPath], { cwd: repo, input: code, encoding: 'utf8' });
+        const [result] = JSON.parse(run.stdout || run.stderr);
+        const hits = result.warnings.filter((w) => w.rule === 'media-feature-range-notation');
+        expect(hits.map((w) => w.text)).toEqual(expected ? ['Expected "prefix" media feature range notation (media-feature-range-notation)'] : []);
+    });
+
+    test('mini calendar shares the sidebar width across all seven columns instead of scrolling the last one away', () => {
+        expect(decls('#datePicker table', null)).toEqual({ 'table-layout': 'fixed' });
+        expect(decls('#datePicker td', null)).toEqual({ 'padding-left': '0', 'padding-right': '0' });
+    });
+
+    test('layout repair never clips, hides or shrinks toolbar and mini-calendar content', () => {
+        const clipping = /^(overflow|overflow-x|overflow-y|text-overflow|clip|clip-path|max-height|height|transform|zoom)$/;
+        const offending = rulesWithMedia().filter((r) => clipping.test(r.prop)
+            && /(#topToolbarRight|#functions|#dateNAV|#viewPicker|#datePicker|\.table-responsive)/.test(r.selector));
+        expect(offending).toEqual([]);
+        // Date numbers keep the theme size; only the pre-existing weekday-initial row is restyled.
+        const sized = rulesWithMedia().filter((r) => r.prop === 'font-size' && /#datePicker/.test(r.selector));
+        expect(sized.map((r) => [r.selector, r.value])).toEqual([[`${SCOPE} #datePicker tr:nth-child(2) .tdDOW-small`, '0.72rem']]);
     });
 });
