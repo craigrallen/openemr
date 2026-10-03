@@ -146,6 +146,24 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function finderStylesheetIsVersioned(): void
+    {
+        $this->writeAsset('finder.css', 1_700_000_789);
+
+        self::assertSame('1700000789', (new ClinicalWorkspaceAssets($this->directory))->version('finder.css'));
+    }
+
+    #[Test]
+    public function shippedFinderStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/finder.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('finder.css'));
+    }
+
+    #[Test]
     public function soapDocumentAssetsAreVersionedIndependently(): void
     {
         $this->writeAsset('soap-document.css', 1_700_000_789);

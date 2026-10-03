@@ -30,6 +30,7 @@ final readonly class ClinicalWorkspaceAssets
         'appointment.css',
         'calendar-workday.css',
         'calendar-workday.js',
+        'finder.css',
         'mode.js',
         'soap-document.css',
         'soap-document.js',
