@@ -176,3 +176,67 @@ describe('clinical workspace record card colors', () => {
         }
     );
 });
+
+describe('clinical workspace record card sizing', () => {
+    const css = fs.readFileSync(require.resolve('../../interface/clinical-workspace/workspace.css'), 'utf8');
+    // Real card_base.html.twig output, recorded by TwigTemplateRenderTest.
+    const fixture = (name) => fs.readFileSync(
+        require.resolve(`../Tests/Isolated/Common/Twig/fixtures/render/${name}`),
+        'utf8'
+    );
+
+    beforeEach(() => {
+        document.head.innerHTML = '';
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.appendChild(style);
+        document.body.className = 'oe-clinical-record oe-clinical-workspace';
+    });
+
+    function declared(element, property) {
+        return Array.from(document.styleSheets[0].cssRules)
+            .filter((rule) => rule.style && rule.style.getPropertyValue(property) !== '')
+            .filter((rule) => element.matches(rule.selectorText))
+            .map((rule) => rule.style.getPropertyValue(property));
+    }
+
+    test.each(['care-plan-card-empty.html', 'care-plan-card-collapsed.html'])(
+        '%s sizes to its content instead of its column',
+        (name) => {
+            document.body.innerHTML = `<div class="row"><div class="col-12">${fixture(name)}</div></div>`;
+            const card = document.querySelector('section.card');
+            expect(declared(card, 'height')).not.toContain('100%');
+            expect(declared(card, 'height')).toContain('auto');
+            expect(declared(card, 'max-height')).toEqual([]);
+            expect(declared(card, 'overflow')).toEqual([]);
+        }
+    );
+
+    test('card sections get one layer of padding, from the card body only', () => {
+        document.body.innerHTML = fixture('care-plan-card-collapsed.html');
+        expect(declared(document.querySelector('section.card'), 'padding')).toEqual([]);
+        expect(declared(document.querySelector('.card-body'), 'padding')).not.toHaveLength(0);
+    });
+
+    test('collapsed card has no header separator; the open body carries it', () => {
+        document.body.innerHTML = fixture('care-plan-card-collapsed.html');
+        const title = document.querySelector('.card-title');
+        expect(declared(title, 'border-bottom')).toEqual([]);
+        expect(declared(title, 'padding-bottom')).toEqual([]);
+        expect(declared(document.querySelector('.card-text'), 'border-top')).not.toHaveLength(0);
+    });
+
+    test('legacy non-card sections keep their workspace frame', () => {
+        document.body.innerHTML = '<section id="legacy">Notes</section>';
+        expect(declared(document.querySelector('#legacy'), 'padding')).not.toHaveLength(0);
+    });
+
+    test('alert cards keep Bootstrap colors and are not shrunk', () => {
+        document.body.innerHTML = '<section class="card bg-danger text-white"><div class="card-body p-1">'
+            + '<div class="card-title mb-0 d-flex p-1"><strong>Deceased</strong></div></div></section>';
+        const card = document.querySelector('section.card');
+        expect(declared(card, 'background')).toEqual(['var(--oe-paper)']);
+        expect(declared(card, 'max-height')).toEqual([]);
+        expect(declared(card, 'display')).toEqual([]);
+    });
+});

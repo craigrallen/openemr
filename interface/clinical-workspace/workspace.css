@@ -175,8 +175,9 @@ body.oe-clinical-record.oe-clinical-workspace .main {
   margin-top: 1rem;
 }
 
+/* Cards size to their own content: collapsed is header-height, open shows everything. */
 body.oe-clinical-record.oe-clinical-workspace .card {
-  height: 100%;
+  height: auto;
   margin-bottom: 0.8rem;
   background: var(--oe-paper);
   border: 1px solid var(--oe-line);
@@ -199,14 +200,18 @@ body.oe-clinical-record.oe-clinical-workspace .card-body {
 }
 
 body.oe-clinical-record.oe-clinical-workspace .card-body.p-1 {
-  padding: 0.9rem 1rem !important;
+  padding: 0.5rem 0.75rem !important;
 }
 
 body.oe-clinical-record.oe-clinical-workspace .card-title {
-  padding-bottom: 0.65rem !important;
-  border-bottom: 1px solid var(--oe-line);
   font-size: 0.96rem;
   font-weight: 700;
+}
+
+/* The separator belongs to the body, so it disappears with a collapsed body. */
+body.oe-clinical-record.oe-clinical-workspace .card-title + .card-text {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--oe-line);
 }
 
 /* Colored alert cards (e.g. the deceased banner) keep their Bootstrap text color. */
@@ -230,7 +235,8 @@ body.oe-clinical-record.oe-clinical-workspace .section-header-dynamic {
   font-weight: 650;
 }
 
-body.oe-clinical-record.oe-clinical-workspace section {
+/* Cards already frame and pad themselves; only legacy sections get this frame. */
+body.oe-clinical-record.oe-clinical-workspace section:not(.card) {
   padding: 0.75rem;
   background: var(--oe-paper);
   border: 1px solid var(--oe-line);
