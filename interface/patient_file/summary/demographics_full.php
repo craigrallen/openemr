@@ -30,6 +30,7 @@ use OpenEMR\Common\Forms\FormActionBarSettings;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Events\PatientDemographics\UpdateEvent;
+use OpenEMR\Patient\PatientDobContext;
 use OpenEMR\Services\PatientService;
 
 
@@ -529,7 +530,7 @@ $constraints = LBF_Validation::generate_validate_constraints("DEM");
         <?php }?>
 
         <?php if ($set_pid) { ?>
-        parent.left_nav.setPatient(<?php echo js_escape($result['fname'] . " " . $result['lname']) . "," . js_escape($pid) . "," . js_escape($result['pubpid']) . ",''," . js_escape(" " . xl('DOB') . ": " . oeFormatShortDate($result['DOB_YMD']) . " " . xl('Age') . ": " . getPatientAgeDisplay($result['DOB_YMD'])) . "," . ((new PatientService())->hasPictureForPid($pid) ? 'true' : 'false'); ?>);
+        parent.left_nav.setPatient(<?php echo js_escape($result['fname'] . " " . $result['lname']) . "," . js_escape($pid) . "," . js_escape($result['pubpid']) . ",''," . js_escape(PatientDobContext::headerString($result['DOB_YMD'] ?? null, fn(string $dob): string => " " . xl('DOB') . ": " . oeFormatShortDate($dob) . " " . xl('Age') . ": " . getPatientAgeDisplay($dob))) . "," . ((new PatientService())->hasPictureForPid($pid) ? 'true' : 'false'); ?>);
         <?php } ?>
 
         <?php echo $date_init; ?>

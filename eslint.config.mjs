@@ -59,6 +59,16 @@ export default [{
         "no-unused-vars": "warn",
         "no-redeclare": "warn",
     },
+}, {
+    // Jest suites under tests/js run in Node (CommonJS), so they get Node
+    // globals such as __dirname; browser sources keep the browser set only.
+    files: ["tests/js/**/*.js"],
+
+    languageOptions: {
+        globals: {
+            ...globals.node,
+        },
+    },
 }, ...compat.extends("plugin:jest/recommended").map(config => ({
     ...config,
     files: ["**/*.spec.js"],

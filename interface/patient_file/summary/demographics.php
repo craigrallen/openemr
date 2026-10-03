@@ -63,6 +63,7 @@ use OpenEMR\Patient\Cards\DemographicsViewCard;
 use OpenEMR\Patient\Cards\InsuranceViewCard;
 use OpenEMR\Patient\Cards\PortalCard;
 use OpenEMR\Patient\Cards\TreatmentPreferenceViewCard;
+use OpenEMR\Patient\PatientDobContext;
 use OpenEMR\Reminder\BirthdayReminder;
 use OpenEMR\Services\AllergyIntoleranceService;
 use OpenEMR\Services\Forms\CarePlanFormService;
@@ -931,9 +932,9 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
             parent.left_nav.setPatient(<?php echo js_escape($result['fname'] . " " . $result['lname']) .
                     "," . js_escape($pid) . "," . js_escape($result['pubpid']) . ",'',";
             if (empty($date_of_death)) {
-                echo js_escape(" " . xl('DOB') . ": " . oeFormatShortDate($result['DOB_YMD']) . " " . xl('Age') . ": " . getPatientAgeDisplay($result['DOB_YMD']));
+                echo js_escape(PatientDobContext::headerString($result['DOB_YMD'] ?? null, fn(string $dob): string => " " . xl('DOB') . ": " . oeFormatShortDate($dob) . " " . xl('Age') . ": " . getPatientAgeDisplay($dob)));
             } else {
-                echo js_escape(" " . xl('DOB') . ": " . oeFormatShortDate($result['DOB_YMD']) . " " . xl('Age at death') . ": " . oeFormatAge($result['DOB_YMD'], $date_of_death));
+                echo js_escape(PatientDobContext::headerString($result['DOB_YMD'] ?? null, fn(string $dob): string => " " . xl('DOB') . ": " . oeFormatShortDate($dob) . " " . xl('Age at death') . ": " . oeFormatAge($dob, $date_of_death)));
             }
             echo "," . ((new PatientService())->hasPictureForPid($pid) ? 'true' : 'false'); ?>);
             var EncounterDateArray = [];

@@ -48,7 +48,7 @@ $logoService = new LogoService();
 $menuLogo = $logoService->getLogo('core/menu/primary/');
 $versionService = new VersionService();
 $softwareVersion = text((string) $versionService->getSoftwareVersion());
-$clinicalUiAssetVersion = '20261003-banner';
+$clinicalUiAssetVersion = '20261003-dob';
 // Registration status and options.
 $productRegistration = new ProductRegistrationService();
 $product_row = $productRegistration->getProductDialogStatus();
@@ -387,7 +387,7 @@ $twig = ServiceContainer::getTwig();
     <script src="js/menu_launcher.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>"></script>
     <script src="js/workbench_shell.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>"></script>
     <script src="js/application_view_model.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
-    <script src="js/frame_proxies.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
+    <script src="js/frame_proxies.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>"></script>
     <script src="js/dialog_utils.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
     <script src="js/shortcuts.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
 
