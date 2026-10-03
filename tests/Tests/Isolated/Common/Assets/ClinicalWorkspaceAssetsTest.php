@@ -87,7 +87,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     public function unsupportedAssetIsRejected(string $asset): void
     {
         // A real file at the requested location proves rejection is by name, not by absence.
-        $this->writeAsset('workspace.css', 1_700_000_000);
+        $this->writeAsset('unlisted.css', 1_700_000_000);
         $assets = new ClinicalWorkspaceAssets($this->directory);
 
         $this->expectException(\InvalidArgumentException::class);
@@ -103,7 +103,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     {
         return [
             'empty name' => [''],
-            'unlisted sibling' => ['workspace.css'],
+            'unlisted sibling' => ['unlisted.css'],
             'parent traversal' => ['../appointment.css'],
             'traversal back into a listed name' => ['x/../mode.js'],
             'absolute path' => ['/etc/passwd'],
@@ -135,6 +135,17 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function calendarWorkdayAssetsAreVersionedPerFile(): void
+    {
+        $this->writeAsset('calendar-workday.css', 1_700_000_700);
+        $this->writeAsset('calendar-workday.js', 1_700_000_800);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700000700', $assets->version('calendar-workday.css'));
+        self::assertSame('1700000800', $assets->version('calendar-workday.js'));
+    }
+
+    #[Test]
     public function finderStylesheetIsVersioned(): void
     {
         $this->writeAsset('finder.css', 1_700_000_789);
@@ -161,6 +172,24 @@ class ClinicalWorkspaceAssetsTest extends TestCase
 
         self::assertSame('1700000789', $assets->version('soap-document.css'));
         self::assertSame('1700000790', $assets->version('soap-document.js'));
+    }
+
+    #[Test]
+    public function recordWorkspaceStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('workspace.css', 1_700_000_901);
+
+        self::assertSame('1700000901', (new ClinicalWorkspaceAssets($this->directory))->version('workspace.css'));
+    }
+
+    #[Test]
+    public function shippedWorkspaceStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/workspace.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('workspace.css'));
     }
 
     #[Test]

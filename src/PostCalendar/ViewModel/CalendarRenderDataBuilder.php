@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace OpenEMR\PostCalendar\ViewModel;
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+
 /**
  * Orchestration layer that turns the legacy consumer's raw inputs
  * (the existing `$A_EVENTS`, `$providers`, `$times`, etc. that
@@ -32,8 +34,13 @@ namespace OpenEMR\PostCalendar\ViewModel;
  */
 final readonly class CalendarRenderDataBuilder
 {
+    /**
+     * @param ClinicalWorkspaceAssets $assets Per-file cache versions for the
+     *                                        clinical-workspace assets a view links directly.
+     */
     public function __construct(
         public CalendarViewModel $viewModel,
+        private ClinicalWorkspaceAssets $assets = new ClinicalWorkspaceAssets(),
     ) {
     }
 
@@ -906,6 +913,8 @@ final readonly class CalendarRenderDataBuilder
             'isHolidayDay'            => $isHolidayDay,
             'providers'               => $providersGrid,
             'webroot'                 => $webroot,
+            'workdayCssVersion'       => $this->assets->version('calendar-workday.css'),
+            'workdayJsVersion'        => $this->assets->version('calendar-workday.js'),
         ];
     }
 

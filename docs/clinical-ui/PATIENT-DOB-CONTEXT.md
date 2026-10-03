@@ -32,7 +32,11 @@ Because the name, external ID and DOB appear together, two patients with the sam
 
 `tests/js/patient-dob-context.test.js` drives the real `setPatient` proxy and `patient_data_view_model`, and binds the real PHP-rendered template through `tests/js/fixtures/patient-data-template-harness.php`, for every `patient_name_display` variant. It covers: known DOB, same-patient null/undefined refresh, same-patient replacement, a new patient without a DOB, empty/whitespace/undefined as unknown, same-name switching, clearing, no patient, and escaping.
 
-It also runs the real `PatientDobContext` class through `tests/js/fixtures/patient-dob-publisher-harness.php` (no autoloader or DB) for NULL, empty, zero, impossible and malformed dates, and for valid dates including a leap day. It passes that output into the real proxy and template, checking that unknown shows `Unknown` and that a same-patient `null` refresh keeps a valid DOB. A source-contract test checks that every `setPatient` call in `demographics.php`, `demographics_full.php` and `orders_results.php` goes through the guard, and that `main.php` loads `frame_proxies.js` with a new `clinical_ui` cache token (`20261003-banner` → `20261003-dob`).
+It also runs the real `PatientDobContext` class through `tests/js/fixtures/patient-dob-publisher-harness.php` (no autoloader or DB) for NULL, empty, zero, impossible and malformed dates, and for valid dates including a leap day. It passes that output into the real proxy and template, checking that unknown shows `Unknown` and that a same-patient `null` refresh keeps a valid DOB. A source-contract test checks that every `setPatient` call in `demographics.php`, `demographics_full.php` and `orders_results.php` goes through the guard, and that `main.php` loads `frame_proxies.js` with a new `clinical_ui` cache token.
+
+Cache token history: this slice originally moved the token from `20261003-banner` to `20261003-dob`. After the later workspace-spacing integration, the current value of `$clinicalUiAssetVersion` in `interface/main/tabs/main.php` is `20261003-workspace-spacing-dob`. All four consumers of that variable use it: `js/menu_launcher.js`, `js/workbench_shell.js`, `js/frame_proxies.js` and `css/workbench_shell.css`.
+
+### Original TDD evidence (this slice, before integration)
 
 RED (publisher pages stashed, guard and tests present): `Tests: 3 failed, 47 passed, 50 total`. Each failure was a page missing the guard. Before that, the asset-token test failed on its own (`Expected: not "20261003-banner"`). GREEN with all changes: `Test Suites: 3 passed`, `Tests: 125 passed, 125 total` across the three suites below.
 
@@ -41,7 +45,14 @@ npx jest --runInBand --coverage=false --cacheDirectory ~/.hermes/cache/scratch/j
   tests/js/patient-dob-context.test.js tests/js/patient-identity-banner.test.js tests/js/workbench-shell.test.js
 ```
 
+### Refreshed controller evidence (after the staged integration merge)
+
+On the refreshed integration checkout, the controller re-ran the full Jest suite: 38 suites, 722 tests, all passing. `php -l` passed on all six changed PHP files, and `git diff --check` passed. This is local evidence from an isolated scratch checkout. It is not a hosted CI run, and the change has not been merged or deployed to production.
+
 ## Not verified here
+
+- Fresh hosted CI is still needed and has not been run for this integration: full-codebase PHPStan (level 10) with baseline-regeneration stability (retain this slice's obsolete-entry removals; add no suppressions), PHPCS, Rector dry-run, the PHPUnit suites, and coverage.
+- Runtime DOB navigation (opening a chart, switching patients, and moving from demographics to patient notes in a live session) has not been verified against a running stack.
 
 - Real browser rendering and real chart navigation (demographics → patient notes with `set_pid`) have not been exercised against a running stack.
 - `DOB: Unknown` uses the existing `DOB` and `Unknown` translation keys. Rendering in non-English languages has not been checked against a live language table.

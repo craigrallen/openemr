@@ -81,7 +81,11 @@ body.workbench-active { width: 100% !important;
   min-width: 0;
   overflow: hidden; }
 
+/* The theme's sidebar rule gives every bare `main` a 250px start margin and
+   matching width; the rail already occupies that space here. */
 #mainBox:not(.workbench-legacy) .workbench-main { display: flex;
+  width: auto;
+  margin: 0;
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
@@ -203,7 +207,7 @@ body.workbench-active { width: 100% !important;
 #mainBox:not(.workbench-legacy) #attendantData {
   flex: 0 0 auto;
   min-height: 0;
-  padding: 8px 20px;
+  padding: 6px 20px;
   background: #fff;
   border-bottom: 1px solid var(--wb-line);
 }
@@ -294,7 +298,7 @@ body.workbench-active { width: 100% !important;
 #mainBox:not(.workbench-legacy) #attendantData .workbench-identity-user { margin-inline: auto 0; }
 
 #mainBox:not(.workbench-legacy) .workbench-content-head {
-  padding: 14px 22px 7px;
+  padding: 8px 22px 4px;
   color: var(--wb-ink);
   font-size: 18px;
   font-weight: 700;

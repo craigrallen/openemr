@@ -48,7 +48,7 @@ $logoService = new LogoService();
 $menuLogo = $logoService->getLogo('core/menu/primary/');
 $versionService = new VersionService();
 $softwareVersion = text((string) $versionService->getSoftwareVersion());
-$clinicalUiAssetVersion = '20261003-focus-dob-r3';
+$clinicalUiAssetVersion = '20261003-workspace-spacing-dob';
 // Registration status and options.
 $productRegistration = new ProductRegistrationService();
 $product_row = $productRegistration->getProductDialogStatus();
