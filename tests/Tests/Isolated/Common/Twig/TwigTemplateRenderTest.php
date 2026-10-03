@@ -767,7 +767,29 @@ class TwigTemplateRenderTest extends TestCase
             [
                 'FORM_ACTION' => '/openemr',
                 'assetVersion' => self::ASSET_VERSION,
-                'soapDocumentAssets' => ['css' => '1700000789', 'js' => '1700000790'],
+                'soapDocumentAssets' => [
+                    'css' => '1700000789',
+                    'js' => '1700000790',
+                    'referenceCss' => '1700000791',
+                    'referenceJs' => '1700000792',
+                ],
+                'soapCopyAllowed' => true,
+                // Synthetic previous note with markup-like text: the fixture
+                // must show it only as an escaped attribute payload.
+                'soapReference' => [
+                    'status' => 'available',
+                    'withheld' => true,
+                    'notes' => [[
+                        'encounter' => 41,
+                        'date' => '2026-09-01',
+                        'sections' => [
+                            'subjective' => '<script>alert(1)</script>',
+                            'objective' => "a & 'b'",
+                            'assessment' => '',
+                            'plan' => "line one\nline two",
+                        ],
+                    ]],
+                ],
                 'DONT_SAVE_LINK' => '/openemr/interface/patient_file/encounter/encounter_top.php',
                 'data' => new class {
                     public function get_subjective(): string
@@ -807,6 +829,60 @@ class TwigTemplateRenderTest extends TestCase
                 },
             ],
             $fixtureDir . '/soap-form-saved-note.html',
+        ];
+
+        // No reference context and no copy eligibility: the panel must render
+        // "could not be loaded" with copy denied, never "no earlier notes".
+        yield 'forms/soap soap_form new note without reference context' => [
+            '/forms/soap/templates/soap_form.twig',
+            [
+                'FORM_ACTION' => '/openemr',
+                'assetVersion' => self::ASSET_VERSION,
+                'soapDocumentAssets' => [
+                    'css' => '1700000789',
+                    'js' => '1700000790',
+                    'referenceCss' => '1700000791',
+                    'referenceJs' => '1700000792',
+                ],
+                'DONT_SAVE_LINK' => '/openemr/interface/patient_file/encounter/encounter_top.php',
+                'data' => new class {
+                    public function get_subjective(): string
+                    {
+                        return "  pt reports <b>pain</b> & \"fatigue\"\n\n  since Monday  ";
+                    }
+
+                    public function get_objective(): string
+                    {
+                        return "\tBP 120/80";
+                    }
+
+                    public function get_assessment(): string
+                    {
+                        return '';
+                    }
+
+                    public function get_plan(): string
+                    {
+                        return "line one\nline two";
+                    }
+
+                    public function get_id(): int
+                    {
+                        return 12;
+                    }
+
+                    public function get_activity(): int
+                    {
+                        return 1;
+                    }
+
+                    public function get_pid(): int
+                    {
+                        return 7;
+                    }
+                },
+            ],
+            $fixtureDir . '/soap-form-new-note-no-reference.html',
         ];
     }
 

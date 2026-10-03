@@ -31,6 +31,8 @@ final readonly class ClinicalWorkspaceAssets
         'mode.js',
         'soap-document.css',
         'soap-document.js',
+        'soap-reference.css',
+        'soap-reference.js',
         'visit-history.css',
         'visit-history.js',
     ];

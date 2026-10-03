@@ -13,9 +13,13 @@
 
 require_once("FormSOAP.class.php");
 
+use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+use OpenEMR\Common\ClinicalWorkspace\SoapReferencePanel;
 use OpenEMR\Common\Forms\EncounterFormAccess;
 use OpenEMR\Common\Forms\FormActionBarSettings;
+use OpenEMR\Common\Session\EncounterSessionUtil;
+use OpenEMR\Common\Session\PatientSessionUtil;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\OEGlobalsBag;
@@ -43,6 +47,7 @@ class C_FormSOAP extends Controller
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
                 "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
                 "soapDocumentAssets" => self::soapDocumentAssetVersions(),
+                ...self::soapReferenceContext(0),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]
@@ -62,10 +67,32 @@ class C_FormSOAP extends Controller
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
                 "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
                 "soapDocumentAssets" => self::soapDocumentAssetVersions(),
+                ...self::soapReferenceContext($formId),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]
         );
+    }
+
+    /**
+     * Template variables for the optional read-only previous-SOAP panel.
+     * A runtime exception degrades the panel to "unavailable" with copy denied; it
+     * never prevents the editor itself from rendering. Errors propagate.
+     *
+     * @return array{soapReference: array{status: 'available'|'none'|'denied'|'unavailable', withheld: bool, notes: list<array{encounter: int, date: string, sections: array{subjective: string, objective: string, assessment: string, plan: string}}>}, soapCopyAllowed: bool}
+     */
+    private static function soapReferenceContext(int $formId): array
+    {
+        try {
+            return SoapReferencePanel::fromRuntime()->context(
+                PatientSessionUtil::getPid(),
+                EncounterSessionUtil::getEncounter(),
+                $formId,
+            );
+        } catch (\RuntimeException $e) {
+            ServiceContainer::getLogger()->error('SOAP reference panel could not be prepared', ['exception' => $e]);
+            return SoapReferencePanel::unavailable();
+        }
     }
 
     public function default_action_process()
@@ -102,9 +129,9 @@ class C_FormSOAP extends Controller
         }
     }
     /**
-     * Per-file cache versions for the SOAP document stylesheet and auto-height script.
+     * Per-file cache versions for the SOAP document and reference panel assets.
      *
-     * @return array{css: string, js: string}
+     * @return array{css: string, js: string, referenceCss: string, referenceJs: string}
      */
     private static function soapDocumentAssetVersions(): array
     {
@@ -113,6 +140,8 @@ class C_FormSOAP extends Controller
         return [
             'css' => $assets->version('soap-document.css'),
             'js' => $assets->version('soap-document.js'),
+            'referenceCss' => $assets->version('soap-reference.css'),
+            'referenceJs' => $assets->version('soap-reference.js'),
         ];
     }
 
