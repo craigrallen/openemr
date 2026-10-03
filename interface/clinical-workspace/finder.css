@@ -1,0 +1,204 @@
+/*
+ * Patient Finder inside the active workbench: quiet document heading, compact
+ * search toolbar and a results sheet. Presentation only; every control, column,
+ * DataTables hook and row handler stays in the DOM in its original order.
+ * Loaded after workspace.css; legacy, direct and print views use the theme.
+ */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-block: 0.5rem 1.25rem;
+    padding: 0;
+    background: transparent !important;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* Reference workspace heading: 28px, semibold, tight tracking. */
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .navbar-brand {
+    margin-inline-end: 0.5rem;
+    padding: 0;
+    color: var(--oe-ink);
+    font-size: 1.75rem;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .navbar-nav {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .btn-add {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.375rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--oe-petrol);
+    border-radius: 0.3rem;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pageHeadingNav .nav-link {
+    color: var(--oe-muted);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .table-responsive {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /* Toolbar: the original "Search all columns" field. */
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table_filter {
+    max-width: 35rem;
+    margin-block: 0 1rem;
+    text-align: start;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table_filter label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.6rem;
+    margin: 0;
+    color: var(--oe-muted);
+    font-weight: 600;
+    text-align: start;
+    white-space: normal;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table_filter input {
+    flex: 1 1 14rem;
+    width: auto;
+    min-width: 0;
+    min-height: 2.5rem;
+    margin-inline: 0;
+    padding: 0.5rem 0.65rem;
+    color: var(--oe-ink);
+  }
+
+  /*
+   * Results sheet: DataTables processing indicator and table, or the recent list.
+   * clear: the overflow box would otherwise sit beside the floated DataTables filter.
+   */
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results {
+    clear: both;
+    max-width: 100%;
+    margin: 0;
+    overflow-x: auto;
+    background: var(--oe-paper);
+    border: 1px solid var(--oe-line);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table,
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results table {
+    font-size: 0.875rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results th,
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table thead th {
+    padding: 0.7rem 1rem;
+    background: #f6f8f9;
+    border-block-end: 1px solid var(--oe-line) !important;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-align: start;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results td,
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table td {
+    padding: 0.75rem 1rem;
+    border-block-start: 1px solid #e1e8eb !important;
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table td a,
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results td a {
+    font-weight: 600;
+  }
+
+  /* Per-column filters revealed by the heading search action. */
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table #advanced_search td {
+    padding: 0.5rem;
+    background: #fbfcfc;
+    border-block-start: 0 !important;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table #advanced_search input {
+    min-width: 8rem;
+    min-height: 2.25rem;
+    font-size: 0.8125rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table.no-footer {
+    border-block-end: 0 !important;
+  }
+
+  /* Footer: new-tab and exact-search options, result count and paging. */
+  body.oe-clinical-workspace.oe-clinical-finder .mytopdiv form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .mytopdiv {
+    padding-block: 0.85rem 0.25rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .mytopdiv .form-check-inline {
+    margin-inline: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table_wrapper .mytopdiv label {
+    margin-inline: 0;
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .dataTables_info {
+    padding-block-start: 0.5rem;
+    color: var(--oe-muted) !important;
+    font-size: 0.8125rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .dataTables_paginate {
+    margin-block-start: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .dataTables_paginate .pagination {
+    flex-wrap: wrap;
+  }
+}
+
+@media screen and (width <= 640px) {
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .navbar-brand {
+    font-size: 1.5625rem;
+  }
+
+  /* The heading partial has no toggler, so keep Add New Patient reachable. */
+  body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .navbar-collapse {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #pt_table_filter {
+    max-width: 100%;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results th,
+  body.oe-clinical-workspace.oe-clinical-finder #recent .oe-finder-results td,
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table thead th,
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-results #pt_table td {
+    padding: 0.6rem 0.75rem;
+  }
+}

@@ -293,3 +293,23 @@ focus moves to the nearest focusable ancestor, otherwise to the body. The new
   remain open. Next: verify latest CI/Codecov and test deployment, exercise the
   launcher in real browser/admin/restricted/module contexts, then take the next
   bounded additive design/backend slice. The redesign is NOT complete.
+
+## Patient Finder workspace slice — 2026-10-03
+
+Presentation-only Finder slice in `feat/clinical-finder-workspace`; see
+[FINDER.md](FINDER.md) for scope, RED/GREEN commands and logs. Controller
+verified full Jest 28 suites / 428 tests, full isolated PHPUnit 5875 tests /
+14834 assertions (exit 0 with four inherited warnings, five skipped and
+fourteen incomplete), ESLint/stylelint/PHPCS/Rector/diff checks. Full-codebase
+PHPStan CI passed with zero errors in debug/no-result-cache mode after the
+ordinary result-cache write exhausted local disk. No gates/baselines weakened.
+Independent Codex Astra found the floated search/results-sheet P2; Claude
+fixed regression-first. Actual authenticated local Chrome verified corrected
+layout and twelve LTR/RTL desktop/mobile geometry cases, original controls,
+global/column/empty search, recent/list tabs and synthetic record routing.
+No clinical saves or JS errors; original expansion handler persisted then
+restored a local UI preference. Screenshot/reference comparison is partial
+Finder fidelity, not full research or clinical acceptance. Wider roles,
+modules/custom columns, drag-resize, print, zoom and assistive technology still
+need evidence. All 22 acceptance rows remain open. Required hosted CI/review,
+merge and canonical test deployment are separate gates, not yet claimed here.
