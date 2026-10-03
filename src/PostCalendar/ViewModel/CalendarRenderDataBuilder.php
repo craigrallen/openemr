@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace OpenEMR\PostCalendar\ViewModel;
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+
 /**
  * Orchestration layer that turns the legacy consumer's raw inputs
  * (the existing `$A_EVENTS`, `$providers`, `$times`, etc. that
@@ -34,6 +36,7 @@ final readonly class CalendarRenderDataBuilder
 {
     public function __construct(
         public CalendarViewModel $viewModel,
+        private ClinicalWorkspaceAssets $assets = new ClinicalWorkspaceAssets(),
     ) {
     }
 
@@ -643,6 +646,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'month',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'currentMonthLabel'       => $currentMonthLabel,
             'isToday'                 => $isToday,
@@ -879,6 +883,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'day',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'dayHeaderLabel'          => $dayHeaderLabel,
             'isToday'                 => $isToday,
@@ -1055,6 +1060,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'week',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'weekHeaderLabel'         => $weekHeaderLabel,
             'isToday'                 => $isToday,

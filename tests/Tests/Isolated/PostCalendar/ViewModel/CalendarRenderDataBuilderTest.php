@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace OpenEMR\Tests\Isolated\PostCalendar\ViewModel;
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\PostCalendar\ViewModel\CalendarRenderDataBuilder;
 use OpenEMR\PostCalendar\ViewModel\CalendarViewModel;
 use OpenEMR\PostCalendar\ViewModel\ViewType;
@@ -403,6 +404,37 @@ final class CalendarRenderDataBuilderTest extends TestCase
         self::assertSame('?next', $result['NEXT_DAY_URL']);
         self::assertArrayHasKey('timeRows', $result);
         self::assertArrayHasKey('providers', $result);
+    }
+
+    public function testScreenViewsVersionTheSidebarScriptFromItsOwnFile(): void
+    {
+        $directory = sys_get_temp_dir() . '/oe-calendar-sidebar-' . bin2hex(random_bytes(6));
+        mkdir($directory);
+        $script = $directory . '/calendar-sidebar.js';
+        file_put_contents($script, '/* sidebar */');
+        touch($script, 1_700_000_321);
+        try {
+            $assets = new ClinicalWorkspaceAssets($directory);
+            $common = [[$this->makeProvider()], [$this->makeProvider()], [['id' => 1, 'name' => 'Main']]];
+            $month = (new CalendarRenderDataBuilder(new CalendarViewModel(ViewType::Month, 0), $assets))
+                ->buildMonthScreenRenderData(['2026-03-15' => []], ...[...$common, '20260315', $this->shortDayNames(), 1, 0, '', '', '', '', '', '', '', true, '']);
+            $day = (new CalendarRenderDataBuilder(new CalendarViewModel(ViewType::Day, 0), $assets))
+                ->buildDayScreenRenderData(['2026-03-15' => []], ...[...$common, $this->makeTimes(), 30, '20260315', $this->shortDayNames(), 1, 0, '', '', '', '', '', '', '', true, '', true]);
+            $week = (new CalendarRenderDataBuilder(new CalendarViewModel(ViewType::Week, 0), $assets))
+                ->buildWeekScreenRenderData(['2026-03-15' => []], ...[...$common, $this->makeTimes(), 30, '20260315', $this->shortDayNames(), 1, 0, '', '', '', '', '', '', '', true, '', true]);
+
+            foreach (['month' => $month, 'day' => $day, 'week' => $week] as $view => $result) {
+                self::assertSame('1700000321', $result['calendarSidebarVersion'], $view);
+            }
+
+            touch($script, 1_700_086_400);
+            $day = (new CalendarRenderDataBuilder(new CalendarViewModel(ViewType::Day, 0), $assets))
+                ->buildDayScreenRenderData(['2026-03-15' => []], ...[...$common, $this->makeTimes(), 30, '20260315', $this->shortDayNames(), 1, 0, '', '', '', '', '', '', '', true, '', true]);
+            self::assertSame('1700086400', $day['calendarSidebarVersion']);
+        } finally {
+            unlink($script);
+            rmdir($directory);
+        }
     }
 
     public function testBuildDayScreenShowFacilitySelectReflectsFacilityCount(): void
