@@ -901,13 +901,16 @@ function createFollowUpEncounter(event, encId){
 $(function () {
     $(".encrow").on("mouseover", function() { $(this).toggleClass("highlight"); });
     $(".encrow").on("mouseout", function() { $(this).toggleClass("highlight"); });
-    $(".encrow").on("click", function() { toencounter(this.id); });
 
     $(".docrow").on("mouseover", function() { $(this).toggleClass("highlight"); });
     $(".docrow").on("mouseout", function() { $(this).toggleClass("highlight"); });
-    $(".docrow").on("click", function() { todocument(this.id); });
     if (window.oeVisitHistory) {
+        // Delegated: a click opens only the closest row, and links inside a row keep their own href.
+        oeVisitHistory.bindRowClicks(document, { openEncounter: toencounter, openDocument: todocument });
         oeVisitHistory.bindRowKeyboard(document, { openEncounter: toencounter, openDocument: todocument });
+    } else {
+        $(".encrow").on("click", function() { toencounter(this.id); });
+        $(".docrow").on("click", function() { todocument(this.id); });
     }
 
     $(".billing_note_text").on("mouseover", function() { $(this).toggleClass("billing_note_text_highlight"); });

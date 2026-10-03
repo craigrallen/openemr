@@ -28,6 +28,7 @@ final readonly class ClinicalWorkspaceAssets
     private const SUPPORTED = [
         'ajtooltip.js',
         'appointment.css',
+        'finder.css',
         'mode.js',
         'soap-document.css',
         'soap-document.js',
