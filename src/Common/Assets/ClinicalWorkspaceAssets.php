@@ -30,6 +30,8 @@ final readonly class ClinicalWorkspaceAssets
         'appointment.css',
         'finder.css',
         'mode.js',
+        'soap-document.css',
+        'soap-document.js',
         'visit-history.css',
         'visit-history.js',
     ];

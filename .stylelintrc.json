@@ -33,6 +33,7 @@
     "overrides": [
         {
             "files": [
+                "interface/clinical-workspace/calendar.css",
                 "interface/clinical-workspace/finder.css"
             ],
             "rules": {

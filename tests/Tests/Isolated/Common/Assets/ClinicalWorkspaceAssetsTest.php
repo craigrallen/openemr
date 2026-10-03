@@ -152,6 +152,26 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('finder.css'));
     }
 
+    #[Test]
+    public function soapDocumentAssetsAreVersionedIndependently(): void
+    {
+        $this->writeAsset('soap-document.css', 1_700_000_789);
+        $this->writeAsset('soap-document.js', 1_700_000_790);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700000789', $assets->version('soap-document.css'));
+        self::assertSame('1700000790', $assets->version('soap-document.js'));
+    }
+
+    #[Test]
+    public function shippedSoapDocumentAssetsExist(): void
+    {
+        $assets = new ClinicalWorkspaceAssets();
+
+        self::assertNotSame('0', $assets->version('soap-document.css'));
+        self::assertNotSame('0', $assets->version('soap-document.js'));
+    }
+
     private function writeAsset(string $name, int $mtime): void
     {
         $path = $this->directory . '/' . $name;
