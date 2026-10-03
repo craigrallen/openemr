@@ -1448,7 +1448,7 @@ function isRegularRepeat($repeat): bool
             <option value='2'<?php echo ($startampm == '2') ? " selected" : ""; ?>><?php echo xlt('PM'); ?></option>
         </select>
         <?php endif ?>
-        <label class='col-sm col-form-label' id='tdallday4'><?php echo xlt('duration'); ?></label>
+        <label class='col-sm col-form-label' for='tdallday5' id='tdallday4'><?php echo xlt('duration'); ?></label>
         <input class="col-sm form-control" id='tdallday5' type='text' size='4' name='form_duration' value='<?php echo attr($thisduration) ?>' title='<?php echo xla('Event duration in minutes'); ?>' />
     </div>
     <div class="form-row mb-sm-2">
@@ -1485,7 +1485,7 @@ function isRegularRepeat($repeat): bool
             }
             ?>
         </select>
-        <label class='col-sm col-form-label' id='tdrepeat2'><?php echo xlt('until date'); ?></label>
+        <label class='col-sm col-form-label' for='form_enddate' id='tdrepeat2'><?php echo xlt('until date'); ?></label>
         <input class="col-sm form-control form-control-sm datepicker" type='text' size='10' name='form_enddate' id='form_enddate' value='<?php echo attr(oeFormatShortDate($recurrence_end_date ?? '')) ?>' title='<?php echo xla('last date of this event'); ?>' />
         <?php
         if (!empty($repeatexdate)) {
@@ -1544,8 +1544,8 @@ function isRegularRepeat($repeat): bool
 </div>
 <div class="form-row mx-2">
     <div class="col-sm form-group">
-        <label id='title_apptstatus'><?php echo xlt('Status'); ?>:</label>
-        <label id='title_prefcat' class='font-weight-bold' style='display:none'>
+        <label for='form_apptstatus' id='title_apptstatus'><?php echo xlt('Status'); ?>:</label>
+        <label for='form_prefcat' id='title_prefcat' class='font-weight-bold' style='display:none'>
             <?php echo xlt('Exclusive Category'); ?>:
             <i class="text-muted font-weight-normal ml-1"><?php echo xlt('(If selected, you will only be shown as available for this category)'); ?></i>
         </label>
@@ -1558,7 +1558,7 @@ function isRegularRepeat($repeat): bool
         ?>
         <!-- The following list will be invisible unless this is an In Office
          event, in which case form_apptstatus (above) is to be invisible. -->
-        <select class='form-control form-control-sm' name='form_prefcat' style='display:none' title='<?php echo xla('Preferred Event Category'); ?>'>
+        <select class='form-control form-control-sm' name='form_prefcat' id='form_prefcat' style='display:none' title='<?php echo xla('Preferred Event Category'); ?>'>
             <?php echo $prefcat_options ?>
         </select>
     </div>
@@ -1620,6 +1620,7 @@ set_repeat();
 set_days_every_week();
 /* and get it on with some javascript */
 $(function () {
+    bindPickerKeys(document);
     $("#form_save").click(function (e) {
         validateform(e, "save");
     });

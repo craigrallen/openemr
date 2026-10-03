@@ -138,6 +138,149 @@ describe('appointment editor loads the workbench presentation', () => {
     });
 });
 
+describe('schedule and status labels name their controls', () => {
+    // Static markup of the schedule block and the status/room/comments row, PHP removed.
+    function scheduleDom() {
+        const src = source();
+        const start = src.indexOf('<div class="jumbotron jumbotron-fluid px-3 py-4 my-2 oe-appt-schedule">');
+        const end = src.indexOf('<div class="form-row mx-2 mt-3 oe-appt-actions">');
+        const holder = document.createElement('form');
+        holder.innerHTML = src.slice(start, end).replace(/<\?php[\s\S]*?\?>/g, '');
+        return holder;
+    }
+
+    test.each([
+        ['tdallday4', 'form_duration'],
+        ['tdrepeat2', 'form_enddate'],
+        ['title_prefcat', 'form_prefcat'],
+    ])('visible label #%s is the label of the %s control', (labelId, controlName) => {
+        const dom = scheduleDom();
+        const label = dom.querySelector(`#${labelId}`);
+        expect(label.control).not.toBeNull();
+        expect(label.control.name).toBe(controlName);
+    });
+
+    test('Status label points at the select generate_form_field emits for apptstatus', () => {
+        expect(tagWithId(source(), 'title_apptstatus')).toContain("for='form_apptstatus'");
+        // options.inc.php builds the list as generate_select_list("form_$field_id") and uses that as the id.
+        const options = fs.readFileSync(path.join(repo, 'library/options.inc.php'), 'utf8');
+        expect(options).toContain('"form_$field_id",');
+        expect(options).toContain("$attributes['id'] = attr($tag_name);");
+    });
+
+    test('every label in the schedule and status rows resolves to a control', () => {
+        // These selects are emitted by PHP (generate_form_field / generate_select_list) and absent once PHP is stripped.
+        const phpGenerated = ['form_apptstatus', 'form_room'];
+        const orphans = [...scheduleDom().querySelectorAll('label')]
+            .filter((label) => !phpGenerated.includes(label.htmlFor) && label.control === null)
+            .map((label) => label.id || label.textContent.trim());
+        expect(orphans).toEqual([]);
+    });
+});
+
+describe('patient and group pickers open from the keyboard', () => {
+    const jsPath = path.join(repo, 'interface/main/calendar/add_edit_event.js');
+    const win = window;
+    let calls;
+
+    // jest-environment-jsdom runs scripts, so the real add_edit_event.js loads once and the inline
+    // onclick attributes in the real markup compile to the original sel_patient()/sel_group() calls.
+    beforeAll(() => {
+        const script = document.createElement('script');
+        script.textContent = fs.readFileSync(jsPath, 'utf8');
+        document.head.appendChild(script);
+    });
+
+    // The whole single-line <input> carrying the id; tagWithId would stop at the "?>" in its placeholder.
+    const fieldTag = (src, id) => src.match(new RegExp(`<input\\b[^\\n]*\\bid=['"]${id}['"][^\\n]*/>`))[0];
+
+    // Real Patient and Group field markup (PHP removed).
+    function pickerPage() {
+        const src = source();
+        const field = (id) => fieldTag(src, id).replace(/<\?php[\s\S]*?\?>/g, '');
+        document.body.innerHTML = `<form>${field('form_patient')}${field('form_group')}<input type='hidden' name='form_enddate'></form>`;
+        calls = [];
+        // Parent-window collaborators the pickers reach for; recorded rather than opened.
+        win.restoreSession = () => calls.push('restoreSession');
+        win.dlgopen = (url) => calls.push(url);
+        win.addEditEventConfig = { translations: { patientSearch: 'Patient Search', groupSearch: 'Group Search' } };
+        win.bindPickerKeys(document);
+        return { win, calls, patient: document.getElementById('form_patient'), group: document.getElementById('form_group') };
+    }
+
+    const press = (win, el, key, init = {}) => {
+        const event = new win.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+        el.dispatchEvent(event);
+        return event;
+    };
+
+    test('markup keeps the original names, ids and click handlers', () => {
+        const src = source();
+        expect(fieldTag(src, 'form_patient')).toMatch(/name='form_patient'[\s\S]*onclick='sel_patient\(\)'/);
+        expect(fieldTag(src, 'form_patient')).not.toMatch(/\breadonly\b|role=/);
+        expect(fieldTag(src, 'form_group')).toMatch(/name='form_group'[\s\S]*onclick='sel_group\(\)'[\s\S]*readonly/);
+        expect(fieldTag(src, 'form_group')).not.toMatch(/role=/);
+    });
+
+    test('the page binds the keys once the DOM is ready', () => {
+        const ready = source().split('<!-- form support functions-->')[1];
+        expect(ready).toMatch(/\$\(function \(\) \{\n {4}bindPickerKeys\(document\);/);
+    });
+
+    test.each(['Enter', ' '])('%j on the read-only Group field runs sel_group() once, restoring the session first', (key) => {
+        const { win, calls, group } = pickerPage();
+        const event = press(win, group, key);
+        expect(calls).toEqual(['restoreSession', 'find_group_popup.php']);
+        expect(event.defaultPrevented).toBe(true);
+    });
+
+    test('a native click on the Group field still opens the picker exactly once', () => {
+        const { calls, group } = pickerPage();
+        group.click();
+        expect(calls).toEqual(['restoreSession', 'find_group_popup.php']);
+    });
+
+    test.each([
+        ['Tab', {}],
+        ['a', {}],
+        ['Enter', { repeat: true }],
+        ['Enter', { ctrlKey: true }],
+        [' ', { altKey: true }],
+    ])('%j %o on the Group field is left alone', (key, init) => {
+        const { win, calls, group } = pickerPage();
+        const event = press(win, group, key, init);
+        expect(calls).toEqual([]);
+        expect(event.defaultPrevented).toBe(false);
+    });
+
+    test.each(['Enter', ' ', 'a'])('the typeable Patient field keeps native %j handling', (key) => {
+        const { win, calls, patient } = pickerPage();
+        const event = press(win, patient, key);
+        expect(calls).toEqual([]);
+        expect(event.defaultPrevented).toBe(false);
+        patient.click();
+        expect(calls).toEqual(['find_patient_popup.php']);
+    });
+
+    test('a field whose click handler is not the expected picker is not bound', () => {
+        const { win, calls, group } = pickerPage();
+        const other = group.cloneNode();
+        other.id = 'form_group';
+        other.setAttribute('onclick', 'sel_patient()');
+        group.replaceWith(other);
+        win.bindPickerKeys(win.document);
+        expect(press(win, other, 'Enter').defaultPrevented).toBe(false);
+        expect(calls).toEqual([]);
+    });
+
+    test('binding twice does not open the picker twice', () => {
+        const { win, calls, group } = pickerPage();
+        win.bindPickerKeys(win.document);
+        press(win, group, 'Enter');
+        expect(calls).toEqual(['restoreSession', 'find_group_popup.php']);
+    });
+});
+
 describe('mode switch on the real appointment body', () => {
     const origin = window.location.origin;
     let observer;
@@ -260,6 +403,16 @@ describe('appointment.css contract', () => {
         expect(focusRules.some(({ prop }) => prop === 'box-shadow' || prop === 'outline')).toBe(true);
         rules.filter(({ prop, value }) => prop === 'outline' && /^(0|none)$/.test(value))
             .forEach(({ selector }) => expect(selector).toBe('unreachable: outline removed'));
+    });
+
+    test('text inputs and selects draw a real outline on focus, not only a box-shadow', () => {
+        // Bootstrap sets .form-control:focus { outline: 0 }; forced-colors mode drops box-shadow,
+        // so without an outline a focused field has no indicator at all.
+        ['.form-control:focus', 'select.input-sm:focus'].forEach((control) => {
+            const outlines = rules.filter(({ selector, prop }) => selector === `${SCOPE} ${control}` && prop === 'outline');
+            expect([control, outlines.length]).toEqual([control, 1]);
+            expect(outlines[0].value).toMatch(/^2px solid \S+$/);
+        });
     });
 
     test('only hooks that exist in the PHP markup are targeted', () => {

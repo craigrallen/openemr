@@ -56,6 +56,29 @@ function sel_group() {
     dlgopen('find_group_popup.php', '_blank', 650, 300, '', title);
 }
 
+// Read-only picker fields and the click handler each one must carry.
+const PICKER_FIELDS = {form_patient: 'sel_patient()', form_group: 'sel_group()'};
+
+// Enter or Space on a read-only picker field does what a click does: runs its own onclick once.
+function pickerKeydown(event) {
+    if ((event.key !== 'Enter' && event.key !== ' ') || event.repeat
+        || event.ctrlKey || event.altKey || event.metaKey || !event.currentTarget.readOnly) {
+        return;
+    }
+    event.preventDefault();
+    event.currentTarget.click();
+}
+
+// Give keyboard users the picker on read-only fields. Typeable fields keep native key handling.
+function bindPickerKeys(doc) {
+    Object.keys(PICKER_FIELDS).forEach(function (id) {
+        var field = doc.getElementById(id);
+        if (field && field.readOnly && field.getAttribute('onclick') === PICKER_FIELDS[id]) {
+            field.addEventListener('keydown', pickerKeydown);
+        }
+    });
+}
+
 // Do whatever is needed when a new event category is selected.
 // For now this means changing the event title and duration.
 function set_display() {

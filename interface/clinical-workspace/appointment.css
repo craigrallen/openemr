@@ -89,6 +89,9 @@
   body.oe-clinical-workspace.oe-clinical-appointment select.input-sm:focus {
     border-color: var(--oe-petrol);
     box-shadow: var(--oe-ring);
+
+    /* Forced-colors mode drops box-shadow; a transparent outline is repainted there as the focus ring */
+    outline: 2px solid transparent;
   }
 
   body.oe-clinical-workspace.oe-clinical-appointment .form-check-input {
