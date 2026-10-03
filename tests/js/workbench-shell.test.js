@@ -237,6 +237,16 @@ test('clinical UI scripts use the same changed asset version in main.php', () =>
     }
 });
 
+test('patient banner CSS change busts the deployed work-areas asset cache for the shell CSS and both scripts', () => {
+    const php = fs.readFileSync(path.join(root, 'interface/main/tabs/main.php'), 'utf8');
+    const token = php.match(/\$clinicalUiAssetVersion\s*=\s*'([^']+)'/)[1];
+    expect(token).not.toBe('20261002-areas');
+    const consumer = "?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>&clinical_ui=<?php echo $clinicalUiAssetVersion; ?>";
+    for (const asset of ['css/workbench_shell.css', 'js/menu_launcher.js', 'js/workbench_shell.js']) {
+        expect(php).toContain(`${asset}${consumer}`);
+    }
+});
+
 test('blocked descendant explains the ancestor requirement without dispatch', () => {
     setup();
     const popup = Array.from(document.querySelectorAll('[data-workbench-action]')).find(button => button.textContent === 'Popup');
