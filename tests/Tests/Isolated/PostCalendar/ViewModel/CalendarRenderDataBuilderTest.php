@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace OpenEMR\Tests\Isolated\PostCalendar\ViewModel;
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\PostCalendar\ViewModel\CalendarRenderDataBuilder;
 use OpenEMR\PostCalendar\ViewModel\CalendarViewModel;
 use OpenEMR\PostCalendar\ViewModel\ViewType;
@@ -403,6 +404,56 @@ final class CalendarRenderDataBuilderTest extends TestCase
         self::assertSame('?next', $result['NEXT_DAY_URL']);
         self::assertArrayHasKey('timeRows', $result);
         self::assertArrayHasKey('providers', $result);
+    }
+
+    public function testBuildDayScreenCarriesPerFileWorkdayAssetVersions(): void
+    {
+        $directory = sys_get_temp_dir() . '/oe-workday-assets-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        try {
+            file_put_contents($directory . '/calendar-workday.css', '/* css */');
+            touch($directory . '/calendar-workday.css', 1_700_000_100);
+            file_put_contents($directory . '/calendar-workday.js', '/* js */');
+            touch($directory . '/calendar-workday.js', 1_700_000_200);
+
+            $builder = new CalendarRenderDataBuilder(
+                new CalendarViewModel(viewType: ViewType::Day, firstDayOfWeek: 0),
+                new ClinicalWorkspaceAssets($directory)
+            );
+            $result = $builder->buildDayScreenRenderData(
+                ['2026-03-15' => []],
+                [$this->makeProvider()],
+                [$this->makeProvider()],
+                [['id' => 1, 'name' => 'Main']],
+                $this->makeTimes(),
+                30,
+                '20260315',
+                $this->shortDayNames(),
+                1,
+                0,
+                '/img',
+                '/openemr',
+                '?prev',
+                '?next',
+                'fa-chevron-left',
+                'fa-chevron-right',
+                '<select id="monthPicker"></select>',
+                true,
+                'Sunday, March 15, 2026',
+                true
+            );
+        } finally {
+            if (is_file($directory . '/calendar-workday.css')) {
+                unlink($directory . '/calendar-workday.css');
+            }
+            if (is_file($directory . '/calendar-workday.js')) {
+                unlink($directory . '/calendar-workday.js');
+            }
+            rmdir($directory);
+        }
+
+        self::assertSame('1700000100', $result['workdayCssVersion']);
+        self::assertSame('1700000200', $result['workdayJsVersion']);
     }
 
     public function testBuildDayScreenShowFacilitySelectReflectsFacilityCount(): void
