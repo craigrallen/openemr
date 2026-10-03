@@ -297,15 +297,17 @@ test('mobile drawer contains focus, closes on backdrop and restores trigger afte
     expect(document.activeElement).toBe(toggle);
 });
 
-test('runtime menu insert retains branch state and focus on existing action', () => {
+test('runtime menu insert retains branch state and moves focus off an unreachable action', () => {
     const menu = setup();
     const branch = document.querySelector('.workbench-branch');
     branch.open = true;
     const popup = Array.from(document.querySelectorAll('[data-workbench-action]')).find(button => button.textContent === 'Popup');
+    // Popup sits inside the still-collapsed Visits branch, so a real browser could not hold focus on it.
+    expect(popup.closest('details').open).toBe(false);
     popup.focus();
     menu()[1].children()[0].children.push({ label: ko.observable('Extra'), header: false, url: ko.observable('/extra'), target: 'enc', requirement: 0, enabled: ko.observable(true) });
     expect(document.querySelector('.workbench-branch').open).toBe(true);
-    expect(document.activeElement.textContent).toBe('Popup');
+    expect(document.activeElement).toBe(document.querySelector('[data-workbench-search]'));
     expect(Array.from(document.querySelectorAll('[data-workbench-action]')).some(button => button.textContent === 'Extra')).toBe(true);
 });
 

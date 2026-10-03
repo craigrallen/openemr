@@ -19,11 +19,13 @@ After the rebuild, focus goes to the first match in this order:
 2. The nearest surviving ancestor branch summary.
 3. The rail search field.
 
-Steps 2 and 3, and step 1 when the element was reachable before, accept only
-elements a keyboard user can reach. An element is unreachable if it is
-disconnected, sits inside a `hidden` area section, is inert, or sits inside a
-collapsed `<details>`. If an element was already unreachable before the
-rebuild, step 1 restores it exactly as before this change.
+Every step accepts only elements a keyboard user can reach. An element is
+unreachable if it is disconnected, sits inside a `hidden` area section, is
+inert, or sits inside a collapsed `<details>`. This includes an element that
+was already unreachable before the rebuild (for example, a branch collapsed
+synchronously while a descendant held focus): browsers cannot focus such an
+element, so restoring it would leave focus on the body. It falls back to its
+nearest reachable ancestor summary or the search field instead.
 
 Focus is only restored when it was inside the rail tree, so nothing moves focus
 out of an iframe, the search field or the top bar. Restoration runs
@@ -42,6 +44,8 @@ with synthetic menu data and covers:
   during an active search
 - fallback when a branch is removed, moved into a hidden area, moved under a
   collapsed branch, or filtered out of a search
+- fallback when a focused summary or action is collapsed away synchronously
+  before the rerender (it is not refocused while unreachable)
 - identity and original dispatch for a duplicate-labelled action
 - no iframe or ancestor mutations
 - listener cleanup on teardown, and a detached root that does not throw

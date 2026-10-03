@@ -198,7 +198,6 @@
                     if (current.__workbenchNode) focusChain.push(current.__workbenchNode);
                 }
             }
-            var wasReachable = !!focusChain.length && reachable(focused);
             var openNodes = new Set(Array.from(tree.querySelectorAll('.workbench-branch[open]')).map(function (branch) { return branch.__workbenchNode; }));
             var relevant = null;
             if (needle) {
@@ -231,11 +230,10 @@
             if (focusChain.length) {
                 var candidates = Array.from(tree.querySelectorAll('[data-workbench-action], .workbench-branch')).map(focusTarget);
                 var replacement = null;
-                focusChain.some(function (node, index) {
+                focusChain.some(function (node) {
+                    // Browsers cannot focus hidden, inert or collapsed elements, so only reachable ones qualify.
                     replacement = candidates.find(function (item) {
-                        if ((item.__workbenchNode || item.parentElement.__workbenchNode) !== node) return false;
-                        // The same node returns as before unless the rerender hid it.
-                        return reachable(item) || (index === 0 && !wasReachable);
+                        return (item.__workbenchNode || item.parentElement.__workbenchNode) === node && reachable(item);
                     }) || null;
                     return !!replacement;
                 });

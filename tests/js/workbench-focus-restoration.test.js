@@ -164,6 +164,26 @@ test('branch moved under a collapsed branch is not focused through the closed de
     expect(reachable(document.activeElement)).toBe(true);
 });
 
+test.each(['summary', 'action'])('focused %s collapsed away before a rerender falls back to the reachable ancestor summary', kind => {
+    const menu = setup();
+    chooseArea('Patient');
+    branchFor(menu()[1]).open = true;
+    const visits = menu()[1].children()[0];
+    branchFor(visits).open = true;
+    const target = kind === 'summary' ? summaryFor(visits) : actionFor(visits.children()[0]);
+    target.focus();
+    expect(reachable(target)).toBe(true);
+
+    // Synchronous collapse leaves focus on the now-unreachable element; the next rerender must not restore it.
+    branchFor(menu()[1]).open = false;
+    expect(document.activeElement).toBe(target);
+    menu()[2].children.push(extra('Extra'));
+
+    expect(branchFor(menu()[1]).open).toBe(false);
+    expect(document.activeElement).toBe(summaryFor(menu()[1]));
+    expect(reachable(document.activeElement)).toBe(true);
+});
+
 test('branch filtered out of an active search falls back to the search field, never the body', () => {
     const menu = setup();
     type('Popup');
