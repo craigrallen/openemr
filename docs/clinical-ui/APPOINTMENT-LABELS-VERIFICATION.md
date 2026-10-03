@@ -81,7 +81,7 @@ functions called from PHP; `bindPickerKeys` joins that list for the same reason.
 `ci/auto_prepend.php` in the `e2e` suite of `test.yml` (see `ci/README-COVERAGE.md`). Jest tests read the PHP
 source and do not execute it.
 
-`tests/Tests/E2e/AppointmentFormLabelsTest.php` logs in as admin and loads the page in new-appointment mode.
+`HhMainMenuLinksTest::testAppointmentFormLabelsAreBoundToControls()` in `tests/Tests/E2e/HhMainMenuLinksTest.php` logs in as admin and loads the page in new-appointment mode.
 That request renders all four changed labels, the `id='form_prefcat'` select and the `bindPickerKeys(document)`
 call (none are inside a conditional). `bindPickerKeys(document)` runs in the page's jQuery ready handler, so the
 test first registers its own ready handler through `executeAsyncScript` and waits for it to run. jQuery runs ready
