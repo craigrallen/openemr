@@ -293,3 +293,83 @@ focus moves to the nearest focusable ancestor, otherwise to the body. The new
   remain open. Next: verify latest CI/Codecov and test deployment, exercise the
   launcher in real browser/admin/restricted/module contexts, then take the next
   bounded additive design/backend slice. The redesign is NOT complete.
+
+## SOAP document sheet — 2026-10-03 (branch `feat/clinical-soap-document`, uncommitted)
+
+- **Scope:** the existing SOAP form (`interface/forms/soap/templates/soap_form.twig`) only.
+  Its four original textareas, names, `onkeyup` dirty flag, save/cancel buttons,
+  hidden `id`/`activity`/`pid`/`process` fields, CSRF token, `save.php` handler,
+  translations, form-ownership checks and close dialog are unchanged. Accessible
+  field names and the input-only dirty guard belong to the separate SOAP input-guard
+  PR and are **not** part of this slice.
+- **Document sheet:** new `interface/clinical-workspace/soap-document.css`, inside
+  `@media screen` and scoped to `body.oe-clinical-soap.oe-clinical-workspace`: title
+  rule, section headings, ruled fields at 1.7 line-height, footer actions, narrow-width
+  padding, logical (RTL-safe) properties. Legacy presentation and print keep the
+  previous `workspace.css` rules; `workspace.css` is not modified.
+- **Spell-check:** `spellcheck="true"` on the document container, inherited by the four
+  fields. This is the browser's own checker only: no medical dictionary, and
+  autocorrect is **not** provided.
+- **Auto-height:** new `interface/clinical-workspace/soap-document.js` grows each field
+  to its text while the workbench class is present (typing, paste, width change,
+  font load, back/forward restore). It writes only `style.height`, never values; restores
+  the original inline height on mode exit or dispose; ignores removed fields, windowless
+  documents and unmeasurable (hidden) fields; keeps a manual drag height until the next
+  edit; keeps page scroll; no storage, network or new dependency.
+- **Cache busting:** both files are versioned per file through `ClinicalWorkspaceAssets`
+  (`soapDocumentAssets` from `C_FormSOAP`).
+- **Print:** inline heights would survive into print, where the CSS is screen-only.
+  Fitting is suspended while `beforeprint`/`afterprint` or `matchMedia('print')` report
+  printing (either signal; legacy `addListener` supported): original inline heights are
+  restored, input/resize/font refits are ignored, and fields refit after print ends.
+  Listeners are removed on dispose. Legacy presentation is never written to.
+- **Tests (run in the flex container helper):** RED first — Jest suite failed (module
+  missing); PHPUnit 2 asset errors (unsupported name) and missing SOAP render fixture.
+  After independent review, 6 new print-lifecycle tests failed on assertions before the
+  print fix. GREEN — `tests/js/clinical-soap-document.test.js` 29/29 at that point (module 98%
+  statements); full Jest 28 suites / 451 tests; full-repo eslint and stylelint exit 0;
+  `ClinicalWorkspaceAssetsTest`, `TwigTemplateRenderTest` (new `soap-form-saved-note.html`
+  fixture via `composer update-twig-fixtures`, no existing fixture changed) and
+  `TwigTemplateCompilationTest` pass. Controller gates on this diff: full PHP suite
+  5877 tests / 14838 assertions exit 0 (4 inherited warnings, 5 skipped, 14 incomplete),
+  full PHPStan 0 errors, PHPCS and Rector pass.
+- **Visual correction after browser QA:** your real-browser pass on the previous code
+  (20 geometries: native/fallback, LTR/RTL, 1440/1024/768/390/320, multiline drafts,
+  exact draft and mode preservation, no POST, no errors) passed. Its screenshot still
+  showed the legacy theme's grey legend bars and six blank native rows under short notes.
+  Now: workbench-only legends are plain headings (transparent, no padding bar); fields
+  are measured from a collapsed `0px` box instead of `auto` (which keeps the `rows="6"`
+  floor) with a scoped 4.5rem minimum, so short notes fit their text. Markup keeps
+  `rows="6"`; legacy restore, print restore and save are unchanged. RED: 11 tests failed
+  (short-field heights, legend and min-height rules); GREEN: 31/31 focused, full Jest
+  28 suites / 453 tests, full eslint and stylelint exit 0. jsdom has no layout: field
+  heights are tested against a modelled `scrollHeight`; the final real-browser
+  recheck is recorded below.
+- **Legend background fix:** the browser recheck of the compact correction still showed
+  grey headings (`rgb(209, 213, 219)`). Verified root cause: the served `style_light.css`
+  sets `legend { background-color: #d1d5db !important }` globally, which beats a normal
+  scoped rule. The SOAP workbench legend rule now declares `background-color: transparent
+  !important`, the only `!important` in `soap-document.css`; no global or other-control
+  styles changed. RED: the test asserting an important transparent background failed;
+  GREEN: 31/31 focused, full Jest 28 suites / 453 tests, full eslint and stylelint exit 0.
+  **Controller runtime recheck passed on the final fix:** real authenticated Finder →
+  synthetic patient → Visit History → nested SOAP; all four sections and original
+  Save/Cancel visible on desktop; plain transparent headings and compact short fields.
+  Native and forced moveBefore fallback: 20 geometry checks across LTR/RTL and
+  1440/1024/768/390/320 widths; long multiline text and exact whitespace preserved;
+  textarea content fits after width changes, original Calendar/Encounter tab hide/show,
+  and both navigation modes. Chromium print-media emulation restores original inline
+  heights and screen mode refits. Zero clinical POSTs and zero page errors. This is
+  disposable-local feature source, not a Railway deployment. Source files restored.
+  Screenshots/evidence: mission `browser-qa/soap-document-saved-local.png` and
+  `soap-document-local.json`. Screenshot comparison exposed and fixed the retained
+  gray legend bars/native blank-row floor; wider full-reference fidelity remains open.
+- **Not verified:** saving through the backend, encounter lock/ESign, restricted roles,
+  native OS print-preview fidelity and medical autocorrect. Row 2 in
+  [ACCEPTANCE.md](ACCEPTANCE.md) is Partial, not Accepted.
+- **Toolchain limitation and recovery:** new managed easy-light boot exhausted the
+  local Docker filesystem during optional CCDA dependency installation; only that
+  newly created disposable stack was torn down and left stopped. Tests ran in a
+  correctly rooted ephemeral flex container using existing dependency volumes,
+  SQLite extensions and Git scratch-index access; no gates or application security
+  guards were weakened. No Railway, database, document or outbound integration changes.

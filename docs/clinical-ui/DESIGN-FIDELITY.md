@@ -10,11 +10,13 @@ The accepted research-based OpenEMR workbench proposal—not a new concept—is 
 - No All menus button or popup in the main shell; shared menu helpers and legacy fallback retained.
 - Local real-browser acceptance: area switching without iframe replacement, all 119 admin runtime action labels retained, synthetic Finder/patient/SOAP route and unsaved drafts preserved, native/fallback layouts and mobile drawer checked. Other roles and installed module combinations require their own runtime acceptance.
 
+- SOAP document sheet (workbench only, screen only): the existing SOAP form takes the reference `.sheet`/`.doc` composition—document title rule, section headings, ruled 1.7 line-height fields, footer actions—on its four original textareas with original save/cancel, hidden fields, CSRF and dirty handler. Browser spell-check enabled; fields auto-grow to their text. Legacy layout and print keep the previous rules. No side-by-side reference, templates, signature or AI.
+
 ## Explicitly unfinished
 
 1. Task-led Work landing surface: build on actual day schedule and real data; next action/follow-up panels must use authenticated backend state, never the mock's synthetic counts or fabricated statuses.
 2. Persistent patient context: align the existing live name, DOB, record ID and encounter header with the accepted composition. Allergy verification state needs a real ACL-protected source and safe unknown handling; do not infer normal/no-allergy from missing data.
-3. Encounter document and same-patient reference: align existing note editing with the reference's central document plus read-only longitudinal context. Preserve original save, CSRF, note authority and encounter identity; do not treat local prototype drafts or sample chart content as implemented features.
+3. Encounter document and same-patient reference: the SOAP sheet above is a first slice only; LBF/other visit forms, the read-only same-patient reference pane and medical autocorrect remain. Align existing note editing with the reference's central document plus read-only longitudinal context. Preserve original save, CSRF, note authority and encounter identity; do not treat local prototype drafts or sample chart content as implemented features.
 4. Remaining typography and hierarchy: reference Arial/14px base, 28px workspace headings and approximately 39px navigation rhythm. Match clinical surfaces after preserving every control, semantic alert contrast, zoom and translated content.
 5. Wider acceptance: actual restricted roles, enabled modules, RTL/long translations, assistive technology and keyboard focus through full menu/search rebuilds. The existing branch-summary focus-restoration limitation is not resolved by area-switch tests.
 

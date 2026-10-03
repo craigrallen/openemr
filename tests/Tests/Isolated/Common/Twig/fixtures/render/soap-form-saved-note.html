@@ -1,0 +1,96 @@
+<html>
+<head>
+<title>SOAP</title>
+    <!-- setupHeader stub -->
+    <link rel="stylesheet" href="/openemr/interface/clinical-workspace/workspace.css?v=82">
+    <script src="/openemr/interface/clinical-workspace/mode.js?v=82" defer></script>
+    <link rel="stylesheet" href="/openemr/interface/clinical-workspace/soap-document.css?v=1700000789">
+    <script src="/openemr/interface/clinical-workspace/soap-document.js?v=1700000790" defer></script>
+</head>
+<body class="oe-clinical-soap">
+    <div class="container mt-3 oe-soap-document" spellcheck="true">
+        <div class="row">
+            <div class="col-12">
+                <h2>SOAP</h2>
+                <form name="soap" method="post" action="/openemr/interface/forms/soap/save.php" onsubmit="return top.restoreSession()">
+                    <input type="hidden" name="csrf_token_form" value="test-csrf-token" />
+                    <fieldset>
+                        <legend>Subjective</legend>
+                        <div class="container">
+                            <div class="form-group" >
+                                <textarea name="subjective" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">  pt reports &lt;b&gt;pain&lt;/b&gt; &amp; "fatigue"
+
+  since Monday  </textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Objective</legend>
+                        <div class="container">
+                            <div class="form-group">
+                                <textarea name="objective" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">	BP 120/80</textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Assessment</legend>
+                        <div class="container">
+                            <div class="form-group">
+                                <textarea name="assessment" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;"></textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Plan</legend>
+                        <div class="container">
+                            <div class="form-group">
+                                <textarea name="plan" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">line one
+line two</textarea>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <div class="form-group">
+                        <div class="btn-group" role="group">
+                            <button type="submit" class="btn btn-primary btn-save" name="Submit">Save</button>
+                            <button type="button" class="btn btn-secondary btn-cancel" id="btnClose">Cancel</button>
+                        </div>
+                        <input type="hidden" name="id" value="12" />
+                        <input type="hidden" name="activity" value="1" />
+                        <input type="hidden" name="pid" value="7" />
+                        <input type="hidden" name="process" value="true" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const close = function() {
+            if (top.isSoapEdit === true) {
+                dlgopen('', '', 450, 125, '', '<div class="text-danger">Warning</div>',
+                    {
+                    type: 'Alert',
+                    html: '<p>Do you want to close the tabs?</p>',
+                    buttons: [
+                        { text: 'Cancel', close: true, style: 'default btn-sm' },
+                        { text: 'Close', close: true, style: 'danger btn-sm', click: closeSoap },
+                    ],
+                    allowDrag: false,
+                    allowResize: false,
+                });
+            } else {
+                top.restoreSession();
+                location.href = 'javascript:parent.closeTab(window.name, false)';
+            }
+        }
+
+        const closeSoap = function() {
+            top.isSoapEdit = false;
+            top.restoreSession();
+            location.href = 'javascript:parent.closeTab(window.name, false)';
+        }
+        $('#btnClose').click(close);
+    </script>
+
+</body>
+</html>
