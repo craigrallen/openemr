@@ -15,36 +15,36 @@
                 <form name="soap" method="post" action="/openemr/interface/forms/soap/save.php" onsubmit="return top.restoreSession()">
                     <input type="hidden" name="csrf_token_form" value="test-csrf-token" />
                     <fieldset>
-                        <legend>Subjective</legend>
+                        <legend id="soap-subjective-label">Subjective</legend>
                         <div class="container">
                             <div class="form-group" >
-                                <textarea name="subjective" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">  pt reports &lt;b&gt;pain&lt;/b&gt; &amp; "fatigue"
+                                <textarea name="subjective" id="soap-subjective" aria-labelledby="soap-subjective-label" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;" oninput="top.isSoapEdit = true;">  pt reports &lt;b&gt;pain&lt;/b&gt; &amp; "fatigue"
 
   since Monday  </textarea>
                             </div>
                         </div>
                     </fieldset>
                     <fieldset>
-                        <legend>Objective</legend>
+                        <legend id="soap-objective-label">Objective</legend>
                         <div class="container">
                             <div class="form-group">
-                                <textarea name="objective" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">	BP 120/80</textarea>
+                                <textarea name="objective" id="soap-objective" aria-labelledby="soap-objective-label" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;" oninput="top.isSoapEdit = true;">	BP 120/80</textarea>
                             </div>
                         </div>
                     </fieldset>
                     <fieldset>
-                        <legend>Assessment</legend>
+                        <legend id="soap-assessment-label">Assessment</legend>
                         <div class="container">
                             <div class="form-group">
-                                <textarea name="assessment" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;"></textarea>
+                                <textarea name="assessment" id="soap-assessment" aria-labelledby="soap-assessment-label" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;" oninput="top.isSoapEdit = true;"></textarea>
                             </div>
                         </div>
                     </fieldset>
                     <fieldset>
-                        <legend>Plan</legend>
+                        <legend id="soap-plan-label">Plan</legend>
                         <div class="container">
                             <div class="form-group">
-                                <textarea name="plan" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">line one
+                                <textarea name="plan" id="soap-plan" aria-labelledby="soap-plan-label" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;" oninput="top.isSoapEdit = true;">line one
 line two</textarea>
                             </div>
                         </div>
