@@ -75,6 +75,30 @@ git diff --check                                                             # c
 `eslint` on `add_edit_event.js` reports 0 errors and the file's existing `no-unused-vars` warnings for global
 functions called from PHP; `bindPickerKeys` joins that list for the same reason.
 
+## PHP coverage of the changed markup
+
+`add_edit_event.php` is a procedural page; CI records its coverage only from real HTTP requests, through
+`ci/auto_prepend.php` in the `e2e` suite of `test.yml` (see `ci/README-COVERAGE.md`). Jest tests read the PHP
+source and do not execute it.
+
+`tests/Tests/E2e/AppointmentFormLabelsTest.php` logs in as admin and loads the page in new-appointment mode.
+That request renders all four changed labels, the `id='form_prefcat'` select and the `bindPickerKeys(document)`
+call (none are inside a conditional). `bindPickerKeys(document)` runs in the page's jQuery ready handler, so the
+test first registers its own ready handler through `executeAsyncScript` and waits for it to run. jQuery runs ready
+handlers in registration order, so the page's handler has run by then. There is no fixed sleep. The test then
+asserts that each label's browser-resolved `label.control` is the intended control. It also asserts that the
+Patient field is typeable (`readOnly` is false), and that Enter on it neither calls `sel_patient()` nor is
+prevented. Each `executeScript` result is checked with `assertIsString` before `json_decode`.
+
+Limits:
+
+- The test has **not been run locally** (no Docker stack or `vendor/` here). Only `php -l` was run on it. It runs
+  in hosted CI's e2e job.
+- The Group picker branch of `bindPickerKeys` is not exercised by this E2E test, because the Group field renders
+  only when `enable_group_therapy` is on. Jest covers that branch in JS.
+- No RED run: the test covers markup that is already in this branch, and the "before" state was not run in a
+  browser.
+
 ## Still needed: browser acceptance
 
 These checks have **not** been run in a browser:
