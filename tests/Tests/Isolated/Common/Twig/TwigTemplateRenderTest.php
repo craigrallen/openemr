@@ -213,6 +213,69 @@ class TwigTemplateRenderTest extends TestCase
     }
 
     /**
+     * The day-screen workday summary carries the slot geometry the builder used, every
+     * label the script requires (and no current-time "next" labels), and its assets; the
+     * toolbar anchors it proxies keep their original handlers.
+     */
+    #[Test]
+    public function calendarDayScreenWorkdaySummaryMetadata(): void
+    {
+        $twig = self::twigEnvironment();
+        $cases = iterator_to_array(self::renderCaseProvider());
+        [$template, $parameters] = $cases['calendar day-screen empty'];
+        $html = $twig->render($template, array_merge($parameters, [
+            'timeRows' => [
+                ['hour' => 8, 'minute' => 0, 'startampm' => 1, 'isOnTheHour' => true, 'displayLabel' => '8:00'],
+                ['hour' => 8, 'minute' => 15, 'startampm' => 1, 'isOnTheHour' => false, 'displayLabel' => '8:15'],
+            ],
+            'timeslotHeightVal' => 20,
+            'workdayCssVersion' => '1700000700',
+            'workdayJsVersion' => '1700000800',
+        ]));
+
+        self::assertSame(1, preg_match('/<section id="oe-calendar-workday"[^>]*>/', $html, $match));
+        $tag = $match[0];
+        foreach (
+            [
+                ' hidden ',
+                'aria-labelledby="oe-cal-workday-title"',
+                'data-date="20260315"',
+                'data-slot-start-min="480"',
+                'data-slot-interval-min="15"',
+                'data-slot-height="20"',
+                'data-l-count-one="1 booking · Providers: {providers}"',
+                'data-l-count="{count} bookings · Providers: {providers}"',
+                'data-l-empty="No bookings for the selected providers on this day"',
+                'data-l-unavailable="No schedule loaded"',
+                'data-l-first="First booking"',
+                'data-l-time-unknown="Start time not available"',
+            ] as $attribute
+        ) {
+            self::assertStringContainsString($attribute, $tag);
+        }
+        self::assertDoesNotMatchRegularExpression('/data-l-(next|none-remaining)=/', $tag);
+        self::assertStringNotContainsString('data-is-today', $tag);
+
+        self::assertStringContainsString('data-oe-workday-action="new-appointment" title="New Appointment" onclick="newEvt(1, 9, 00, &quot;20260315&quot;, 0, 0)"', $html);
+        self::assertStringContainsString('data-oe-workday-action="today" onclick="GoToToday(theform);"', $html);
+        self::assertStringContainsString('<button type="button" class="btn btn-sm btn-outline-secondary" data-role="today" hidden>', $html);
+        self::assertStringContainsString('<link rel="stylesheet" href="/interface/clinical-workspace/calendar-workday.css?v=1700000700">', $html);
+        self::assertStringContainsString('<script src="/interface/clinical-workspace/calendar-workday.js?v=1700000800"></script>', $html);
+        // The global cache-buster must not stand in for the per-file versions.
+        self::assertStringNotContainsString('calendar-workday.css?v=' . self::ASSET_VERSION, $html);
+
+        // Without slot rows the geometry is left empty so the script withholds times.
+        $empty = $twig->render($template, $parameters);
+        self::assertStringContainsString('data-slot-start-min="" data-slot-interval-min=""', $empty);
+        self::assertStringContainsString('data-slot-height=""', $empty);
+
+        // On today the original Today anchor is absent, and so is its proxy.
+        $today = $twig->render($template, array_merge($parameters, ['isToday' => true]));
+        self::assertStringNotContainsString('data-oe-workday-action="today"', $today);
+        self::assertStringNotContainsString('data-role="today"', $today);
+    }
+
+    /**
      * Provide [templateName, parameters, fixturePath] for each render test case.
      *
      * To add a new test case:
@@ -473,6 +536,8 @@ class TwigTemplateRenderTest extends TestCase
                 'timeRows'        => [],
                 'timeslotCss'     => '20px',
                 'providers'       => [],
+                'workdayCssVersion' => '1700000700',
+                'workdayJsVersion' => '1700000800',
             ]),
             $fixtureDir . '/calendar-day-screen-empty.html',
         ];

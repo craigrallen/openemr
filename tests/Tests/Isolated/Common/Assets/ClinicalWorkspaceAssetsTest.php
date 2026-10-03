@@ -134,6 +134,17 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         self::assertSame('1700000456', (new ClinicalWorkspaceAssets($this->directory))->version('visit-history.js'));
     }
 
+    #[Test]
+    public function calendarWorkdayAssetsAreVersionedPerFile(): void
+    {
+        $this->writeAsset('calendar-workday.css', 1_700_000_700);
+        $this->writeAsset('calendar-workday.js', 1_700_000_800);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700000700', $assets->version('calendar-workday.css'));
+        self::assertSame('1700000800', $assets->version('calendar-workday.js'));
+    }
+
     private function writeAsset(string $name, int $mtime): void
     {
         $path = $this->directory . '/' . $name;

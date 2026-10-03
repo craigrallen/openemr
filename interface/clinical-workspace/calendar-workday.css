@@ -1,0 +1,96 @@
+/*
+ * Day-screen workday summary (calendar-workday.js). Only shown inside the
+ * workbench; the direct/legacy calendar keeps its original layout untouched.
+ * Uses logical properties so RTL mirrors without extra rules.
+ */
+.oe-cal-workday {
+  display: none;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-block: 0.75rem;
+  padding-block: 0.625rem;
+  padding-inline: 0.875rem;
+  border: 1px solid var(--oe-line, #d9e4e2);
+  border-radius: 6px;
+  background: var(--oe-paper, #fff);
+  color: var(--oe-ink, #17343b);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  min-inline-size: 0;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__date {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__count,
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__next {
+  margin: 0;
+  color: var(--oe-muted, #526a70);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__next:not([hidden]) {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  min-inline-size: 0;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__next-label {
+  font-weight: 600;
+  color: var(--oe-ink, #17343b);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__time {
+  font-variant-numeric: tabular-nums;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__provider,
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__patient {
+  overflow: hidden;
+  max-inline-size: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__patient {
+  color: var(--oe-ink, #17343b);
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-inline-start: auto;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday [hidden] {
+  display: none !important;
+}
+
+@media (width <= 767.98px) {
+  body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__actions {
+    inline-size: 100%;
+    margin-inline-start: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__provider,
+  body.oe-clinical-workspace.oe-clinical-calendar .oe-cal-workday__patient {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

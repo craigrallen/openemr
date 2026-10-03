@@ -23,9 +23,9 @@
         <a id="menu-toggle" href="#" role="button" aria-controls="bottomLeft" aria-label="Toggle Calendar Sidebar" title="Toggle Calendar Sidebar" class="btn btn-outline-dark"><i class="fas fa-bars" aria-hidden="true"></i></a>
         <input type="hidden" name="jumpdate" id="jumpdate" value="" />
         <input type="hidden" name="viewtype" id="viewtype" value="day" />
-        <a href="#" title="New Appointment" onclick="newEvt(1, 9, 00, &quot;20260315&quot;, 0, 0)" class="btn btn-primary"><i class="fa fa-plus"></i></a>
+        <a href="#" data-oe-workday-action="new-appointment" title="New Appointment" onclick="newEvt(1, 9, 00, &quot;20260315&quot;, 0, 0)" class="btn btn-primary"><i class="fa fa-plus"></i></a>
         <a href="#" title="Search Appointment" onclick='top.restoreSession();location="index.php?module=PostCalendar&amp;func=search"' class="btn btn-primary"><i class="fa fa-search"></i></a>
-                    <a href="#" name="bnsubmit" value="Today" onclick="GoToToday(theform);" class="btn btn-primary">Today</a>
+                    <a href="#" name="bnsubmit" value="Today" data-oe-workday-action="today" onclick="GoToToday(theform);" class="btn btn-primary">Today</a>
             </div>
 
     <div id="dateNAV">
@@ -90,6 +90,34 @@
 
 <div class="page-content-wrapper">
 <div class="container-fluid calsearch_body">
+<section id="oe-calendar-workday" class="oe-cal-workday" hidden aria-labelledby="oe-cal-workday-title"
+    data-date="20260315"
+    data-slot-start-min="" data-slot-interval-min=""
+    data-slot-height=""
+    data-l-count-one="1 booking · Providers: {providers}"
+    data-l-count="{count} bookings · Providers: {providers}"
+    data-l-empty="No bookings for the selected providers on this day"
+    data-l-unavailable="No schedule loaded"
+    data-l-first="First booking"
+    data-l-time-unknown="Start time not available">
+    <div class="oe-cal-workday__head">
+        <h2 id="oe-cal-workday-title" class="oe-cal-workday__date">Sunday March 15 2026</h2>
+        <p class="oe-cal-workday__count" data-role="count" aria-live="polite"></p>
+    </div>
+    <p class="oe-cal-workday__next" data-role="next" hidden>
+        <span class="oe-cal-workday__next-label" data-role="next-label"></span>
+        <bdi class="oe-cal-workday__time" data-role="next-time"></bdi>
+        <bdi class="oe-cal-workday__provider" data-role="next-provider"></bdi>
+        <bdi class="oe-cal-workday__patient" data-role="next-patient"></bdi>
+    </p>
+    <div class="oe-cal-workday__actions">
+        <button type="button" class="btn btn-sm btn-outline-primary" data-role="open-booking" hidden>Open booking</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-role="open-patient" hidden>Open patient</button>
+        <button type="button" class="btn btn-sm btn-link" data-role="show-booking" hidden>Show in calendar</button>
+        <button type="button" class="btn btn-sm btn-primary" data-role="new-appointment" hidden>New Appointment</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-role="today" hidden>Today</button>
+            </div>
+</section>
 <div id="bigCal">
     <div class="table-responsive">
         <table class="table border-0">
@@ -319,3 +347,5 @@
 <script>
     $(function () { if (typeof setupDirectTime === 'function') { setupDirectTime(); } });
 </script>
+<link rel="stylesheet" href="/interface/clinical-workspace/calendar-workday.css?v=1700000700">
+<script src="/interface/clinical-workspace/calendar-workday.js?v=1700000800"></script>
