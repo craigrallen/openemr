@@ -767,4 +767,3 @@ describe('focus when the sidebar collapses to inert', () => {
         });
     });
 });
-
