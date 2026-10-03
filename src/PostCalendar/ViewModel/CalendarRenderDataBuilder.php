@@ -650,6 +650,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'month',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'currentMonthLabel'       => $currentMonthLabel,
             'isToday'                 => $isToday,
@@ -886,6 +887,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'day',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'dayHeaderLabel'          => $dayHeaderLabel,
             'isToday'                 => $isToday,
@@ -1064,6 +1066,7 @@ final readonly class CalendarRenderDataBuilder
 
         return [
             'viewtype'                => 'week',
+            'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
             'Date'                    => $dateYmd,
             'weekHeaderLabel'         => $weekHeaderLabel,
             'isToday'                 => $isToday,
