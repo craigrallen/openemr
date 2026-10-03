@@ -20,6 +20,7 @@ use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
+use OpenEMR\Patient\PatientDobContext;
 use OpenEMR\Services\PatientService;
 use OpenEMR\Services\PhoneNumberService;
 
@@ -50,7 +51,7 @@ if (!empty($_GET['set_pid']) && $form_review) {
     $result = getPatientData($pid, "*, DATE_FORMAT(DOB,'%Y-%m-%d') as DOB_YMD");
     ?>
     <script>
-        parent.left_nav.setPatient(<?php echo js_escape($result['fname'] . " " . $result['lname']) . "," . js_escape($pid) . "," . js_escape($result['pubpid']) . ",''," . js_escape(" " . xl('DOB') . ": " . oeFormatShortDate($result['DOB_YMD']) . " " . xl('Age') . ": " . getPatientAge($result['DOB_YMD'])) . "," . ((new PatientService())->hasPictureForPid($pid) ? 'true' : 'false'); ?>);
+        parent.left_nav.setPatient(<?php echo js_escape($result['fname'] . " " . $result['lname']) . "," . js_escape($pid) . "," . js_escape($result['pubpid']) . ",''," . js_escape(PatientDobContext::headerString($result['DOB_YMD'] ?? null, fn(string $dob): string => " " . xl('DOB') . ": " . oeFormatShortDate($dob) . " " . xl('Age') . ": " . getPatientAge($dob))) . "," . ((new PatientService())->hasPictureForPid($pid) ? 'true' : 'false'); ?>);
     </script>
     <?php
 }

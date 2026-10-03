@@ -112,9 +112,16 @@ switch ($search_any_type) {
                     <?php echo ($closeElement !== '') ? "</$closeElement>" : ''; ?>
                 <?php echo "</$wrapperElement>"; ?>
 
-                <div class="mt-2 workbench-identity-dob">
+                <!-- ko let: {dobKnown: typeof patient().str_dob() === 'string' && patient().str_dob().trim() !== ''} -->
+                <div class="mt-2 workbench-identity-dob" data-bind="attr: {'data-dob-state': dobKnown ? 'known' : 'unknown'}">
+                    <!-- ko if: dobKnown -->
                     <span data-bind="text:patient().str_dob()"></span>
+                    <!-- /ko -->
+                    <!-- ko ifnot: dobKnown -->
+                    <span><?php echo xlt("DOB"); ?>: <?php echo xlt("Unknown"); ?></span>
+                    <!-- /ko -->
                 </div>
+                <!-- /ko -->
                 </div><!-- workbench-identity-patient -->
                 <!-- /ko -->
             </div>

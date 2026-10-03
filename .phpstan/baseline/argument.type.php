@@ -14622,11 +14622,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../interface/patient_file/summary/demographics.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Parameter \\#1 \\$dobYMD of function getPatientAgeDisplay expects string, mixed given\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/patient_file/summary/demographics.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Parameter \\#1 \\$i of function filterActiveIssues expects array, mixed given\\.$#',
     'count' => 3,
     'path' => __DIR__ . '/../../interface/patient_file/summary/demographics.php',
@@ -14835,11 +14830,6 @@ $ignoreErrors[] = [
     'message' => '#^Parameter \\#6 \\$test of function active_alert_summary expects string, true given\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../interface/patient_file/summary/demographics.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Parameter \\#1 \\$dobYMD of function getPatientAgeDisplay expects string, mixed given\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/patient_file/summary/demographics_full.php',
 ];
 $ignoreErrors[] = [
     'message' => '#^Parameter \\#1 \\$pid of class OpenEMR\\\\Events\\\\PatientDemographics\\\\UpdateEvent constructor expects int, mixed given\\.$#',
