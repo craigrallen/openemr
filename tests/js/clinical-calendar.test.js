@@ -119,6 +119,8 @@ describe('calendar mode switch on the real calendar markup', () => {
 const MEDIA_EXCEPTIONS = [
     ['(max-width: 768px)', `${SCOPE} #bottomLeft`, 'top', 'var(--oe-calendar-toolbar-height, 4.78rem)'],
     ['(max-width: 768px)', `${SCOPE} #bottomLeft`, 'height', 'calc(100% - var(--oe-calendar-toolbar-height, 4.78rem))'],
+    ['(max-width: 576px)', `${SCOPE} #bottomLeft`, 'top', 'var(--oe-calendar-toolbar-height, 6.9rem)'],
+    ['(max-width: 576px)', `${SCOPE} #bottomLeft`, 'height', 'calc(100% - var(--oe-calendar-toolbar-height, 6.9rem))'],
     ['(min-width: 769px)', `${SCOPE} #wrapper.toggled .sidebar-wrapper`, 'display', 'none']
 ];
 const mediaException = (r) => MEDIA_EXCEPTIONS.some(([media, selector, prop, value]) => r.media === media

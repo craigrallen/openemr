@@ -46,6 +46,17 @@ function fakeMedia(matches) {
     return mql;
 }
 
+// Engines before Safari 14 expose MediaQueryList only through the deprecated addListener/removeListener.
+function legacyMedia(matches) {
+    const mql = fakeMedia(matches);
+    const { listeners } = mql;
+    delete mql.addEventListener;
+    delete mql.removeEventListener;
+    mql.addListener = (cb) => listeners.push(cb);
+    mql.removeListener = (cb) => listeners.splice(listeners.indexOf(cb), 1);
+    return mql;
+}
+
 function mount(media, extra = {}) {
     const resizeCallbacks = [];
     const controller = createSidebarToggle({
@@ -140,6 +151,33 @@ describe('sidebar toggle state follows the actual #wrapper toggled class', () =>
         expect(media.listeners).toEqual([]);
     });
 
+    test('addListener-only MediaQueryList still re-derives state and is released on dispose', async () => {
+        loadFixture('week');
+        attachOriginalToggle();
+        const media = legacyMedia(true);
+        const { controller } = mount(media);
+        const toggle = document.getElementById('menu-toggle');
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(media.listeners).toHaveLength(1);
+
+        toggle.click();
+        await flush();
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        media.set(false);
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        controller.dispose();
+        expect(media.listeners).toEqual([]);
+    });
+
+    test('a MediaQueryList with no listener API is read once and never subscribed', () => {
+        loadFixture('day');
+        const media = { matches: true };
+        const { controller } = mount(media);
+        expect(document.getElementById('menu-toggle').getAttribute('aria-expanded')).toBe('false');
+        expect(() => controller.dispose()).not.toThrow();
+    });
+
     test('state set by any other code path is reflected too', async () => {
         loadFixture('month');
         const { controller } = mount(fakeMedia(false));
@@ -219,6 +257,19 @@ describe('browser bootstrap on the real window', () => {
         expect(offset()).toBe('');
     });
 
+    test('boots on an addListener-only window.matchMedia and releases it on unload', () => {
+        const media = legacyMedia(true);
+        window.matchMedia = jest.fn(() => media);
+        expect(() => boot()).not.toThrow();
+        expect(document.getElementById('menu-toggle').getAttribute('aria-expanded')).toBe('false');
+        expect(offset()).toBe('120px');
+        expect(media.listeners).toHaveLength(1);
+
+        window.dispatchEvent(new Event('unload'));
+        expect(media.listeners).toEqual([]);
+        expect(offset()).toBe('');
+    });
+
     test('prefers ResizeObserver on the toolbar and treats a missing matchMedia as desktop', () => {
         const observed = [];
         let disconnected = 0;
@@ -266,7 +317,9 @@ describe('narrow sidebar is placed below the real toolbar height', () => {
         expect(wrapper.style.getPropertyValue('--oe-calendar-toolbar-height')).toBe('');
     });
 
-    // Every declaration calendar.css may make inside a media query, exactly. Anything else is a failure.
+    // Every declaration calendar.css makes on the sidebar inside a media query, exactly. Other media
+    // queries (e.g. toolbar layout) are not this feature's, but may not touch these selectors.
+    const SIDEBAR_SELECTOR = /(#bottomLeft|#pc_username|\.sidebar-wrapper)\b/;
     const MEDIA_RULES = {
         '(max-width: 768px)': [
             [`${SCOPE} #bottomLeft`, 'height', 'calc(100% - var(--oe-calendar-toolbar-height, 4.78rem))'],
@@ -276,24 +329,65 @@ describe('narrow sidebar is placed below the real toolbar height', () => {
             // instead of growing past the space left under the toolbar.
             [`${SCOPE} #providerPicker #pc_username`, 'max-height', 'calc(100vh - var(--oe-calendar-toolbar-height, 4.78rem) - 1.5rem)']
         ],
+        // Without the measured height, the fallback must still clear the theme's taller small-screen toolbar.
+        '(max-width: 576px)': [
+            [`${SCOPE} #bottomLeft`, 'height', 'calc(100% - var(--oe-calendar-toolbar-height, 6.9rem))'],
+            [`${SCOPE} #bottomLeft`, 'top', 'var(--oe-calendar-toolbar-height, 6.9rem)'],
+            [`${SCOPE} #providerPicker #pc_username`, 'max-height', 'calc(100vh - var(--oe-calendar-toolbar-height, 6.9rem) - 1.5rem)']
+        ],
         // Desktop starts one pixel above the narrow query, so exactly 768px keeps the narrow behaviour.
         '(min-width: 769px)': [
             [`${SCOPE} #wrapper.toggled .sidebar-wrapper`, 'display', 'none']
         ]
     };
 
-    function mediaRules() {
+    function sidebarMediaRules(css) {
         const found = {};
-        postcss.parse(fs.readFileSync(cssPath, 'utf8')).walkAtRules('media', (at) => {
-            at.walkRules((rule) => rule.walkDecls((d) => {
-                (found[at.params] ||= []).push([rule.selector, d.prop, d.value]);
-            }));
+        postcss.parse(css).walkAtRules('media', (at) => {
+            at.walkRules((rule) => {
+                if (!SIDEBAR_SELECTOR.test(rule.selector)) return;
+                rule.walkDecls((d) => {
+                    (found[at.params] ||= []).push([rule.selector, d.prop, d.value]);
+                });
+            });
         });
         return found;
     }
 
-    test('media-scoped rules are exactly the sidebar placement, provider list cap and desktop hide', () => {
-        expect(mediaRules()).toEqual(MEDIA_RULES);
+    const calendarCss = () => fs.readFileSync(cssPath, 'utf8');
+
+    test('media-scoped sidebar rules are exactly the placement, provider list cap and desktop hide', () => {
+        expect(sidebarMediaRules(calendarCss())).toEqual(MEDIA_RULES);
+    });
+
+    test('an independent toolbar media query does not disturb the sidebar rule set, but a stray sidebar rule does', () => {
+        // The shape the clinical toolbar change adds alongside this feature.
+        const toolbarQuery = `\n@media (max-width: 768px) {\n  ${SCOPE} #topToolbarRight {\n    flex-wrap: wrap;\n  }\n}\n`
+            + `@media (max-width: 991.98px) {\n  ${SCOPE} #viewPicker {\n    margin-top: 0.25rem;\n  }\n}\n`;
+        expect(sidebarMediaRules(calendarCss() + toolbarQuery)).toEqual(MEDIA_RULES);
+
+        const straySidebar = `\n@media (max-width: 768px) {\n  ${SCOPE} #bottomLeft {\n    width: 80%;\n  }\n}\n`;
+        expect(sidebarMediaRules(calendarCss() + straySidebar)).not.toEqual(MEDIA_RULES);
+    });
+
+    test('without the measured height the fallback offset equals the theme offset at every narrow breakpoint', () => {
+        // Theme: @media (max-width: map-get($grid-breakpoints, "<bp>")) { ... #bottomLeft { ... top: X; } }
+        const variables = fs.readFileSync(require.resolve('bootstrap/scss/_variables.scss'), 'utf8');
+        const breakpoints = Object.fromEntries([...variables.match(/\$grid-breakpoints:\s*\(([^)]*)\)/)[1]
+            .matchAll(/(\w+):\s*(\d+)px/g)].map(([, name, px]) => [name, Number(px)]));
+        const theme = fs.readFileSync(themePath, 'utf8');
+        const themeTops = [...theme.matchAll(/@media \(max-width: map-get\(\$grid-breakpoints, "(\w+)"\)\) \{(?:(?!@media)[\s\S])*?#bottomLeft \{[^}]*?top: ([\d.]+rem);/g)]
+            .map(([, bp, top]) => [breakpoints[bp], top]);
+        expect(themeTops).toEqual([[768, '4.78rem'], [576, '6.9rem']]);
+
+        themeTops.forEach(([px, top]) => {
+            const decls = MEDIA_RULES[`(max-width: ${px}px)`].filter(([sel]) => sel === `${SCOPE} #bottomLeft`);
+            expect(decls).toContainEqual([`${SCOPE} #bottomLeft`, 'top', `var(--oe-calendar-toolbar-height, ${top})`]);
+            expect(decls).toContainEqual([`${SCOPE} #bottomLeft`, 'height', `calc(100% - var(--oe-calendar-toolbar-height, ${top}))`]);
+        });
+        // The smaller breakpoint must come later so it wins the cascade inside both queries.
+        const order = Object.keys(sidebarMediaRules(calendarCss()));
+        expect(order.indexOf('(max-width: 576px)')).toBeGreaterThan(order.indexOf('(max-width: 768px)'));
     });
 
     test('desktop toggled sidebar is removed from view rather than shifted by a direction-dependent margin', () => {

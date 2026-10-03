@@ -45,6 +45,20 @@
     const NARROW_QUERY = '(max-width: 768px)';
     const OFFSET_PROPERTY = '--oe-calendar-toolbar-height';
 
+    // MediaQueryList gained addEventListener in Safari 14; older engines only have addListener.
+    // With neither, the state is read once at setup. Returns the matching unsubscribe.
+    function watchMedia(media, callback) {
+        if (media && typeof media.addEventListener === 'function') {
+            media.addEventListener('change', callback);
+            return () => media.removeEventListener('change', callback);
+        }
+        if (media && typeof media.addListener === 'function') {
+            media.addListener(callback);
+            return () => media.removeListener(callback);
+        }
+        return () => {};
+    }
+
     function createSidebarToggle({ document, media, observeClass, observeResize }) {
         const toggle = document.getElementById('menu-toggle');
         const wrapper = document.getElementById('wrapper');
@@ -72,7 +86,7 @@
         };
 
         toggle.addEventListener('keydown', onKeydown);
-        if (media) media.addEventListener('change', sync);
+        const unwatchMedia = watchMedia(media, sync);
         const classObserver = observeClass(wrapper, sync);
         const resizeObserver = toolbar ? observeResize(toolbar, measure) : null;
         sync();
@@ -81,7 +95,7 @@
         return {
             dispose() {
                 toggle.removeEventListener('keydown', onKeydown);
-                if (media) media.removeEventListener('change', sync);
+                unwatchMedia();
                 classObserver.disconnect();
                 if (resizeObserver) resizeObserver.disconnect();
                 wrapper.style.removeProperty(OFFSET_PROPERTY);
