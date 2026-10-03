@@ -173,10 +173,32 @@
             });
         }
 
+        // Focus may only return to an element a keyboard user can actually reach.
+        function reachable(target) {
+            for (var current = target; current; current = current.parentElement) {
+                if (current.hidden || current.inert || current.hasAttribute('inert')) return false;
+                if (current !== target && current.matches('details') && !current.open && target.parentElement !== current) return false;
+            }
+            return target.isConnected;
+        }
+
+        function focusTarget(item) {
+            return item.matches('details') ? item.querySelector(':scope > summary') : item;
+        }
+
         var renderer = ko.computed(function () {
             var nodes = options.menu();
             var needle = query().trim();
-            var focusedNode = root.ownerDocument.activeElement.__workbenchNode;
+            // The focused node first, then its ancestors: a summary carries no node
+            // itself, so walking up resolves it to its own branch.
+            var focusChain = [];
+            var focused = root.ownerDocument.activeElement;
+            if (focused && tree.contains(focused)) {
+                for (var current = focused; current && current !== tree; current = current.parentElement) {
+                    if (current.__workbenchNode) focusChain.push(current.__workbenchNode);
+                }
+            }
+            var wasReachable = !!focusChain.length && reachable(focused);
             var openNodes = new Set(Array.from(tree.querySelectorAll('.workbench-branch[open]')).map(function (branch) { return branch.__workbenchNode; }));
             var relevant = null;
             if (needle) {
@@ -206,9 +228,20 @@
             if (!needle) tree.querySelectorAll('.workbench-branch').forEach(function (branch) {
                 if (openNodes.has(branch.__workbenchNode)) branch.open = true;
             });
-            if (focusedNode) {
-                var replacement = Array.from(tree.querySelectorAll('[data-workbench-action], .workbench-branch')).find(function (item) { return item.__workbenchNode === focusedNode; });
-                if (replacement) (replacement.matches('details') ? replacement.querySelector('summary') : replacement).focus();
+            if (focusChain.length) {
+                var candidates = Array.from(tree.querySelectorAll('[data-workbench-action], .workbench-branch')).map(focusTarget);
+                var replacement = null;
+                focusChain.some(function (node, index) {
+                    replacement = candidates.find(function (item) {
+                        if ((item.__workbenchNode || item.parentElement.__workbenchNode) !== node) return false;
+                        // The same node returns as before unless the rerender hid it.
+                        return reachable(item) || (index === 0 && !wasReachable);
+                    }) || null;
+                    return !!replacement;
+                });
+                // Never strand focus on the body when the whole branch has gone.
+                if (!replacement && reachable(search)) replacement = search;
+                if (replacement) replacement.focus();
             }
         });
 
