@@ -172,6 +172,47 @@ class TwigTemplateRenderTest extends TestCase
     }
 
     /**
+     * The day/week/month sidebar toggle is a named button controlling the sidebar, keeps its
+     * original href/handler, and the state helper loads after that handler on screen views only.
+     */
+    #[Test]
+    public function calendarScreenSidebarToggleIsNamedAndWired(): void
+    {
+        $twig = self::twigEnvironment();
+        $cases = iterator_to_array(self::renderCaseProvider());
+        foreach (['day', 'week', 'month'] as $view) {
+            self::assertArrayHasKey("calendar {$view}-screen empty", $cases);
+            self::assertArrayHasKey("calendar {$view}_print empty", $cases);
+            [$template, $parameters] = $cases["calendar {$view}-screen empty"];
+            $html = $twig->render($template, $parameters);
+
+            self::assertSame(1, preg_match('/<a id="menu-toggle"[^>]*>/', $html, $match), $view);
+            $tag = $match[0];
+            foreach (
+                [
+                    'href="#"',
+                    'role="button"',
+                    'aria-controls="bottomLeft"',
+                    'aria-label="Toggle Calendar Sidebar"',
+                    'title="Toggle Calendar Sidebar"',
+                ] as $attribute
+            ) {
+                self::assertStringContainsString($attribute, $tag, $view);
+            }
+            self::assertStringContainsString('<div id="bottomLeft" class="sidebar-wrapper">', $html, $view);
+
+            $original = strpos($html, '$("#wrapper").toggleClass("toggled");');
+            $helper = strpos($html, '<script src="/interface/clinical-workspace/calendar-sidebar.js?v=' . self::ASSET_VERSION . '"></script>');
+            self::assertIsInt($original, $view);
+            self::assertIsInt($helper, $view);
+            self::assertGreaterThan($original, $helper, $view);
+
+            [$printTemplate, $printParameters] = $cases["calendar {$view}_print empty"];
+            self::assertStringNotContainsString('calendar-sidebar.js', $twig->render($printTemplate, $printParameters), $view);
+        }
+    }
+
+    /**
      * Provide [templateName, parameters, fixturePath] for each render test case.
      *
      * To add a new test case:

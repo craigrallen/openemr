@@ -604,7 +604,7 @@ describe('SOAP document template and styles', () => {
         expect(html).toMatch(/<div class="container mt-3 oe-soap-document" spellcheck="true">/);
         expect(html).not.toMatch(/spellcheck="false"|autocorrect|autocomplete="off"/i);
         FIELD_NAMES.forEach((name) => {
-            expect(html).toContain(`<textarea name="${name}" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;">{{ data.get_${name}()|text }}</textarea>`);
+            expect(html).toContain(`<textarea name="${name}" id="soap-${name}" aria-labelledby="soap-${name}-label" class="form-control" cols="60" rows="6" onkeyup="top.isSoapEdit = true;" oninput="top.isSoapEdit = true;">{{ data.get_${name}()|text }}</textarea>`);
         });
         expect(html).toContain('<input type="hidden" name="csrf_token_form" value="{{ csrfTokenRaw()|attr }}" />');
         expect(html).toContain('action="{{ FORM_ACTION | attr }}/interface/forms/soap/save.php" onsubmit="return top.restoreSession()"');

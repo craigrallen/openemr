@@ -29,5 +29,15 @@
         "max-nesting-depth": null,
         "scss/at-extend-no-missing-placeholder": null,
         "keyframes-name-pattern": null
-    }
+    },
+    "overrides": [
+        {
+            "files": [
+                "interface/clinical-workspace/calendar.css"
+            ],
+            "rules": {
+                "media-feature-range-notation": "prefix"
+            }
+        }
+    ]
 }
