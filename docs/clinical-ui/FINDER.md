@@ -21,7 +21,7 @@ Every selector starts with `body.oe-clinical-workspace.oe-clinical-finder`, and 
 - **Readable results sheet:** a white bordered sheet with `overflow-x: auto`. Headers are muted and uppercase, cells are 14px with consistent padding, and every column stays reachable by horizontal scroll. The per-column filter row gets compact inputs.
 - **Footer:** the new-tab and exact-search checkboxes wrap with gaps; the info text and pagination wrap.
 - **RTL:** logical properties only. The stylesheet has no physical left/right margin, padding, border, text-align or float. Values from `workspace.css` that pointed one way (`text-align: left`, `margin-right`) are overridden logically.
-- **Narrow:** at 640px or below the heading is 25px and cell padding is tighter. The heading partial has no toggler, so `.navbar-collapse` is kept visible there. Otherwise Bootstrap hides Add New Patient below 576px, which is legacy behaviour that this mode does not hide.
+- **Narrow:** at 640px or below (`@media screen and (max-width: 640px)`) the heading is 25px and cell padding is tighter. The heading partial has no toggler, so `.navbar-collapse` is kept visible there. Otherwise Bootstrap hides Add New Patient below 576px, which is legacy behaviour that this mode does not hide.
 - No `display: none` or `visibility: hidden`. No control is removed or reordered.
 
 ## TDD record
@@ -63,6 +63,25 @@ Controller final gates (`09-controller-final-gates.log`) reran full JavaScript: 
 Controller full-codebase PHPStan CI configuration passed with zero errors using `php -d memory_limit=8G vendor/bin/phpstan analyse -c .phpstan/phpstan.ci.neon --memory-limit=8G --no-progress --debug` (`08-controller-phpstan-debug.log`). Debug mode avoids the result-cache write that exhausted disk; no baseline or gate was weakened.
 
 Actual authenticated disposable-local Chrome checked the real DataTables render: results below the search toolbar after the fix, all original controls across mode toggles, global/column/empty search, recent/list tabs and correct synthetic patient routing. Twelve LTR/RTL geometry cases at 1440/1024/768/640/390/320px passed with Add New Patient and footer options visible. No clinical save or JavaScript error. The original advanced-search open/close handler persisted then restored a local UI preference; this was not a clinical-data write. Local sources were restored afterward. Evidence: mission `browser-qa/finder-workspace-local.json` and `finder-workspace-{1440,390}-local.png`. Images are local feature evidence, not Railway deployment. Compared with the accepted schedule reference, Finder follows heading/document/table styling, not schedule semantics or full research fidelity.
+
+## Review fix: narrow query ignored by older declared browsers
+
+Review finding: the narrow block used Media Queries 4 range syntax, `@media screen and (width <= 640px)`. The `browserslist` in `package.json` declares support for older engines (for example `chrome >= 45`, `safari >= 7`, `ff >= 45`, `ie >= 8`) that don't understand range syntax. Those engines drop the whole block, so Bootstrap would hide `.navbar-collapse` below 576px, and with it Add New Patient and the other original heading actions.
+
+- **Fix:** the query is now `@media screen and (max-width: 640px)`. It is still screen-only and still inclusive of 640px (`max-width: 640px` ≡ `width <= 640px`). The declarations inside are unchanged, so runtime behaviour in current browsers is unchanged. `workspace.css` keeps its own inherited `(width <= 640px)` query; that is separate debt and was not touched here.
+- **Lint:** stylelint-config-standard sets `media-feature-range-notation: "context"`, which rejects every `min-`/`max-` prefixed range feature. No equivalent query satisfies that rule. Instead of a disable comment or a global exception, `.stylelintrc.json` has a single-file `overrides` entry for `interface/clinical-workspace/finder.css` that sets the rule to `"prefix"`. The rule stays active for that file and now *rejects* range syntax there. A stdin probe confirmed `(width <= 640px)` fails with `Expected "prefix" media feature range notation`. Every other file keeps `"context"`.
+- **Test:** the new test `narrow Finder query uses prefix syntax the declared older browsers understand` in `tests/js/clinical-finder.test.js` asserts that the stylesheet's only media queries are `screen` and `screen and (max-width: 640px)`, that no query contains `<` or `>`, and that the narrow block still keeps `.navbar-collapse` at `display: flex; flex-basis: 100%; flex-wrap: wrap` and the heading at `1.5625rem`. The old `toMatch(/@media screen and \(width <= 640px\)/)` assertion was removed.
+
+Host commands, with the read-only dependencies at `D=/Users/craig/.hermes/workspaces/openemr-researched-work-areas/node_modules`:
+
+| Step | Command | Result |
+|---|---|---|
+| RED | `NODE_PATH=$D node $D/jest/bin/jest.js --rootDir <worktree> --runInBand tests/js/clinical-finder.test.js` | 1 failed, 6 passed. Expected `screen and (max-width: 640px)`, received `screen and (width <= 640px)` |
+| GREEN | same command | 7 passed |
+| Lint | `node $D/stylelint/bin/stylelint.mjs interface/clinical-workspace/finder.css` | before the override: 1 error (`Expected "context"…`); after it: exit 0. `workspace.css` is still clean under `"context"` |
+| Lint | `node $D/eslint/bin/eslint.js tests/js/clinical-finder.test.js` | exit 0. The ESM config ignores `NODE_PATH`, so its four imported packages were symlinked temporarily into the worktree's empty `node_modules/` and removed afterwards |
+
+Controller re-verification: full Jest passed 28 suites / 429 tests, focused Finder passed 7 tests, and ESLint/stylelint/diff checks passed using temporary individual read-only dependency links (removed afterward). The initial external config-basedir invocation incorrectly resolved the single-file override and failed; normal repo-based config resolution passed. Controller independently replayed the new test against the original stylesheet: exit 1, then restored the corrected file and verified GREEN. Independent Codex GPT-6 Astra complete-diff review found no introduced P1/P2 blockers; active prefix-vs-context lint rejection paths were checked. Not run for this fix: full PHP suites or real-browser QA. **Runtime QA in an older engine that lacks range syntax is still outstanding**, because no such browser was available. The claim that those engines now apply the block rests on prefix-syntax support, not on observation.
 
 ## Blockers and limits
 

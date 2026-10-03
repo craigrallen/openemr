@@ -151,7 +151,31 @@ test('scoped screen-only stylesheet composes the real heading, toolbar and resul
     expect(results.clear).toBe('both');
     const search = declarationsFor(`${scope} #pt_table_filter input`);
     expect(search['min-width']).toBe('0');
-    expect(text).toMatch(/@media screen and \(width <= 640px\)/);
+});
+
+test('narrow Finder query uses prefix syntax the declared older browsers understand', () => {
+    // Engines without Media Queries 4 range syntax drop a `(width <= 640px)` block
+    // entirely, which would leave Bootstrap hiding Add New Patient below 576px.
+    const queries = [];
+    postcss.parse(css()).walkAtRules('media', (atRule) => queries.push(atRule.params));
+    expect(queries).toEqual(['screen', 'screen and (max-width: 640px)']);
+    for (const query of queries) {
+        expect(query).not.toMatch(/[<>]/);
+    }
+
+    const narrow = {};
+    postcss.parse(css()).walkRules((rule) => {
+        if (rule.parent.type === 'atrule' && rule.parent.params === 'screen and (max-width: 640px)') {
+            for (const selector of rule.selectors) {
+                narrow[selector] = {};
+                rule.walkDecls((decl) => { narrow[selector][decl.prop] = decl.value; });
+            }
+        }
+    });
+    expect(narrow[`${scope} #container_div > .navbar .navbar-collapse`]).toEqual({
+        display: 'flex', 'flex-basis': '100%', 'flex-wrap': 'wrap'
+    });
+    expect(narrow[`${scope} #container_div > .navbar .navbar-brand`]).toEqual({ 'font-size': '1.5625rem' });
 });
 
 test('rendered Finder shape is styled only in workspace mode, never in legacy mode', () => {

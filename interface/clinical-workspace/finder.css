@@ -179,7 +179,8 @@
   }
 }
 
-@media screen and (width <= 640px) {
+/* Prefix syntax: the declared older browsers drop range-syntax queries. */
+@media screen and (max-width: 640px) {
   body.oe-clinical-workspace.oe-clinical-finder #container_div > .navbar .navbar-brand {
     font-size: 1.5625rem;
   }
