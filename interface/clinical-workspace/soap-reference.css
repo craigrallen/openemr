@@ -1,0 +1,84 @@
+/* Read-only previous-SOAP reference beside the SOAP editor. */
+.oe-soap-reference {
+  margin-block-start: 1rem;
+  font-size: 0.875rem;
+}
+
+.oe-soap-reference__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  margin-block-end: 0.5rem;
+}
+
+.oe-soap-reference__toggle {
+  padding-inline: 0;
+  font-weight: 600;
+  min-block-size: 2.75rem;
+}
+
+.oe-soap-reference__toggle::after {
+  content: ' \25B8';
+}
+
+.oe-soap-reference__toggle[aria-expanded='true']::after {
+  content: ' \25BE';
+}
+
+.oe-soap-reference__copy {
+  padding-inline: 0;
+}
+
+.oe-soap-reference__toggle:focus-visible,
+.oe-soap-reference__copy:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+.oe-soap-reference__list {
+  list-style: none;
+  padding-inline-start: 0;
+  margin: 0;
+  max-block-size: 70vh;
+  overflow-y: auto;
+}
+
+.oe-soap-reference__note {
+  border-block-start: 1px solid rgb(0 0 0 / 12.5%);
+  padding-block: 0.5rem;
+}
+
+.oe-soap-reference__provenance {
+  font-weight: 600;
+  margin-block-end: 0.25rem;
+}
+
+.oe-soap-reference__heading {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-block: 0.5rem 0.125rem;
+}
+
+/* Escaped text node; keep the author's line breaks without interpreting markup. */
+.oe-soap-reference__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+@media (width >= 992px) {
+  .oe-soap-reference {
+    position: sticky;
+    inset-block-start: 0;
+    align-self: flex-start;
+  }
+}
+
+@media print {
+  .oe-soap-reference {
+    display: none;
+  }
+}

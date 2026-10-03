@@ -6,11 +6,13 @@
     <script src="{{ FORM_ACTION|attr }}/interface/clinical-workspace/mode.js?v={{ assetVersion|attr_url }}" defer></script>
     <link rel="stylesheet" href="{{ FORM_ACTION|attr }}/interface/clinical-workspace/soap-document.css?v={{ soapDocumentAssets.css|attr_url }}">
     <script src="{{ FORM_ACTION|attr }}/interface/clinical-workspace/soap-document.js?v={{ soapDocumentAssets.js|attr_url }}" defer></script>
+    <link rel="stylesheet" href="{{ FORM_ACTION|attr }}/interface/clinical-workspace/soap-reference.css?v={{ soapDocumentAssets.referenceCss|attr_url }}">
+    <script src="{{ FORM_ACTION|attr }}/interface/clinical-workspace/soap-reference.js?v={{ soapDocumentAssets.referenceJs|attr_url }}" defer></script>
 </head>
 <body class="oe-clinical-soap">
     <div class="container mt-3 oe-soap-document" spellcheck="true">
         <div class="row">
-            <div class="col-12">
+            <div class="col-12 col-lg-8">
                 <h2>{{'SOAP'|xlt}}</h2>
                 <form name="soap" method="post" action="{{ FORM_ACTION | attr }}/interface/forms/soap/save.php" onsubmit="return top.restoreSession()">
                     <input type="hidden" name="csrf_token_form" value="{{ csrfTokenRaw()|attr }}" />
@@ -58,6 +60,32 @@
                     </div>
                 </form>
             </div>
+            <aside class="col-12 col-lg-4 oe-soap-reference" aria-label="{{ 'Previous SOAP notes (read-only)'|xla }}"
+                data-soap-reference="{{ soapReference|default({status: 'unavailable', withheld: false, notes: []})|json_encode|attr }}"
+                data-copy-eligibility="{{ soapCopyAllowed is same as(true) ? 'allowed' : 'denied' }}"
+                data-label-copy="{{ 'Copy to current draft'|xla }}"
+                data-label-copied="{{ 'Copied into the current draft. Review before saving.'|xla }}"
+                data-label-locked="{{ 'This field cannot be edited; nothing was copied.'|xla }}"
+                data-label-encounter="{{ 'Encounter'|xla }}"
+                data-label-subjective="{{ 'Subjective'|xla }}"
+                data-label-objective="{{ 'Objective'|xla }}"
+                data-label-assessment="{{ 'Assessment'|xla }}"
+                data-label-plan="{{ 'Plan'|xla }}">
+                <h3 class="oe-soap-reference__title">
+                    <button type="button" class="btn btn-link oe-soap-reference__toggle" aria-expanded="false" aria-controls="oe-soap-reference-body">{{ 'Previous SOAP notes'|xlt }}</button>
+                    <span class="badge badge-secondary">{{ 'Read-only'|xlt }}</span>
+                </h3>
+                <div id="oe-soap-reference-body" class="oe-soap-reference__body" hidden>
+                    <p class="oe-soap-reference__status"
+                        data-status-available="{{ 'Read-only reference for this patient. Earlier notes cannot be edited here.'|xla }}"
+                        data-status-none="{{ 'No earlier SOAP notes for this patient.'|xla }}"
+                        data-status-denied="{{ 'Earlier SOAP notes are restricted for your account.'|xla }}"
+                        data-status-unavailable="{{ 'Earlier SOAP notes could not be loaded.'|xla }}"
+                        data-status-withheld="{{ 'Some earlier notes are hidden by access restrictions.'|xla }}">{{ 'Earlier SOAP notes could not be loaded.'|xlt }}</p>
+                    <ol class="oe-soap-reference__list"></ol>
+                    <p class="oe-soap-reference__live sr-only" aria-live="polite"></p>
+                </div>
+            </aside>
         </div>
     </div>
 
