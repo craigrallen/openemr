@@ -212,6 +212,87 @@ body.workbench-active { width: 100% !important;
   height: 44px;
   object-fit: cover; }
 
+/* Patient identity banner: existing live name, record ID, DOB and encounter
+   controls composed as one horizontal row that wraps when the space left by
+   the rail is too narrow. Legacy mode keeps the original. */
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-main { display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-picture { float: none !important;
+  margin: 0 !important; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-main > .form-group { margin: 0; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-patient { display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-patient .ptName,
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-patient .ptName.btn {
+  color: var(--wb-ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  overflow-wrap: anywhere;
+}
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-id { margin-inline-start: 10px;
+  color: var(--wb-muted) !important;
+  font-size: 13px;
+  font-weight: 400; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-label {
+  position: static !important;
+  width: auto;
+  height: auto;
+  margin: 0 4px 0 0;
+  margin-inline: 0 4px;
+  overflow: visible;
+  clip: auto;
+  white-space: nowrap;
+  color: var(--wb-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-dob { margin: 0 !important;
+  color: var(--wb-muted);
+  font-size: 13px; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-encounter-column { flex: 0 1 auto;
+  margin: 0 !important;
+  min-width: 0; }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-encounter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding-inline-start: 16px;
+  border-inline-start: 1px solid var(--wb-line);
+  font-size: 13px;
+}
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-encounter .patientCurrentEncounter { margin: 0 !important;
+  color: var(--wb-muted); }
+
+#mainBox:not(.workbench-legacy) #attendantData .workbench-identity-user { margin-inline: auto 0; }
+
 #mainBox:not(.workbench-legacy) .workbench-content-head {
   padding: 14px 22px 7px;
   color: var(--wb-ink);
@@ -329,4 +410,12 @@ body:has(#mainBox.workbench-legacy) {
   #mainBox:not(.workbench-legacy) #attendantData { padding: 8px 12px; }
   #mainBox:not(.workbench-legacy) #tabs_div { padding: 0 12px !important; }
   #mainBox:not(.workbench-legacy) #mainFrames_div { padding: 6px 8px 0; }
+
+  #mainBox:not(.workbench-legacy) #attendantData .workbench-identity { flex-wrap: wrap;
+    gap: 8px; }
+
+  #mainBox:not(.workbench-legacy) #attendantData .workbench-identity-encounter { padding-inline-start: 0;
+    border-inline-start: 0; }
+
+  #mainBox:not(.workbench-legacy) #attendantData .workbench-identity-user { margin-inline-start: 0; }
 }
