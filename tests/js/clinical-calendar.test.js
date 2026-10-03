@@ -17,7 +17,8 @@ function calendarRules() {
     const rules = [];
     postcss.parse(fs.readFileSync(cssPath, 'utf8')).walkRules((rule) => {
         rule.selectors.forEach((selector) => {
-            rule.walkDecls((decl) => rules.push({ selector, prop: decl.prop, value: decl.value, important: decl.important }));
+            const media = rule.parent && rule.parent.type === 'atrule' ? rule.parent.params : null;
+            rule.walkDecls((decl) => rules.push({ selector, media, prop: decl.prop, value: decl.value, important: decl.important }));
         });
     });
     return rules;
@@ -113,6 +114,16 @@ describe('calendar mode switch on the real calendar markup', () => {
     });
 });
 
+// The only geometry/visibility declarations allowed past the guards below, matched exactly
+// (media, selector, property, value); the full media rule set is pinned in clinical-calendar-sidebar.test.js.
+const MEDIA_EXCEPTIONS = [
+    ['(max-width: 768px)', `${SCOPE} #bottomLeft`, 'top', 'var(--oe-calendar-toolbar-height, 4.78rem)'],
+    ['(max-width: 768px)', `${SCOPE} #bottomLeft`, 'height', 'calc(100% - var(--oe-calendar-toolbar-height, 4.78rem))'],
+    ['(min-width: 769px)', `${SCOPE} #wrapper.toggled .sidebar-wrapper`, 'display', 'none']
+];
+const mediaException = (r) => MEDIA_EXCEPTIONS.some(([media, selector, prop, value]) => r.media === media
+    && r.selector === selector && r.prop === prop && r.value === value);
+
 describe('calendar.css preserves clinical meaning and booking geometry', () => {
     test('every selector is scoped to the workbench calendar body', () => {
         const unscoped = calendarRules().filter((r) => !r.selector.startsWith(SCOPE));
@@ -141,7 +152,8 @@ describe('calendar.css preserves clinical meaning and booking geometry', () => {
 
     test('keeps toolbar and provider header heights that the fixed sidebar and slot rows are aligned to', () => {
         const vertical = /^(height|min-height|max-height|line-height|font-size|padding|padding-top|padding-bottom|margin|margin-top|margin-bottom|border|border-width|border-top|border-bottom|border-top-width|border-bottom-width|position|top|display)$/;
-        const offending = calendarRules().filter((r) => vertical.test(r.prop)
+        // Sole exception: the narrow fixed sidebar is placed below the measured toolbar (calendar-sidebar.js).
+        const offending = calendarRules().filter((r) => vertical.test(r.prop) && !mediaException(r)
             && /(#topToolbarRight|#functions|#dateNAV|#viewPicker|\.providerheader|\.providerday|\.providerXbtn|#bottomLeft|\.sidebar-wrapper|\.page-content-wrapper|#wrapper|\.sticky-top|#bigCal)/.test(r.selector));
         expect(offending).toEqual([]);
     });
@@ -196,7 +208,7 @@ describe('calendar.css preserves clinical meaning and booking geometry', () => {
 
     test('hides nothing and never forces clinical colours with !important', () => {
         const rules = calendarRules();
-        expect(rules.filter((r) => r.prop === 'display' && r.value === 'none')).toEqual([]);
+        expect(rules.filter((r) => r.prop === 'display' && r.value === 'none' && !mediaException(r))).toEqual([]);
         expect(rules.filter((r) => r.prop === 'visibility' || r.prop === 'pointer-events')).toEqual([]);
         expect(rules.filter((r) => r.important && /\.event|#facilityColor/.test(r.selector))).toEqual([]);
     });

@@ -149,6 +149,38 @@ body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username:foc
   box-shadow: 0 0 0 0.2rem rgb(8 104 120 / 20%);
 }
 
+/*
+ * Narrow screens: the toolbar wraps onto several rows, taller than the theme's fixed
+ * sidebar top (4.78rem / 6.9rem), so the opened sidebar covered date navigation and
+ * the view picker. calendar-sidebar.js publishes the measured toolbar height; the
+ * theme offset remains the fallback. Same breakpoint as ajax_calendar_sass.scss.
+ */
+@media (max-width: 768px) {
+  body.oe-clinical-workspace.oe-clinical-calendar #bottomLeft {
+    height: calc(100% - var(--oe-calendar-toolbar-height, 4.78rem));
+    overflow-y: auto;
+    top: var(--oe-calendar-toolbar-height, 4.78rem);
+  }
+
+  /* Short frames: cap the provider multi-select to the space under the toolbar so all of it can be
+     scrolled into view; it keeps every option and native multiple selection, and scrolls itself. */
+  body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username {
+    max-height: calc(100vh - var(--oe-calendar-toolbar-height, 4.78rem) - 1.5rem);
+  }
+}
+
+/*
+ * Desktop: the theme hides the toggled sidebar with margin-left: -30rem, which leaves the fixed
+ * sidebar on screen when the document direction is rtl. Remove it from view in either direction.
+ * Starts at 769px so exactly 768px keeps the theme's narrow behaviour. The original #menu-toggle
+ * handler still owns the toggled class.
+ */
+@media (min-width: 769px) {
+  body.oe-clinical-workspace.oe-clinical-calendar #wrapper.toggled .sidebar-wrapper {
+    display: none;
+  }
+}
+
 /* Booking surface: chrome only. Events and slot rows keep theme geometry and colours. */
 body.oe-clinical-workspace.oe-clinical-calendar #bigCal {
   background-color: var(--oe-canvas);
