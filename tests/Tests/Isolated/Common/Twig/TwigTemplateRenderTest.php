@@ -172,6 +172,47 @@ class TwigTemplateRenderTest extends TestCase
     }
 
     /**
+     * The day/week/month sidebar toggle is a named button controlling the sidebar, keeps its
+     * original href/handler, and the state helper loads after that handler on screen views only.
+     */
+    #[Test]
+    public function calendarScreenSidebarToggleIsNamedAndWired(): void
+    {
+        $twig = self::twigEnvironment();
+        $cases = iterator_to_array(self::renderCaseProvider());
+        foreach (['day', 'week', 'month'] as $view) {
+            self::assertArrayHasKey("calendar {$view}-screen empty", $cases);
+            self::assertArrayHasKey("calendar {$view}_print empty", $cases);
+            [$template, $parameters] = $cases["calendar {$view}-screen empty"];
+            $html = $twig->render($template, $parameters);
+
+            self::assertSame(1, preg_match('/<a id="menu-toggle"[^>]*>/', $html, $match), $view);
+            $tag = $match[0];
+            foreach (
+                [
+                    'href="#"',
+                    'role="button"',
+                    'aria-controls="bottomLeft"',
+                    'aria-label="Toggle Calendar Sidebar"',
+                    'title="Toggle Calendar Sidebar"',
+                ] as $attribute
+            ) {
+                self::assertStringContainsString($attribute, $tag, $view);
+            }
+            self::assertStringContainsString('<div id="bottomLeft" class="sidebar-wrapper">', $html, $view);
+
+            $original = strpos($html, '$("#wrapper").toggleClass("toggled");');
+            $helper = strpos($html, '<script src="/interface/clinical-workspace/calendar-sidebar.js?v=' . self::ASSET_VERSION . '"></script>');
+            self::assertIsInt($original, $view);
+            self::assertIsInt($helper, $view);
+            self::assertGreaterThan($original, $helper, $view);
+
+            [$printTemplate, $printParameters] = $cases["calendar {$view}_print empty"];
+            self::assertStringNotContainsString('calendar-sidebar.js', $twig->render($printTemplate, $printParameters), $view);
+        }
+    }
+
+    /**
      * Provide [templateName, parameters, fixturePath] for each render test case.
      *
      * To add a new test case:
@@ -759,6 +800,55 @@ class TwigTemplateRenderTest extends TestCase
             ],
             $fixtureDir . '/care-plan-card-populated.html',
         ];
+
+        // The SOAP form calls getters on a FormSOAP; a stand-in keeps the render database-free.
+        // Saved text includes markup and whitespace that |text must escape and keep.
+        yield 'forms/soap soap_form saved note' => [
+            '/forms/soap/templates/soap_form.twig',
+            [
+                'FORM_ACTION' => '/openemr',
+                'assetVersion' => self::ASSET_VERSION,
+                'soapDocumentAssets' => ['css' => '1700000789', 'js' => '1700000790'],
+                'DONT_SAVE_LINK' => '/openemr/interface/patient_file/encounter/encounter_top.php',
+                'data' => new class {
+                    public function get_subjective(): string
+                    {
+                        return "  pt reports <b>pain</b> & \"fatigue\"\n\n  since Monday  ";
+                    }
+
+                    public function get_objective(): string
+                    {
+                        return "\tBP 120/80";
+                    }
+
+                    public function get_assessment(): string
+                    {
+                        return '';
+                    }
+
+                    public function get_plan(): string
+                    {
+                        return "line one\nline two";
+                    }
+
+                    public function get_id(): int
+                    {
+                        return 12;
+                    }
+
+                    public function get_activity(): int
+                    {
+                        return 1;
+                    }
+
+                    public function get_pid(): int
+                    {
+                        return 7;
+                    }
+                },
+            ],
+            $fixtureDir . '/soap-form-saved-note.html',
+        ];
     }
 
     /**
@@ -850,6 +940,14 @@ class TwigTemplateRenderTest extends TestCase
             'setupHeader',
             fn (): string => '<!-- setupHeader stub -->',
             ['is_safe' => ['html']]
+        ));
+
+        // csrfTokenRaw() derives the token from the session's CSRF key, which
+        // isolated tests do not have. A fixed token keeps the hidden field
+        // visible in fixtures without a session.
+        $twig->addFunction(new TwigFunction(
+            'csrfTokenRaw',
+            fn (string $subject = 'default'): string => 'test-csrf-token',
         ));
 
         // PostCalendar templates use pc_sort_events and

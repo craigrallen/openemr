@@ -13,6 +13,7 @@
 
 require_once("FormSOAP.class.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Forms\EncounterFormAccess;
 use OpenEMR\Common\Forms\FormActionBarSettings;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -41,6 +42,7 @@ class C_FormSOAP extends Controller
             [
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
                 "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
+                "soapDocumentAssets" => self::soapDocumentAssetVersions(),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]
@@ -59,6 +61,7 @@ class C_FormSOAP extends Controller
             [
                 "FORM_ACTION" => OEGlobalsBag::getInstance()->getWebRoot(),
                 "assetVersion" => OEGlobalsBag::getInstance()->getString('v_js_includes'),
+                "soapDocumentAssets" => self::soapDocumentAssetVersions(),
                 "DONT_SAVE_LINK" => FormActionBarSettings::EXIT_URL,
                 "data" => $form
             ]
@@ -98,6 +101,21 @@ class C_FormSOAP extends Controller
             $_POST['process'] = "";
         }
     }
+    /**
+     * Per-file cache versions for the SOAP document stylesheet and auto-height script.
+     *
+     * @return array{css: string, js: string}
+     */
+    private static function soapDocumentAssetVersions(): array
+    {
+        $assets = new ClinicalWorkspaceAssets();
+
+        return [
+            'css' => $assets->version('soap-document.css'),
+            'js' => $assets->version('soap-document.js'),
+        ];
+    }
+
     /**
      * @return string
      */

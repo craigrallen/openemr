@@ -20,7 +20,7 @@
 <div class="container-fluid sticky-top">
 <div id="topToolbarRight" class="bgcolor2">
     <div id="functions">
-        <a id="menu-toggle" href="#" class="btn btn-outline-dark"><i class="fas fa-bars"></i></a>
+        <a id="menu-toggle" href="#" role="button" aria-controls="bottomLeft" aria-label="Toggle Calendar Sidebar" title="Toggle Calendar Sidebar" class="btn btn-outline-dark"><i class="fas fa-bars" aria-hidden="true"></i></a>
         <input type="hidden" name="jumpdate" id="jumpdate" value="" />
         <input type="hidden" name="viewtype" id="viewtype" value="week" />
         <a href="#" title="New Appointment" onclick="newEvt(1, 9, 00, &quot;20260315&quot;, 0, 0)" class="btn btn-primary"><i class="fa fa-plus"></i></a>
@@ -254,6 +254,7 @@
         $("#wrapper").toggleClass("toggled");
     });
 </script>
+<script src="/interface/clinical-workspace/calendar-sidebar.js?v=82"></script>
 
 <style>
     #bigCal td#times,
