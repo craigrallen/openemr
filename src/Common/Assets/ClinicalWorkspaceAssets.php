@@ -31,6 +31,8 @@ final readonly class ClinicalWorkspaceAssets
         'calendar-workday.css',
         'calendar-workday.js',
         'mode.js',
+        'soap-document.css',
+        'soap-document.js',
         'visit-history.css',
         'visit-history.js',
     ];

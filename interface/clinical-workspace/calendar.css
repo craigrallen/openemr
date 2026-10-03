@@ -71,6 +71,36 @@ body.oe-clinical-workspace.oe-clinical-calendar #dateNAV {
   color: var(--oe-ink);
 }
 
+/*
+ * The theme splits the toolbar 25/50/25% from Bootstrap md, which in the narrower workbench frame
+ * wraps print/refresh/Day/Week/Month inside #viewPicker. Size the button groups to their content and
+ * give the date the remaining width instead (width: auto releases the col-md-* 100% width that an auto
+ * flex basis would otherwise adopt). The date never shrinks below its own heading and chevrons; in
+ * 768-945px frames where the three groups cannot share a row (Today button, long dates) the theme's
+ * flex-wrap moves whole groups down instead, and #viewPicker goes to the end edge, clear of the fixed
+ * sidebar. Widths only: the row keeps the theme's flex-wrap and
+ * heights, and the stacked layout below md (which #bottomLeft's mobile offsets assume) is untouched.
+ * Prefix notation keeps older supported browsers on the same layout (enforced for this file in .stylelintrc.json).
+ */
+@media (min-width: 768px) {
+  body.oe-clinical-workspace.oe-clinical-calendar #functions,
+  body.oe-clinical-workspace.oe-clinical-calendar #viewPicker {
+    flex: 0 1 auto;
+    max-width: none;
+    width: auto;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-calendar #viewPicker {
+    margin-inline-start: auto;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-calendar #dateNAV {
+    flex: 1 0 auto;
+    max-width: none;
+    width: auto;
+  }
+}
+
 body.oe-clinical-workspace.oe-clinical-calendar #dateNAV a,
 body.oe-clinical-workspace.oe-clinical-calendar #dateNAV .chevron_color {
   color: var(--oe-petrol);
@@ -100,6 +130,19 @@ body.oe-clinical-workspace.oe-clinical-calendar #datePicker {
   margin: 0.5rem 5% 0.4rem;
   padding: 0.25rem 0.4rem;
   width: auto;
+}
+
+/*
+ * Theme cell padding makes the seven columns wider than the inset panel, so .table-responsive
+ * scrolled the last column out of view. Share the width equally; date text keeps the theme size.
+ */
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker table {
+  table-layout: fixed;
+}
+
+body.oe-clinical-workspace.oe-clinical-calendar #datePicker td {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 body.oe-clinical-workspace.oe-clinical-calendar #datePicker .tdMonthName-small {
@@ -166,6 +209,18 @@ body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username:foc
      scrolled into view; it keeps every option and native multiple selection, and scrolls itself. */
   body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username {
     max-height: calc(100vh - var(--oe-calendar-toolbar-height, 4.78rem) - 1.5rem);
+  }
+}
+
+/* Theme's small-screen toolbar is taller (6.9rem at the "sm" breakpoint); keep the fallback below it. */
+@media (max-width: 576px) {
+  body.oe-clinical-workspace.oe-clinical-calendar #bottomLeft {
+    height: calc(100% - var(--oe-calendar-toolbar-height, 6.9rem));
+    top: var(--oe-calendar-toolbar-height, 6.9rem);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-calendar #providerPicker #pc_username {
+    max-height: calc(100vh - var(--oe-calendar-toolbar-height, 6.9rem) - 1.5rem);
   }
 }
 

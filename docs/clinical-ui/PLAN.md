@@ -6,8 +6,11 @@ schedule) into a series of separately reviewable OpenEMR changes. The design
 artifacts are reference only. Mock data, static menu inventories and pretend
 services from the prototype are not carried into the app.
 
-Slice 1 (the "All menus" launcher, see [STATUS.md](STATUS.md)) is the only
-slice implemented so far. **The design is not complete.** Every later slice
+The "All menus" launcher from slice 1 has since been retired from the shell
+in favour of area navigation; partial slices now exist for the workbench
+shell, patient workspace, visit history, calendar, appointment editor and the
+SOAP document sheet (see [STATUS.md](STATUS.md) and
+[DESIGN-FIDELITY.md](DESIGN-FIDELITY.md)). **The design is not complete.** Every later slice
 below needs its own clinician and accessibility review.
 
 ## Hard rule: no existing feature is dropped

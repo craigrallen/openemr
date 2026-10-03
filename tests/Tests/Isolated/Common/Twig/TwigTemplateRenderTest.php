@@ -865,6 +865,55 @@ class TwigTemplateRenderTest extends TestCase
             ],
             $fixtureDir . '/care-plan-card-populated.html',
         ];
+
+        // The SOAP form calls getters on a FormSOAP; a stand-in keeps the render database-free.
+        // Saved text includes markup and whitespace that |text must escape and keep.
+        yield 'forms/soap soap_form saved note' => [
+            '/forms/soap/templates/soap_form.twig',
+            [
+                'FORM_ACTION' => '/openemr',
+                'assetVersion' => self::ASSET_VERSION,
+                'soapDocumentAssets' => ['css' => '1700000789', 'js' => '1700000790'],
+                'DONT_SAVE_LINK' => '/openemr/interface/patient_file/encounter/encounter_top.php',
+                'data' => new class {
+                    public function get_subjective(): string
+                    {
+                        return "  pt reports <b>pain</b> & \"fatigue\"\n\n  since Monday  ";
+                    }
+
+                    public function get_objective(): string
+                    {
+                        return "\tBP 120/80";
+                    }
+
+                    public function get_assessment(): string
+                    {
+                        return '';
+                    }
+
+                    public function get_plan(): string
+                    {
+                        return "line one\nline two";
+                    }
+
+                    public function get_id(): int
+                    {
+                        return 12;
+                    }
+
+                    public function get_activity(): int
+                    {
+                        return 1;
+                    }
+
+                    public function get_pid(): int
+                    {
+                        return 7;
+                    }
+                },
+            ],
+            $fixtureDir . '/soap-form-saved-note.html',
+        ];
     }
 
     /**
@@ -956,6 +1005,14 @@ class TwigTemplateRenderTest extends TestCase
             'setupHeader',
             fn (): string => '<!-- setupHeader stub -->',
             ['is_safe' => ['html']]
+        ));
+
+        // csrfTokenRaw() derives the token from the session's CSRF key, which
+        // isolated tests do not have. A fixed token keeps the hidden field
+        // visible in fixtures without a session.
+        $twig->addFunction(new TwigFunction(
+            'csrfTokenRaw',
+            fn (string $subject = 'default'): string => 'test-csrf-token',
         ));
 
         // PostCalendar templates use pc_sort_events and
