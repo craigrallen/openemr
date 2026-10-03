@@ -19,6 +19,7 @@
  */
 
 use OpenEMR\BC\ServiceContainer;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -83,6 +84,8 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     <?php Header::setupHeader(['datatables', 'datatables-colreorder', 'datatables-dt', 'datatables-bs']); ?>
     <title><?php echo xlt("Patient Finder"); ?></title>
     <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>">
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/finder.css?v=<?php echo attr_url($clinicalAssets->version('finder.css')); ?>">
     <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" defer></script>
 <style>
     /* Finder Processing style */
@@ -277,8 +280,9 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
                 var searchType = $("#setting_search_type:checked").length > 0;
                 aoData.push({"name": "searchType", "value": searchType});
             },
-            // dom invokes ColReorderWithResize and allows inclusion of a custom div
-            "dom": 'Rlfrt<"mytopdiv">ip',
+            // dom invokes ColReorderWithResize and allows inclusion of a custom div;
+            // oe-finder-results only groups the processing indicator and table for workspace styling
+            "dom": 'Rlf<"oe-finder-results"rt><"mytopdiv">ip',
             // These column names come over as $_GET['sColumns'], a comma-separated list of the names.
             // See: http://datatables.net/usage/columns and
             // http://datatables.net/release-datatables/extras/ColReorder/server_side.html
