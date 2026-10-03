@@ -13,7 +13,8 @@
  *    a watcher on the attribute hands it over to any other writer: after an external write
  *    (including a same-value one) the helper leaves the attribute as that writer left it.
  *    On a viewport collapse it also returns focus to the toggle when the browser has already
- *    blurred a sidebar control to <body> and nothing since shows the user moved focus elsewhere.
+ *    blurred a sidebar control to <body> after the frame's viewport changed, at the size the
+ *    collapse arrives at, and nothing since shows the user moved focus elsewhere.
  */
 (function (root, factory) {
     const api = factory();
@@ -105,20 +106,46 @@
         // blur that element to <body> before the media callback runs; this lets the callback tell
         // that loss apart from a deliberate move. See CALENDAR-INERT-LIFECYCLE.md for the rules.
         let focusOwner = null;
+        // The frame's viewport size when the focus owner was focused, and when it blurred to
+        // <body> at a different size (null until then). Only a blur after the viewport changed
+        // can be the resize's own, and only a collapse at that same size is the same transition.
+        let focusViewport = null;
+        let blurViewport = null;
         // The keydown being dispatched, if any: a blur during it is the user's own action.
         let keyEvent = null;
         const view = document.defaultView;
+        const viewport = () => (view ? `${view.innerWidth}x${view.innerHeight}` : null);
         const forgetFocus = () => {
             focusOwner = null;
+            focusViewport = null;
+            blurViewport = null;
         };
         const onFocusin = (event) => {
             const inside = sidebar && sidebar.contains(event.target);
-            focusOwner = inside && body.classList.contains(WORKBENCH_CLASS) ? event.target : null;
+            if (!inside || !body.classList.contains(WORKBENCH_CLASS)) {
+                forgetFocus();
+                return;
+            }
+            focusOwner = event.target;
+            focusViewport = viewport();
+            blurViewport = null;
         };
         // A focus move to another element is seen by onFocusin; a blur to <body> while a keydown
-        // is still being dispatched (eventPhase is NONE only once dispatch ends) is a key action.
-        const onFocusout = () => {
-            if (keyEvent && keyEvent.eventPhase !== 0) forgetFocus();
+        // is still being dispatched (eventPhase is NONE only once dispatch ends) is a key action,
+        // and a blur at the size the owner was focused at is not caused by a viewport change.
+        const onFocusout = (event) => {
+            if (focusOwner === null || event.target !== focusOwner) return;
+            if (keyEvent && keyEvent.eventPhase !== 0) {
+                forgetFocus();
+                return;
+            }
+            if (event.relatedTarget) return;
+            const size = viewport();
+            if (size === focusViewport) {
+                forgetFocus();
+            } else {
+                blurViewport = size;
+            }
         };
         const onKeyCapture = (event) => {
             keyEvent = event;
@@ -140,10 +167,15 @@
         focusListeners.forEach(([target, type, listener]) => target.addEventListener(type, listener, listenerOptions));
 
         // Focus the browser already dropped from the sidebar: <body> is active in a document that
-        // still has focus, and the remembered element is still in the sidebar.
-        const blurredFromSidebar = (active) => (!active || active === body)
-            && typeof document.hasFocus === 'function' && document.hasFocus()
-            && focusOwner !== null && sidebar.contains(focusOwner);
+        // still has focus, the remembered element is still in the sidebar, and the viewport now
+        // differs from its size at focus and matches its size at the blur. With no focusout seen
+        // (a browser that drops focus from hidden content silently) the current size stands in.
+        const blurredFromSidebar = (active) => {
+            if ((active && active !== body) || focusOwner === null || !sidebar.contains(focusOwner)) return false;
+            if (typeof document.hasFocus !== 'function' || !document.hasFocus()) return false;
+            const size = viewport();
+            return size !== focusViewport && size === (blurViewport ?? size);
+        };
 
         // A browser drops focus from a newly inert subtree to <body>, so focus inside the sidebar
         // goes to the toggle first. On a viewport collapse, focus the browser already blurred from

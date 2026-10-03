@@ -410,13 +410,22 @@ describe('focus when the sidebar collapses to inert', () => {
         // MediaQueryList change callback runs. The frame itself keeps focus, so hasFocus() stays
         // true. jsdom reports hasFocus() false whenever no element is focused, so the frame's
         // focus is stated explicitly here.
+        // The frame's viewport changes before both the CSS blur and the media callback, so the
+        // fake resizes it first. jsdom's default viewport is 1024 x 768.
+        const WIDE = 1024;
+        const NARROW = 480;
+        const setViewport = (width) => {
+            Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
+        };
         let frameFocused;
         beforeEach(() => {
             frameFocused = true;
             document.hasFocus = () => frameFocused;
+            setViewport(WIDE);
         });
         afterEach(() => {
             delete document.hasFocus;
+            setViewport(1024);
         });
 
         function desktopWorkbench(view = 'week') {
@@ -432,8 +441,17 @@ describe('focus when the sidebar collapses to inert', () => {
             return { media, controller, outside, blank };
         }
 
-        // Native-like: the focused control loses focus to <body> with no user action.
-        const nativeBlur = (element) => element.blur();
+        // Native-like: the viewport narrows, then the narrow CSS blurs the focused control to
+        // <body> with no user action. The media callback (media.set) runs after both.
+        const nativeBlur = (element) => {
+            setViewport(NARROW);
+            element.blur();
+        };
+        // The viewport widens back past the breakpoint, then the media callback runs.
+        const widen = (media) => {
+            setViewport(WIDE);
+            media.set(false);
+        };
 
         test('a viewport collapse returns focus blurred from the sidebar to the toggle', async () => {
             const { media, controller } = desktopWorkbench();
@@ -462,7 +480,7 @@ describe('focus when the sidebar collapses to inert', () => {
                     nativeBlur(sidebarControl());
                     media.set(true);
                     expect(document.activeElement).toBe(toggle());
-                    media.set(false);
+                    widen(media);
                     await flush();
                     expect(sidebar().hasAttribute('inert')).toBe(false);
                 }
@@ -498,7 +516,7 @@ describe('focus when the sidebar collapses to inert', () => {
             outside.focus();
             media.set(true);
             expect(document.activeElement).toBe(outside);
-            media.set(false);
+            widen(media);
 
             // Even if that other control is later blurred to <body>.
             sidebarControl().focus();
@@ -516,6 +534,8 @@ describe('focus when the sidebar collapses to inert', () => {
                 if (e.key === 'Escape') control.blur();
             });
             control.focus();
+            // After a resize, so only the keyboard rule tells this blur from the resize's own.
+            setViewport(NARROW);
             control.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
             expect(document.activeElement).toBe(document.body);
             media.set(true);
@@ -531,13 +551,42 @@ describe('focus when the sidebar collapses to inert', () => {
             frameFocused = false;
             media.set(true);
             expect(document.activeElement).toBe(document.body);
-            media.set(false);
+            widen(media);
 
             // The window lost focus in between, then regained it without a focus move here.
             frameFocused = true;
             sidebarControl().focus();
             window.dispatchEvent(new FocusEvent('blur'));
             nativeBlur(sidebarControl());
+            media.set(true);
+            expect(document.activeElement).toBe(document.body);
+            controller.dispose();
+        });
+
+        test('a script blur with no viewport change is not undone by a later viewport collapse', async () => {
+            const { media, controller } = desktopWorkbench();
+            const control = sidebarControl();
+            control.focus();
+            // Intentional programmatic blur: no input, no window blur, viewport unchanged.
+            control.blur();
+            await flush();
+            // A later, separate resize collapses the sidebar.
+            setViewport(NARROW);
+            media.set(true);
+            expect(sidebar().getAttribute('inert')).toBe('');
+            expect(document.activeElement).toBe(document.body);
+            controller.dispose();
+        });
+
+        test('a script blur after an earlier resize is not undone by a later viewport collapse', async () => {
+            const { media, controller } = desktopWorkbench();
+            const control = sidebarControl();
+            control.focus();
+            // A resize that stays above the breakpoint, then an intentional blur at that size.
+            setViewport(900);
+            control.blur();
+            await flush();
+            setViewport(NARROW);
             media.set(true);
             expect(document.activeElement).toBe(document.body);
             controller.dispose();
