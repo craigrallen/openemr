@@ -68,6 +68,13 @@ The original list never closes its first `.row`, so the rest of the page parses 
 
 The result is exactly 0px page-level horizontal overflow in workbench mode at every tested width. The legacy page keeps its own 15px overflow at 360px; that comes from the nested row and is not introduced by this slice.
 
+The compose dialog can be much narrower than its open width. `dialog.js` fixes the modal width as a percentage of the window at open time, so a dialog opened at 1440px and then resized to 390/320px leaves a 180/146px iframe. An authenticated candidate-overlay run found that the original new-note page fits there, but the first version of this slice overflowed and clipped Save. This was a regression introduced by the slice: `flex: 0 0 auto` buttons and 16px sheet padding. The correction is screen-only:
+
+- compose `.btn-group > .btn` is `flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: normal`, so labels wrap at their full 14px size;
+- the sheet's inline padding minimum drops from 16px to 8px. Because the value is `clamp(8px, 5vw, 36px)`, this only changes frames narrower than 320px.
+
+Nothing is hidden, scaled or forced into a full-screen modal. The list toolbar keeps `flex: 0 0 auto`.
+
 Out of scope and unchanged:
 
 - Legacy defects: `id='outbox_div table-resonsive'`, `show_div('outbox')` finding no element, duplicate `#noteid`/`#Submit` IDs, the unclosed `.row`, and the missing doctype (quirks mode) on the dialog.
@@ -92,7 +99,7 @@ No backend, schema, API, query or message data was changed or created.
 
 ### In repo
 
-`tests/js/clinical-patient-messages.test.js` (Jest, jsdom) has 16 tests:
+`tests/js/clinical-patient-messages.test.js` (Jest, jsdom) has 18 tests:
 
 - **Asset tags:** for both pages, escaped versioned asset tags in order, `media="screen"` on `workspace.css`, the body scope class, the dialog's missing doctype preserved, and no new script or writing-assistance attributes.
 - **Token parity:** counts of 29 list tokens and 23 compose tokens, pinned to `ba11545`.
@@ -103,6 +110,7 @@ No backend, schema, API, query or message data was changed or created.
   - the outbox `display` is untouched, and there is no hiding, `!important`, `content` or body overflow;
   - `#note` is a document field with native resize and a visible outline;
   - billing sits on paper with ink and no selector targets `.text-danger`, and the sole `btn-danger` rule is `color: #fff`.
+- **Resized compose dialog:** at 146px and 180px frames, the sheet chrome leaves at least 110px for content. Compose action buttons shrink and wrap at 14px, with no compose overflow, transform, zoom or width media query.
 - **Theme pairing:** the sheet, table, `td` and billing `td` set ink; `.form-control` and `:focus` set ink on paper; the gutter rules are present.
 - **Mode controller:** the list follows a workbench host two frames up and returns to legacy on toggle. The dialog activates under `top` without mutating its form or unsaved values. The legacy shell and direct load stay inactive.
 
@@ -127,18 +135,23 @@ Evidence lives in `/Users/craig/.hermes/projects/openemr/verification/cron-patie
   - `red4-native-qa.txt` (660 passed, 6 failed: every dark balance-only case at 1.05:1);
   - then one `color` declaration on the billing cell.
 
+- Resized compose dialog (authenticated candidate-overlay finding, see Overflow):
+  - `red6-narrow-jest.txt` (2 failed, against the `91f99a5` CSS). `red5-narrow-jest.txt` is an earlier run whose test helper read only the first matching rule; the helper now merges matching rules in source order.
+  - `red5-narrow-native-qa.txt` (1254 passed, 64 failed: every 146/180px compose case; the new-note baseline premise passes);
+  - then the CSS correction: `green6-narrow-jest.txt` and `green5-narrow-native-qa.txt`.
+
 **Final runs:**
 
 | Check | Result | Record |
 | --- | --- | --- |
-| Targeted Jest | 16/16 | `final-jest-target.txt` |
-| Full Jest | 38 suites, 688 tests passed | `full-jest-final.txt` |
-| Stylelint, repo config | exit 0 | `stylelint-final.txt` (the earlier `lint.txt`, with 4 errors, was the pre-fix run) |
-| ESLint, repo `eslint.config.mjs`, on the new test | exit 0 | `eslint-final.txt` |
+| Targeted Jest | 18/18 | `green6-narrow-jest.txt` |
+| Full Jest | 38 suites, 690 tests passed | `full-jest-narrow.txt` |
+| Stylelint, repo config | exit 0 | `stylelint-narrow.txt` (earlier: `stylelint-final.txt`; `lint.txt`, with 4 errors, was a pre-fix run) |
+| ESLint, repo `eslint.config.mjs`, on the new test | exit 0 after the resized-dialog tests | `cron-patient-messages-live/controller-lint-final2.txt` |
 | `php -l` on the four changed PHP files | clean | `php-lint.txt` |
 | Host-PHP helper harness, no vendor | pass | `green-native-php.txt` |
 | Invariant diff | only `<body>` removed; added lines are only the import, asset tags and body class | `invariant-diff.txt` |
-| Native QA | 666 passed, 0 failed | `native-qa.txt`, `native-qa/native-qa.json` |
+| Native QA | 1318 passed, 0 failed (earlier 666 before the new-note fixture and 146/180px frames) | `green5-narrow-native-qa.txt`, `native-qa/native-qa.json` |
 
 ESLint ran through temporary links in the worktree's empty, gitignored `node_modules`, pointing to the four config imports in the shared node_modules (`globals`, `eslint-plugin-jest`, `@eslint/js`, `@eslint/eslintrc`). The links were removed afterwards.
 
@@ -150,13 +163,14 @@ This is real native-browser evidence (headless Chrome 154 driven over CDP) again
 - **Renders the fixtures.** Hand-written synthetic markup shaped like each page's PHP output is rendered with the compiled theme, `workspace.css`, `patient-messages.css` and the real `mode.js`, inside a same-origin iframe under a shell body with or without `workbench-active`.
 - **Blocks the network.** It aborts every request through CDP `Fetch` and never fabricates a response. A probe request proves the interception is live.
 
-It renders three page fixtures:
+It renders four page fixtures:
 
 - the list with a billing note, whose balance and note sit in `text-danger` spans;
 - the list with a balance but an empty billing note, whose balance row has no spans, matching the PHP branch where `$colorbeg` is empty;
-- the compose dialog.
+- the compose dialog for an existing note (Print, Cancel, Save as new, Append);
+- the compose dialog for a new note (Cancel, Save), the branch that the authenticated overlay exercised.
 
-For each theme (light, dark) × fixture × `dir` (ltr, rtl) × width (360/768/1280px), it checks:
+For each theme (light, dark) × fixture × `dir` (ltr, rtl) × width (360/768/1280px, plus 146/180px resized-dialog frames for compose), it checks:
 
 - **Legacy and print:** the legacy-host and workbench-print renders equal the baseline in geometry, computed CSS and per-element contrast.
 - **Workbench rendering:** activation, Arial 14px, and body direction equal to the theme baseline.
@@ -166,7 +180,8 @@ For each theme (light, dark) × fixture × `dir` (ltr, rtl) × width (360/768/12
 - **Danger colours:** `text-danger` and `btn-danger` colours equal the theme.
 - **List:** eight columns render, the outbox stays hidden, toolbars wrap, and the inbox scrolls internally at 360px.
 - **Balance-only list:** the billing cell and every other `td` reach an absolute 4.5:1. The general check only requires min(4.5, baseline), and the legacy baseline here is itself 1.05:1.
-- **Compose:** the textarea keeps native resize, has the document-field style, and toolbars wrap.
+- **Compose:** the textarea keeps native resize, has the document-field style, and toolbars wrap. Every control that sits wholly inside the unscrolled frame at baseline still does. Save is present, hittable and inside the frame, and is never clicked. Action and field text stays at 14px.
+- **Resized compose frames (146/180px):** every original control fits inside the frame. For the new-note branch, the harness first checks the premise that the unstyled original fits with 0 overflow. In the existing-note branch, the original nowrap `btn-group` overflows by 53/19px at baseline. The workbench wraps it to 0px overflow.
 
 Real input through `Input.dispatchKeyEvent` and `Input.dispatchMouseEvent`:
 
@@ -185,11 +200,12 @@ Screenshots are in `native-qa/`. Boxes in place of icons there are the theme's i
 
 ## Limitations
 
-- **Fixture versus application.** The browser evidence uses synthetic fixtures. No authenticated OpenEMR session, PHP rendering, DB, jQuery, `dialog.js`, `restoreSession`, AJAX save, datetimepicker or real `dlgopen` mounting was exercised. There was no live, restricted-role, screen-reader, touch-gesture, real print-dialog/pagination or deployment verification.
+- **Candidate overlay, not deployment.** One authenticated run injected the `91f99a5` candidate assets browser-locally into a real session and resized a real `dlgopen` compose dialog. That run found the 146/180px regression described under Overflow. Its harness reports overall `ok: false` and `acceptance: false`, because of blocked automatic page requests, page errors and the undeployed candidate. The correction is verified only by offline fixtures and Jest. An authenticated rerun against the corrected candidate is still pending. Nothing here claims deployed, clinical, full-source or runtime parity.
+- **Fixture versus application.** The other browser evidence uses synthetic fixtures. No authenticated OpenEMR session, PHP rendering, DB, jQuery, `dialog.js`, `restoreSession`, AJAX save, datetimepicker or real `dlgopen` mounting was exercised. There was no live, restricted-role, screen-reader, touch-gesture, real print-dialog/pagination or deployment verification.
 - **Themes not covered.**
   - Solar, manila, colour and compact variants were not compiled or checked.
   - The RTL theme variant (`oemr-rtl.scss`) cannot compile here, because `bootstrap-rtl` (a napa git dependency) is not installed and nothing was installed. RTL coverage is therefore `dir="rtl"` on the LTR themes, which themselves force `direction: ltr` on body.
   - CSS emitted by webpack's css-loader/autoprefixer is not reproduced.
 - **PHP gates.** Docker is unavailable and `vendor/` is empty, so there was no full isolated PHPUnit run, PHPStan, Rector or PHPCS. The two new PHPUnit cases were not executed under PHPUnit. Their logic was exercised by the host-PHP harness, and `php -l` passed.
-- **Inherited defects.** The legacy dark theme's unreadable balance-only row (1.05:1) and the malformed list markup are pre-existing. They remain in legacy mode.
+- **Inherited defects.** The legacy dark theme's unreadable balance-only row (1.05:1), the malformed list markup and the existing-note compose toolbar overflowing a 146/180px resized dialog are pre-existing. They remain in legacy mode.
 - **Design fidelity.** Fidelity remains partial and unaccepted, and the required GitHub review is a separate gate.

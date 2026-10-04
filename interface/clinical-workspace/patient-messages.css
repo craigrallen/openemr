@@ -44,15 +44,26 @@
     max-width: 100%;
   }
 
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-group > .btn {
+    flex: 0 0 auto;
+  }
+
   body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-group > .btn,
   body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-group > .btn {
-    flex: 0 0 auto;
     min-height: 38px;
     margin-left: 0;
     padding: 7px 12px;
     border-radius: 5px;
     font-size: 14px;
     font-weight: 600;
+  }
+
+  /* dialog.js keeps the open-time modal percentage on resize, so the compose frame can be ~146px wide; labels wrap at full size inside the sheet. */
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-group > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
   }
 
   body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-secondary,
@@ -173,7 +184,7 @@
 
   body.oe-clinical-workspace.oe-clinical-message-compose #pnotes {
     margin-block: 16px;
-    padding: clamp(16px, 4vw, 28px) clamp(16px, 5vw, 36px);
+    padding: clamp(16px, 4vw, 28px) clamp(8px, 5vw, 36px);
     border: 1px solid var(--oe-line, #d9e4e2);
     border-radius: 7px;
     background: var(--oe-paper, #fff);

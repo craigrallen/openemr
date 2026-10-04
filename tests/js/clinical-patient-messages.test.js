@@ -265,6 +265,61 @@ describe('patient-messages.css contract', () => {
     });
 });
 
+describe('compose dialog resized after open (dialog.js keeps the open-time percentage)', () => {
+    // A dialog opened at 1440px and resized to 390/320px leaves a 180/146px iframe; the original
+    // unstyled page fits every control there, so the workbench sheet must too.
+    const frameWidths = [146, 180];
+    const px = (value, frame) => {
+        const clamp = /^clamp\(\s*([\d.]+)px\s*,\s*([\d.]+)vw\s*,\s*([\d.]+)px\s*\)$/.exec(value);
+        if (clamp) {
+            return Math.min(Math.max(Number(clamp[1]), (Number(clamp[2]) * frame) / 100), Number(clamp[3]));
+        }
+        const plain = /^([\d.]+)px$/.exec(value);
+        expect([value, plain !== null]).toEqual([value, true]);
+        return Number(plain[1]);
+    };
+    const inline = (shorthand) => {
+        const parts = shorthand.match(/clamp\([^)]*\)|\S+/g);
+        return parts.length > 1 ? parts[1] : parts[0];
+    };
+    // Every rule listing the selector, merged in source order (later declarations win, as in the cascade).
+    const find = (selector) => {
+        const matching = rules().filter(({ selectors }) => selectors.includes(selector));
+        expect([selector, matching.length > 0]).toEqual([selector, true]);
+        return Object.assign({}, ...matching.map(({ declarations }) => declarations));
+    };
+
+    test('the sheet chrome leaves room for the longest original action word at 146px and 180px', () => {
+        const container = find(`${composeScope} .container`);
+        const sheet = find(`${composeScope} #pnotes`);
+        const border = Number(/^(\d+)px/.exec(sheet.border)[1]);
+        for (const frame of frameWidths) {
+            const chrome = 2 * px(container['padding-inline'], frame) + 2 * px(inline(sheet.padding), frame) + 2 * border;
+            // 110px fits "Printable"/"Message" at the 14px/600 button weight plus the button padding.
+            expect([frame, frame - chrome >= 110]).toEqual([frame, true]);
+        }
+    });
+
+    test('original action buttons wrap their labels inside the sheet instead of overflowing it', () => {
+        const buttons = find(`${composeScope} #pnotes .btn-group > .btn`);
+        // Shrinkable flex items with wrapping labels; the 14px label size itself is kept.
+        expect(buttons.flex).not.toMatch(/^\d+ 0 /);
+        expect(buttons['min-width']).toBe('0');
+        expect(buttons['max-width']).toBe('100%');
+        expect(buttons['white-space']).toBe('normal');
+        expect(buttons['font-size']).toBe('14px');
+        const group = find(`${composeScope} #pnotes .btn-group`);
+        expect(group['max-width']).toBe('100%');
+        expect(group['flex-wrap']).toBe('wrap');
+        // Nothing is hidden, clipped or scaled down to make it fit.
+        for (const { selectors, declarations } of rules().filter(({ selectors }) => selectors.some((s) => s.startsWith(composeScope)))) {
+            expect([selectors.join(), declarations.overflow, declarations['overflow-x']]).toEqual([selectors.join(), undefined, undefined]);
+            expect([selectors.join(), declarations.transform, declarations.zoom]).toEqual([selectors.join(), undefined, undefined]);
+        }
+        expect(css()).not.toMatch(/@media[^{]*(max|min)-width/);
+    });
+});
+
 describe('surfaces pair their own foreground and background (dark theme cascade)', () => {
     const ink = 'var(--oe-ink, #17343b)';
     const paper = 'var(--oe-paper, #fff)';
