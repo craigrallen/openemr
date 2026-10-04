@@ -1,0 +1,721 @@
+<html>
+<head>
+    <title>Vitals</title>
+    <!-- setupHeader stub -->
+<script src="/openemr/interface/forms/vitals/vitals.js?v=82" type="text/javascript"></script>
+<script>
+    let vitalsTranslations = {
+        'weight_input_usa': window.xl("Weight") + ' (' + window.xl("lbs") + ')'
+        ,'weight_input_metric': window.xl("Weight") + ' (' + window.xl("kg") + ')'
+        ,'height_input_usa': window.xl("Height/Length") + ' (' + window.xl("in") + ')'
+        ,'height_input_metric': window.xl("Height/Length") + ' (' + window.xl("cm") + ')'
+        ,'bps_input': window.xl("BP Systolic")
+        ,'bpd_input': window.xl("BP Diastolic")
+        ,'validateFailed': window.xl("Please correct the value(s) before proceeding!")
+        ,'invalidField': window.xl("The following field has an invalid value")
+        ,'outsideRange': window.xl("Value is outside typical clinical range")
+        ,'invalidNegative': window.xl("Value cannot be negative")
+        ,'invalidRange': window.xl("Value is outside acceptable range")
+    };
+    if (window.vitalsForm) {
+        window.vitalsForm.init("%2Fopenemr", vitalsTranslations);
+    } else {
+        console.error("Failed to find vitalsForm object to initialize javascript vitals form");
+    }
+</script>
+<link rel="stylesheet" href="/openemr/interface/forms/vitals/vitals.css?v=82-vitals-document-1" />
+<script src="/openemr/interface/clinical-workspace/mode.js?v=82-vitals-document-1" defer></script>
+</head>
+<body class="oe-clinical-vitals">
+
+ <div class="container mt-3">
+        <div class="row no-gutters">
+        <div class="col-4">
+            <h2 class="h2-responsive">
+                Vitals&nbsp;&nbsp;&nbsp;
+                <a id="vitals-screen-top" href="../summary/demographics.php" class="text-decoration-none" onclick="window.top.restoreSession()"
+                    title="Back to patient dashboard">
+                        <i id="advanced-tooltip" class="readonly fas fa-arrow-circle-left fa-2x small" aria-hidden="true"></i>
+                </a>
+            </h2>
+        </div>
+                <div class="col-8 text-right">
+                <h6 class="h6-responsive"><a href="#patient-vitals-history" class="text-decoration-none">See More Vital Records History</a></h6>
+        </div>
+                <div class="col-sm-12">
+            <form id="vitalsForm" name="vitals" method="post" action="/openemr/interface/forms/vitals/save.php">
+                <input type="hidden" name="csrf_token_form" value="test-csrf-token" />
+                                <div class="row">
+                    <div class="col-md-auto p-3 font-weight-bold text-right">
+                        <label for="date">Date</label>
+                    </div>
+                    <div class="col-md-auto p-2">
+                        <input title="Date and time of this observation" type='text' size='14' class='form-control datetimepicker oe-patient-background' name='date' id='date' value='2026-10-01 09:30' />
+                    </div>
+                </div>
+                                <div id="chart" class="chart-dygraphs" style="margin-left: -15px"></div>
+                    <div class="table-responsive" id="vitals-measurements" role="region" aria-label="Vitals" tabindex="0">
+
+                        <table class="table">
+
+                            <thead class="table-head">
+                                <tr>
+                                    <th class="text-left"><span class="vitals-title">Name</span></th>
+                                    <th class="text-left">Unit</th>
+                                    <th class="editonly">Value</th>
+                                    <th class="editonly">Abn</th>
+                                    <th class="editonly">Actions</th>
+                                                                            <th class='historicalvalues d-none d-md-table-cell'>2026-09-01 10:00</th>
+                                                                            <th class='historicalvalues d-none d-md-table-cell'>2026-06-12 14:15</th>
+                                                                            <th class='historicalvalues d-none d-md-table-cell'>2026-01-20 08:45</th>
+                                                                    </tr>
+                            </thead>
+
+                            <tbody>
+                                                                                                                               <tr class="hide">
+    <td>
+        <input type="hidden" class="vitals-conv-unit-save-value" id='weight_input' name="weight"
+               value="176.4" />
+    </td>
+            <td class="historicalvalues"></td>
+            <td class="historicalvalues"></td>
+            <td class="historicalvalues"></td>
+    </tr>
+
+<!-- USA row comes first -->
+        <tr>
+                <td class="graph" id="weight">
+                <span class="vitals-title">Weight</span> <small>(LOINC:29463-7)</small>        </td>
+            <td>
+                lbs
+        </td>
+                        <td class='currentvalues p-2'>
+
+            <input type="text" inputmode="decimal" class="form-control vitals-conv-unit skip-template-editor" size='5' id='weight_input_usa'
+                   value=" 176.40"
+                   data-system="usa" data-unit="lbs" data-target-input="weight_input"
+                   data-target-input-conv="weight_input_metric"
+                   title='Decimal pounds or pounds and ounces separated by #(e.g. 5#4)'
+                   data-min="0" data-max="1500" data-warning-min="2" data-warning-max="700"/>
+                        <span class="vitals-warning-message" id="weight_input_usa_warning"></span>
+                    </td>
+        <td class="editonly">
+            <select name="interpretation[weight]" class="form-control" id='interpretation_weight'>
+    <option value=""> </option>
+                        <option  value="N">Normal</option>
+                                <option  value="H">High</option>
+            </select>
+        </td>
+        <td class="editonly actions">
+            <button class="btn btn-secondary reason-code-btn" data-toggle-container="weight_reason_code"><i class="fa fa-asterisk"></i></button>
+        </td>
+            <td class='historicalvalues d-none d-md-table-cell'>
+                                                        176.40
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        176.40
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        176.40
+                                        </td>
+    </tr>
+
+<!-- Metric row comes second -->
+    <tr class="hide">
+            <td class="graph" id="weight_metric">
+                <span class="vitals-title">Weight</span> <small>(LOINC:29463-7)</small>        </td>
+            <td>
+                kg
+    </td>
+                        <td class='currentvalues p-2'>
+
+            <!-- Note we intentionally use vitalsValue not vitalValuesMetric because of how data is stored internally -->
+            <input type="text" inputmode="decimal" class="form-control vitals-conv-unit skip-template-editor" size='5' id='weight_input_metric'
+                   value="80.01"
+                   data-system="metric" data-unit="lbs" data-target-input="weight_input"
+                   data-target-input-conv="weight_input_usa"
+                   />
+                    </td>
+        <td class="editonly">
+                    </td>
+        <td class="editonly actions">
+                    </td>
+
+            <td class='historicalvalues d-none d-md-table-cell'>
+                                                                    80.01
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                                    80.01
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                                    80.01
+                                        </td>
+    </tr>
+
+    <tr id="weight_reason_code" class="reasonCodeContainer d-none">
+    <td colspan="5" class="border-top-0">
+        <div class="card mt-2 mb-4">
+            <div class="card-header">
+                Weight Reason Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <p class="col">
+                        When recording a reason for the value (or absence of a value) of an observation both the reason code and status of the reason are required
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Reason Code</label>
+                                                <input class="code-selector-popup form-control" placeholder="Select a reason code"
+                               name="reasonCode[weight]" type="text" value="" />
+
+                                                    <p class="code-selector-text-display d-none"></p>
+                            <input type="hidden" name="reasonCodeText[weight]" class="code-selector-text" value="" />
+                                            </div>
+                    <div class="col-md-6 form-group">
+                        <label>Reason Status</label>
+                        <select name="reasonCodeStatus[weight]" class="form-control">
+                                                            <option value=""
+                                                                        >Select a status code</option>
+                                                            <option value="completed"
+                                                                        >Completed</option>
+                                                    </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+    </tr>
+                                                                                                                                                                                                                                     <tr>
+    <td class="graph" id="bps"><span class="vitals-title">BP Systolic</span> <small>(LOINC:8480-6)</small></td>
+    <td>mmHg</td>
+
+        <td class='currentvalues p-2'>
+                            <input type="text" inputmode="decimal" class="form-control skip-template-editor" size='5' name='bps' id='bps_input'
+               value="128"
+               data-min="0" data-max="400" data-warning-min="60" data-warning-max="250"/>
+                        <span class="vitals-warning-message" id="bps_input_warning"></span>
+            </td>
+    <td class="editonly">
+        <select name="interpretation[bps]" class="form-control" id='interpretation_bps'>
+    <option value=""> </option>
+                        <option  value="N">Normal</option>
+                                    <option selected="selected" value="H">High</option>
+            </select>
+    </td>
+    <td class="editonly actions">
+        <button class="btn btn-secondary reason-code-btn" data-toggle-container="bps_reason_code"><i class="fa fa-asterisk"></i></button>
+    </td>
+            <td class='historicalvalues d-none d-md-table-cell'>
+                                                        141
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        135
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        122
+                                        </td>
+</tr>
+<tr id="bps_reason_code" class="reasonCodeContainer ">
+    <td colspan="5" class="border-top-0">
+        <div class="card mt-2 mb-4">
+            <div class="card-header">
+                BP Systolic Reason Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <p class="col">
+                        When recording a reason for the value (or absence of a value) of an observation both the reason code and status of the reason are required
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Reason Code</label>
+                                                <input class="code-selector-popup form-control" placeholder="Select a reason code
+                               name="reasonCode[bps]" type="text" value="SNOMED-CT:271649006" />
+
+                                                    <p class="code-selector-text-display">Systolic blood pressure above reference range</p>
+                            <input type="hidden" name="reasonCodeText[bps]" class="code-selector-text" value="Systolic blood pressure above reference range" />
+                                            </div>
+                    <div class="col-md-6 form-group">
+                        <label>Reason Status</label>
+                        <select name="reasonCodeStatus[bps]" class="form-control">
+                                                            <option value=""
+                                                                        >Select a status code</option>
+                                                            <option value="completed"
+                                        selected                                >Completed</option>
+                                                    </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+    </tr>
+                                                                                                                                                                                                                                     <tr><td class="graph" id="BMI"><span class="vitals-title">BMI</span> <small>(LOINC:39156-5)</small></td><td>kg/m^2</td>
+            <td class='currentvalues p-2'><input type="text" class="form-control" size='5'
+            name='BMI' id='BMI_input' value="24.61"/></td>
+        <td class="editonly"></td>
+        <td class="editonly actions">
+            <button class="btn btn-secondary reason-code-btn" data-toggle-container="BMI_reason_code"><i class="fa fa-asterisk"></i></button>
+        </td>
+                <td class='historicalvalues d-none d-md-table-cell'>
+                                                        24.61
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        24.61
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        24.61
+                                        </td>
+    </tr>
+<tr id="BMI_reason_code" class="reasonCodeContainer d-none">
+    <td colspan="5" class="border-top-0">
+        <div class="card mt-2 mb-4">
+            <div class="card-header">
+                BMI Reason Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <p class="col">
+                        When recording a reason for the value (or absence of a value) of an observation both the reason code and status of the reason are required
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Reason Code</label>
+                                                <input class="code-selector-popup form-control" placeholder="Select a reason code"
+                               name="reasonCode[BMI]" type="text" value="" />
+
+                                                    <p class="code-selector-text-display d-none"></p>
+                            <input type="hidden" name="reasonCodeText[BMI]" class="code-selector-text" value="" />
+                                            </div>
+                    <div class="col-md-6 form-group">
+                        <label>Reason Status</label>
+                        <select name="reasonCodeStatus[BMI]" class="form-control">
+                                                            <option value=""
+                                                                        >Select a status code</option>
+                                                            <option value="completed"
+                                                                        >Completed</option>
+                                                    </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+    </tr>
+                                                                                                                                                                                                    <tr>
+    <td><span class="vitals-title">BMI Status</span></td>
+    <td>Type</td>
+        <td class='currentvalues p-2'>
+        <input type="text" class="form-control skip-template-editor" size='20'
+            name="BMI_status" id="BMI_status" value="Normal BW"/></td>
+    <td class="editonly"></td>
+    <td class="editonly actions">
+        <button class="btn btn-secondary reason-code-btn" data-toggle-container="BMI_Status_reason_code"><i class="fa fa-asterisk"></i></button>
+    </td>
+            <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Normal BW
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Normal BW
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Normal BW
+                                        </td>
+</tr>
+<tr id="BMI_Status_reason_code" class="reasonCodeContainer d-none">
+    <td colspan="5" class="border-top-0">
+        <div class="card mt-2 mb-4">
+            <div class="card-header">
+                BMI Status Reason Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <p class="col">
+                        When recording a reason for the value (or absence of a value) of an observation both the reason code and status of the reason are required
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Reason Code</label>
+                                                <input class="code-selector-popup form-control" placeholder="Select a reason code"
+                               name="reasonCode[BMI_Status]" type="text" value="" />
+
+                                                    <p class="code-selector-text-display d-none"></p>
+                            <input type="hidden" name="reasonCodeText[BMI_Status]" class="code-selector-text" value="" />
+                                            </div>
+                    <div class="col-md-6 form-group">
+                        <label>Reason Status</label>
+                        <select name="reasonCodeStatus[BMI_Status]" class="form-control">
+                                                            <option value=""
+                                                                        >Select a status code</option>
+                                                            <option value="completed"
+                                                                        >Completed</option>
+                                                    </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+    </tr>
+                                                                                                                                                                                                    <tr><td><span class="vitals-title">Temp Location</span> <small>(LOINC:8327-9)</small><td></td>
+        <td class='currentvalues p-2'><select name="temp_method" class="form-control" id='temp_method'><option value=""> </option>
+            <option value="Oral"               selected>Oral
+            <option value="Tympanic Membrane" >Tympanic Membrane
+            <option value="Rectal"            >Rectal
+            <option value="Axillary"          >Axillary
+            <option value="Temporal Artery"   >Temporal Artery
+        </select></td>
+
+    <td class="editonly"></td>
+    <td class="editonly actions">
+        <button class="btn btn-secondary reason-code-btn" data-toggle-container="_reason_code"><i class="fa fa-asterisk"></i></button>
+    </td>
+            <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Oral
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Oral
+                                        </td>
+    <td class='historicalvalues d-none d-md-table-cell'>
+                                                        Oral
+                                        </td>
+</tr>
+<tr id="_reason_code" class="reasonCodeContainer d-none">
+    <td colspan="5" class="border-top-0">
+        <div class="card mt-2 mb-4">
+            <div class="card-header">
+                 Reason Information
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <p class="col">
+                        When recording a reason for the value (or absence of a value) of an observation both the reason code and status of the reason are required
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Reason Code</label>
+                                                <input class="code-selector-popup form-control" placeholder="Select a reason code"
+                               name="reasonCode[]" type="text" value="" />
+
+                                                    <p class="code-selector-text-display d-none"></p>
+                            <input type="hidden" name="reasonCodeText[]" class="code-selector-text" value="" />
+                                            </div>
+                    <div class="col-md-6 form-group">
+                        <label>Reason Status</label>
+                        <select name="reasonCodeStatus[]" class="form-control">
+                                                            <option value=""
+                                                                        >Select a status code</option>
+                                                            <option value="completed"
+                                                                        >Completed</option>
+                                                    </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </td>
+
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+            <td class="historicalvalues d-none d-md-table-cell"></td>
+    </tr>
+                                                                                                                                                                                                    <tr>
+    <td class="graph" id="note"><span class="vitals-title">Other Notes</span></td>
+    <td></td>
+
+        <td class='currentvalues p-2'>
+        <textarea class="form-control" name='note' id='note_input'>Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient</textarea>
+    </td>
+    <td class="editonly">
+    </td>
+    <td class="editonly actions">
+    </td>
+                <td  class='historicalvalues d-none d-md-table-cell'>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+            <td  class='historicalvalues d-none d-md-table-cell'>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+            <td  class='historicalvalues d-none d-md-table-cell'>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+    </tr>
+                                                                                                                                                                                                    <tr class="hide">
+        <td colspan='5' class="text-center pt-2">
+        <input type="button" class="btn btn-primary" id="pdfchart" value='Growth-Chart (PDF)'>
+    <input type="button" class="btn btn-primary" id="htmlchart" value='Growth-Chart (HTML)'>
+    </td>
+    <td class="historicalvalues d-none d-md-table-cell"></td>
+    <td class="historicalvalues d-none d-md-table-cell"></td>
+    <td class="historicalvalues d-none d-md-table-cell"></td>
+</tr>
+                                                                                          </tbody>
+                        </table>
+
+                    </div>
+                <div class="form-group">
+                    <div class="text-left position-override">
+                        <div class="btn-group" role="group">
+                            <button type="submit" class="btn btn-primary btn-save editonly" name="Submit" value=''>Save</button>
+                            <button type="button" class="btn btn-secondary btn-cancel editonly" id="cancel" value=''>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            <br /><br />
+            <input type="hidden" name="id" id='id' value="7" />
+            <input type="hidden" name="uuid" id='uuid' value="9a1f0000-0000-4000-8000-000000000007" />
+            <input type="hidden" name="activity" id='activity' value="1" />
+            <input type="hidden" name="pid" id='pid' value="3" />
+            <input type="hidden" name="process" id='process' value="true" />
+            </form>
+        </div>
+        <div class="card vitals-complete-history col-12">
+    <div class="card-header">
+        <div class="row">
+            <div class="col-4">
+                <h2 class="h2-responsive">
+                    Vitals History
+                    <a id="vitals-screen-top" href="../summary/demographics.php" class="text-decoration-none" onclick="window.top.restoreSession()"
+                       title="Back to patient dashboard">
+                        <i id="advanced-tooltip" class="readonly fas fa-arrow-circle-left fa-2x small" aria-hidden="true"></i>
+                    </a>
+                </h2>
+            </div>
+            <div class="col-8 text-right">
+                <h6 class="h6-responsive"><a id="patient-vitals-history" href="#vitals-screen-top" class="text-decoration-none">Back to top</a></h6>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+                <div class="table-responsive" id="vitals-history-measurements" role="region" aria-label="Vitals History" tabindex="0">
+            <table class="table">
+
+                <thead class="table-head">
+                <tr>
+                    <th class="text-left">Name</th>
+                    <th class="text-left">Unit</th>
+                                            <th class='historicalvalues d-none d-md-table-cell'>2026-09-01 10:00</th>
+                                            <th class='historicalvalues d-none d-md-table-cell'>2026-06-12 14:15</th>
+                                            <th class='historicalvalues d-none d-md-table-cell'>2026-01-20 08:45</th>
+                                    </tr>
+                </thead>
+
+                <tbody>
+
+<!-- USA row comes first -->
+        <tr>
+                <td class="graph" id="weight">
+                <span class="vitals-title">Weight</span> <small>(LOINC:29463-7)</small>        </td>
+            <td>
+                lbs
+        </td>
+            <td class='historicalvalues '>
+                                                        176.40
+                                        </td>
+    <td class='historicalvalues '>
+                                                        176.40
+                                        </td>
+    <td class='historicalvalues '>
+                                                        176.40
+                                        </td>
+    </tr>
+
+<!-- Metric row comes second -->
+    <tr class="hide">
+            <td class="graph" id="weight_metric">
+                <span class="vitals-title">Weight</span> <small>(LOINC:29463-7)</small>        </td>
+            <td>
+                kg
+    </td>
+
+            <td class='historicalvalues '>
+                                                                    80.01
+                                        </td>
+    <td class='historicalvalues '>
+                                                                    80.01
+                                        </td>
+    <td class='historicalvalues '>
+                                                                    80.01
+                                        </td>
+    </tr>
+
+                                                                                                                                                                <tr>
+    <td class="graph" id="bps"><span class="vitals-title">BP Systolic</span> <small>(LOINC:8480-6)</small></td>
+    <td>mmHg</td>
+
+            <td class='historicalvalues '>
+                                                        141
+                                        </td>
+    <td class='historicalvalues '>
+                                                        135
+                                        </td>
+    <td class='historicalvalues '>
+                                                        122
+                                        </td>
+</tr>
+                                                                                                                                                                                    <tr><td class="graph" id="BMI"><span class="vitals-title">BMI</span> <small>(LOINC:39156-5)</small></td><td>kg/m^2</td>
+                <td class='historicalvalues '>
+                                                        24.61
+                                        </td>
+    <td class='historicalvalues '>
+                                                        24.61
+                                        </td>
+    <td class='historicalvalues '>
+                                                        24.61
+                                        </td>
+    </tr>
+                                                                                                                                            <tr>
+    <td><span class="vitals-title">BMI Status</span></td>
+    <td>Type</td>
+            <td class='historicalvalues '>
+                                                        Normal BW
+                                        </td>
+    <td class='historicalvalues '>
+                                                        Normal BW
+                                        </td>
+    <td class='historicalvalues '>
+                                                        Normal BW
+                                        </td>
+</tr>
+                                                                                                                                            <tr><td><span class="vitals-title">Temp Location</span> <small>(LOINC:8327-9)</small><td></td>
+            <td class='historicalvalues '>
+                                                        Oral
+                                        </td>
+    <td class='historicalvalues '>
+                                                        Oral
+                                        </td>
+    <td class='historicalvalues '>
+                                                        Oral
+                                        </td>
+</tr>
+                                                                                                                                            <tr>
+    <td class="graph" id="note"><span class="vitals-title">Other Notes</span></td>
+    <td></td>
+
+                <td  class='historicalvalues '>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+            <td  class='historicalvalues '>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+            <td  class='historicalvalues '>
+                            Seated, left arm, after five minutes rest; repeat reading taken because the first cuff size was too small for the patient
+                    </td>
+    </tr>
+                                                                                                                                                    </tbody>
+            </table>
+
+        </div>
+            </div>
+</div>
+    </div>
+    </div>
+<script>
+let formdate = "20261001";
+// vitals array elements are in the format:
+//   date-height-weight-head_circumference
+let vitals = [];
+// get values from the current form elements
+vitals[0] = formdate + '-' + "" + '-' + 176.4
+    + '-' + "";
+// historic values
+vitals[vitals.length] = "20260901" + '-' + ""
+    + '-' + 176.4 + '-' + "";
+vitals[vitals.length] = "20260612" + '-' + ""
+    + '-' + 176.4 + '-' + "";
+vitals[vitals.length] = "20260120" + '-' + ""
+    + '-' + 176.4 + '-' + "";
+let patientAge= 45;
+let patient_dob= "1981-02-03";
+let webroot = "\/openemr";
+let pid = 3;
+let cancellink = "\/openemr\/interface\/patient_file\/encounter\/encounter_top.php";
+let birth_xl= window.xl("Birth-24 months");
+let older_xl= window.xl("2-20 years");
+function addGCSelector()
+{
+    let options=[];
+    let birth={'display':birth_xl,'param':'birth'};
+    let age2={'display':older_xl,'param':'2-20'}
+    if((patientAge.toString().indexOf('24 month')>=0) || (patientAge.toString().indexOf('month')==-1))
+        {
+            let dob_data=patient_dob.split("-");
+            let dob_date=new Date(dob_data[0],parseInt(dob_data[1])-1,dob_data[2]);
+            options[0]=age2;
+            for(var idx=0;idx<vitals.length;idx++)
+                {
+                    let str_data_date=vitals[idx].split("-")[0];
+                    let data_date=new Date(str_data_date.substr(0,4),parseInt(str_data_date.substr(4,2))-1,str_data_date.substr(6,2));
+                    if(((data_date-dob_date)/86400000)<=2*365)
+                        {
+                            idx=vitals.length;
+                            options[1]=birth
+                        }
+                }
+        }
+        else
+        {
+            options[0]=birth;
+        }
+        let chart_buttons_cell=$("#pdfchart").parent("td");
+        let select=$("<select id='chart_type'></select>");
+        chart_buttons_cell.prepend(select);
+        for(idx=0;idx<options.length;idx++)
+            {
+                let option=$("<option value='"+options[idx].param+"'>"+options[idx].display+"</option>");
+                select.append(option);
+            }
+        select.find("option:first").attr("selected","true");
+        if(options.length<2)
+            {
+                select.css("display","none");
+            }
+}
+
+$(function () {
+    $("#growthchart").on("click", function() { ShowGrowthchart(); });
+    $("#pdfchart").on("click", function() { ShowGrowthchart(1); });
+    $("#htmlchart").on("click", function() { ShowGrowthchart(2); });
+    $("#cancel").on("click", function() { location.href=cancellink; });
+    addGCSelector();
+
+    /* jqueryDateTimePicker stub */
+});
+
+function ShowGrowthchart(doPDF) {
+    // get values from the current form elements
+    vitals[0] = formdate+'-'+$("#height_input_usa").val()+'-'+$("#weight_input_usa").val()+'-'+$("#head_circ_input_usa").val();
+    // build the data string
+    var datastring = "";
+    for(let i=0; i<vitals.length; i++) {
+        datastring += vitals[i] + "~";
+    }
+    newURL = webroot + '/interface/forms/vitals/growthchart/chart.php?pid=' + encodeURIComponent(pid) + '&data=' + encodeURIComponent(datastring);
+    if (doPDF == 1) newURL += "&pdf=1";
+    if (doPDF == 2) newURL += "&html=1";
+    newURL += "&chart_type=" + encodeURIComponent($("#chart_type").val()) + "&csrf_token_form=" + "test-csrf-token";
+    // do the new window stuff
+    window.top.restoreSession();
+    window.open(newURL, '_blank', "menubar=1,toolbar=1,scrollbars=1,resizable=1,width=600,height=450");
+}
+</script>
+</body>
+</html>

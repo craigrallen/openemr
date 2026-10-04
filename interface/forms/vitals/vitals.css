@@ -93,3 +93,166 @@ select {
   font-size: 0.8rem;
   margin-top: 2px;
 }
+
+/* Workbench document presentation (proposed). Screen-only and scoped to the vitals route
+ * inside an active workbench (mode.js adds .oe-clinical-workspace); the legacy page and
+ * print keep the rules above. No control, value, warning or validation rule is changed. */
+@media screen {
+  body.oe-clinical-vitals.oe-clinical-workspace {
+    --oe-ink: #17343b;
+    --oe-muted: #526a70;
+    --oe-line: #d9e4e2;
+    --oe-paper: #fff;
+    --oe-tint: #f6f9f8;
+    --oe-petrol: #086878;
+    --oe-petrol-dark: #075363;
+    --oe-warning-ink: #6b4500;
+    --oe-warning-tint: #fff4d6;
+
+    background: var(--oe-paper);
+    color: var(--oe-ink);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Never below 15px: the nested date .row and the inline-styled #chart use -15px gutters. */
+  body.oe-clinical-vitals.oe-clinical-workspace > .container {
+    max-width: 1180px;
+    padding-inline: clamp(15px, 3vw, 2rem);
+  }
+
+  /* The heading column sizes to "Vitals" at 28px; the history link wraps below when narrow. */
+  body.oe-clinical-vitals.oe-clinical-workspace .container > .row > .col-4 {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .vitals-complete-history .card-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .container > .row > .col-4 > h2 {
+    margin-block: 0 1rem;
+    color: var(--oe-ink);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace a {
+    color: var(--oe-petrol);
+  }
+
+  /* The measurement table scrolls inside its own named region; the page never widens. */
+  body.oe-clinical-vitals.oe-clinical-workspace #vitals-measurements,
+  body.oe-clinical-vitals.oe-clinical-workspace #vitals-history-measurements {
+    max-width: 100%;
+    overflow-x: auto;
+    border-block: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table {
+    margin-block-end: 0;
+    color: var(--oe-ink);
+    font-weight: 400;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table th {
+    border-block-start: 0;
+    border-block-end: 1px solid var(--oe-line);
+    color: var(--oe-muted);
+    font-weight: 600;
+    text-align: start;
+    vertical-align: bottom;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table td {
+    border-block-start: 1px solid var(--oe-line);
+    vertical-align: middle;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table .vitals-title {
+    color: var(--oe-ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table small {
+    color: var(--oe-muted);
+    font-size: 14px;
+  }
+
+  /*
+   * Themes colour the range warning var(--warning) (#ffc107), unreadable on the white sheet.
+   * Re-pair colour and background only; text, size, display and input borders are unchanged.
+   */
+  body.oe-clinical-vitals.oe-clinical-workspace .vitals-warning-message {
+    background-color: var(--oe-warning-tint);
+    color: var(--oe-warning-ink);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .table .historicalvalues,
+  body.oe-clinical-vitals.oe-clinical-workspace .table th.historicalvalues {
+    border-color: var(--oe-line);
+    background: var(--oe-tint);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .form-group {
+    margin-block: 1.25rem 0;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .btn-save {
+    background: var(--oe-petrol);
+    border-color: var(--oe-petrol);
+    color: #fff;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .btn-save:hover {
+    background: var(--oe-petrol-dark);
+    border-color: var(--oe-petrol-dark);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace :focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Cards (history and expanded reason panels) take the sheet's paper/ink pair; dark themes
+   * otherwise paint .card black under the ink text. Alerts keep their own theme colours.
+   */
+  body.oe-clinical-vitals.oe-clinical-workspace .card {
+    border-color: var(--oe-line);
+    background: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .card-header,
+  body.oe-clinical-vitals.oe-clinical-workspace .card-body {
+    border-color: var(--oe-line);
+    background: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /* History reads as a plain section of the same sheet rather than a grey card. */
+  body.oe-clinical-vitals.oe-clinical-workspace .vitals-complete-history {
+    margin-block-start: 2rem;
+    border: 0;
+    border-block-start: 2px solid var(--oe-ink);
+    border-radius: 0;
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .vitals-complete-history .card-header {
+    padding-inline: 0;
+    border-block-end: 0;
+    background: var(--oe-paper);
+  }
+
+  body.oe-clinical-vitals.oe-clinical-workspace .vitals-complete-history .card-body {
+    padding-inline: 0;
+  }
+}
