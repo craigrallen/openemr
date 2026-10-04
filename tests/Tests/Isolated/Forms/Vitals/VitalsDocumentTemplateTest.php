@@ -75,7 +75,7 @@ class VitalsDocumentTemplateTest extends TestCase
     public function bodyOptsIntoWorkbenchPresentationWithVersionedAssets(): void
     {
         $html = self::render();
-        $version = self::ASSET_VERSION . '-vitals-document-1';
+        $version = self::ASSET_VERSION . '-vitals-document-2';
 
         self::assertStringContainsString('<body class="oe-clinical-vitals">', $html);
         self::assertStringContainsString(

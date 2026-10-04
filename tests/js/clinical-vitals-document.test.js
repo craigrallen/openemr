@@ -30,7 +30,8 @@ const ORIGINAL = {
     modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599'
 };
 
-const VERSION = "{{ (assetVersion ~ '-vitals-document-1')|attr_url }}";
+// Bumped from -vitals-document-1 when the observation-date rule was added after the first published head.
+const VERSION = "{{ (assetVersion ~ '-vitals-document-2')|attr_url }}";
 const SCOPE = 'body.oe-clinical-vitals.oe-clinical-workspace';
 const CSS_MARKER = '/* Workbench document presentation';
 
@@ -195,6 +196,47 @@ describe('vitals.css document presentation', () => {
         expect(decls[`${SCOPE} .container > .row > .col-4 | max-width`]).toBe('100%');
     });
 
+    test('observation date: complete YYYY-MM-DD HH:mm width and a paired readable colour, focused or not', () => {
+        // The legacy size='14' input clips the 16-character value in the auto-width column, and the
+        // dark theme draws its #dee2e6 text on .oe-patient-background's white (!important): 1.3:1.
+        // Only colour, background and a minimum inline size are set; the theme's white !important
+        // background, borders (validation highlights), font size, padding and markup are untouched.
+        const rules = {};
+        addedRoot().walkRules((rule) => {
+            if (/#date\b/.test(rule.selector)) rules[rule.selectors.join(', ')] = rule;
+        });
+        expect(Object.keys(rules)).toEqual([`${SCOPE} #date, ${SCOPE} #date:focus`]);
+        const rule = Object.values(rules)[0];
+        expect(rule.parent.type).toBe('atrule');
+        expect(rule.parent.params).toMatch(/^screen\b/);
+        const decls = {};
+        rule.walkDecls((decl) => {
+            expect(decl.important === true).toBe(false);
+            decls[decl.prop] = decl.value;
+        });
+        expect(Object.keys(decls).sort()).toEqual(['background-color', 'color', 'min-inline-size']);
+        expect(decls.color).toBe('var(--oe-ink)');
+        expect(decls['background-color']).toBe('var(--oe-paper)');
+        // 16ch (digit advance) covers the 16 characters; plus Bootstrap's 0.75rem padding each side and 1px borders.
+        expect(decls['min-inline-size']).toBe('calc(16ch + 1.5rem + 2px)');
+        const tokens = {};
+        addedRoot().walkRules((r) => {
+            if (r.selector === SCOPE) r.walkDecls((decl) => { tokens[decl.prop] = decl.value; });
+        });
+        const lum = (hex) => {
+            const full = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
+            const [r, g, b] = full.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i).slice(1).map((h) => parseInt(h, 16) / 255)
+                .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        // The theme forces white behind the date (.oe-patient-background); ink must read on white and on paper.
+        const ink = lum(tokens['--oe-ink']);
+        [tokens['--oe-paper'], '#ffffff'].forEach((bg) => {
+            const b = lum(bg);
+            expect((Math.max(ink, b) + 0.05) / (Math.min(ink, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
+        });
+    });
+
     test('paper document: Arial 14px base, 28px heading, petrol Save and focus, scrollable named region', () => {
         const decls = {};
         addedRoot().walkRules((rule) => rule.selectors.forEach((selector) => {
@@ -269,6 +311,18 @@ describe('rendered vitals form in and out of the workbench', () => {
             expect(region.querySelector('table')).not.toBeNull();
         });
         expect(document.querySelector('#vitals-measurements').closest('form').id).toBe('vitalsForm');
+    });
+
+    test('the observation date control keeps its original attributes and value', () => {
+        const date = document.getElementById('date');
+        expect(date).not.toBeNull();
+        expect(date.closest('form').id).toBe('vitalsForm');
+        expect(document.querySelectorAll('#vitalsForm [name="date"]')).toHaveLength(1);
+        expect([date.tagName, date.getAttribute('type'), date.getAttribute('size'), date.getAttribute('name'),
+            date.getAttribute('title'), date.className, date.value]).toEqual(['INPUT', 'text', '14', 'date',
+            'Date and time of this observation', 'form-control datetimepicker oe-patient-background', '2026-10-01 09:30']);
+        expect(date.value).toHaveLength(16);
+        expect(document.querySelector('label[for="date"]')).not.toBeNull();
     });
 
     test('heading, save, cancel, growth chart and history link contracts are present', () => {

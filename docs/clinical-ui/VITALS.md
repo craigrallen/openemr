@@ -16,7 +16,8 @@ Template (markup only, `vitals.html.twig` and `vitals_historical_values_complete
 - `<body class="oe-clinical-vitals">` as a route hook.
 - Loads the existing, unchanged `interface/clinical-workspace/mode.js`. It adds
   `oe-clinical-workspace` only while a same-origin ancestor body has `workbench-active`.
-- `vitals.css` and `mode.js` use the explicit version token `assetVersion-vitals-document-1`.
+- `vitals.css` and `mode.js` use the explicit version token `assetVersion-vitals-document-2` (bumped from `-1` when the
+  observation-date rule below changed `vitals.css` after the first published head).
   `vitals.js` and the other shell assets are unchanged.
 - The measurement table and the history table each sit in a named, keyboard-focusable scroll
   region (`#vitals-measurements` "Vitals", `#vitals-history-measurements` "Vitals History";
@@ -35,6 +36,15 @@ CSS (appended to `vitals.css`; the original rules above it are byte-for-byte unc
 - Petrol Save button and a petrol `:focus-visible` outline.
 - The container keeps at least 15px inline padding. The nested date `.row` and the inline
   `#chart` margin rely on Bootstrap's -15px gutters.
+- Observation date (`#date`, markup unchanged: still `type="text" size="14"`, same name, title,
+  classes, value, date picker class and handlers): one rule for `#date` and `#date:focus` sets
+  only `min-inline-size: calc(16ch + 1.5rem + 2px)`, `background-color: var(--oe-paper)` and
+  `color: var(--oe-ink)`. The full 16-character `YYYY-MM-DD HH:mm` value now fits at desktop
+  widths, where the auto-width column used to clip it (126px text in a 120px content box). Font
+  size, padding and borders are unchanged, so the `.error`/`.warning` highlights are the same as
+  baseline. The background declaration is for pairing only: the theme's `.oe-patient-background`
+  forces white with `!important`, and this rule does not override it. In the dark theme the
+  date text goes from 1.3:1 to 13.2:1, focused or not. Legacy and print are unchanged.
 - The heading column sizes to its text, so the history link wraps below it on narrow screens.
 - The appended rules do not hide anything or set any font size below 14px. Existing rules
   still apply, though:
@@ -70,7 +80,7 @@ pediatric logic.
   - Checks body class, versioned assets, no `workspace.css`, the regions, and the
     form/CSRF/hidden-input/save/cancel/growth-chart/reason/history-link contracts.
   - Records `fixtures/vitals-form-document.html`. Regenerate with `UPDATE_FIXTURES=1`.
-- `tests/js/clinical-vitals-document.test.js` (Jest, 15 tests):
+- `tests/js/clinical-vitals-document.test.js` (Jest, 17 tests):
   - Source preservation: removing exactly the listed additions gives the original template
     hashes, `mode.js` is unchanged, and the legacy part of the stylesheet hash is unchanged.
   - Contracts on the appended declarations only: screen-only and scoped; no hiding
@@ -78,8 +88,11 @@ pediatric logic.
   - The only warning rule is the colour/background pair, and its declared colours resolve to
     at least 4.5:1.
   - Cards paired paper/ink, the 15px container gutter, and the heading column sizing.
+  - The observation date control is wide enough for a complete `YYYY-MM-DD HH:mm` value and
+    has a paired readable colour/background, focused or not.
   - Rendered-fixture checks in jsdom: route class, regions, and control node identity/values
-    through workbench on/off.
+    through workbench on/off; the observation date control keeps its original attributes and
+    value.
 
 ### Offline native Chrome harness (outside the repo)
 
@@ -153,9 +166,12 @@ Test counts:
 
 - In the light theme, the `.error`/`.warning` input borders are grey (`#9ca3af`) on both
   baseline and candidate (pre-existing).
-- Dark theme: form controls keep the theme's black inputs on the white sheet. The date input
-  (`.oe-patient-background`) measures 1.3:1 text contrast, identical to baseline (pre-existing,
-  not changed here).
+- Dark theme: form controls other than the date keep the theme's black inputs on the white
+  sheet. The date input's 1.3:1 text contrast is fixed in workbench screen mode only. Legacy
+  dark mode still measures 1.3:1, as in baseline.
+- The date fix was checked against the rendered stub fixture in offline native Chrome
+  (compiled light/dark themes, 1440/768/390/320, LTR and effective-body RTL). Width is measured
+  with the fixture's Arial; other fonts and translated date formats were not checked.
 - Not run: PHPStan (its config needs the target's own `vendor/`), phpcs (Slevomat sniffs
   missing from the sibling vendor), ESLint (`globals` missing from the shared node_modules).
   The direct-`TwigContainer` and manual-globals issues were checked with an out-of-repo source

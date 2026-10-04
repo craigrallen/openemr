@@ -201,6 +201,18 @@ select {
     color: var(--oe-ink);
   }
 
+  /*
+   * Observation date: the legacy size='14' input clips "YYYY-MM-DD HH:mm" in its auto-width column, and
+   * the dark theme draws light text on .oe-patient-background's forced white. Give it room for 16 digits
+   * plus Bootstrap's padding/borders and the sheet's ink/paper pair; borders and font size are unchanged.
+   */
+  body.oe-clinical-vitals.oe-clinical-workspace #date,
+  body.oe-clinical-vitals.oe-clinical-workspace #date:focus {
+    min-inline-size: calc(16ch + 1.5rem + 2px);
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
   body.oe-clinical-vitals.oe-clinical-workspace .form-group {
     margin-block: 1.25rem 0;
   }
