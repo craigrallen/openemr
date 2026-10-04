@@ -233,6 +233,141 @@ describe('SOAP previous-note reference', () => {
     });
 });
 
+describe('SOAP reference copy hands the appended draft to the clinician for review', () => {
+    const copyButton = (dom, name, index = 0) => dom.list
+        .querySelectorAll('li')[index]
+        .querySelector(`[data-section="${name}"] button.oe-soap-reference__copy`);
+
+    // Keyboard activation: the button has focus when it is clicked.
+    function press(button) {
+        button.focus();
+        button.click();
+    }
+
+    function expectCaretAtEnd(editor) {
+        expect(document.activeElement).toBe(editor);
+        expect(editor.selectionStart).toBe(editor.value.length);
+        expect(editor.selectionEnd).toBe(editor.value.length);
+    }
+
+    test('focuses the matching field with a collapsed caret after the appended multiline text', () => {
+        const prior = '  Prior line one\n\n\tindented line two  \n';
+        const draft = 'current draft  \n  second line\n';
+        const payload = { status: 'available', withheld: false, notes: [note(21, '2026-08-08', { plan: prior })] };
+        const dom = mount(payload, { draft: { plan: draft } });
+        const payloadBefore = dom.panel.getAttribute('data-soap-reference');
+        attach(window);
+
+        const button = copyButton(dom, 'plan');
+        const source = button.closest('[data-section]').querySelector('.oe-soap-reference__text');
+        expect(button.type).toBe('button');
+        press(button);
+
+        const editor = field('plan');
+        expect(editor.value).toBe(`${draft}\n\n${prior}`);
+        expectCaretAtEnd(editor);
+        expect(source.textContent).toBe(prior);
+        expect(dom.panel.getAttribute('data-soap-reference')).toBe(payloadBefore);
+        expect(['subjective', 'objective', 'assessment'].map((name) => field(name).value)).toEqual(['', '', '']);
+    });
+
+    test('focuses an initially empty field with the caret after the copied text', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(22, '2026-08-09', { subjective: '\n  spaced  \n' })] });
+        attach(window);
+        press(copyButton(dom, 'subjective'));
+        const editor = field('subjective');
+        expect(editor.value).toBe('\n  spaced  \n');
+        expectCaretAtEnd(editor);
+    });
+
+    test('moves focus only after the existing input and keyup handlers have run', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(23, '2026-08-10')] }, {
+            draft: { objective: 'draft' },
+        });
+        const editor = field('objective');
+        const order = [];
+        editor.addEventListener('input', () => order.push(['input', document.activeElement === editor, editor.value]));
+        editor.addEventListener('keyup', () => order.push(['keyup', document.activeElement === editor, window.top.isSoapEdit]));
+        editor.addEventListener('focus', () => order.push(['focus', true, editor.value]));
+        attach(window);
+        press(copyButton(dom, 'objective'));
+
+        expect(order).toEqual([
+            ['input', false, 'draft\n\nSynthetic O 23'],
+            ['keyup', false, true],
+            ['focus', true, 'draft\n\nSynthetic O 23'],
+        ]);
+        expectCaretAtEnd(editor);
+    });
+
+    test('each copy focuses its own section field across sections and notes', () => {
+        const dom = mount({
+            status: 'available',
+            withheld: false,
+            notes: [note(25, '2026-08-12'), note(24, '2026-08-11')],
+        }, { draft: { assessment: 'kept' } });
+        attach(window);
+
+        press(copyButton(dom, 'plan', 0));
+        expectCaretAtEnd(field('plan'));
+
+        press(copyButton(dom, 'subjective', 1));
+        expectCaretAtEnd(field('subjective'));
+
+        press(copyButton(dom, 'plan', 1));
+        expect(field('plan').value).toBe('Synthetic P 25\n\nSynthetic P 24');
+        expectCaretAtEnd(field('plan'));
+
+        expect(field('subjective').value).toBe('Synthetic S 24');
+        expect(field('objective').value).toBe('');
+        expect(field('assessment').value).toBe('kept');
+    });
+
+    test.each([
+        ['read-only', (editor) => { editor.readOnly = true; }],
+        ['disabled', (editor) => { editor.disabled = true; }],
+        ['missing', (editor) => { editor.remove(); }],
+    ])('a %s target copies nothing and leaves focus and selection alone', (_label, lock) => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(26, '2026-08-13')] }, {
+            draft: { assessment: 'signed text' },
+        });
+        const editor = field('assessment');
+        editor.setSelectionRange(2, 4);
+        lock(editor);
+        attach(window);
+
+        const button = copyButton(dom, 'assessment');
+        press(button);
+
+        expect(document.activeElement).toBe(button);
+        expect(editor.value).toBe('signed text');
+        expect([editor.selectionStart, editor.selectionEnd]).toEqual([2, 4]);
+        expect(window.top.isSoapEdit).toBe(false);
+        expect(dom.live.textContent).toBe('This field cannot be edited; nothing was copied.');
+    });
+
+    test('server default-deny offers no copy, so focus never moves to the draft', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(27, '2026-08-14')] }, { eligibility: 'denied' });
+        attach(window);
+        dom.toggle.focus();
+        expect(dom.list.querySelector('button')).toBeNull();
+        expect(document.activeElement).toBe(dom.toggle);
+        expect(SECTION_NAMES.map((name) => field(name).value)).toEqual(['', '', '', '']);
+    });
+
+    test('does not focus a field that an existing handler detached during the copy', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(28, '2026-08-15')] });
+        const editor = field('plan');
+        editor.addEventListener('input', () => editor.remove());
+        attach(window);
+
+        const button = copyButton(dom, 'plan');
+        expect(() => press(button)).not.toThrow();
+        expect(editor.value).toBe('Synthetic P 28');
+        expect(document.activeElement).not.toBe(editor);
+    });
+});
+
 function mountFixture(name) {
     const html = read(`tests/Tests/Isolated/Common/Twig/fixtures/render/${name}`);
     document.body.innerHTML = html.match(/<body[^>]*>([\s\S]*?)<script>/)[1];

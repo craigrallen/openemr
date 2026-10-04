@@ -69,6 +69,10 @@
         field.dispatchEvent(new view.Event('input', { bubbles: true }));
         field.dispatchEvent(new view.KeyboardEvent('keyup', { bubbles: true }));
         live.textContent = labels.copied;
+        // Hand the clinician the appended draft to review: focus it, caret after the copied text.
+        // focus() is a no-op if a handler above detached the field; textareas always support selection.
+        field.focus();
+        field.setSelectionRange(field.value.length, field.value.length);
     }
 
     function setStatus(status, key, withheld) {

@@ -22,6 +22,18 @@ read-only reference while a clinician writes the current note.
   saved until the clinician saves the form through the existing save action,
   and the copied text should be reviewed first. Nothing is copied
   automatically.
+- **Review after copy.** After a successful copy, and after the field's
+  existing `input`/`keyup` handlers have run, keyboard focus moves to the
+  matching draft field with the caret collapsed at the end of its new text, so
+  the clinician reviews the appended text next. When nothing is copied
+  (read-only, disabled or missing field; copy not allowed by the server),
+  focus and selection are left alone. Moving focus has the usual browser side
+  effects: the field's selection becomes the end-of-text caret, the browser
+  may scroll the field into view, and on touch devices the on-screen keyboard
+  may open. When the copy was triggered with Enter, that key's own `keyup`
+  reaches the newly focused field and runs its `onkeyup` handler again (the
+  text does not change). Nothing is saved, no other field or the source is
+  touched, and the page does not navigate.
 
 ## Access and lock rules
 
@@ -66,4 +78,35 @@ added to the existing editor template only.
   remains the source of truth.
 - Verified by isolated PHPUnit and Jest tests with synthetic data and stubbed
   reads. It has not been verified against a live database, real ACL
-  configurations, real ESign lock data, or in a running browser session.
+  configurations, real ESign lock data, or in a running OpenEMR browser
+  session.
+- Review-after-copy focus (2026-10-04): `tests/js/clinical-soap-reference.test.js`
+  ran RED first (4 failing: focus stayed on the copy button), then GREEN
+  (34/34); the full Jest suite passed (37 suites, 681 tests). jsdom covers
+  empty, non-empty and multiline/whitespace drafts, source and payload
+  unchanged, correct field and caret, read-only/disabled/missing targets,
+  server default-deny, several sections and notes, event order (handlers run
+  before focus) and a field that a handler detaches. The live reference fixture
+  still has no earlier notes, so copy and its focus behaviour have not been
+  accepted in a live browser. This does not complete features 4 or 5 in
+  [ACCEPTANCE.md](ACCEPTANCE.md).
+- Offline browser check (isolated synthetic fixture, not a live server,
+  database, role or session): a script kept outside the repository loads
+  `soap-form-saved-note.html` with its own data payload and inline handlers,
+  with every `<link>`/`<script>` stripped, adds the production
+  `soap-document.js`, `soap-reference.js` and SOAP CSS, and aborts all network
+  requests in headless Chrome. It opens the panel with the toggle, copies with
+  real Enter and Space key presses, and checks the exact append, unchanged
+  source and payload, dirty flag, caret, event order, auto-height, read-only
+  and disabled refusal, literal `<script>` shown as text, and no submits,
+  dialogs or requests.
+- Commands:
+
+  ```bash
+  npx jest tests/js/clinical-soap-reference.test.js
+  npx eslint interface/clinical-workspace/soap-reference.js \
+    interface/clinical-workspace/soap-document.js \
+    tests/js/clinical-soap-reference.test.js
+  uv run --with playwright python \
+    /Users/craig/.hermes/projects/openemr/verification/cron-copy-focus/offline-browser.py
+  ```
