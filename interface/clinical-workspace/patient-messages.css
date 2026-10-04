@@ -1,0 +1,244 @@
+/* Patient messages list and compose dialog inside the active workbench. Presentation only; no control is hidden. */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-messages,
+  body.oe-clinical-workspace.oe-clinical-message-compose {
+    color: var(--oe-ink, #17343b);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* List: heading and toolbar sit on the canvas, the message table is the sheet. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes {
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-inline: clamp(15px, 2vw, 28px);
+  }
+
+  /* The legacy markup nests .row directly in .row; its negative gutters would scroll the page sideways. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .row > .row {
+    margin-inline: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes h3 {
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--oe-line, #d9e4e2);
+    color: var(--oe-ink, #17343b);
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.4px;
+    line-height: 1.2;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes h3 a {
+    color: var(--oe-petrol, #086878);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-group,
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-group > .btn,
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-group > .btn {
+    flex: 0 0 auto;
+    min-height: 38px;
+    margin-left: 0;
+    padding: 7px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-secondary,
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-secondary {
+    border-color: var(--oe-line, #d9e4e2);
+    background: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-secondary:hover,
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .btn-secondary:hover {
+    border-color: var(--oe-petrol, #086878);
+    background: #e4f0f1;
+  }
+
+  /* The page's first .row is never closed, so this sheet is a flex item of it; keep it to the row width. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer {
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: 16px;
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 7px;
+    background: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+  }
+
+  /* Themes colour .table text themselves (dark: near-white); pair it with the white sheet. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer .table {
+    background-color: transparent;
+    color: var(--oe-ink, #17343b);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer > .btn {
+    min-height: 34px;
+    margin-block: 2px;
+    border-radius: 5px;
+  }
+
+  /* Every column stays; narrow frames scroll inside the existing containers. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes #inbox_div {
+    max-width: 100%;
+    margin-top: 16px;
+    overflow-x: auto;
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 7px;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes [id^='outbox_div'] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes [id^='outbox_div'] table.table {
+    min-width: 640px;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes #inbox_div table.table {
+    min-width: 960px;
+    margin-bottom: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer th {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--oe-line, #d9e4e2);
+    background: #f6f8f9;
+    color: var(--oe-muted, #526a70);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e1e8eb;
+    color: var(--oe-ink, #17343b);
+    font-size: 14px;
+    line-height: 1.5;
+    vertical-align: top;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer td .btn-sm {
+    min-height: 32px;
+    margin-block: 2px;
+    border-radius: 5px;
+    font-weight: 600;
+  }
+
+  /* Balance due and billing note: warning edge, ink on paper (a balance without a billing note has no text-danger span); text-danger spans keep the theme colour. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .table-responsive .billing td {
+    padding: 10px 14px;
+    border-left: 4px solid #79531d;
+    background: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+  }
+
+  /* workspace.css colours every link petrol; restore the delete button's text. Literal because the dark theme maps --white to black. */
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes a.btn-danger {
+    color: #fff;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .noterow.highlight td {
+    background: #f0f5f6;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .noterow.highlightcolor td {
+    background: #e4f0f1;
+  }
+
+  /* Compose: one readable document sheet with the reference's quiet fields. */
+  body.oe-clinical-workspace.oe-clinical-message-compose .container {
+    max-width: 760px;
+    padding-inline: clamp(8px, 2vw, 16px);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes {
+    margin-block: 16px;
+    padding: clamp(16px, 4vw, 28px) clamp(16px, 5vw, 36px);
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 7px;
+    background: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .title {
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--oe-line, #d9e4e2);
+    color: var(--oe-ink, #17343b);
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.4px;
+    line-height: 1.2;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .form-group {
+    margin-bottom: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes label {
+    color: var(--oe-ink, #17343b);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .form-control {
+    height: auto;
+    min-height: 40px;
+    padding: 9px 10px;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+    font-size: 14px;
+  }
+
+  /* Themes restate the field colours on focus (dark: black); keep the pair. */
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .form-control:focus {
+    background-color: var(--oe-paper, #fff);
+    color: var(--oe-ink, #17343b);
+  }
+
+  /* Existing message being amended, shown as the thread entry above the reply. */
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes .form-group > .text {
+    padding: 16px 18px;
+    border-radius: 6px;
+    background: #f0f5f6;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes #note {
+    width: 100%;
+    min-height: 104px;
+    padding: 8px 0;
+    border: 0;
+    border-bottom: 1px solid #dce4e7;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-message-compose #pnotes #note:focus {
+    border-bottom-color: var(--oe-petrol, #086878);
+    background: #fbfdfe;
+  }
+}
