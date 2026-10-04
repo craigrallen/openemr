@@ -17,7 +17,7 @@ describe('stylelint allows the theme breakpoint notation only in calendar.css an
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
     test('override is a two-file prefix notation, not a disabled rule', () => {
-        const overrides = rc().overrides.filter((o) => 'media-feature-range-notation' in o.rules);
+        const overrides = rc().overrides.filter((o) => o.files.includes('interface/clinical-workspace/calendar.css'));
         expect(overrides).toEqual([{
             files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css'],
             rules: { 'media-feature-range-notation': 'prefix' }

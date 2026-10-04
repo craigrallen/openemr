@@ -213,6 +213,20 @@ select {
     color: var(--oe-ink);
   }
 
+  /*
+   * Other Notes: the legacy textarea is ~144px x 2 lines in every theme and width, hiding most of a note.
+   * Give it about 33 characters by five lines at the inherited 16px and the sheet's ink/paper pair; 75vw
+   * caps the minimum on narrow screens. The wider value column alone wraps the desktop history dates, so
+   * the wide-screen rule after this block keeps them on one line. Borders, font, padding and resize are unchanged.
+   */
+  body.oe-clinical-vitals.oe-clinical-workspace #note_input,
+  body.oe-clinical-vitals.oe-clinical-workspace #note_input:focus {
+    min-inline-size: min(18rem, 75vw);
+    min-block-size: calc(7.5em + 0.75rem + 2px);
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
   body.oe-clinical-vitals.oe-clinical-workspace .form-group {
     margin-block: 1.25rem 0;
   }
@@ -266,5 +280,12 @@ select {
 
   body.oe-clinical-vitals.oe-clinical-workspace .vitals-complete-history .card-body {
     padding-inline: 0;
+  }
+}
+
+/* Wide screens: keep each edit-table history date header on one line beside the wider Other Notes column. */
+@media screen and (min-width: 1200px) {
+  body.oe-clinical-vitals.oe-clinical-workspace #vitals-measurements th.historicalvalues {
+    white-space: nowrap;
   }
 }

@@ -16,8 +16,10 @@ Template (markup only, `vitals.html.twig` and `vitals_historical_values_complete
 - `<body class="oe-clinical-vitals">` as a route hook.
 - Loads the existing, unchanged `interface/clinical-workspace/mode.js`. It adds
   `oe-clinical-workspace` only while a same-origin ancestor body has `workbench-active`.
-- `vitals.css` and `mode.js` use the explicit version token `assetVersion-vitals-document-2` (bumped from `-1` when the
-  observation-date rule below changed `vitals.css` after the first published head).
+- `vitals.css` and `mode.js` use the explicit version token `assetVersion-vitals-document-3` (bumped from `-1` when the
+  observation-date rule below changed `vitals.css` after the first published head, and from `-2` when the Other Notes
+  and history-header rules changed it again). Both consumers in `vitals.html.twig` carry the same token. The
+  standalone history template has no notes editor and loads neither asset, so it is unchanged.
   `vitals.js` and the other shell assets are unchanged.
 - The measurement table and the history table each sit in a named, keyboard-focusable scroll
   region (`#vitals-measurements` "Vitals", `#vitals-history-measurements` "Vitals History";
@@ -45,6 +47,18 @@ CSS (appended to `vitals.css`; the original rules above it are byte-for-byte unc
   baseline. The background declaration is for pairing only: the theme's `.oe-patient-background`
   forces white with `!important`, and this rule does not override it. In the dark theme the
   date text goes from 1.3:1 to 13.2:1, focused or not. Legacy and print are unchanged.
+- Other Notes (`#note_input`, markup unchanged: same `textarea`, name `note`, id, `form-control` class, value, no
+  `rows`/`cols`): one rule for `#note_input` and `#note_input:focus` sets only `min-inline-size: min(18rem, 75vw)`,
+  `min-block-size: calc(7.5em + 0.75rem + 2px)`, `background-color: var(--oe-paper)` and `color: var(--oe-ink)`.
+  Legacy measured about 164x62px (two lines); the workbench box is 288.8x134px at 1440px (five lines at the
+  inherited 16px). Font, padding, borders (`.error`/`.warning`) and the vertical resize handle are unchanged.
+  Contrast 13.2:1 focused or not, in both themes. At 390/320px the minimum is 75vw and the table region scrolls.
+- Edit-table history date headers (`#vitals-measurements th.historicalvalues`): a separate
+  `@media screen and (min-width: 1200px)` rule sets only `white-space: nowrap`. Without it the wider Notes column
+  wrapped all three `YYYY-MM-DD HH:mm` headers onto two lines at 1440px. Committed `c2f4cb2` kept them on one line.
+  With the rule, header lines match `c2f4cb2` (1,1,1) in light/dark and LTR/RTL, with no page or region overflow.
+  Below 1200px the rule does not apply. At 768px the headers wrap to three lines inside the scrolling region.
+  That case was not compared against `c2f4cb2`.
 - The heading column sizes to its text, so the history link wraps below it on narrow screens.
 - The appended rules do not hide anything or set any font size below 14px. Existing rules
   still apply, though:
@@ -80,7 +94,7 @@ pediatric logic.
   - Checks body class, versioned assets, no `workspace.css`, the regions, and the
     form/CSRF/hidden-input/save/cancel/growth-chart/reason/history-link contracts.
   - Records `fixtures/vitals-form-document.html`. Regenerate with `UPDATE_FIXTURES=1`.
-- `tests/js/clinical-vitals-document.test.js` (Jest, 17 tests):
+- `tests/js/clinical-vitals-document.test.js` (Jest, 20 tests):
   - Source preservation: removing exactly the listed additions gives the original template
     hashes, `mode.js` is unchanged, and the legacy part of the stylesheet hash is unchanged.
   - Contracts on the appended declarations only: screen-only and scoped; no hiding
@@ -90,11 +104,23 @@ pediatric logic.
   - Cards paired paper/ink, the 15px container gutter, and the heading column sizing.
   - The observation date control is wide enough for a complete `YYYY-MM-DD HH:mm` value and
     has a paired readable colour/background, focused or not.
+  - Other Notes: the exact minimum sizes and the ink/paper pair, inside `@media screen`. The
+    desktop history headers: exactly one `white-space: nowrap` rule under
+    `screen and (min-width: 1200px)`.
   - Rendered-fixture checks in jsdom: route class, regions, and control node identity/values
-    through workbench on/off; the observation date control keeps its original attributes and
-    value.
+    through workbench on/off. The observation date and Other Notes controls keep their
+    original attributes, value and node.
 
 ### Offline native Chrome harness (outside the repo)
+
+Current harness: `verification/cron-vitals-notes/native-qa.py`. It extends the date harness and keeps every
+earlier gate. It adds Notes geometry, value/node, contrast, resize, validation and legacy/print checks, plus a
+desktop header-line gate. A second baseline compares against committed `c2f4cb2` workbench rendering: exact
+fixture, `vitals.css` and `mode.js`, extracted with `git show c2f4cb2:<path>` to `baseline-c2f4cb2/`, with the
+same themes, warning text, 1440px viewport and direction. Input SHA-256s and the Chrome version (154.0.8037.93)
+are recorded. Final run: `ok: true`, zero failures, zero requests/submissions/errors. RED before the header rule:
+4x "desktop history date headers wrap" plus 4x "candidate history header lines differ from committed c2f4cb2".
+The earlier description below is of the original `cron-vitals` harness.
 
 `verification/cron-vitals/native-qa.py` uses the installed Chrome via Playwright.
 

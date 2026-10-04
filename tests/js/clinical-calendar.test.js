@@ -289,7 +289,9 @@ describe('calendar toolbar and mini calendar fit the workbench frame', () => {
     test('stylelint enforces prefix media notation for calendar.css and finder.css only', () => {
         const config = JSON.parse(fs.readFileSync(path.join(repo, '.stylelintrc.json'), 'utf8'));
         expect(config.rules['media-feature-range-notation']).toBeUndefined();
-        expect(config.overrides).toEqual([{
+        const calendarOverrides = config.overrides.filter((o) => o.files.includes('interface/clinical-workspace/calendar.css')
+            || o.files.includes('interface/clinical-workspace/finder.css'));
+        expect(calendarOverrides).toEqual([{
             files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css'],
             rules: { 'media-feature-range-notation': 'prefix' },
         }]);

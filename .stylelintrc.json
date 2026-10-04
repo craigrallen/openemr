@@ -39,6 +39,14 @@
             "rules": {
                 "media-feature-range-notation": "prefix"
             }
+        },
+        {
+            "files": [
+                "interface/forms/vitals/vitals.css"
+            ],
+            "rules": {
+                "media-feature-range-notation": "prefix"
+            }
         }
     ]
 }

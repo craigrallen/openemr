@@ -30,8 +30,9 @@ const ORIGINAL = {
     modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599'
 };
 
-// Bumped from -vitals-document-1 when the observation-date rule was added after the first published head.
-const VERSION = "{{ (assetVersion ~ '-vitals-document-2')|attr_url }}";
+// Bumped from -vitals-document-1 when the observation-date rule was added after the first published head,
+// and from -2 when the Other Notes rule changed vitals.css again.
+const VERSION = "{{ (assetVersion ~ '-vitals-document-3')|attr_url }}";
 const SCOPE = 'body.oe-clinical-vitals.oe-clinical-workspace';
 const CSS_MARKER = '/* Workbench document presentation';
 
@@ -237,6 +238,55 @@ describe('vitals.css document presentation', () => {
         });
     });
 
+    test('other notes: a multiline document-sized textarea with a paired readable colour, focused or not', () => {
+        // Native Chrome measured the legacy textarea at 144-164px x 62px in every theme and width: two
+        // visible lines of ~15-17 characters, so a 120-character note showed under a third of its text.
+        // Only minimum sizes, colour and background are set; the theme's 16px font, padding, borders
+        // (validation highlights), resize handle and the markup (name, id, value, no rows/cols) are untouched.
+        const rules = {};
+        addedRoot().walkRules((rule) => {
+            if (/note/.test(rule.selector)) rules[rule.selectors.join(', ')] = rule;
+        });
+        expect(Object.keys(rules)).toEqual([`${SCOPE} #note_input, ${SCOPE} #note_input:focus`]);
+        const rule = Object.values(rules)[0];
+        expect(rule.parent.type).toBe('atrule');
+        expect(rule.parent.params).toMatch(/^screen\b/);
+        const decls = {};
+        rule.walkDecls((decl) => {
+            expect(decl.important === true).toBe(false);
+            decls[decl.prop] = decl.value;
+        });
+        expect(Object.keys(decls).sort()).toEqual(['background-color', 'color', 'min-block-size', 'min-inline-size']);
+        expect(decls.color).toBe('var(--oe-ink)');
+        expect(decls['background-color']).toBe('var(--oe-paper)');
+        // About 33 characters per line at the inherited 16px, capped so the box still fits a 320px viewport.
+        // Native Chrome: at 1440px this width (and 24rem) squeezed the edit table's history date headers onto
+        // two lines; the desktop nowrap rule tested below keeps them on one.
+        expect(decls['min-inline-size']).toBe('min(18rem, 75vw)');
+        // Five lines at Bootstrap's 1.5 line height, plus its 0.375rem block padding each side and 1px borders.
+        expect(decls['min-block-size']).toBe('calc(7.5em + 0.75rem + 2px)');
+    });
+
+    test('desktop history date headers stay on one line beside the wider notes column', () => {
+        // Native Chrome at 1440px: with the Notes minimum width, all three "YYYY-MM-DD HH:mm" headers wrapped to
+        // two lines in light/dark and LTR/RTL; committed c2f4cb2 kept them on one. Only white-space is set, only on
+        // the edit table's header cells, only on wide screens (narrow widths already scroll the table region).
+        const rules = [];
+        addedRoot().walkRules((rule) => {
+            if (/th\.historicalvalues/.test(rule.selector) && /min-width/.test(rule.parent.params || '')) rules.push(rule);
+        });
+        expect(rules).toHaveLength(1);
+        const rule = rules[0];
+        expect(rule.selector).toBe(`${SCOPE} #vitals-measurements th.historicalvalues`);
+        expect([rule.parent.type, rule.parent.name, rule.parent.params]).toEqual(['atrule', 'media', 'screen and (min-width: 1200px)']);
+        const decls = {};
+        rule.walkDecls((decl) => {
+            expect(decl.important === true).toBe(false);
+            decls[decl.prop] = decl.value;
+        });
+        expect(decls).toEqual({ 'white-space': 'nowrap' });
+    });
+
     test('paper document: Arial 14px base, 28px heading, petrol Save and focus, scrollable named region', () => {
         const decls = {};
         addedRoot().walkRules((rule) => rule.selectors.forEach((selector) => {
@@ -323,6 +373,20 @@ describe('rendered vitals form in and out of the workbench', () => {
             'Date and time of this observation', 'form-control datetimepicker oe-patient-background', '2026-10-01 09:30']);
         expect(date.value).toHaveLength(16);
         expect(document.querySelector('label[for="date"]')).not.toBeNull();
+    });
+
+    test('the other notes textarea keeps its original node, attributes and value', () => {
+        const notes = document.querySelectorAll('#vitalsForm [name="note"]');
+        expect(notes).toHaveLength(1);
+        const note = notes[0];
+        expect([note.tagName, note.id, note.className, note.getAttribute('rows'), note.getAttribute('cols'),
+            note.getAttribute('style')]).toEqual(['TEXTAREA', 'note_input', 'form-control', null, null, null]);
+        expect(note.value).toBe('Seated, left arm, after five minutes rest; repeat reading taken because the first cuff '
+            + 'size was too small for the patient');
+        const workbench = createModeController({ body: document.body, mode: 'workbench' });
+        expect(document.querySelector('#vitalsForm [name="note"]')).toBe(note);
+        workbench.dispose();
+        expect(document.querySelector('#vitalsForm [name="note"]')).toBe(note);
     });
 
     test('heading, save, cancel, growth chart and history link contracts are present', () => {
