@@ -44,10 +44,10 @@ function toolbarHtml(withToday) {
     </div>`;
 }
 
-function event({ date = '20261001', eid, top, patient, pid = '1', cls = 'event_appointment', status = '-', group = false, inStart = false }) {
+function event({ date = '20261001', eid, top, patient, pid = '1', href = `#p${pid}`, cls = 'event_appointment', status = '-', group = false, inStart = false }) {
     const link = group
         ? `<a href="javascript:goGid(&quot;9&quot;)" title="g"><i class="fas fa-user text-primary"></i>${patient}</a>`
-        : `<a class="link_title" data-pid="${pid}" href="#p${pid}" title="t"><i class="fas fa-user text-success"></i>${patient}</a>`;
+        : `<a class="link_title" data-pid="${pid}" href="${href}" title="t"><i class="fas fa-user text-success"></i>${patient}</a>`;
     const minutes = 480 + (top / 20) * 15;
     const shownTime = `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
     const body = patient === null ? '' : `<span class="appointment"><a class="event_time" onclick="event_time_click(this)" title="Click to edit">${shownTime}</a>&nbsp;${status}${link}</span>`;
@@ -327,6 +327,393 @@ describe('calendar workday summary', () => {
         surface.querySelector('[data-role="open-booking"]').click();
         expect(window.event_time_click).not.toHaveBeenCalled();
         expect(document.getElementById('20261001-11-0')).not.toBeNull();
+    });
+});
+
+// The real page bootstrap (window wrapper + browser MutationObserver), not an injected stub.
+function bootPage(columns) {
+    mount({ columns });
+    jest.isolateModules(() => { require(modulePath); });
+}
+const flush = async () => { await new Promise((r) => setTimeout(r, 0)); await new Promise((r) => setTimeout(r, 0)); };
+const node = (eid) => document.getElementById(`20261001-${eid}-0`);
+const twoBookings = () => [column(5, 'Robin Example', [
+    event({ eid: 11, top: 40, patient: 'Alpha,Test' }),   // 08:30
+    event({ eid: 12, top: 80, patient: 'Beta,Test' })     // 09:00
+])];
+
+describe('live refresh of existing event nodes (real page observer)', () => {
+    test('a moved event (style top + time text) changes the first booking', async () => {
+        bootPage(twoBookings());
+        expect(text('next-patient')).toBe('Alpha,Test');
+        node(11).style.top = '160px';
+        node(11).querySelector('a.event_time').firstChild.data = '10:00';
+        await flush();
+        expect(text('next-time')).toBe('9:00');
+        expect(text('next-patient')).toBe('Beta,Test');
+    });
+
+    test('changed time text alone is reflected', async () => {
+        bootPage(twoBookings());
+        node(11).querySelector('a.event_time').firstChild.data = '8:31';
+        await flush();
+        expect(text('next-time')).toBe('8:31');
+    });
+
+    test('changed patient link text is reflected; comment span still stripped', async () => {
+        bootPage(twoBookings());
+        const link = node(11).querySelector('a.link_title');
+        link.lastChild.data = 'Renamed,Test';
+        await flush();
+        expect(text('next-patient')).toBe('Renamed,Test');
+        link.insertAdjacentHTML('beforeend', "(Visit: <span class='text-success'>Private note</span>)");
+        await flush();
+        expect(text('next-patient')).toBe('Renamed,Test(Visit)');
+        expect(document.getElementById('oe-calendar-workday').textContent).not.toContain('Private note');
+    });
+
+    test.each([
+        ['booking class replaced', (n) => { n.classList.remove('event_appointment'); n.classList.add('event_out'); }],
+        ['event class removed', (n) => { n.className = 'event_appointment'; }]
+    ])('%s: no longer counted or offered as first booking', async (_name, change) => {
+        bootPage(twoBookings());
+        expect(text('count')).toBe('2 bookings · 1 provider(s)');
+        change(node(11));
+        await flush();
+        expect(text('count')).toBe('1 booking · 1 provider(s)');
+        expect(text('next-patient')).toBe('Beta,Test');
+    });
+
+    test('column date and provider header metadata changes are reflected', async () => {
+        bootPage(twoBookings());
+        document.querySelector('.providerheader').firstChild.data = 'Robin Renamed';
+        await flush();
+        expect(text('next-provider')).toBe('Robin Renamed');
+        document.querySelector('td.schedule').setAttribute('date', '20261002');
+        await flush();
+        expect(text('count')).toBe(LABELS['data-l-unavailable']);
+        expect(shown('next')).toBe(false);
+    });
+
+    test('direct-select marker churn does not re-render, and a real change renders once (no loop)', async () => {
+        bootPage(twoBookings());
+        const surface = document.getElementById('oe-calendar-workday');
+        let surfaceRecords = 0;
+        const counter = new MutationObserver((records) => { surfaceRecords += records.length; });
+        counter.observe(surface, { childList: true, subtree: true, attributes: true, characterData: true });
+        // Mirrors library/js/calendarDirectSelect.js displayApptTime on mousemove.
+        const day = document.querySelector('.calendar_day');
+        day.insertAdjacentHTML('beforeend', "<a class='apptMarker event event_appointment' style='height:20px;'></a>");
+        const marker = day.querySelector('a.apptMarker');
+        for (let y = 20; y <= 100; y += 20) {
+            marker.style.top = y + 'px';
+            marker.innerHTML = '<span>9:' + y + '</span>';
+            marker.setAttribute('href', 'javascript:newEvt(9,' + y + ')');
+            marker.style.display = '';
+        }
+        marker.style.display = 'none';
+        await flush();
+        expect(surfaceRecords).toBe(0);
+        node(11).style.top = '160px';
+        await flush();
+        const afterOne = surfaceRecords;
+        expect(afterOne).toBeGreaterThan(0);
+        await flush();
+        expect(surfaceRecords).toBe(afterOne);
+        counter.disconnect();
+    });
+});
+
+describe('actions taken before the observer has delivered', () => {
+    const clicks = () => {
+        window.event_time_click = jest.fn();
+        const patientClicks = jest.fn((e) => e.preventDefault());
+        document.querySelectorAll('#bigCal a.link_title').forEach((a) => a.addEventListener('click', patientClicks));
+        document.querySelectorAll('#bigCal .event').forEach((n) => { n.scrollIntoView = jest.fn(); });
+        return patientClicks;
+    };
+    const press = (role) => document.querySelector(`[data-role="${role}"]`).click();
+
+    test.each(['open-booking', 'open-patient', 'show-booking'])(
+        '%s: stale first booking is not acted on and no other booking is substituted; summary refreshes',
+        (role) => {
+            const surface = mount({ columns: twoBookings() });
+            const patientClicks = clicks();
+            const ctl = createWorkdaySummary({ document, surface });
+            node(11).style.top = '160px';
+            press(role);
+            expect(window.event_time_click).not.toHaveBeenCalled();
+            expect(patientClicks).not.toHaveBeenCalled();
+            expect(node(11).scrollIntoView).not.toHaveBeenCalled();
+            expect(node(12).scrollIntoView).not.toHaveBeenCalled();
+            expect(text('next-patient')).toBe('Beta,Test');
+            ctl.destroy();
+        }
+    );
+
+    test('after the refresh, a deliberate click on the now-visible booking proceeds', () => {
+        const surface = mount({ columns: twoBookings() });
+        clicks();
+        const ctl = createWorkdaySummary({ document, surface });
+        node(11).style.top = '160px';
+        press('open-booking');
+        expect(window.event_time_click).not.toHaveBeenCalled();
+        press('open-booking');
+        expect(window.event_time_click).toHaveBeenCalledTimes(1);
+        expect(window.event_time_click).toHaveBeenCalledWith(node(12).querySelector('a.event_time'));
+        ctl.destroy();
+    });
+
+    test('a different patient reference behind identical text blocks the patient action', () => {
+        const surface = mount({ columns: twoBookings() });
+        const patientClicks = clicks();
+        const ctl = createWorkdaySummary({ document, surface });
+        node(11).querySelector('a.link_title').setAttribute('data-pid', '999');
+        press('open-patient');
+        expect(patientClicks).not.toHaveBeenCalled();
+        press('open-patient');
+        expect(patientClicks).toHaveBeenCalledTimes(1);
+        ctl.destroy();
+    });
+
+    test('real observer: destroy disconnects, later grid changes do not touch the surface', async () => {
+        const surface = mount({ columns: twoBookings() });
+        let observer = null;
+        const ctl = createWorkdaySummary({
+            document, surface,
+            observe: (target, cb) => {
+                observer = new MutationObserver(cb);
+                observer.observe(target, { childList: true, subtree: true, attributes: true, characterData: true });
+                jest.spyOn(observer, 'disconnect');
+                return observer;
+            }
+        });
+        ctl.destroy();
+        expect(observer.disconnect).toHaveBeenCalledTimes(1);
+        node(11).style.top = '160px';
+        node(11).querySelector('a.link_title').lastChild.data = 'Renamed,Test';
+        await flush();
+        expect(surface.hidden).toBe(true);
+        expect(text('count')).toBe('');
+        expect(text('next-patient')).toBe('');
+    });
+
+    test('changed patient label on the same node blocks the patient action', () => {
+        const surface = mount({ columns: twoBookings() });
+        const patientClicks = clicks();
+        const ctl = createWorkdaySummary({ document, surface });
+        node(11).querySelector('a.link_title').lastChild.data = 'Other,Person';
+        press('open-patient');
+        expect(patientClicks).not.toHaveBeenCalled();
+        expect(text('next-patient')).toBe('Other,Person');
+        ctl.destroy();
+    });
+
+    test('booking that lost eligibility is not opened', () => {
+        const surface = mount({ columns: twoBookings() });
+        clicks();
+        const ctl = createWorkdaySummary({ document, surface });
+        node(11).classList.replace('event_appointment', 'event_out');
+        press('open-booking');
+        expect(window.event_time_click).not.toHaveBeenCalled();
+        expect(text('count')).toBe('1 booking · 1 provider(s)');
+        ctl.destroy();
+    });
+});
+
+// Production handlers and routes, read from the shared calendar screen script rather than mocked.
+const screenJs = fs.readFileSync(path.join(repo, 'templates/calendar/default/views/_calendar_screen_js.html.twig'), 'utf8')
+    .replace(/\{\{ webroot \}\}/g, '/oe');
+function productionSource(start) {
+    const at = screenJs.indexOf(start);
+    if (at < 0) throw new Error('production source not found: ' + start);
+    let depth = 0;
+    for (let i = screenJs.indexOf('{', at); i < screenJs.length; i++) {
+        if (screenJs[i] === '{') depth++;
+        if (screenJs[i] === '}' && --depth === 0) return screenJs.slice(at, i + 1);
+    }
+    throw new Error('unbalanced production source: ' + start);
+}
+const ROUTE_GLOBALS = ['$', 'jQuery', 'dlgopen', 'restoreSession', 'RTop', 'event_time_click', 'EditEvent',
+    'oldEvt', 'oldGroupEvt', 'goPid', 'goGid', 'objID', 'parts', 'editing_group'];
+function loadProductionRoutes() {
+    window.$ = window.jQuery = require('jquery');
+    window.dlgopen = jest.fn();
+    window.restoreSession = jest.fn();
+    window.RTop = { location: '' };
+    ['function event_time_click(', 'function oldEvt(', 'function oldGroupEvt(', 'function goPid(', 'function goGid(', 'var EditEvent = function(']
+        .forEach((start) => window.eval(productionSource(start)));
+}
+function bindProductionHover() {
+    const hover = screenJs.match(/\$\("\.event"\)\.mouse(over|out)\(function\(\) \{ \$\(this\)\.toggleClass\("event_highlight"\); \}\);/g);
+    expect(hover).toHaveLength(2);
+    hover.forEach((line) => window.eval(line));
+}
+const prodHref = (pid) => `javascript:goPid(&quot;${pid}&quot;)`;
+const prodBookings = () => [column(5, 'Robin Example', [
+    event({ eid: 11, top: 40, patient: 'Alpha,Test', pid: '1', href: prodHref('1') }),
+    event({ eid: 12, top: 80, patient: 'Beta,Test', pid: '2', href: prodHref('2') })
+])];
+const editUrl = (eid, prov) => `add_edit_event.php?date=20261001&eid=${eid}&prov=${prov}`;
+const groupUrl = (eid, prov) => `add_edit_event.php?group=true&date=20261001&eid=${eid}&prov=${prov}`;
+const settle = () => new Promise((r) => setTimeout(r, 20));
+
+describe('presentation-only hover does not rescan the grid', () => {
+    afterEach(() => { ROUTE_GLOBALS.forEach((name) => { delete window[name]; }); jest.restoreAllMocks(); });
+
+    const surfaceRecorder = () => {
+        const records = { count: 0 };
+        const counter = new MutationObserver((list) => { records.count += list.length; });
+        counter.observe(document.getElementById('oe-calendar-workday'), { childList: true, subtree: true, attributes: true, characterData: true });
+        return { records, counter };
+    };
+    const hover = (n, type) => n.dispatchEvent(new MouseEvent(type, { bubbles: true }));
+
+    test('production mouseover/mouseout event_highlight toggles neither re-render nor re-read the grid', async () => {
+        bootPage(twoBookings());
+        loadProductionRoutes();
+        bindProductionHover();
+        const { records, counter } = surfaceRecorder();
+        const clones = jest.spyOn(Node.prototype, 'cloneNode');
+        hover(node(11), 'mouseover');
+        expect(node(11).classList.contains('event_highlight')).toBe(true);
+        await flush();
+        hover(node(11), 'mouseout');
+        hover(node(12), 'mouseover');
+        hover(node(12), 'mouseout');
+        await flush();
+        expect(records.count).toBe(0);
+        expect(clones).not.toHaveBeenCalled();
+        counter.disconnect();
+    });
+
+    test.each([
+        ['while highlighted', (n) => { n.classList.replace('event_appointment', 'event_out'); }],
+        ['in the same batch as a hover toggle', (n) => {
+            hover(n, 'mouseout');
+            n.classList.replace('event_appointment', 'event_out');
+        }]
+    ])('a booking-eligibility class change %s still refreshes', async (_name, change) => {
+        bootPage(twoBookings());
+        loadProductionRoutes();
+        bindProductionHover();
+        hover(node(11), 'mouseover');
+        await flush();
+        change(node(11));
+        await flush();
+        expect(text('count')).toBe('1 booking · 1 provider(s)');
+        expect(text('next-patient')).toBe('Beta,Test');
+    });
+
+    test('becoming a group booking (routing class) still refreshes', async () => {
+        bootPage(twoBookings());
+        const { records, counter } = surfaceRecorder();
+        node(11).classList.add('groups');
+        await flush();
+        expect(records.count).toBeGreaterThan(0);
+        counter.disconnect();
+    });
+});
+
+describe('column provider removal and provider header replacement (real page observer)', () => {
+    test('removing a column provider attribute stops counting that column', async () => {
+        bootPage([...twoBookings(), column(6, 'Sam Sample', [event({ eid: 21, top: 120, patient: 'Gamma,Test' })])]);
+        expect(text('count')).toBe('3 bookings · 2 provider(s)');
+        document.querySelector('td.schedule[provider="6"]').removeAttribute('provider');
+        await flush();
+        expect(text('count')).toBe('2 bookings · 1 provider(s)');
+    });
+
+    test('replacing the provider header element updates the provider name', async () => {
+        bootPage(twoBookings());
+        const td = document.querySelector('td.schedule');
+        const header = document.createElement('div');
+        header.className = 'providerheader providerday';
+        header.textContent = 'Robin Replaced';
+        td.replaceChild(header, td.querySelector('.providerheader'));
+        await flush();
+        expect(text('next-provider')).toBe('Robin Replaced');
+    });
+});
+
+describe('actions reach the production route only for the unchanged booking', () => {
+    afterEach(() => { ROUTE_GLOBALS.forEach((name) => { delete window[name]; }); });
+
+    const setup = () => {
+        const surface = mount({ columns: prodBookings() });
+        loadProductionRoutes();
+        return createWorkdaySummary({ document, surface });
+    };
+    const press = (role) => document.querySelector(`[data-role="${role}"]`).click();
+
+    test('unchanged booking: production routes receive the shown booking arguments', async () => {
+        const ctl = setup();
+        press('open-booking');
+        expect(window.dlgopen).toHaveBeenCalledTimes(1);
+        expect(window.dlgopen).toHaveBeenCalledWith(editUrl(11, 0), '_blank', 780, 650);
+        press('open-patient');
+        await settle();
+        expect(window.RTop.location).toBe('../../patient_file/summary/demographics.php?set_pid=1');
+        ctl.destroy();
+    });
+
+    test('unchanged group booking routes to the group editor and group page', async () => {
+        const surface = mount({ columns: [column(5, 'Robin Example', [
+            event({ eid: 14, top: 40, patient: 'Group,Session', group: true, cls: 'event_appointment groups' })
+        ])] });
+        loadProductionRoutes();
+        const ctl = createWorkdaySummary({ document, surface });
+        press('open-booking');
+        expect(window.dlgopen).toHaveBeenCalledWith(groupUrl(14, 0), '_blank', 780, 675);
+        press('open-patient');
+        await settle();
+        expect(window.RTop.location).toBe('/oe/therapy_groups/index.php?method=groupDetails&group_id=9');
+        ctl.destroy();
+    });
+
+    test.each([
+        ['provider-category segment of the event id', '20261001-11-7', editUrl(11, 7)],
+        ['eid segment of the event id (data-eid unchanged)', '20261001-13-0', editUrl(13, 0)]
+    ])('changed %s: first click is not routed; the next click routes the refreshed booking', (_name, id, url) => {
+        const ctl = setup();
+        node(11).id = id;
+        press('open-booking');
+        expect(window.dlgopen).not.toHaveBeenCalled();
+        press('open-booking');
+        expect(window.dlgopen).toHaveBeenCalledTimes(1);
+        expect(window.dlgopen).toHaveBeenCalledWith(url, '_blank', 780, 650);
+        ctl.destroy();
+    });
+
+    test('becoming a group booking: first click is not routed; the next click opens the group editor', () => {
+        const ctl = setup();
+        node(11).classList.add('groups');
+        press('open-booking');
+        expect(window.dlgopen).not.toHaveBeenCalled();
+        press('open-booking');
+        expect(window.dlgopen).toHaveBeenCalledWith(groupUrl(11, 0), '_blank', 780, 675);
+        ctl.destroy();
+    });
+
+    test('changed executable href behind the same data-pid: first click is not routed', async () => {
+        const ctl = setup();
+        node(11).querySelector('a.link_title').setAttribute('href', 'javascript:goPid("2")');
+        press('open-patient');
+        await settle();
+        expect(window.RTop.location).toBe('');
+        press('open-patient');
+        await settle();
+        expect(window.RTop.location).toBe('../../patient_file/summary/demographics.php?set_pid=2');
+        ctl.destroy();
+    });
+
+    test('changed data-pid behind the same href: first click is not routed', async () => {
+        const ctl = setup();
+        node(11).querySelector('a.link_title').setAttribute('data-pid', '2');
+        press('open-patient');
+        await settle();
+        expect(window.RTop.location).toBe('');
+        ctl.destroy();
     });
 });
 
