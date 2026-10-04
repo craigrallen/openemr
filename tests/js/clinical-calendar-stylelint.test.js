@@ -11,21 +11,22 @@ const process = require('node:process');
 const repo = path.join(__dirname, '../..');
 const cssPath = path.join(repo, 'interface/clinical-workspace/calendar.css');
 const finderCssPath = path.join(repo, 'interface/clinical-workspace/finder.css');
+const soapDocumentCssPath = path.join(repo, 'interface/clinical-workspace/soap-document.css');
 
-describe('stylelint allows the theme breakpoint notation only in calendar.css and finder.css', () => {
+describe('stylelint allows the theme breakpoint notation only in calendar.css, finder.css and soap-document.css', () => {
     const rcPath = path.join(repo, '.stylelintrc.json');
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
-    test('override is a two-file prefix notation, not a disabled rule', () => {
+    test('override is a three-file prefix notation, not a disabled rule', () => {
         const overrides = rc().overrides.filter((o) => 'media-feature-range-notation' in o.rules);
         expect(overrides).toEqual([{
-            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css'],
+            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/soap-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
         }]);
         expect(rc().rules['media-feature-range-notation']).toBeUndefined();
     });
 
-    test('calendar.css and finder.css lint clean while other files still require context notation', () => {
+    test('calendar.css, finder.css and soap-document.css lint clean while other files still require context notation', () => {
         // Stylelint loads plugins via dynamic import, which Jest's VM cannot host; run the real CLI.
         // Overrides and extends resolve against --config-basedir, so root both explicitly; this
         // runs the same whether node_modules is local or shared.
@@ -51,11 +52,16 @@ describe('stylelint allows the theme breakpoint notation only in calendar.css an
         try {
             expect(lint([cssPath])).toEqual({ status: 0, rules: [] });
             expect(lint([finderCssPath])).toEqual({ status: 0, rules: [] });
+            expect(lint([soapDocumentCssPath])).toEqual({ status: 0, rules: [] });
             const prefix = '@media (max-width: 768px) {\n  a {\n    color: #fff;\n  }\n}\n';
             const context = '@media (width <= 768px) {\n  a {\n    color: #fff;\n  }\n}\n';
             // The override is not a disable: calendar.css itself rejects context notation...
             expect(lint(stdinAs('calendar.css'), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('finder.css'), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(stdinAs('soap-document.css'), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(stdinAs('soap-document.css'), prefix)).toEqual({ status: 0, rules: [] });
+            // The sibling reference stylesheet is not covered by the override.
+            expect(lint(stdinAs('soap-reference.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             // ...and every other file keeps the repo-wide context notation.
             expect(lint(stdinAs('other.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('other.css'), context)).toEqual({ status: 0, rules: [] });
