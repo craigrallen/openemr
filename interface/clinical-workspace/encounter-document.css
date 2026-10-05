@@ -90,6 +90,13 @@
     outline: 2px solid var(--oe-petrol);
     outline-offset: 2px;
   }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .navbar > .navbar-brand {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
 }
 
 @media screen and (max-width: 640px) {

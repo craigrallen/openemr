@@ -18,6 +18,7 @@ const COMMON = 'interface/forms/newpatient/templates/newpatient/common.html.twig
 const HEAD = 'interface/forms/newpatient/templates/newpatient/partials/common/_head.html.twig';
 const CSS = 'interface/clinical-workspace/encounter-document.css';
 const CONTROLS = 'interface/forms/newpatient/templates/newpatient/partials/common/_form-controls.html.twig';
+const PAGE_HEADING = 'templates/oemr_ui/page_heading/partials/page_heading.html.twig';
 // The id outranks workspace.css's shared `body.oe-clinical-workspace #container_div` rule.
 const SCOPE = 'body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document';
 
@@ -245,6 +246,21 @@ describe('encounter-document.css', () => {
         const inline = parts.length === 1 ? parts[0] : parts[1];
         const px = inline.endsWith('rem') ? parseFloat(inline) * 16 : parseFloat(inline);
         expect(px).toBeGreaterThanOrEqual(15);
+    });
+
+    test('the page heading title wraps inside the sheet, screen and workbench only, without shrinking or eliding', () => {
+        // OemrUI::pageHeading() renders the title (with the patient name) as nav.navbar > span.navbar-brand, which
+        // Bootstrap 4 sets white-space: nowrap. Observed live at frame widths 372/302: the span ran to 581/582px.
+        expect(read(PAGE_HEADING)).toContain('<span class="navbar-brand mb-0 h1">{{ heading|text }}</span>');
+        const title = blocks().filter((b) => b.selectors.includes(`${SCOPE} .navbar > .navbar-brand`));
+        expect(title).toHaveLength(1);
+        expect(title[0].media).toBe('@media screen');
+        expect(title[0].declarations).toEqual({
+            'max-width': '100%',
+            'min-width': '0',
+            'overflow-wrap': 'break-word',
+            'white-space': 'normal'
+        });
     });
 
     test('lints clean as itself under the repo config and ignore file, and the lint is not a no-op', () => {

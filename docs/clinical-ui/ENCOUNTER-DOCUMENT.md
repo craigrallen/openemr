@@ -115,3 +115,16 @@ Harness corrections made during the run (these were not product changes):
   app.
 - Not tested: an authenticated session, the real `main.php` frame tree, screen readers, translated
   or long labels in real locales, and module Twig hooks emitting content.
+
+## Authenticated live candidate overlay: heading wrap
+
+An authenticated live run of the candidate overlay rendered the real form: 42 controls, including
+2 date pickers. It exposed an inherited `white-space: nowrap` on the `.navbar > .navbar-brand`
+heading. The title measured 581px wide inside 372px and 302px frames, so it overflowed.
+
+The fix is one scoped rule inside `@media screen`. It applies `max-width: 100%`, `min-width: 0`,
+`overflow-wrap: break-word` and `white-space: normal` to that heading only. The full patient text
+and the font size are kept. Help, legacy (non-workbench) and print presentations are unchanged
+because the rule needs the workbench classes and screen media.
+
+This is not a deployment and not clinical acceptance. The controller's gates are still pending.
