@@ -286,11 +286,11 @@ describe('calendar toolbar and mini calendar fit the workbench frame', () => {
         expect(fs.readFileSync(cssPath, 'utf8')).not.toMatch(/stylelint-disable/);
     });
 
-    test('stylelint enforces prefix media notation for calendar.css and finder.css only', () => {
+    test('stylelint enforces prefix media notation for calendar.css, finder.css and encounter-document.css only', () => {
         const config = JSON.parse(fs.readFileSync(path.join(repo, '.stylelintrc.json'), 'utf8'));
         expect(config.rules['media-feature-range-notation']).toBeUndefined();
         expect(config.overrides).toEqual([{
-            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css'],
+            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/encounter-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' },
         }]);
     });

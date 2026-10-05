@@ -12,14 +12,13 @@ const repo = path.join(__dirname, '../..');
 const cssPath = path.join(repo, 'interface/clinical-workspace/calendar.css');
 const finderCssPath = path.join(repo, 'interface/clinical-workspace/finder.css');
 
-describe('stylelint allows the theme breakpoint notation only in calendar.css and finder.css', () => {
+describe('stylelint allows the theme breakpoint notation only in calendar.css, finder.css and encounter-document.css', () => {
     const rcPath = path.join(repo, '.stylelintrc.json');
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
     test('override is a two-file prefix notation, not a disabled rule', () => {
-        const overrides = rc().overrides.filter((o) => 'media-feature-range-notation' in o.rules);
-        expect(overrides).toEqual([{
-            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css'],
+        expect(rc().overrides).toEqual([{
+            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/encounter-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
         }]);
         expect(rc().rules['media-feature-range-notation']).toBeUndefined();

@@ -1,0 +1,107 @@
+/*
+ * New/Edit Encounter as a quiet sheet, after the accepted reference's document editor.
+ * Screen-only and scoped to the workbench presentation: the legacy layout and print are
+ * unchanged. Field names, IDs, grouping, order, handlers and controls are untouched; every
+ * text colour is set with its background so dark themes' light text never lands on paper.
+ * Selectors carry #container_div to outrank workspace.css's shared container rule.
+ */
+@media screen {
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document {
+    max-width: 1100px;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 1.5rem clamp(1rem, 3vw, 2rem) 1.25rem;
+    border: 1px solid var(--oe-line);
+    border-radius: 7px;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    box-shadow: 0 1px 3px rgb(25 53 56 / 6%);
+  }
+
+  /*
+   * theme-defaults.scss forces legend and fieldset background and text colour with
+   * !important (dark: light text on a dark fill), so both halves of each pair must match it.
+   */
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document fieldset {
+    margin-bottom: 1.25rem;
+    background-color: var(--oe-paper) !important;
+    color: var(--oe-ink) !important;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document legend {
+    margin-bottom: 0.75rem;
+    padding: 0 0 0.45rem;
+    border: 0;
+    border-bottom: 1px solid var(--oe-line);
+    border-radius: 0;
+    background-color: var(--oe-paper) !important;
+    color: var(--oe-ink) !important;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document legend small {
+    background-color: var(--oe-paper);
+    color: var(--oe-muted);
+    font-weight: 400;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .form-row {
+    margin-bottom: 0.85rem;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document label,
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .col-form-label {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .form-control {
+    border-color: #6f878d;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .form-control:focus {
+    border-color: var(--oe-petrol);
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document #reason {
+    min-height: 6rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  /* The original Save/Cancel row, ruled off as the sheet's action area. */
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .oe-encounter-actions {
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .btn:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document {
+    padding: 1rem;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .form-row > [class*='col-'] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}

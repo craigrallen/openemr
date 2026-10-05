@@ -5,6 +5,10 @@
     {# moment(moment.js) & validation_script used for script validation, with moment needed for date validators #}
     {{ setupHeader(['datetime-picker', 'datetime-picker-translated', 'common', 'moment', 'validation_script']) }}
     <script src="{{ webroot|attr }}/interface/forms/newpatient/newpatient.js?v={{ assetVersion|attr_url }}"></script>
+    {# Workbench sheet presentation; mode.js enables it only inside an active workbench #}
+    <link rel="stylesheet" href="{{ webroot|attr }}/interface/clinical-workspace/workspace.css?v={{ assetVersion|attr_url }}" media="screen">
+    <script src="{{ webroot|attr }}/interface/clinical-workspace/mode.js?v={{ assetVersion|attr_url }}" defer></script>
+    <link rel="stylesheet" href="{{ webroot|attr }}/interface/clinical-workspace/encounter-document.css?v={{ encounterDocumentCssVersion|default(assetVersion)|attr_url }}">
     <style>
         @media only screen and (max-width: 1024px) {
             #visit-details [class*="col-"],
