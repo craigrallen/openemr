@@ -12,7 +12,8 @@ clinical change and has not been accepted clinically or deployed.
 | `.../partials/common/_head.html.twig` | Loads `workspace.css` with `media="screen"`, so print is unchanged. Also loads `mode.js` (`defer`) and `encounter-document.css` after the original assets. Head hooks and their order are unchanged. |
 | `common.html.twig` | Adds `oe-clinical-encounter` to the body and `oe-encounter-document` to `#container_div`. |
 | `.../partials/common/_form-controls.html.twig` | Adds `oe-encounter-actions` to the Save/Cancel `.form-row`. Buttons, IDs, classes and the cancel wiring are unchanged. |
-| `C_EncounterVisitForm.class.php`, `ClinicalWorkspaceAssets.php` | Add `encounterDocumentCssVersion`, the file's mtime taken from the fixed asset allowlist. |
+| `ClinicalWorkspaceAssets.php` | Adds `encounter-document.css` to the fixed asset allowlist. |
+| `src/Common/Twig/TwigExtension.php` | New `clinicalWorkspaceAssetVersion(asset)` function, the existing `ClinicalWorkspaceAssets::version()` injected through the constructor (default: the shipped directory). It returns the file mtime, `'0'` for a missing allowlisted file, and rejects names outside the allowlist (Twig `RuntimeError` wrapping `InvalidArgumentException`). `_head` calls it directly; the controller is unchanged from ba11545. |
 | `.stylelintrc.json` | Adds `encounter-document.css` to the existing `media-feature-range-notation: prefix` override. This is the only file added; no other rule or threshold changed. |
 
 `mode.js` adds `oe-clinical-workspace` only inside an active workbench. Direct (legacy) and print
@@ -47,7 +48,26 @@ Logs are in `~/.hermes/projects/openemr/verification/cron-encounter-document/`.
 4. Full Jest suite (`full-suite3.log`): 38 suites, 685 tests passing. `git diff --check` is clean.
    `php -l` passes on both changed PHP files.
 
-PHPUnit, PHPStan, phpcs and Rector were **not** run. The target vendor and Docker were not available.
+5. Coverage correction (PR35 codecov/patch: the one new controller line was never executed). The
+   controller-only parameter was replaced by the Twig function above.
+   - RED: `red-coverage-php.log` showed 5 failing/erroring tests, with
+     `Unknown "clinicalWorkspaceAssetVersion" function`. `red-coverage-jest.log` showed 2 failing.
+   - GREEN: `green-coverage-php.log` showed:
+     - `ClinicalWorkspaceAssetVersionFunctionTest`: 5/5. It renders through a real Twig
+       `Environment`, with the real `_head.html.twig` from a `FilesystemLoader`; only
+       `setupHeader` is stubbed.
+     - `ClinicalWorkspaceAssetsTest`: 23/23, including the new encounter-document allowlist and
+       shipped-file tests.
+     - `TwigExtensionIsolatedTest`: 1/1.
+   - `green-coverage-jest.log` showed 15/15. The full Jest suite is 38 suites, 685 tests.
+   - Native QA re-ran with `ok=true`, and the re-rendered page carries the file's real mtime.
+   - These PHPUnit runs used the host PHP 8.5 against a **sibling** vendor (identical
+     `composer.lock`) through `run-php.sh`/`bootstrap-rooted.php`. The bootstrap maps
+     `OpenEMR\` and `OpenEMR\Tests\` to this worktree. Composer "files" autoloads (procedural
+     `library/` helpers such as `attr_url`/`text`) load from the sibling checkout. No coverage
+     driver was available locally, so patch coverage is verified only by hosted CI.
+
+PHPStan, phpcs and Rector were **not** run. The target vendor and Docker were not available.
 
 ## Native offline QA (external harness, synthetic fixture)
 

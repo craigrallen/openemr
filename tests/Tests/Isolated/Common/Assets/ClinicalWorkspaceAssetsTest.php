@@ -175,6 +175,27 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function encounterDocumentStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('encounter-document.css', 1_700_000_910);
+        $this->writeAsset('workspace.css', 1_700_000_911);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700000910', $assets->version('encounter-document.css'));
+        self::assertSame('1700000911', $assets->version('workspace.css'));
+    }
+
+    #[Test]
+    public function shippedEncounterDocumentStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/encounter-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('encounter-document.css'));
+    }
+
+    #[Test]
     public function recordWorkspaceStylesheetIsVersionedPerFile(): void
     {
         $this->writeAsset('workspace.css', 1_700_000_901);

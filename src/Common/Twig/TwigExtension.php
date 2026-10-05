@@ -18,6 +18,7 @@
 namespace OpenEMR\Common\Twig;
 
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Forms\Types\EncounterListOptionType;
 use OpenEMR\Common\Layouts\LayoutsUtils;
@@ -50,6 +51,7 @@ class TwigExtension extends AbstractExtension implements GlobalsInterface
     public function __construct(
         protected OEGlobalsBag $globals,
         protected ?Kernel $kernel = null,
+        protected ClinicalWorkspaceAssets $clinicalWorkspaceAssets = new ClinicalWorkspaceAssets(),
     ) {
     }
 
@@ -105,6 +107,12 @@ class TwigExtension extends AbstractExtension implements GlobalsInterface
             new TwigFunction(
                 'setupHeader',
                 Header::setupHeader(...)
+            ),
+
+            // Per-file ?v= cache version for an allowlisted interface/clinical-workspace asset.
+            new TwigFunction(
+                'clinicalWorkspaceAssetVersion',
+                $this->clinicalWorkspaceAssets->version(...)
             ),
 
             new TwigFunction(

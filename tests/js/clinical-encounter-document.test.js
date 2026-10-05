@@ -126,7 +126,7 @@ describe('encounter form template wiring', () => {
         // media="screen": workspace.css has unscoped-by-media rules that must not reach print.
         const workspace = '<link rel="stylesheet" href="{{ webroot|attr }}/interface/clinical-workspace/workspace.css?v={{ assetVersion|attr_url }}" media="screen">';
         const mode = '<script src="{{ webroot|attr }}/interface/clinical-workspace/mode.js?v={{ assetVersion|attr_url }}" defer></script>';
-        const sheet = '<link rel="stylesheet" href="{{ webroot|attr }}/interface/clinical-workspace/encounter-document.css?v={{ encounterDocumentCssVersion|default(assetVersion)|attr_url }}">';
+        const sheet = `<link rel="stylesheet" href="{{ webroot|attr }}/interface/clinical-workspace/encounter-document.css?v={{ clinicalWorkspaceAssetVersion('encounter-document.css')|attr_url }}">`;
         const order = [setup, newpatientJs, workspace, mode, sheet, '</style>', '_head-after.html.twig'].map((s) => head.indexOf(s));
         expect(order.every((i) => i >= 0)).toBe(true);
         expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -144,10 +144,13 @@ describe('encounter form template wiring', () => {
         expect(controls.match(/<button/g)).toHaveLength(2);
     });
 
-    test('the controller supplies a cache version from the fixed asset allowlist', () => {
+    test('the sheet version comes from the shared Twig function over the fixed asset allowlist', () => {
         expect(read('src/Common/Assets/ClinicalWorkspaceAssets.php')).toMatch(/'encounter-document\.css',/);
-        expect(read('interface/forms/newpatient/C_EncounterVisitForm.class.php'))
-            .toMatch(/'encounterDocumentCssVersion' => \(new ClinicalWorkspaceAssets\(\)\)->version\('encounter-document\.css'\),/);
+        expect(read('src/Common/Twig/TwigExtension.php'))
+            .toMatch(/new TwigFunction\(\s*'clinicalWorkspaceAssetVersion',\s*\$this->clinicalWorkspaceAssets->version\(\.\.\.\)\s*\)/);
+        // No controller-only version parameter remains.
+        const controller = read('interface/forms/newpatient/C_EncounterVisitForm.class.php');
+        expect(controller).not.toMatch(/encounterDocumentCssVersion|ClinicalWorkspaceAssets/);
     });
 });
 

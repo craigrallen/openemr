@@ -27,7 +27,6 @@ use OpenEMR\Billing\MiscBillingOptions;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclExtended;
 use OpenEMR\Common\Acl\AclMain;
-use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -706,7 +705,6 @@ class C_EncounterVisitForm
             // END AI GENERATED CODE
             'CSRF_TOKEN_FORM' => CsrfUtils::collectCsrfToken(session: $session),
             'bodyClass' => $body_javascript ?? '',
-            'encounterDocumentCssVersion' => (new ClinicalWorkspaceAssets())->version('encounter-document.css'),
             'oemrUiSettings' => $arrOeUiSettings,
             'formAction' => '/interface/forms/newpatient/save.php',
             'language_direction' => $session->get('language_direction') ?? 'ltr',
