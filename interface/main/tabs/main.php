@@ -503,6 +503,35 @@ $twig = ServiceContainer::getTwig();
     }
     ?>
     <div id="mainBox" <?php echo $disp_mainBox ?>>
+        <script data-navigation-boot>
+            // Apply the saved navigation mode before any navigation markup can paint.
+            // workbench_shell.js reads the same key: anything but 'legacy' is workbench.
+            window.OpenEMRNavigationBoot = (function () {
+                var box = document.getElementById('mainBox');
+                var legacy = false;
+                function apply(nextLegacy) {
+                    legacy = nextLegacy;
+                    box.classList.toggle('workbench-legacy', legacy);
+                    // Nothing has been moved yet, so legacy shows the original nodes in place.
+                    box.classList.toggle('workbench-static-legacy', legacy);
+                    document.documentElement.classList.toggle('workbench-active', !legacy);
+                    document.body.classList.toggle('workbench-active', !legacy);
+                }
+                var saved = false;
+                try {
+                    saved = window.localStorage.getItem('openemr.navigation.mode') === 'legacy';
+                } catch (error) {
+                    saved = false;
+                }
+                apply(saved);
+                // Labels the mode control for the current mode, as workbench_shell.js does.
+                function control(button) {
+                    button.textContent = legacy ? button.dataset.workbenchLabel : button.dataset.legacyLabel;
+                    button.setAttribute('aria-pressed', legacy ? 'true' : 'false');
+                }
+                return { apply: apply, control: control };
+            }());
+        </script>
         <nav class="navbar navbar-expand-xl navbar-light bg-light py-0">
             <?php if (OEGlobalsBag::getInstance()->getBoolean('display_main_menu_logo')) {
                 $bag = OEGlobalsBag::getInstance();
@@ -540,9 +569,13 @@ $twig = ServiceContainer::getTwig();
             <?php endif; ?>
             <!--Below is the user data section that contains the user information and the attendant data-->
             <span id="userData" data-bind="template: {name: 'user-data-template', data: application_data}"></span>
-            <button type="button" class="workbench-mode-button" data-workbench-mode
+            <?php // Disabled until the workbench shell starts and listens on it. ?>
+            <button type="button" class="workbench-mode-button" data-workbench-mode disabled
                 data-legacy-label="<?php echo xla('Legacy navigation'); ?>"
                 data-workbench-label="<?php echo xla('Workbench navigation'); ?>"><?php echo xlt('Legacy navigation'); ?></button>
+            <script data-navigation-control>
+                OpenEMRNavigationBoot.control(document.querySelector('#mainBox [data-workbench-mode]'));
+            </script>
             <?php
             // fire off a nav event
             $dispatcher?->dispatch(new RenderEvent(), RenderEvent::EVENT_BODY_RENDER_NAV);
@@ -589,12 +622,23 @@ $twig = ServiceContainer::getTwig();
     <script>
         ko.applyBindings(app_view_model);
 
-        OpenEMRWorkbenchShell.create({
-            root: document.getElementById('mainBox'),
-            menu: app_view_model.application_data.menu,
-            tabs: app_view_model.application_data.tabs.tabsList,
-            groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
-        });
+        var modeButton = document.querySelector('#mainBox [data-workbench-mode]');
+        try {
+            OpenEMRWorkbenchShell.create({
+                root: document.getElementById('mainBox'),
+                menu: app_view_model.application_data.menu,
+                tabs: app_view_model.application_data.tabs.tabsList,
+                groupTherapyEnabled: jsGlobals.enable_group_therapy == 1
+            });
+            modeButton.disabled = false;
+        } catch (error) {
+            // The bound legacy menu stays usable; an empty workbench rail would not be.
+            console.error('Workbench navigation failed to start; showing legacy navigation.', error);
+            OpenEMRNavigationBoot.apply(true);
+            // A half-started shell may already listen on the mode button; disabled, it cannot switch back.
+            modeButton.disabled = true;
+            OpenEMRNavigationBoot.control(modeButton);
+        }
 
         $(function () {
             $('.dropdown-toggle').dropdown();
