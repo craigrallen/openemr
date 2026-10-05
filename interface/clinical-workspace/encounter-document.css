@@ -91,6 +91,20 @@
     outline-offset: 2px;
   }
 
+  /*
+   * Bootstrap's .btn-group pulls Cancel 1px back over Save's border (bootstrap-rtl on the other
+   * side); keep the two original buttons apart, with room for each one's focus ring.
+   */
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .oe-encounter-actions .btn-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .oe-encounter-actions .btn-group > .btn {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
   body.oe-clinical-encounter.oe-clinical-workspace #container_div.oe-encounter-document .navbar > .navbar-brand {
     max-width: 100%;
     min-width: 0;

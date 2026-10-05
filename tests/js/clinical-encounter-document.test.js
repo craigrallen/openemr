@@ -263,6 +263,48 @@ describe('encounter-document.css', () => {
         });
     });
 
+    test('Save and Cancel separate into two buttons with a real gap, screen and workbench only', () => {
+        // Bootstrap 4 joins .btn-group buttons by pulling every later one back over its neighbour's border
+        // (bootstrap-4-rtl mirrors it to margin-right). Observed live: Cancel at margin-left -1px, a 1px overlap.
+        const bootstrap = fs.readFileSync(require.resolve('bootstrap/dist/css/bootstrap.min.css'), 'utf8');
+        const joins = [...bootstrap.matchAll(/([^{}]*\.btn-group>\.btn[^{}]*){([^}]*margin-(?:left|right)[^}]*)}/g)]
+            .flatMap((m) => m[1].split(',').filter((s) => /^\.btn-group>\.btn(?![\w-])/.test(s)).map((s) => [s, m[2]]));
+        expect(joins).toEqual([['.btn-group>.btn:not(:first-child)', 'margin-left:-1px']]);
+        // Specificity [ids, classes/pseudo-classes, types]; :not() counts its argument.
+        const specificity = (selector) => {
+            const s = selector.replace(/:not\(([^)]*)\)/g, ' $1');
+            return [/#[\w-]+/g, /\.[\w-]+|\[[^\]]*\]|:[\w-]+/g, /(?:^|[\s>+~])[a-z][\w-]*/gi]
+                .map((re) => (s.match(re) || []).length);
+        };
+        const outranks = (a, b) => {
+            const i = a.findIndex((n, k) => n !== b[k]);
+            return i >= 0 && a[i] > b[i];
+        };
+
+        const screen = blocks().filter((b) => b.media === '@media screen');
+        const rule = (selector) => screen.filter((b) => b.selectors.includes(selector)).map((b) => b.declarations);
+        const group = rule(`${SCOPE} .oe-encounter-actions .btn-group`);
+        const buttons = rule(`${SCOPE} .oe-encounter-actions .btn-group > .btn`);
+        expect(group).toHaveLength(1);
+        expect(buttons).toHaveLength(1);
+        // Both physical sides reset, so LTR and RTL builds alike lose the -1px pull; nothing hidden, resized or reordered.
+        expect(buttons[0]).toEqual({ 'margin-right': '0', 'margin-left': '0' });
+        for (const [selector] of joins) {
+            expect(specificity(selector)).toEqual([0, 3, 0]);
+            expect(outranks(specificity(`${SCOPE} .oe-encounter-actions .btn-group > .btn`), specificity(selector))).toBe(true);
+        }
+        // The group wraps at 320px and tighter frames instead of overflowing, and the gap clears a focused
+        // button's ring (outline width + offset) so keyboard focus never paints over its neighbour.
+        expect(group[0]).toEqual({ 'flex-wrap': 'wrap', gap: '0.5rem' });
+        const ring = rule(`${SCOPE} .btn:focus-visible`)[0];
+        const ringPx = parseFloat(ring.outline) + parseFloat(ring['outline-offset']);
+        expect(parseFloat(group[0].gap) * 16).toBeGreaterThan(ringPx);
+        // Only the 640px rule lives outside plain screen; it must not undo the separation.
+        for (const b of blocks().filter((x) => x.media !== '@media screen')) {
+            expect(b.selectors.some((s) => s.includes('.btn-group'))).toBe(false);
+        }
+    });
+
     test('lints clean as itself under the repo config and ignore file, and the lint is not a no-op', () => {
         const bin = path.join(path.dirname(require.resolve('stylelint/package.json')), 'bin/stylelint.mjs');
         const configBasedir = path.resolve(path.dirname(require.resolve('stylelint-config-standard/package.json')), '../..');

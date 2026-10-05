@@ -128,3 +128,8 @@ and the font size are kept. Help, legacy (non-workbench) and print presentations
 because the rule needs the workbench classes and screen media.
 
 This is not a deployment and not clinical acceptance. The controller's gates are still pending.
+
+Save/Cancel spacing: a scoped screen-only workbench rule adds a 0.5rem gap with margin resets and wrapping, and keeps the original Save/Cancel actions unchanged.
+Controller Jest run: 687 tests across 38 suites pass.
+The fixture check (light/dark, simulatedRTL) is an offline simulation, not clinical acceptance; simulatedRTL is not a real RTL theme build.
+Live-run blocked requests and errors remain unresolved.
