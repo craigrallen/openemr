@@ -240,3 +240,160 @@ describe('clinical workspace record card sizing', () => {
         expect(declared(card, 'display')).toEqual([]);
     });
 });
+
+describe('clinical workspace demographics facts', () => {
+    const css = fs.readFileSync(require.resolve('../../interface/clinical-workspace/workspace.css'), 'utf8');
+    // Real production-selected tab_base.html.twig + card_base.html.twig around layout output,
+    // recorded by TwigTemplateRenderTest.
+    const fixture = fs.readFileSync(
+        require.resolve('../Tests/Isolated/Common/Twig/fixtures/render/demographics-card-custom-groups.html'),
+        'utf8'
+    );
+    const scope = 'body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts';
+
+    beforeEach(() => {
+        document.head.innerHTML = '';
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.appendChild(style);
+        document.body.className = 'oe-clinical-record oe-clinical-workspace';
+        document.body.innerHTML = fixture
+            + '<section class="card"><table><tr><td class="label_custom">Other</td><td class="text data">x</td></tr></table></section>';
+    });
+
+    // Every style rule with the media queries it sits under; pseudo-classes are kept in the
+    // selector but stripped for matching, since jsdom cannot focus or hover.
+    function styleRules() {
+        const out = [];
+        const walk = (rules, media) => Array.from(rules).forEach((rule) => {
+            if (rule.media) walk(rule.cssRules, [...media, rule.media.mediaText]);
+            else if (rule.style) out.push({ rule, media });
+        });
+        walk(document.styleSheets[0].cssRules, []);
+        return out;
+    }
+
+    function declared(element, property, { pseudo = '' } = {}) {
+        return styleRules()
+            .filter(({ rule }) => rule.style.getPropertyValue(property) !== '')
+            .filter(({ rule }) => rule.selectorText.split(',').some((sel) => {
+                const s = sel.trim();
+                if (pseudo !== '' && !s.endsWith(pseudo)) return false;
+                if (pseudo === '' && /:(focus|hover)/.test(s)) return false;
+                try {
+                    return element.matches(s.replace(/:(focus-visible|focus|hover)$/, ''));
+                } catch (e) {
+                    // jsdom cannot parse selector lists inside :not(); those rules are not demographics rules.
+                    if (e.name === 'SyntaxError' && !s.includes('oe-demographics-facts')) return false;
+                    throw e;
+                }
+            }))
+            .map(({ rule, media }) => ({ value: rule.style.getPropertyValue(property), media }));
+    }
+
+    const values = (element, property, options) => declared(element, property, options).map((d) => d.value);
+    const rem = (value) => parseFloat(value);
+
+    test('every demographics rule is screen-only and scoped to the record workbench wrapper', () => {
+        const own = styleRules().filter(({ rule }) => rule.selectorText.includes('oe-demographics-facts'));
+        expect(own.length).toBeGreaterThan(5);
+        own.forEach(({ rule, media }) => {
+            expect(media.length).toBeGreaterThan(0);
+            media.forEach((m) => expect(m).toMatch(/^screen\b/));
+            rule.selectorText.split(',').forEach((sel) => expect(sel.trim().startsWith(scope)).toBe(true));
+        });
+        expect(styleRules().some(({ rule }) => /tabNav|tabContainer|label_custom/.test(rule.selectorText)
+            && !rule.selectorText.includes('oe-demographics-facts'))).toBe(false);
+    });
+
+    test('labels and values form a readable, padded hierarchy', () => {
+        const label = document.querySelector('#card_demographics td.label_custom');
+        const value = document.querySelector('#card_demographics td.data');
+        expect(rem(values(value, 'font-size')[0])).toBeGreaterThanOrEqual(1);
+        expect(rem(values(label, 'font-size')[0])).toBeGreaterThanOrEqual(0.875);
+        expect(rem(values(label, 'font-size')[0])).toBeLessThan(rem(values(value, 'font-size')[0]));
+        expect(values(label, 'color')).toEqual(['var(--oe-muted)']);
+        expect(values(value, 'color')).toEqual(['var(--oe-ink)']);
+        [label, value].forEach((cell) => {
+            expect(values(cell, 'padding')).not.toHaveLength(0);
+            expect(values(cell, 'vertical-align')).toEqual(['top']);
+            expect(values(cell, 'border-top')).not.toHaveLength(0);
+        });
+        // The real compiled theme marks both legacy .8rem font sizes important.
+        const typography = styleRules().filter(({ rule }) => rule.style.getPropertyValue('font-size')
+            && (label.matches(rule.selectorText) || value.matches(rule.selectorText)));
+        typography.forEach(({ rule }) => expect(rule.style.getPropertyPriority('font-size')).toBe('important'));
+    });
+
+    test('fact panes and tabs pair readable ink with the paper background in either theme', () => {
+        const pane = document.querySelector('#card_demographics .tabContainer > .tab');
+        const nav = document.querySelector('#card_demographics .tabNav');
+        expect(values(pane, 'background-color')).toEqual(['var(--oe-paper)']);
+        expect(values(nav, 'background-color')).toEqual(['var(--oe-paper)']);
+        expect(values(nav.querySelector('li.current a'), 'background-color')).toEqual(['var(--oe-paper)']);
+    });
+
+    test('long values wrap inside a bounded, full-width fact table', () => {
+        const value = document.querySelector('#text_email');
+        expect(values(value, 'overflow-wrap')).toEqual(['anywhere']);
+        const table = document.querySelector('#card_demographics .tabContainer table');
+        expect(values(table, 'width')).toEqual(['100%']);
+        expect(values(table, 'border-collapse')).toEqual(['collapse']);
+        const wrapper = document.querySelector('.oe-demographics-facts');
+        expect(values(wrapper, 'max-width')).toHaveLength(1);
+        expect(values(wrapper, 'max-width')[0]).toMatch(/rem$/);
+    });
+
+    test('narrow screens stack each label above its value', () => {
+        const label = document.querySelector('#card_demographics td.label_custom');
+        const value = document.querySelector('#card_demographics td.data');
+        [label, value].forEach((cell) => {
+            const stacked = declared(cell, 'display').filter((d) => d.value === 'block');
+            expect(stacked).toHaveLength(1);
+            expect(stacked[0].media.join(' ')).toMatch(/^screen and \(width <= \d+px\)$/);
+        });
+    });
+
+    test('subgroup headings are restrained; spacer rows and inline styles stay in the DOM', () => {
+        const heading = Array.from(document.querySelectorAll('#card_demographics td.label'))
+            .find((td) => td.textContent === 'Identifiers');
+        expect(heading.getAttribute('style')).toBe('background-color: var(--gray300); padding: 4px');
+        const background = declared(heading, 'background-color');
+        expect(background.map((d) => d.value)).toEqual(['transparent']);
+        expect(heading.style.getPropertyPriority('background-color')).toBe('');
+        expect(styleRules().find(({ rule }) => rule.style.getPropertyValue('background-color') === 'transparent'
+            && heading.matches(rule.selectorText)).rule.style.getPropertyPriority('background-color')).toBe('important');
+        expect(values(heading, 'border-bottom')).not.toHaveLength(0);
+        expect(values(heading, 'color')).toEqual(['var(--oe-muted)']);
+        const spacer = document.querySelector('#card_demographics td.label[style*="height"]');
+        expect(values(spacer, 'display')).toEqual([]);
+        // The actual renderer's K option emits a nonempty nbsp spacer; it is not a heading.
+        spacer.textContent = '\u00a0';
+        expect(values(spacer, 'border-bottom')).toEqual([]);
+        expect(values(spacer, 'background-color')).toEqual([]);
+    });
+
+    test('tabs show the selected one clearly and a visible keyboard focus ring', () => {
+        const nav = document.querySelector('#card_demographics ul.tabNav');
+        expect(values(nav, 'flex-wrap')).toEqual(['wrap']);
+        const current = document.querySelector('#header_tab_Who');
+        const other = document.querySelector('#header_tab_Contact');
+        expect(values(current, 'border-bottom')).toEqual(['2px solid var(--oe-petrol)']);
+        expect(values(other, 'border-bottom')).toEqual([]);
+        expect(values(current, 'font-weight').map(Number).every((w) => w >= 600)).toBe(true);
+        expect(values(other, 'outline', { pseudo: ':focus-visible' })).toEqual(['2px solid var(--oe-petrol)']);
+        expect(values(other, 'outline-offset', { pseudo: ':focus-visible' })).not.toHaveLength(0);
+    });
+
+    test('warnings, other cards and the legacy view keep their own styling', () => {
+        const warning = document.querySelector('#card_demographics .text-danger');
+        expect(values(warning, 'color')).toEqual([]);
+        const other = document.querySelector('section.card:not(#x) > table td.data');
+        expect(declared(other, 'font-size')).toEqual([]);
+        expect(declared(other, 'overflow-wrap')).toEqual([]);
+        document.body.className = '';
+        const value = document.querySelector('#card_demographics td.data');
+        expect(declared(value, 'font-size')).toEqual([]);
+        expect(declared(document.querySelector('#header_tab_Who'), 'border-bottom-color')).toEqual([]);
+    });
+});
