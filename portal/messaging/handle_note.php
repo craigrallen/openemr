@@ -23,6 +23,7 @@ use OpenEMR\Services\PortalMessagingSender;
 require_once(__DIR__ . "/../../vendor/autoload.php");
 $globalsBag = OEGlobalsBag::getInstance();
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
+$isPatientSender = true;
 
 if ($session->has('pid') && $session->has('patient_portal_onsite_two')) {
     // ensure patient is bootstrapped (if sent)
@@ -92,6 +93,7 @@ if ($session->has('pid') && $session->has('patient_portal_onsite_two')) {
     $staffSenderName = is_string($staffDisplayName) && trim($staffDisplayName) !== ''
         ? $staffDisplayName
         : $staffSenderId;
+    $isPatientSender = false;
 }
 
 require_once(__DIR__ . "/../lib/portal_mail.inc.php");
@@ -132,6 +134,33 @@ $resolvedStaffSenderName = $staffSenderName ?? null;
     is_string($postedSenderId) ? $postedSenderId : null,
     is_string($postedSenderName) ? $postedSenderName : null,
 );
+
+if ($task === 'add' || $task === 'reply') {
+    // Actor context comes only from the authenticated branches above. Staff
+    // replies retain their legacy patient-recipient semantics.
+    if (!is_string($rid) || trim($rid) === '' || !is_string($owner) || $sid !== $owner) {
+        http_response_code(403);
+        echo xlt('illegal Action');
+        exit;
+    }
+    if ($isPatientSender) {
+        $patientPid = $session->get('pid');
+        $recipient = null;
+        if (
+            $session->get('patient_portal_onsite_two')
+            && (is_int($patientPid) || is_string($patientPid))
+            && filter_var($patientPid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
+        ) {
+            $recipient = (new PortalMessagingSender())->resolvePatientRecipient($rid);
+        }
+        if ($recipient === null) {
+            http_response_code(403);
+            echo xlt('illegal Action');
+            exit;
+        }
+        [$rid, $rn] = $recipient;
+    }
+}
 
 switch ($task) {
     case "forward":

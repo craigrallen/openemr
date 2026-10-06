@@ -19,8 +19,46 @@ declare(strict_types=1);
 
 namespace OpenEMR\Services;
 
+use OpenEMR\Common\Database\QueryUtils;
+use OpenEMR\Common\Database\SqlQueryException;
+
 final class PortalMessagingSender
 {
+    /**
+     * Patient recipients are staff usernames, not numeric user IDs or patient
+     * portal usernames. Resolve once before either mailbox copy is written.
+     * The chooser's legacy user-1 fallback does not confer eligibility.
+     *
+     * @return array{0: string, 1: string}|null Canonical username and display name
+     */
+    public function resolvePatientRecipient(mixed $recipientId): ?array
+    {
+        if (!is_string($recipientId) || trim($recipientId) === '') {
+            return null;
+        }
+
+        try {
+            $recipient = QueryUtils::querySingleRow(
+                'SELECT username, fname, lname FROM users WHERE username = ? AND active = 1 AND portal_user = 1',
+                [$recipientId]
+            );
+        } catch (SqlQueryException) {
+            // An unavailable lookup cannot authorize a patient message.
+            return null;
+        }
+
+        if (
+            !is_array($recipient)
+            || !isset($recipient['username'], $recipient['fname'], $recipient['lname'])
+            || !is_string($recipient['username']) || trim($recipient['username']) === ''
+            || !is_string($recipient['fname']) || !is_string($recipient['lname'])
+        ) {
+            return null;
+        }
+
+        return [$recipient['username'], $recipient['fname'] . ' ' . $recipient['lname']];
+    }
+
     /**
      * Resolve sender identity. If staff identity is available (i.e. the request
      * came from an authenticated staff session) it takes priority over any
