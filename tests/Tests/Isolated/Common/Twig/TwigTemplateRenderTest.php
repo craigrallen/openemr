@@ -40,6 +40,27 @@ class TwigTemplateRenderTest extends TestCase
     private static ?Environment $twig = null;
 
     /**
+     * @param array<string, mixed> $values
+     * @return array<string, mixed>
+     */
+    private static function billingCardDetailsParameters(array $values): array
+    {
+        return array_merge([
+            'id' => 'billing_ps_expand',
+            'title' => 'Billing',
+            'initiallyCollapsed' => false,
+            'forceAlwaysOpen' => false,
+            'hideBtn' => true,
+            'card_bg_color' => '',
+            'card_text_color' => '',
+            'btnLabel' => false,
+            'btnLink' => 'test',
+            'prependedInjection' => '',
+            'appendedInjection' => '',
+        ], $values);
+    }
+
+    /**
      * Shape of display_layout_tabs() output (library/options.inc.php) for a site whose
      * layout renames and adds DEM groups. Stands in for the DB-backed renderer.
      */
@@ -995,6 +1016,10 @@ class TwigTemplateRenderTest extends TestCase
             $fixtureDir . '/care-plan-card-collapsed.html',
         ];
 
+        foreach (self::cardDetailsCases() as $name => $case) {
+            yield 'patient/card details ' . $name => [$case['template'], $case['parameters'], $fixtureDir . '/' . $case['fixture']];
+        }
+
         // The SOAP form calls getters on a FormSOAP; a stand-in keeps the render database-free.
         // Saved text includes markup and whitespace that |text must escape and keep.
         yield 'forms/soap soap_form saved note' => [
@@ -1244,6 +1269,365 @@ class TwigTemplateRenderTest extends TestCase
             ['tabRow:HIS', $parameters['result'], $parameters['result2']],
             ['tabData:HIS', $parameters['result'], $parameters['result2']],
         ], self::$layoutTabCalls);
+    }
+
+    /**
+     * The secondary dashboard cards gain workbench hook classes on elements they already render
+     * and nothing else: removing the hook tokens reproduces the pre-hook output byte-for-byte, and
+     * every form, control, CSRF field, action value and link survives in the same multiset.
+     *
+     * @param list<string> $expectedHooks
+     */
+    #[Test]
+    #[DataProvider('cardDetailsHookProvider')]
+    public function cardDetailsHooksLeaveLegacyOutputAndControlsUntouched(string $case, array $expectedHooks): void
+    {
+        $definition = self::cardDetailsCases()[$case];
+        $html = self::normalizeTrailingWhitespace(
+            self::twigEnvironment()->render($definition['template'], $definition['parameters'])
+        );
+        $legacy = file_get_contents(__DIR__ . '/fixtures/render/card-details-legacy/' . $definition['fixture']);
+        self::assertIsString($legacy);
+
+        $xpath = self::xpathFor($html);
+        $cardId = $definition['parameters']['id'];
+        self::assertIsString($cardId);
+        $cardBody = $xpath->query('//div[@id="' . $cardId . '"]');
+        self::assertNotFalse($cardBody);
+        self::assertSame(1, $cardBody->length);
+        $cardBodyNode = $cardBody->item(0);
+        self::assertInstanceOf(\DOMElement::class, $cardBodyNode);
+
+        $hooks = $xpath->query('.//*[contains(concat(" ", normalize-space(@class), " "), " oe-card-details ")]', $cardBodyNode);
+        self::assertNotFalse($hooks);
+        $modifiers = [];
+        foreach ($hooks as $hook) {
+            self::assertInstanceOf(\DOMElement::class, $hook);
+            $ancestorHooks = $xpath->query('ancestor::*[contains(concat(" ", normalize-space(@class), " "), " oe-card-details ")]', $hook);
+            self::assertNotFalse($ancestorHooks);
+            self::assertSame(0, $ancestorHooks->length);
+            self::assertSame(1, preg_match('/(?:^| )(oe-card-details--[a-z-]+)(?: |$)/', $hook->getAttribute('class'), $match));
+            $modifiers[] = $match[1];
+        }
+        self::assertSame($expectedHooks, $modifiers);
+        // No hook leaks onto the card chrome or anywhere outside the collapsible body.
+        self::assertSame(count($expectedHooks), substr_count($html, ' oe-card-details '));
+
+        self::assertSame($legacy, self::stripCardDetailsHooks($html));
+
+        $controls = self::controlSignatures($xpath, $cardBodyNode);
+        self::assertSame(self::controlSignatures(self::xpathFor($legacy), null, $cardId), $controls);
+        // Every interactive control in the body sits inside a hooked region, so the scoped
+        // styles reach it; none is orphaned outside the wrapper.
+        $outside = $xpath->query(
+            './/*[self::form or self::input or self::select or self::textarea or self::button or self::a]'
+            . '[not(ancestor::*[contains(concat(" ", normalize-space(@class), " "), " oe-card-details ")])]',
+            $cardBodyNode,
+        );
+        self::assertNotFalse($outside);
+        self::assertSame(0, $outside->length);
+        foreach ($definition['requiredControls'] as $required) {
+            self::assertContains($required, $controls);
+        }
+    }
+
+    /**
+     * @return array<string, array{string, list<string>}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function cardDetailsHookProvider(): array
+    {
+        return [
+            'care experience populated' => ['preference care experience populated', ['oe-card-details--preference', 'oe-card-details--preference-edit']],
+            'treatment empty' => ['preference treatment empty', ['oe-card-details--preference', 'oe-card-details--preference-edit']],
+            'care experience read only' => ['preference care experience read only', ['oe-card-details--preference']],
+            'treatment unauthorized' => ['preference treatment unauthorized', ['oe-card-details--preference']],
+            'care plan empty' => ['care plan empty', ['oe-card-details--care-plan']],
+            'care plan populated' => ['care plan populated', ['oe-card-details--care-plan']],
+            'billing full' => ['billing full', ['oe-card-details--billing']],
+            'billing minimal' => ['billing minimal', ['oe-card-details--billing']],
+        ];
+    }
+
+    #[Test]
+    public function cardDetailsCasesRenderTheTemplatesTheDashboardCardsSelect(): void
+    {
+        $selected = [];
+        foreach ([
+            \OpenEMR\Patient\Cards\CareExperiencePreferenceViewCard::class,
+            \OpenEMR\Patient\Cards\TreatmentPreferenceViewCard::class,
+            \OpenEMR\Patient\Cards\CarePlanViewCard::class,
+            \OpenEMR\Patient\Cards\BillingViewCard::class,
+        ] as $cardClass) {
+            $template = (new \ReflectionClass($cardClass))->getConstant('TEMPLATE_FILE');
+            self::assertIsString($template);
+            $selected[] = $template;
+        }
+        $rendered = array_values(array_unique(array_column(self::cardDetailsCases(), 'template')));
+        sort($selected);
+        sort($rendered);
+        self::assertSame(array_values(array_unique($selected)), $rendered);
+    }
+
+    private static function stripCardDetailsHooks(string $html): string
+    {
+        return (string) preg_replace('/ oe-card-details(?: oe-card-details--[a-z-]+)?(?=")/', '', $html);
+    }
+
+    private static function xpathFor(string $html): \DOMXPath
+    {
+        $dom = new \DOMDocument();
+        self::assertTrue($dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NONET));
+        return new \DOMXPath($dom);
+    }
+
+    /**
+     * Sorted multiset of every form and control: tag, type, name, value, method and action, plus
+     * the js- hooks and Bootstrap targets the inline scripts and card toggles bind to.
+     *
+     * @return list<string>
+     */
+    private static function controlSignatures(\DOMXPath $xpath, ?\DOMElement $context, string $bodyId = ''): array
+    {
+        if ($context === null) {
+            $body = $xpath->query('//div[@id="' . $bodyId . '"]');
+            self::assertNotFalse($body);
+            $context = $body->item(0);
+            self::assertInstanceOf(\DOMElement::class, $context);
+        }
+        $nodes = $xpath->query('.//*[self::form or self::input or self::select or self::textarea or self::button or self::option or self::a]', $context);
+        self::assertNotFalse($nodes);
+        $signatures = [];
+        foreach ($nodes as $node) {
+            self::assertInstanceOf(\DOMElement::class, $node);
+            $jsHooks = array_values(array_filter(
+                preg_split('/\s+/', $node->getAttribute('class')) ?: [],
+                static fn (string $class): bool => str_starts_with($class, 'js-'),
+            ));
+            $signatures[] = implode('|', [
+                $node->tagName,
+                $node->getAttribute('type'),
+                $node->getAttribute('name'),
+                $node->getAttribute('id'),
+                $node->getAttribute('value'),
+                $node->getAttribute('method'),
+                $node->getAttribute('action'),
+                $node->hasAttribute('required') ? 'required' : '',
+                $node->hasAttribute('checked') ? 'checked' : '',
+                implode(' ', $jsHooks),
+                $node->getAttribute('data-pref'),
+            ]);
+        }
+        sort($signatures);
+        return $signatures;
+    }
+
+    /**
+     * SYNTHETIC parameters for the secondary dashboard cards. Values mimic what the card classes
+     * pass (see their getTemplateVariables()) but no database, ACL or session stands behind them:
+     * auth/can_write are set directly to reach each template branch.
+     *
+     * @return array<string, array{template: string, parameters: array<string, mixed>, fixture: string, requiredControls: list<string>}>
+     *
+     * @codeCoverageIgnore Shared with data providers that run before coverage instrumentation starts.
+     */
+    private static function cardDetailsCases(): array
+    {
+        $preference = static fn (string $type, string $id, bool $auth, bool $canWrite, array $preferences, ?string $message): array => [
+            'id' => $id,
+            'title' => $type === 'care_experience' ? 'Care Experience Preferences' : 'Treatment Intervention Preferences',
+            'initiallyCollapsed' => false,
+            'forceAlwaysOpen' => false,
+            'card_bg_color' => '',
+            'card_text_color' => '',
+            'btnClass' => 'js-card-toggle-edit',
+            'btnLabel' => 'Edit',
+            'btnLink' => 'event.preventDefault();',
+            'linkMethod' => 'javascript',
+            'type' => $type,
+            'pid' => 1,
+            'auth' => $auth,
+            'can_write' => $canWrite,
+            'webroot' => '/openemr',
+            'csrf_token' => 'synthetic-csrf-token',
+            'preferences' => $preferences,
+            'loinc_codes' => [
+                ['loinc_code' => '00000-1', 'display_name' => 'SYNTHETIC preference category'],
+                ['loinc_code' => '00000-2', 'display_name' => 'SYNTHETIC preference category with a deliberately long display name'],
+            ],
+            'current_datetime' => '2026-01-02T03:04',
+            'message' => $message,
+        ];
+        $rows = [
+            [
+                'id' => 501, 'effective_datetime' => '2026-01-05 09:00:00', 'recorded_date' => '2026-01-05 09:00:00',
+                'observation_code' => '00000-1', 'observation_code_text' => 'SYNTHETIC preference category',
+                'code_display' => 'SYNTHETIC preference category', 'value_type' => 'coded', 'value_code' => 'SYN-A',
+                'value_display' => 'SYNTHETIC coded answer', 'value_boolean' => null, 'value_text' => null,
+                'status' => 'final', 'note' => 'SYNTHETIC note',
+            ],
+            [
+                'id' => 502, 'effective_datetime' => null, 'recorded_date' => '2026-01-06 10:00:00',
+                'observation_code' => '00000-2', 'observation_code_text' => 'SYNTHETIC yes/no preference',
+                'code_display' => 'SYNTHETIC yes/no preference', 'value_type' => 'boolean', 'value_code' => null,
+                'value_display' => null, 'value_boolean' => '1', 'value_text' => null,
+                'status' => 'preliminary', 'note' => '',
+            ],
+            [
+                'id' => 503, 'effective_datetime' => '2026-01-07 11:00:00', 'recorded_date' => '2026-01-07 11:00:00',
+                'observation_code' => '00000-2', 'observation_code_text' => 'SYNTHETIC free text preference',
+                'code_display' => 'SYNTHETIC free text preference', 'value_type' => 'text', 'value_code' => null,
+                'value_display' => null, 'value_boolean' => null,
+                'value_text' => 'SYNTHETIC-free-text-answer-without-any-break-points-to-exercise-overflow-wrapping-in-the-card',
+                'status' => 'entered-in-error', 'note' => '',
+            ],
+            [
+                'id' => 504, 'effective_datetime' => '2026-01-08 12:00:00', 'recorded_date' => '2026-01-08 12:00:00',
+                'observation_code' => '00000-1', 'observation_code_text' => 'SYNTHETIC unanswered preference',
+                'code_display' => 'SYNTHETIC unanswered preference', 'value_type' => 'boolean', 'value_code' => null,
+                'value_display' => null, 'value_boolean' => '0', 'value_text' => null,
+                'status' => 'amended', 'note' => '',
+            ],
+            [
+                'id' => 505, 'effective_datetime' => '2026-01-09 13:00:00', 'recorded_date' => '2026-01-09 13:00:00',
+                'observation_code' => '00000-1', 'observation_code_text' => 'SYNTHETIC unspecified preference',
+                'code_display' => 'SYNTHETIC unspecified preference', 'value_type' => 'coded', 'value_code' => null,
+                'value_display' => null, 'value_boolean' => null, 'value_text' => null,
+                'status' => 'synthetic-custom-status', 'note' => '',
+            ],
+        ];
+        $sig = static fn (
+            string $tag,
+            string $type = '',
+            string $name = '',
+            string $id = '',
+            string $value = '',
+            string $method = '',
+            bool $required = false,
+            bool $checked = false,
+            string $js = '',
+        ): string => implode('|', [$tag, $type, $name, $id, $value, $method, '', $required ? 'required' : '', $checked ? 'checked' : '', $js, '']);
+        $saveForm = static fn (string $type) => [
+            $sig('form', id: $type . '-form', method: 'post'),
+            $sig('input', 'hidden', 'csrf_token', value: 'synthetic-csrf-token'),
+            $sig('input', 'hidden', 'pref_type', value: $type),
+            $sig('input', 'hidden', 'action', value: 'save'),
+            $sig('input', 'hidden', 'id', $type . '-id'),
+            $sig('select', name: 'observation_code', id: $type . '-observation_code', required: true),
+            $sig('input', 'text', 'effective_datetime', $type . '-effective_datetime', '2026-01-02T03:04', required: true),
+            $sig('select', name: 'status', id: $type . '-status'),
+            $sig('input', 'radio', 'value_type', $type . '-vt-coded', 'coded', checked: true, js: 'js-value-type-radio'),
+            $sig('input', 'radio', 'value_type', $type . '-vt-text', 'text', js: 'js-value-type-radio'),
+            $sig('input', 'radio', 'value_type', $type . '-vt-boolean', 'boolean', js: 'js-value-type-radio'),
+            $sig('select', name: 'value_code', id: $type . '-value_code'),
+            $sig('input', 'hidden', 'value_code_system', $type . '-value_code_system'),
+            $sig('input', 'hidden', 'value_display', $type . '-value_display'),
+            $sig('textarea', name: 'value_text', id: $type . '-value_text'),
+            $sig('select', name: 'value_boolean', id: $type . '-value_boolean'),
+            $sig('textarea', name: 'note', id: $type . '-note'),
+            $sig('button', 'submit'),
+            $sig('button', 'button', js: 'js-cancel-edit'),
+        ];
+        $carePlan = static fn (array $rows, ?string $date, ?int $encounter): array => [
+            'id' => 'card_care_plan',
+            'title' => 'Care Plan',
+            'initiallyCollapsed' => false,
+            'forceAlwaysOpen' => false,
+            'auth' => false,
+            'card_bg_color' => '',
+            'card_text_color' => '',
+            'pid' => 1,
+            'rows' => $rows,
+            'mostRecentDate' => $date,
+            'encounter' => $encounter,
+        ];
+        $billing = self::billingCardDetailsParameters(...);
+
+        return [
+            'preference care experience populated' => [
+                'template' => 'patient/card/preference_card_inline.html.twig',
+                'parameters' => $preference('care_experience', 'carepref_ps_expand', true, true, $rows, 'SYNTHETIC preference saved'),
+                'fixture' => 'preference-card-care-experience-populated.html',
+                'requiredControls' => array_merge($saveForm('care_experience'), [
+                    $sig('form', method: 'post'),
+                    $sig('input', 'hidden', 'action', value: 'delete'),
+                    $sig('input', 'hidden', 'id', value: '501'),
+                    $sig('input', 'hidden', 'id', value: '505'),
+                    $sig('button', 'submit'),
+                ]),
+            ],
+            'preference treatment empty' => [
+                'template' => 'patient/card/preference_card_inline.html.twig',
+                'parameters' => $preference('treatment_intervention', 'treatmentpref_ps_expand', true, true, [], null),
+                'fixture' => 'preference-card-treatment-empty.html',
+                'requiredControls' => $saveForm('treatment_intervention'),
+            ],
+            'preference care experience read only' => [
+                'template' => 'patient/card/preference_card_inline.html.twig',
+                'parameters' => $preference('care_experience', 'carepref_ps_expand', true, false, $rows, null),
+                'fixture' => 'preference-card-care-experience-read-only.html',
+                'requiredControls' => [],
+            ],
+            'preference treatment unauthorized' => [
+                'template' => 'patient/card/preference_card_inline.html.twig',
+                'parameters' => $preference('treatment_intervention', 'treatmentpref_ps_expand', false, true, $rows, null),
+                'fixture' => 'preference-card-treatment-unauthorized.html',
+                'requiredControls' => [],
+            ],
+            'care plan empty' => [
+                'template' => 'patient/card/care_plan.html.twig',
+                'parameters' => $carePlan([], null, null),
+                'fixture' => 'care-plan-card-empty.html',
+                'requiredControls' => [],
+            ],
+            'care plan populated' => [
+                'template' => 'patient/card/care_plan.html.twig',
+                'parameters' => $carePlan([
+                    [
+                        'user' => 'SYNTHETIC-author',
+                        'care_plan_type' => 'plan_of_care',
+                        'plan_engagement_category' => 'synthetic',
+                        'code' => 'SNOMED-CT:000000000',
+                        'codetext' => 'SYNTHETIC code text',
+                        'description' => "SYNTHETIC first line\nSYNTHETIC-description-without-any-break-points-to-exercise-overflow-wrapping",
+                        'date' => '2026-01-05 09:00:00',
+                    ],
+                ], '2026-01-05', 12),
+                'fixture' => 'care-plan-card-details-populated.html',
+                'requiredControls' => [$sig('a', js: 'js-care-plan-goto-encounter')],
+            ],
+            'billing full' => [
+                'template' => 'patient/card/billing.html.twig',
+                'parameters' => $billing([
+                    'patientBalance' => 12.5,
+                    'insuranceBalance' => 40,
+                    'totalBalance' => 52.5,
+                    'collectionBalance' => 7,
+                    'unallocated' => 3,
+                    'billingNote' => 'SYNTHETIC-billing-note-without-any-break-points-to-exercise-overflow-wrapping-in-the-card',
+                    'provider' => true,
+                    'insName' => 'SYNTHETIC Insurance Company',
+                    'copay' => '20.00',
+                    'effDate' => '2026-01-01',
+                    'effDateEnd' => '2026-12-31',
+                ]),
+                'fixture' => 'billing-card-full.html',
+                'requiredControls' => [],
+            ],
+            'billing minimal' => [
+                'template' => 'patient/card/billing.html.twig',
+                'parameters' => $billing([
+                    'patientBalance' => 0,
+                    'insuranceBalance' => 0,
+                    'totalBalance' => 0,
+                    'collectionBalance' => 0,
+                    'unallocated' => 0,
+                ]),
+                'fixture' => 'billing-card-minimal.html',
+                'requiredControls' => [],
+            ],
+        ];
     }
 
     /**
