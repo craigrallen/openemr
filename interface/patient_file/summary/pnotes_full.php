@@ -16,6 +16,7 @@ require_once($srcdir . '/options.inc.php');
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -215,6 +216,10 @@ $result_sent = getSentPnotesByDate(
 <head>
 
     <?php Header::setupHeader(['common', 'opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url($clinicalAssets->version('workspace.css')); ?>">
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-messages.css?v=<?php echo attr_url($clinicalAssets->version('patient-messages.css')); ?>">
+    <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 
 <script>
 /// todo, move this to a common library
@@ -279,7 +284,7 @@ function restoreSession() {
 }
 </script>
 </head>
-<body>
+<body class="oe-clinical-messages">
 
 <div class="container mt-3" id="pnotes"> <!-- large outer DIV -->
 

@@ -19,6 +19,7 @@ require_once($srcdir . "/options.inc.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Core\Header;
@@ -175,6 +176,10 @@ $result = getPnotesByDate(
 <head>
 
 <?php Header::setupHeader(['common', 'datetime-picker', 'opener']); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url($clinicalAssets->version('workspace.css')); ?>">
+<link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-messages.css?v=<?php echo attr_url($clinicalAssets->version('patient-messages.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 
 <script>
 function submitform(attr) {
@@ -184,7 +189,7 @@ function submitform(attr) {
 }
 </script>
 </head>
-<body>
+<body class="oe-clinical-message-compose">
     <div class="container"> <!-- large outer DIV -->
         <div id="pnotes">
             <?php

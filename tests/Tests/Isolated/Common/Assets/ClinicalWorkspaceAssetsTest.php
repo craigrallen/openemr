@@ -209,6 +209,24 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function patientMessagesStylesheetIsVersioned(): void
+    {
+        $this->writeAsset('patient-messages.css', 1_700_001_001);
+
+        self::assertSame('1700001001', (new ClinicalWorkspaceAssets($this->directory))->version('patient-messages.css'));
+    }
+
+    #[Test]
+    public function shippedPatientMessagesStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/patient-messages.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-messages.css'));
+    }
+
+    #[Test]
     public function shippedSoapDocumentAssetsExist(): void
     {
         $assets = new ClinicalWorkspaceAssets();
