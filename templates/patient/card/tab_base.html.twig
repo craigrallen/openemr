@@ -1,10 +1,12 @@
 {% extends "patient/card/card_base.html.twig" %}
 
 {% block content %}
+{% if tabID == 'DEM' %}<div id="oe-demographics-facts" class="oe-demographics-facts">{% endif %}
 <ul class="tabNav">
     {{ tabRow(tabID, result, result2) }}
 </ul>
 <div class="tabContainer">
     {{ tabData(tabID, result, result2) }}
 </div>
+{% if tabID == 'DEM' %}</div>{% endif %}
 {% endblock %}

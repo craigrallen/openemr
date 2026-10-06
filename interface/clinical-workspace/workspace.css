@@ -328,3 +328,108 @@ body.oe-clinical-soap.oe-clinical-workspace .btn-group .btn {
     margin-top: 0.7rem !important;
   }
 }
+
+/*
+ * Demographics card facts: the real wrapper ID beats the legacy theme's table selectors.
+ * Dynamic layout output, inline field borders and semantic warning classes stay intact.
+ */
+@media screen {
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts {
+    max-width: 60rem;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts ul.tabNav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    border-bottom: 1px solid var(--oe-line);
+    list-style: none;
+    background-color: var(--oe-paper);
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts ul.tabNav a {
+    display: inline-block;
+    background-color: var(--oe-paper);
+    padding: 0.35rem 0.1rem 0.4rem;
+    color: var(--oe-muted);
+    font-size: 0.875rem;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts ul.tabNav a:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts ul.tabNav li.current a {
+    padding-bottom: calc(0.4rem - 2px);
+    border-bottom: 2px solid var(--oe-petrol);
+    color: var(--oe-ink);
+    font-weight: 600;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts div.tabContainer table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts .tabContainer > .tab {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.label_custom {
+    /* The compiled legacy tab theme marks its .8rem cell size important. */
+    padding: 0.45rem 0.75rem 0.45rem 0;
+    border-top: 1px solid #e3ebe9;
+    color: var(--oe-muted);
+    font-size: 0.875rem !important;
+    font-weight: 600;
+    vertical-align: top;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.data {
+    padding: 0.45rem 1rem 0.45rem 0;
+    border-top: 1px solid #e3ebe9;
+    color: var(--oe-ink);
+    font-size: 1rem !important;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  /* Subgroup headings: quiet text over a rule instead of the grey band; spacer rows (empty) untouched. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.label[colspan][style*='background-color'] {
+    padding-top: 0.9rem !important;
+    border-bottom: 1px solid var(--oe-line);
+    background-color: transparent !important;
+    color: var(--oe-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+@media screen and (width <= 640px) {
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.label_custom,
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.data {
+    display: block;
+    width: auto;
+    padding-right: 0;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.label_custom {
+    padding-bottom: 0.1rem;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-demographics-facts#oe-demographics-facts td.data {
+    padding-top: 0;
+    border-top: 0;
+  }
+}

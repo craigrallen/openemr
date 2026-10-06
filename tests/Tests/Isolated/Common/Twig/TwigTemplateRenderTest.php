@@ -40,6 +40,41 @@ class TwigTemplateRenderTest extends TestCase
     private static ?Environment $twig = null;
 
     /**
+     * Shape of display_layout_tabs() output (library/options.inc.php) for a site whose
+     * layout renames and adds DEM groups. Stands in for the DB-backed renderer.
+     */
+    private const DEMOGRAPHICS_TAB_ROW = "<li class=\"current\">\n"
+        . "<a href=\"#\" id=\"header_tab_Who\">\nWho</a>\n</li>\n"
+        . "<li >\n<a href=\"#\" id=\"header_tab_Contact\">\nContact</a>\n</li>\n"
+        . "<li >\n<a href=\"#\" id=\"header_tab_Clinic Extras\">\nClinic Extras</a>\n</li>\n";
+
+    /**
+     * Shape of display_layout_tabs_data() output: arbitrary colspans, a subgroup heading with
+     * its spacer, a long unbroken value, a link, a bordered field, an empty value and a warning.
+     */
+    private const DEMOGRAPHICS_TAB_DATA = "<div class='tab current'>\n<table border='0' cellpadding='0'>\n"
+        . "<tr><td class='label_custom' colspan='1' id='label_fname'><span class='text-nowrap mr-2'><span id='label_fname'>Name:</span></span></td>"
+        . "<td class='text data' colspan='3' id='text_fname'  data-value='Synthetic'><span id='text_fname' style='display: none'>Synthetic</span>Synthetic Example-Patient</td></tr>\n"
+        . "<tr><td class='label' style='background-color: var(--gray300); padding: 4px' colspan='4'>Identifiers</td></tr>\n"
+        . "<tr><td class='label' style='height: 5px' colspan='4'></td></tr>\n"
+        . "<tr><td class='label_custom' colspan='1' id='label_ss'><span class='text-nowrap mr-2'><span id='label_ss'>S.S.:</span></span></td>"
+        . "<td class='text data' colspan='1' id='text_ss'  data-value=''><span id='text_ss' style='display: none'></span>&nbsp;</td>"
+        . "<td class='label_custom' colspan='1' id='label_DOB'><span class='text-nowrap mr-2'><span id='label_DOB'>DOB:</span></span></td>"
+        . "<td class='text data' colspan='1' id='text_DOB'  data-value='1970-01-01' style='border: 1px solid var(--gray400)'><span id='text_DOB' style='display: none'>1970-01-01</span>1970-01-01</td></tr>\n"
+        . "</table>\n</div>\n"
+        . "<div class='tab'>\n<table border='0' cellpadding='0'>\n"
+        . "<tr><td class='label_custom' colspan='1' id='label_email'><span class='text-nowrap mr-2'><span id='label_email'>Email:</span></span></td>"
+        . "<td class='text data' colspan='3' id='text_email'  data-value='synthetic.patient.with.a.very.long.unbroken.address@example-clinic-domain.invalid'><span id='text_email' style='display: none'>synthetic.patient.with.a.very.long.unbroken.address@example-clinic-domain.invalid</span><a href='mailto:synthetic.patient.with.a.very.long.unbroken.address@example-clinic-domain.invalid'>synthetic.patient.with.a.very.long.unbroken.address@example-clinic-domain.invalid</a></td></tr>\n"
+        . "</table>\n</div>\n"
+        . "<div class='tab'>\n<table border='0' cellpadding='0'>\n"
+        . "<tr><td class='label_custom' colspan='1' id='label_userlist1'><span class='text-nowrap mr-2'><span id='label_userlist1'>Clinic Extra:</span></span></td>"
+        . "<td class='text data' colspan='3' id='text_userlist1'  data-value='x'><span id='text_userlist1' style='display: none'>x</span><span class='text-danger'>Unverified</span></td></tr>\n"
+        . "</table>\n</div>\n";
+
+    /** @var list<array{string, mixed, mixed}> */
+    private static array $layoutTabCalls = [];
+
+    /**
      * The rendering globals as they were before this class first touched them.
      *
      * Captured at the first mutation rather than in setUpBeforeClass(), because PHPUnit resolves
@@ -936,6 +971,12 @@ class TwigTemplateRenderTest extends TestCase
             $fixtureDir . '/care-plan-card-populated.html',
         ];
 
+        yield 'patient/card demographics custom layout groups' => [
+            'patient/card/tab_base.html.twig',
+            self::demographicsCardParameters(),
+            $fixtureDir . '/demographics-card-custom-groups.html',
+        ];
+
         yield 'patient/card care plan collapsed' => [
             'patient/card/care_plan.html.twig',
             [
@@ -1138,6 +1179,108 @@ class TwigTemplateRenderTest extends TestCase
      * verify template structure, not header generation.
      *
      */
+    /**
+     * The workbench wrapper adds one hook around the legacy layout output and changes nothing
+     * inside it: renderer arguments, tab markup, IDs, values and the ul/div sibling order that
+     * library/js/common.js navigates all survive byte-for-byte.
+     */
+    #[Test]
+    public function demographicsCardWrapsLegacyLayoutOutputUnchanged(): void
+    {
+        self::$layoutTabCalls = [];
+        $parameters = self::demographicsCardParameters();
+        $template = (new \ReflectionClass(\OpenEMR\Patient\Cards\DemographicsViewCard::class))->getConstant('TEMPLATE_FILE');
+        self::assertIsString($template);
+        $html = self::twigEnvironment()->render($template, $parameters);
+
+        self::assertSame([
+            ['tabRow:DEM', $parameters['result'], $parameters['result2']],
+            ['tabData:DEM', $parameters['result'], $parameters['result2']],
+        ], self::$layoutTabCalls);
+        self::assertSame(1, substr_count($html, self::DEMOGRAPHICS_TAB_ROW));
+        self::assertSame(1, substr_count($html, self::DEMOGRAPHICS_TAB_DATA));
+
+        $dom = new \DOMDocument();
+        self::assertTrue($dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NONET));
+        $xpath = new \DOMXPath($dom);
+        $wrappers = $xpath->query('//div[@id="card_demographics"]//div[@class="oe-demographics-facts"]');
+        self::assertNotFalse($wrappers);
+        self::assertSame(1, $wrappers->length);
+        $wrapper = $wrappers->item(0);
+        self::assertInstanceOf(\DOMElement::class, $wrapper);
+        self::assertSame('oe-demographics-facts', $wrapper->getAttribute('id'));
+
+        $tabNav = $wrapper->firstElementChild;
+        self::assertInstanceOf(\DOMElement::class, $tabNav);
+        self::assertSame('ul', $tabNav->tagName);
+        self::assertSame('tabNav', $tabNav->getAttribute('class'));
+        $tabContainer = $tabNav->nextElementSibling;
+        self::assertInstanceOf(\DOMElement::class, $tabContainer);
+        self::assertSame('tabContainer', $tabContainer->getAttribute('class'));
+        self::assertNull($tabContainer->nextElementSibling);
+
+        $current = $xpath->query('.//li[@class="current"]/a/@id', $tabNav);
+        self::assertNotFalse($current);
+        $tabIds = [];
+        foreach ($current as $idNode) {
+            self::assertInstanceOf(\DOMAttr::class, $idNode);
+            $tabIds[] = $idNode->value;
+        }
+        self::assertSame(['header_tab_Who'], $tabIds);
+        $values = $xpath->query('.//td[contains(@class, "data")]/@data-value', $tabContainer);
+        self::assertNotFalse($values);
+        self::assertCount(5, $values);
+    }
+
+    #[Test]
+    public function nonDemographicsTabCardKeepsOriginalLayoutWithoutFactsWrapper(): void
+    {
+        self::$layoutTabCalls = [];
+        $parameters = self::demographicsCardParameters();
+        $parameters['tabID'] = 'HIS';
+        $html = self::twigEnvironment()->render('patient/card/tab_base.html.twig', $parameters);
+        self::assertStringNotContainsString('oe-demographics-facts', $html);
+        self::assertSame([
+            ['tabRow:HIS', $parameters['result'], $parameters['result2']],
+            ['tabData:HIS', $parameters['result'], $parameters['result2']],
+        ], self::$layoutTabCalls);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function demographicsCardParameters(): array
+    {
+        return [
+            'id' => 'card_demographics',
+            'tabID' => 'DEM',
+            'title' => 'Demographics',
+            'initiallyCollapsed' => false,
+            'forceAlwaysOpen' => false,
+            'auth' => true,
+            'btnLabel' => 'Edit',
+            'btnLink' => 'demographics_full.php',
+            'linkMethod' => 'html',
+            'requireRestore' => true,
+            'btnClass' => 'btn btn-sm btn-link',
+            'card_bg_color' => '',
+            'card_text_color' => '',
+            'card' => new class {
+                public function canAdd(): bool
+                {
+                    return false;
+                }
+
+                public function canEdit(): bool
+                {
+                    return true;
+                }
+            },
+            'result' => ['pid' => 1, 'fname' => 'Synthetic', 'DOB' => '1970-01-01'],
+            'result2' => ['pid' => 1, 'name' => ''],
+        ];
+    }
+
     private static function twigEnvironment(): Environment
     {
         if (self::$twig !== null) {
@@ -1177,6 +1320,24 @@ class TwigTemplateRenderTest extends TestCase
         $twig->addFunction(new TwigFunction(
             'csrfTokenRaw',
             fn (string $subject = 'default'): string => 'test-csrf-token',
+        ));
+
+        // tabRow()/tabData() read the patient's layout from the database. Stub them with the
+        // legacy renderer's markup so the demographics card renders isolated; the calls are
+        // recorded so tests can prove the arguments reach the renderer unchanged.
+        $twig->addFunction(new TwigFunction(
+            'tabRow',
+            function (string $formType, mixed $result1, mixed $result2): string {
+                self::$layoutTabCalls[] = ['tabRow:' . $formType, $result1, $result2];
+                return self::DEMOGRAPHICS_TAB_ROW;
+            },
+        ));
+        $twig->addFunction(new TwigFunction(
+            'tabData',
+            function (string $formType, mixed $result1, mixed $result2): string {
+                self::$layoutTabCalls[] = ['tabData:' . $formType, $result1, $result2];
+                return self::DEMOGRAPHICS_TAB_DATA;
+            },
         ));
 
         // PostCalendar templates use pc_sort_events and
