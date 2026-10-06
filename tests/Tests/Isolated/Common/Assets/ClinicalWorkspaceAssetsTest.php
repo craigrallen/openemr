@@ -109,6 +109,8 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'absolute path' => ['/etc/passwd'],
             'case variant' => ['Appointment.CSS'],
             'query suffix' => ['mode.js?v=1'],
+            'near-miss lbf stylesheet' => ['lbf_document.css'],
+            'lbf stylesheet outside the workspace' => ['../forms/LBF/lbf-document.css'],
             'trailing nul' => ["mode.js\0"],
         ];
     }
@@ -209,6 +211,27 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('encounter-document.css'));
+    }
+
+    #[Test]
+    public function lbfDocumentStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('lbf-document.css', 1_700_001_101);
+        $this->writeAsset('encounter-document.css', 1_700_001_102);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700001101', $assets->version('lbf-document.css'));
+        self::assertSame('1700001102', $assets->version('encounter-document.css'));
+    }
+
+    #[Test]
+    public function shippedLbfDocumentStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/lbf-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('lbf-document.css'));
     }
 
     #[Test]

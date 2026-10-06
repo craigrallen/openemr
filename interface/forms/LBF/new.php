@@ -16,6 +16,7 @@
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Forms\CoreFormToPortalUtility;
 use OpenEMR\Common\Forms\EncounterFormAccess;
@@ -126,6 +127,9 @@ if ($form_origin !== null) {
     )['pid'] ?? 0;
 }
 $is_core = !($portal_form_pid || $patient_portal || $is_portal_dashboard || $is_portal_module);
+// Workbench document presentation is limited to staff encounter forms. Portal, issue-form tab
+// and trend/graph pages keep their own presentation.
+$lbf_workbench_document = $is_core && !$from_issue_form && !$from_trend_form;
 
 if ($patientPortalSession && !empty($formid)) {
     $pidForm = sqlQuery("SELECT `pid` FROM `forms` WHERE `form_id` = ? AND `formdir` = ?", [$formid, $formname])['pid'];
@@ -438,6 +442,12 @@ if (
         }
 
     </style>
+    <?php if ($lbf_workbench_document) { // Screen-only; inert until mode.js finds an active workbench. ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url($clinicalAssets->version('workspace.css')); ?>">
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/lbf-document.css?v=<?php echo attr_url($clinicalAssets->version('lbf-document.css')); ?>">
+        <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
+    <?php } ?>
 
     <?php require_once OEGlobalsBag::getInstance()->getSrcDir() . "/options.js.php"; ?>
 
@@ -917,11 +927,11 @@ if (
     </script>
 </head>
 
-<body class="body_top"<?php if ($from_issue_form) {
+<body class="body_top<?php echo $lbf_workbench_document ? ' oe-clinical-lbf' : ''; ?>"<?php if ($from_issue_form) {
     echo " style='background-color:var(--white)'";
-                      } ?>>
+                     } ?>>
     <!-- Set as a container until xl breakpoint then make fluid. -->
-    <div class="container-xl">
+    <div class="container-xl oe-lbf-document">
         <?php
         // form-inline is more consistent with the fact that LBFs are not designed for
         // small devices. In particular we prefer horizontal arrangement of multiple
@@ -1795,7 +1805,7 @@ if (
 
                 ?>
                 <br />
-                <div class='row'>
+                <div class='row oe-lbf-actions'>
                     <div class='col-12'>
                         <div class="btn-group">
                             <?php

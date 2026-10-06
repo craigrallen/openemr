@@ -1,0 +1,105 @@
+/*
+ * LBF visit forms as a document inside the clinical workbench.
+ *
+ * new.php links this file only for staff encounter forms, and every rule is scoped to the
+ * route class plus the oe-clinical-workspace class that mode.js adds inside an active
+ * workbench. Direct, portal, issue-form, trend and print presentations are unaffected.
+ *
+ * Both renderers (Bootstrap rows and the legacy history table) are styled through their shared
+ * wrappers only. No rule sizes, hides or re-flows a field, label, history cell or section, so
+ * layout columns, datepickers, show/hide groups and skip conditions behave as before.
+ */
+@media screen {
+  /* Date/age readouts use plain Bootstrap tables; preserve explicit semantic table variants. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .lbfdata table.table:not([class*='table-']) {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    padding-top: 1.25rem;
+    padding-bottom: 0.5rem;
+    font-size: 1rem;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    outline: 1px solid var(--oe-line);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgb(23 52 59 / 6%);
+  }
+
+  /* Title line: form name, patient and visit date. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document h3 {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    font-size: 1.75rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--oe-line);
+  }
+
+  /* Group headings: the existing show/hide checkbox labels. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document label[role='button'] {
+    margin-top: 0.5rem;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document label[role='button'] strong {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  /* Group bodies: a quiet ruled panel in place of the primary-colour box. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document div.section {
+    padding: 0.4375rem;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border: 1px solid var(--oe-line);
+    border-left: 1px solid var(--oe-petrol);
+    border-radius: 0.375rem;
+  }
+
+  /* Group subtitles and history date headers use Bootstrap's !important .text-primary utility. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .lbfdata .text-primary {
+    background-color: var(--oe-paper);
+    color: var(--oe-petrol) !important;
+  }
+
+  /* Action row: ruled off from the form body; Save carries the workbench accent. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .oe-lbf-actions .btn-group {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .oe-lbf-actions {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .oe-lbf-actions .btn-save {
+    background-color: var(--oe-petrol);
+    color: #fff;
+    border-color: var(--oe-petrol);
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .oe-lbf-actions .btn-save:hover,
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document .oe-lbf-actions .btn-save:focus {
+    background-color: #06525f;
+    color: #fff;
+    border-color: #06525f;
+  }
+
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document hr {
+    border-top-color: var(--oe-line);
+  }
+
+  /* Layout revision footer. */
+  body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document p.small {
+    background-color: var(--oe-paper);
+    color: var(--oe-muted);
+  }
+}
