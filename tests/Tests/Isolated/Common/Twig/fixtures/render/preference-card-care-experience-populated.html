@@ -1,0 +1,479 @@
+<section class="card ">
+    <div class="card-body p-1">
+        <h6 class="card-title mb-0 d-flex p-1 justify-content-between">
+            <a class="text-left font-weight-bolder" href="#"  data-toggle="collapse" data-target="#carepref_ps_expand"  aria-expanded="true" aria-controls="carepref_ps_expand">Care Experience Preferences<i class="ml-1 fa fa-fw  fa-compress " data-target="#carepref_ps_expand"></i></a>
+                            <span>
+                                                    <a class="js-card-toggle-edit" href="#"  onclick="event.preventDefault();"><i class="fa fa-pencil-alt">&nbsp;</i></a>
+                                </span>
+                    </h6>
+        <div id="carepref_ps_expand" class="card-text collapse show">
+            <div class="clearfix pt-2">
+                    <html>
+    <head>
+                    <!-- setupHeader stub -->
+                <script>
+            $(function () {
+                $('.datepicker').datetimepicker({
+                    timepicker: true,
+                    formatDate: 'Y-m-d',
+                    format: 'Y-m-d'
+                });
+            });
+        </script>
+    </head>
+                <div class="alert alert-success py-2 mb-2">
+            <i class="fa fa-check-circle"></i> SYNTHETIC preference saved
+        </div>
+
+        <div class="js-view oe-card-details oe-card-details--preference" id="care_experience-view">
+                    <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Preference</th>
+                        <th>Patient`s Choice</th>
+                        <th>Status</th>
+                                                    <th class="text-center">Actions</th>
+                                            </tr>
+                    </thead>
+                    <tbody>
+                                            <tr>
+                            <td><small class="text-muted">2026-01-05</small></td>
+                            <td>
+                                <strong>SYNTHETIC preference category</strong>
+                                                                    <br><small class="text-muted"><i class="fa fa-comment"></i> SYNTHETIC note</small>
+                                                            </td>
+                            <td>
+                                                                    <span class="badge badge-info">SYNTHETIC coded answer</span>
+                                                            </td>
+                            <td>
+                                                                                                    <span class="badge badge-success">Final</span>
+                                                            </td>
+                                                            <td class="float-right">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm js-edit-row"
+                                                data-pref='{"id":501,"effective_datetime":"2026-01-05 09:00:00","recorded_date":"2026-01-05 09:00:00","observation_code":"00000-1","observation_code_text":"SYNTHETIC preference category","code_display":"SYNTHETIC preference category","value_type":"coded","value_code":"SYN-A","value_display":"SYNTHETIC coded answer","value_boolean":null,"value_text":null,"status":"final","note":"SYNTHETIC note"}'                                                 title="Edit">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                                            <input type="hidden" name="pref_type" value="care_experience">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="501">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                                    </tr>
+                                            <tr>
+                            <td><small class="text-muted">2026-01-06</small></td>
+                            <td>
+                                <strong>SYNTHETIC yes/no preference</strong>
+                                                            </td>
+                            <td>
+                                                                                                            <span class="badge badge-success"><i class="fa fa-check"></i> Yes</span>
+                                                                                                </td>
+                            <td>
+                                                                                                    <span class="badge badge-warning">Preliminary</span>
+                                                            </td>
+                                                            <td class="float-right">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm js-edit-row"
+                                                data-pref='{"id":502,"effective_datetime":null,"recorded_date":"2026-01-06 10:00:00","observation_code":"00000-2","observation_code_text":"SYNTHETIC yes\/no preference","code_display":"SYNTHETIC yes\/no preference","value_type":"boolean","value_code":null,"value_display":null,"value_boolean":"1","value_text":null,"status":"preliminary","note":""}'                                                 title="Edit">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                                            <input type="hidden" name="pref_type" value="care_experience">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="502">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                                    </tr>
+                                            <tr>
+                            <td><small class="text-muted">2026-01-07</small></td>
+                            <td>
+                                <strong>SYNTHETIC free text preference</strong>
+                                                            </td>
+                            <td>
+                                                                    SYNTHETIC-free-text-answer-without-any-break-points-to-exercise-overflow-wrapping-in-the-card
+                                                            </td>
+                            <td>
+                                                                                                    <span class="badge badge-danger">Error</span>
+                                                            </td>
+                                                            <td class="float-right">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm js-edit-row"
+                                                data-pref='{"id":503,"effective_datetime":"2026-01-07 11:00:00","recorded_date":"2026-01-07 11:00:00","observation_code":"00000-2","observation_code_text":"SYNTHETIC free text preference","code_display":"SYNTHETIC free text preference","value_type":"text","value_code":null,"value_display":null,"value_boolean":null,"value_text":"SYNTHETIC-free-text-answer-without-any-break-points-to-exercise-overflow-wrapping-in-the-card","status":"entered-in-error","note":""}'                                                 title="Edit">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                                            <input type="hidden" name="pref_type" value="care_experience">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="503">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                                    </tr>
+                                            <tr>
+                            <td><small class="text-muted">2026-01-08</small></td>
+                            <td>
+                                <strong>SYNTHETIC unanswered preference</strong>
+                                                            </td>
+                            <td>
+                                                                                                            <span class="badge badge-secondary"><i class="fa fa-times"></i> No</span>
+                                                                                                </td>
+                            <td>
+                                                                                                    <span class="badge badge-info">Amended</span>
+                                                            </td>
+                                                            <td class="float-right">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm js-edit-row"
+                                                data-pref='{"id":504,"effective_datetime":"2026-01-08 12:00:00","recorded_date":"2026-01-08 12:00:00","observation_code":"00000-1","observation_code_text":"SYNTHETIC unanswered preference","code_display":"SYNTHETIC unanswered preference","value_type":"boolean","value_code":null,"value_display":null,"value_boolean":"0","value_text":null,"status":"amended","note":""}'                                                 title="Edit">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                                            <input type="hidden" name="pref_type" value="care_experience">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="504">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                                    </tr>
+                                            <tr>
+                            <td><small class="text-muted">2026-01-09</small></td>
+                            <td>
+                                <strong>SYNTHETIC unspecified preference</strong>
+                                                            </td>
+                            <td>
+                                                                    <span class="text-muted">Not specified</span>
+                                                            </td>
+                            <td>
+                                                                                                    <span class="badge badge-secondary">synthetic-custom-status</span>
+                                                            </td>
+                                                            <td class="float-right">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm js-edit-row"
+                                                data-pref='{"id":505,"effective_datetime":"2026-01-09 13:00:00","recorded_date":"2026-01-09 13:00:00","observation_code":"00000-1","observation_code_text":"SYNTHETIC unspecified preference","code_display":"SYNTHETIC unspecified preference","value_type":"coded","value_code":null,"value_display":null,"value_boolean":null,"value_text":null,"status":"synthetic-custom-status","note":""}'                                                 title="Edit">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                                            <input type="hidden" name="pref_type" value="care_experience">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="505">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                                    </tr>
+                                        </tbody>
+                </table>
+            </div>
+            </div>
+
+                <div class="js-edit oe-card-details oe-card-details--preference-edit" id="care_experience-edit" style="display:none;">
+            <form method="post" id="care_experience-form">
+                <input type="hidden" name="csrf_token" value="synthetic-csrf-token">
+                <input type="hidden" name="pref_type" value="care_experience">
+                <input type="hidden" name="action" value="save">
+                <input type="hidden" name="id" id="care_experience-id">
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="care_experience-observation_code">
+                            Preference Category
+                            <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control" name="observation_code" id="care_experience-observation_code" required>
+                            <option value="">Select...</option>
+                                                            <option value="00000-1" data-text="SYNTHETIC preference category">
+                                    SYNTHETIC preference category (00000-1)
+                                </option>
+                                                            <option value="00000-2" data-text="SYNTHETIC preference category with a deliberately long display name">
+                                    SYNTHETIC preference category with a deliberately long display name (00000-2)
+                                </option>
+                                                    </select>
+                        <input type="hidden" name="observation_code_text" id="care_experience-observation_code_text">
+                        <small class="form-text text-muted">LOINC-coded list for FHIR compliance</small>
+                    </div>
+
+                    <div class="form-group col-md-3">
+                        <label for="care_experience-effective_datetime">Date Recorded <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control datepicker" name="effective_datetime" id="care_experience-effective_datetime" value="2026-01-02T03:04" required>
+                    </div>
+
+                    <div class="form-group col-md-3">
+                        <label for="care_experience-status">Status</label>
+                        <select class="form-control" name="status" id="care_experience-status">
+                            <option value="final">Final</option>
+                            <option value="preliminary">Preliminary</option>
+                            <option value="amended">Amended</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Response Type <span class="text-danger">*</span></label>
+                    <div class="form-check">
+                        <input class="form-check-input js-value-type-radio" type="radio" name="value_type" id="care_experience-vt-coded" value="coded" checked>
+                        <label class="form-check-label" for="care_experience-vt-coded">Coded Value (from answer list)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input js-value-type-radio" type="radio" name="value_type" id="care_experience-vt-text" value="text">
+                        <label class="form-check-label" for="care_experience-vt-text">Free Text</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input js-value-type-radio" type="radio" name="value_type" id="care_experience-vt-boolean" value="boolean">
+                        <label class="form-check-label" for="care_experience-vt-boolean">Yes/No</label>
+                    </div>
+                </div>
+
+                <div id="care_experience-codedValueSection">
+                    <div class="form-group">
+                        <label for="care_experience-value_code">Patient`s Preference <span class="text-danger">*</span></label>
+                        <select class="form-control" name="value_code" id="care_experience-value_code">
+                            <option value="">Select preference first...</option>
+                        </select>
+                        <input type="hidden" name="value_code_system" id="care_experience-value_code_system">
+                        <input type="hidden" name="value_display" id="care_experience-value_display">
+                    </div>
+                </div>
+
+                <div id="care_experience-textValueSection" style="display:none;">
+                    <div class="form-group">
+                        <label for="care_experience-value_text">Patient`s Preference (Free Text) <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="value_text" id="care_experience-value_text" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div id="care_experience-booleanValueSection" style="display:none;">
+                    <div class="form-group">
+                        <label for="care_experience-value_boolean">Patient`s Preference <span class="text-danger">*</span></label>
+                        <select class="form-control" name="value_boolean" id="care_experience-value_boolean">
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="care_experience-note">Additional Notes</label>
+                    <textarea class="form-control" name="note" id="care_experience-note" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-save"></i> Save Preference</button>
+                    <button type="button" class="btn btn-secondary btn-sm js-cancel-edit"><i class="fa fa-undo"></i> Cancel</button>
+                </div>
+            </form>
+        </div>
+
+    <script>
+        (function ($) {
+            const type = "care_experience";
+
+            function setObsText($scope) {
+                const $sel = $scope.find("#" + type + "-observation_code option:selected");
+                $scope.find("#" + type + "-observation_code_text").val($sel.data("text") || "");
+            }
+
+            function toggleSections(mode, $scope) {
+                if (mode === "edit") {
+                    $scope.find("#" + type + "-view").hide();
+                    $scope.find("#" + type + "-edit").show();
+                } else {
+                    $scope.find("#" + type + "-edit").hide();
+                    $scope.find("#" + type + "-view").show();
+                    resetForm($scope);
+                }
+            }
+
+            function toggleValueFields($scope) {
+                const vt = $scope.find("input[name='value_type']:checked").val();
+                // Use hide/show instead of toggle to ensure consistent state
+                if (vt === "coded") {
+                    $scope.find("#" + type + "-codedValueSection").show();
+                    $scope.find("#" + type + "-textValueSection").hide();
+                    $scope.find("#" + type + "-booleanValueSection").hide();
+                } else if (vt === "text") {
+                    $scope.find("#" + type + "-codedValueSection").hide();
+                    $scope.find("#" + type + "-textValueSection").show();
+                    $scope.find("#" + type + "-booleanValueSection").hide();
+                } else if (vt === "boolean") {
+                    $scope.find("#" + type + "-codedValueSection").hide();
+                    $scope.find("#" + type + "-textValueSection").hide();
+                    $scope.find("#" + type + "-booleanValueSection").show();
+                }
+            }
+
+            function resetForm($scope) {
+                const $f = $scope.find("#" + type + "-form");
+                if ($f.length && $f[0]) $f[0].reset();
+                $scope.find("#" + type + "-id").val("");
+                $scope.find("#" + type + "-value_code").html(
+                    '<option value="">Select preference first...</option>'
+                );
+                $scope.find("#" + type + "-value_code_system").val("");
+                $scope.find("#" + type + "-value_display").val("");
+                toggleValueFields($scope);
+            }
+
+            //  robust loader for answers from library/ajax/get_preference_answers.php
+            function loadAnswers(loinc, $scope, afterPopulate) {
+                const $sel = $scope.find("#" + type + "-value_code");
+                // empty / placeholder
+                if (!loinc) {
+                    $sel.html('<option value="">Select preference first...</option>');
+                    if (afterPopulate) afterPopulate();
+                    return;
+                }
+                // show a tiny loading placeholder
+                $sel.html('<option value="">Loading…</option>');
+
+                $.getJSON("/openemr/library/ajax/get_preference_answers.php", {
+                    loinc_code: loinc,
+                    csrf_token: "test-csrf-token"
+                }).done(function (list) {
+                    if (!Array.isArray(list) || list.length === 0) {
+                        // No coded answers found: show a hint and optionally switch to free text
+                        $sel.html('<option value="">No codified answers available</option>');
+                        // OPTIONAL: auto-switch to text entry if no answers
+                        $scope.find("input[name='value_type'][value='text']").prop('checked', true);
+                        toggleValueFields($scope);
+                        if (afterPopulate) {
+                            afterPopulate();
+                        }
+                        return;
+                    }
+                    // Build options
+                    let html = '<option value="">Select response…</option>';
+                    list.forEach(function (a) {
+                        // a = { answer_code, answer_display, answer_system }
+                        html += '<option value="' + jsAttr(a.answer_code || '') + '"'
+                            + ' data-system="' + jsAttr(a.answer_system || '') + '"'
+                            + ' data-display="' + jsAttr(a.answer_display || '') + '">'
+                            + (jsAttr(a.answer_display) || jsAttr(a.answer_code) || '') + '</option>';
+                    });
+                    $sel.html(html);
+                    if (afterPopulate) {
+                        afterPopulate();
+                    }
+                }).fail(function (xhr) {
+                    console.error("Preference answers XHR failed", xhr && xhr.status, xhr && xhr.responseText);
+                    $sel.html('<option value="">Failed to load answers</option>');
+                    if (afterPopulate) {
+                        afterPopulate();
+                    }
+                });
+            }
+
+            function setValueDisplay($scope) {
+                const $opt = $scope.find("#" + type + "-value_code option:selected");
+                $scope.find("#" + type + "-value_code_system").val($opt.data("system") || "");
+                $scope.find("#" + type + "-value_display").val($opt.data("display") || "");
+            }
+
+            // Bind header icon (from card_base) if you used Option A (recommended)
+            $(document).on("click", ".js-card-toggle-edit", function (e) {
+                e.preventDefault();
+                const $section = $(this).closest("section");
+                toggleSections("edit", $section);
+            });
+
+            // Body buttons
+            $(document).on("click", ".js-toggle-edit", function () {
+                const $section = $(this).closest("section");
+                toggleSections("edit", $section);
+            });
+            $(document).on("click", ".js-cancel-edit", function () {
+                const $section = $(this).closest("section");
+                toggleSections("view", $section);
+            });
+
+            // FIXED: Add radio button change listener to toggle value fields
+            $(document).on("change", ".js-value-type-radio", function () {
+                const $section = $(this).closest("section");
+                toggleValueFields($section);
+            });
+
+            // Observation preference changed → load answers for that LOINC
+            $(document).on("change", "#" + type + "-observation_code", function () {
+                const $section = $(this).closest("section");
+                setObsText($section);
+                loadAnswers(this.value, $section);
+            });
+
+            // Answer changed → update hidden fields for system and display
+            $(document).on("change", "#" + type + "-value_code", function () {
+                const $section = $(this).closest("section");
+                setValueDisplay($section);
+            });
+
+            // Row edit → preload form and answers, then select existing answer
+            $(document).on("click", ".js-edit-row", function () {
+                const $section = $(this).closest("section");
+                const pref = $(this).data("pref");
+                toggleSections("edit", $section);
+
+                // Fill basics
+                $section.find("#" + type + "-id").val(pref.id || "");
+                $section.find("#" + type + "-observation_code").val(pref.observation_code || "");
+                $section.find("#" + type + "-observation_code_text").val(pref.observation_code_text || "");
+                $section.find("#" + type + "-effective_datetime").val((pref.effective_datetime || "").replace(" ", "T").substring(0, 16));
+                $section.find("#" + type + "-status").val(pref.status || "final");
+                $section.find("#" + type + "-note").val(pref.note || "");
+
+                const vt = (pref.value_type || "coded");
+                $section.find("input[name='value_type'][value='" + vt + "']").prop("checked", true);
+                toggleValueFields($section);
+
+                if (vt === "coded") {
+                    loadAnswers(pref.observation_code, $section, function () {
+                        $section.find("#" + type + "-value_code").val(pref.value_code || "").trigger("change");
+                        setValueDisplay($section);
+                    });
+                } else if (vt === "text") {
+                    $section.find("#" + type + "-value_text").val(pref.value_text || "");
+                } else if (vt === "boolean") {
+                    $section.find("#" + type + "-value_boolean").val(
+                        (pref.value_boolean === '1' || pref.value_boolean === 1 || pref.value_boolean === true) ? '1' : '0'
+                    );
+                }
+            });
+
+            // Initialize state for this card instance
+            (function init() {
+                const $section = $(document).find("#care_experience-form").closest("section");
+                toggleValueFields($section);
+            })();
+
+        })(jQuery);
+    </script>
+    </html>
+            </div>
+        </div>
+    </div>
+</section>

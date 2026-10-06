@@ -44,7 +44,7 @@
     {% endif %}
 
     {# VIEW SECTION #}
-    <div class="js-view" id="{{ type|attr }}-view">
+    <div class="js-view oe-card-details oe-card-details--preference" id="{{ type|attr }}-view">
         {% if preferences is empty %}
             <div class="alert alert-info mb-0">
                 <i class="fa fa-info-circle"></i>
@@ -140,7 +140,7 @@
 
     {# EDIT SECTION (hidden by default) #}
     {% if auth and can_write %}
-        <div class="js-edit" id="{{ type|attr }}-edit" style="display:none;">
+        <div class="js-edit oe-card-details oe-card-details--preference-edit" id="{{ type|attr }}-edit" style="display:none;">
             <form method="post" id="{{ type|attr }}-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token|attr }}">
                 <input type="hidden" name="pref_type" value="{{ type|attr }}">

@@ -433,3 +433,160 @@ body.oe-clinical-soap.oe-clinical-workspace .btn-group .btn {
     border-top: 0;
   }
 }
+
+/*
+ * Secondary dashboard cards: 16px values/headings; 14px secondary dates and status badges.
+ * The hooks sit on elements the card templates already render. Preference badges and muted ink
+ * receive paired contrast repairs; danger banners, alerts and warning rows retain their semantics.
+ * Wide tables keep their own .table-responsive scroller; no control or content is clipped.
+ */
+@media screen {
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details table {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details table th {
+    padding: 0.5rem 0.75rem 0.4rem;
+    border-bottom: 1px solid var(--oe-line);
+    background-color: var(--oe-paper);
+    color: var(--oe-muted);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    vertical-align: bottom;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details table td {
+    padding: 0.55rem 0.75rem;
+    border-top: 1px solid var(--oe-line);
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+
+  /* Dates, notes and status badges default to 12-13px; lift them to the 14px step. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details table td small,
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details .badge,
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details .form-text {
+    font-size: 0.875rem;
+  }
+
+  /* Retain teal/green status meanings while pairing white ink with accessible surfaces. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference .badge-info {
+    background-color: var(--oe-petrol);
+    color: #fff;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference .badge-success {
+    background-color: #17633b;
+    color: #fff;
+  }
+
+  /* Gray and yellow keep their meaning; themes that invert grays must not wash the ink out. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference .badge-secondary {
+    background-color: var(--oe-muted);
+    color: #fff;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference .badge-warning {
+    background-color: #ffc107;
+    color: var(--oe-ink);
+  }
+
+  /* Rows sit on the paper table; Bootstrap compiles .text-muted with an important color. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference table .text-muted {
+    background-color: var(--oe-paper);
+    color: var(--oe-muted) !important;
+  }
+
+  /* Legacy .text spans carry a 12pt serif-fallback face; let them follow the cell. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details table td .text {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  /* The preference row actions cell is marked float-right, which lifts it out of the row. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference td.float-right {
+    float: none !important;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference-edit label {
+    margin-bottom: 0.3rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference-edit .form-check-label {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--preference-edit .form-control {
+    font-size: 1rem;
+  }
+
+  /* Care plan cells keep their grid borders; the utility p-1 padding is important. */
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--care-plan th.p-1,
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--care-plan td.p-1 {
+    padding: 0.45rem 0.6rem !important;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--care-plan > p {
+    margin-bottom: 0.5rem !important;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--care-plan .list-group-item {
+    padding: 0.4rem 0.25rem !important;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing {
+    max-width: 40rem;
+    margin: 0;
+    padding: 0 0.25rem;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing > .row {
+    margin: 0;
+    padding: 0.45rem 0;
+    border-top: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing > .row:first-child {
+    border-top: 0;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing > .row > .col-4 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing > .row > .col {
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media screen and (width <= 640px) {
+  /* Preserve Bootstrap's -15px row margins; .8rem gutters create mobile page overflow. */
+  body.oe-clinical-record.oe-clinical-workspace #container_div {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  body.oe-clinical-record.oe-clinical-workspace .oe-card-details--billing > .row > .col-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
