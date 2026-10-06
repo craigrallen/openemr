@@ -16,8 +16,8 @@
 <!DOCTYPE html>
 <html>
 {% include "newpatient/partials/common/_head.html.twig" %}
-<body class="{{ bodyClass|attr }}">
-<div id="container_div" class="{{ oemrUiContainerClass(oemrUiSettings) }} mt-3">
+<body class="{{ bodyClass|attr }} oe-clinical-encounter">
+<div id="container_div" class="{{ oemrUiContainerClass(oemrUiSettings) }} mt-3 oe-encounter-document">
     <div class="row">
         <div class="col-sm-12">
             <div id="overDiv" style="position: absolute; visibility: hidden; z-index: 1000;"></div>

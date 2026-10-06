@@ -13,14 +13,14 @@ const cssPath = path.join(repo, 'interface/clinical-workspace/calendar.css');
 const finderCssPath = path.join(repo, 'interface/clinical-workspace/finder.css');
 const soapDocumentCssPath = path.join(repo, 'interface/clinical-workspace/soap-document.css');
 
-describe('stylelint allows the theme breakpoint notation only in calendar.css, finder.css and soap-document.css', () => {
+describe('stylelint allows the theme breakpoint notation only in calendar.css, finder.css, soap-document.css and encounter-document.css', () => {
     const rcPath = path.join(repo, '.stylelintrc.json');
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
-    test('override is a three-file prefix notation plus the vitals.css override, not a disabled rule', () => {
-        const overrides = rc().overrides.filter((o) => 'media-feature-range-notation' in o.rules);
-        expect(overrides).toEqual([{
-            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/soap-document.css'],
+    test('override is a four-file prefix notation plus the vitals.css override, not a disabled rule', () => {
+        // The full override list is an allowlist: the four workspace sheets plus the separately reviewed vitals.css.
+        expect(rc().overrides).toEqual([{
+            files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/soap-document.css', 'interface/clinical-workspace/encounter-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
         }, {
             files: ['interface/forms/vitals/vitals.css'],
