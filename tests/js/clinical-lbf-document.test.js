@@ -84,16 +84,71 @@ function revert(text, edits) {
     }, text);
 }
 
+// workspace.css is shared with the patient record, which appends its own secondary dashboard
+// card rules after the original stylesheet. The original text must survive byte for byte, and
+// every appended rule must be screen-only and scoped to the patient record body, so it can never
+// reach an LBF document body (body_top oe-clinical-lbf oe-clinical-workspace).
+const WORKSPACE_CSS = 'interface/clinical-workspace/workspace.css';
+const RECORD_APPENDIX = '\n/*\n * Secondary dashboard cards:';
+const RECORD_SCOPE = 'body.oe-clinical-record.oe-clinical-workspace';
+const RECORD_MEDIA = ['screen', 'screen and (width <= 640px)'];
+const LBF_BODY_CLASS = 'body_top oe-clinical-lbf oe-clinical-workspace';
+
+function splitWorkspaceCss(text) {
+    const at = text.indexOf(RECORD_APPENDIX);
+    if (at === -1) {
+        return { original: text, appended: '' };
+    }
+    if (text.indexOf(RECORD_APPENDIX, at + 1) !== -1) {
+        throw new Error('workspace.css: patient-record appendix marker appears more than once');
+    }
+    return { original: text.slice(0, at), appended: text.slice(at) };
+}
+
+function verifyWorkspaceCss(text) {
+    const { original, appended } = splitWorkspaceCss(text);
+    if (sha256(original) !== ORIGINAL.workspaceCss) {
+        throw new Error('workspace.css: original shared stylesheet changed');
+    }
+    const lbfBody = document.implementation.createHTMLDocument('').body;
+    lbfBody.className = LBF_BODY_CLASS;
+    postcss.parse(appended).each((node) => {
+        if (node.type === 'comment') {
+            return;
+        }
+        if (node.type !== 'atrule' || node.name !== 'media' || !RECORD_MEDIA.includes(node.params)) {
+            throw new Error(`workspace.css: appended ${node.type} is outside a screen media block`);
+        }
+        node.each((child) => {
+            if (child.type === 'comment') {
+                return;
+            }
+            if (child.type !== 'rule') {
+                throw new Error(`workspace.css: appended @media ${node.params} nests a ${child.type}`);
+            }
+            child.selectors.forEach((selector) => {
+                const head = selector.split(/[\s>+~]/, 1)[0];
+                if (head !== RECORD_SCOPE || !/^\s+\S/.test(selector.slice(head.length))) {
+                    throw new Error(`workspace.css: appended selector is not patient-record scoped: ${selector}`);
+                }
+                if (selector.includes('oe-clinical-lbf') || lbfBody.matches(head)) {
+                    throw new Error(`workspace.css: appended selector can match the LBF body: ${selector}`);
+                }
+            });
+        });
+    });
+}
+
 describe('LBF new.php source preservation', () => {
     test('the only changes are the import, the guard, the head block, the body class and two wrapper classes', () => {
         expect(sha256(revert(read(NEW), NEW_EDITS))).toBe(ORIGINAL.newPhp);
     });
 
-    test('view.php still routes to new.php unchanged; mode.js and workspace.css are reused unchanged', () => {
+    test('view.php still routes to new.php unchanged; mode.js is reused unchanged; workspace.css keeps its original rules', () => {
         expect(sha256(read(VIEW))).toBe(ORIGINAL.viewPhp);
         expect(read(VIEW)).toContain('require("new.php");');
         expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(ORIGINAL.modeJs);
-        expect(sha256(read('interface/clinical-workspace/workspace.css'))).toBe(ORIGINAL.workspaceCss);
+        expect(() => verifyWorkspaceCss(read(WORKSPACE_CSS))).not.toThrow();
     });
 
     test('the head block sits after setupHeader and the page style, ahead of every head script', () => {
@@ -152,6 +207,67 @@ function contrast(a, b) {
     const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
     return (hi + 0.05) / (lo + 0.05);
 }
+
+describe('workspace.css shared-stylesheet verifier', () => {
+    const current = () => read(WORKSPACE_CSS);
+    const firstRule = `${RECORD_SCOPE} .oe-card-details {`;
+
+    test('the original stylesheet is an exact prefix and the appendix is patient-record only', () => {
+        const { original, appended } = splitWorkspaceCss(current());
+        expect(original.endsWith('}\n')).toBe(true);
+        expect(sha256(original)).toBe(ORIGINAL.workspaceCss);
+        expect(appended.startsWith(RECORD_APPENDIX)).toBe(true);
+        expect(() => verifyWorkspaceCss(current())).not.toThrow();
+    });
+
+    test('the original stylesheet alone still verifies', () => {
+        expect(() => verifyWorkspaceCss(splitWorkspaceCss(current()).original)).not.toThrow();
+    });
+
+    test('changing an original declaration fails', () => {
+        const { original, appended } = splitWorkspaceCss(current());
+        const edited = original.replace(/:\s*([^;{}]+);/, ': inherit;');
+        expect(edited).not.toBe(original);
+        expect(() => verifyWorkspaceCss(edited + appended)).toThrow(/original shared stylesheet changed/);
+    });
+
+    test('moving the appendix boundary fails', () => {
+        const text = current().replace(RECORD_APPENDIX, `\n.x { color: red; }${RECORD_APPENDIX}`);
+        expect(() => verifyWorkspaceCss(text)).toThrow(/original shared stylesheet changed/);
+    });
+
+    test.each([
+        ['broadened to any workspace', 'body.oe-clinical-workspace .oe-card-details {', /not patient-record scoped/],
+        ['retargeted to the LBF body', 'body.oe-clinical-lbf.oe-clinical-workspace .oe-card-details {', /not patient-record scoped/],
+        ['made global', '.oe-card-details {', /not patient-record scoped/],
+        ['joined to a global selector', `${RECORD_SCOPE} .oe-card-details, .oe-card-details {`, /not patient-record scoped/],
+        ['applied to the body itself', `${RECORD_SCOPE} {`, /not patient-record scoped/],
+        ['extended with an LBF compound', `${RECORD_SCOPE}.oe-clinical-lbf .oe-card-details {`, /not patient-record scoped/],
+        ['combined with an LBF descendant', `${RECORD_SCOPE} .oe-clinical-lbf .oe-card-details {`, /can match the LBF body/]
+    ])('a new patient selector %s fails', (_label, replacement, message) => {
+        expect(current()).toContain(firstRule);
+        expect(() => verifyWorkspaceCss(current().replace(firstRule, replacement))).toThrow(message);
+    });
+
+    test.each([
+        ['an unscoped media block', '@media screen {', '@media all {'],
+        ['a print media block', '@media screen {', '@media print {']
+    ])('moving appended rules into %s fails', (_label, from, to) => {
+        const { original, appended } = splitWorkspaceCss(current());
+        expect(appended).toContain(from);
+        expect(() => verifyWorkspaceCss(original + appended.replace(from, to))).toThrow(/outside a screen media block/);
+    });
+
+    test('an appended top-level rule fails', () => {
+        expect(() => verifyWorkspaceCss(`${current()}\n${RECORD_SCOPE} .x { color: red; }\n`))
+            .toThrow(/outside a screen media block/);
+    });
+
+    test('a nested at-rule inside appended media fails', () => {
+        const text = current().replace(firstRule, `@media print { ${RECORD_SCOPE} .x { color: red; } }\n  ${firstRule}`);
+        expect(() => verifyWorkspaceCss(text)).toThrow(/nests a atrule/);
+    });
+});
 
 describe('lbf-document.css', () => {
     test('nested date/gestational-age tables pair their ink with the document surface', () => {
