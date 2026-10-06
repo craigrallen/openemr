@@ -392,6 +392,153 @@ describe('SOAP document auto-height', () => {
     });
 });
 
+describe('SOAP document auto-height follows the document container width class', () => {
+    // soap-reference.js sets this on .oe-soap-document; soap-document.css widens the sheet with it.
+    const OPEN = 'oe-soap-document--reference-open';
+    const heights = (fields) => fields.map((field) => field.style.height);
+    const container = () => document.querySelector('.oe-soap-document');
+
+    function recordingObserve() {
+        const calls = [];
+        const observe = (target, callback) => {
+            const observer = classObserver(target, callback);
+            const record = { target, disconnected: false };
+            calls.push(record);
+            const disconnect = observer.disconnect.bind(observer);
+            observer.disconnect = () => {
+                record.disconnected = true;
+                disconnect();
+            };
+            return observer;
+        };
+        return { calls, observe };
+    }
+
+    test('without ResizeObserver, opening and closing the reference refits every field and keeps the draft', async () => {
+        const fields = loadForm();
+        const scroller = { scrollTop: 250 };
+        Object.defineProperty(document, 'scrollingElement', { configurable: true, get: () => scroller });
+        Object.defineProperty(fields[3], 'scrollHeight', {
+            configurable: true,
+            get() {
+                if (fields[3].style.height === '0px') scroller.scrollTop = 0;
+                return measuredContent(fields[3]);
+            }
+        });
+        try {
+            document.body.classList.add('oe-clinical-workspace');
+            const { calls, observe } = recordingObserve();
+            const controller = createAutoHeight({ body: document.body, fields, observe });
+            expect(window.ResizeObserver).toBeUndefined();
+            expect(calls.map((call) => call.target)).toEqual([document.body, container()]);
+            const narrow = heights(fields);
+            expect(narrow).toEqual(fields.map(heightFor));
+
+            const values = fields.map((field) => field.value);
+            const objective = fields[1];
+            objective.focus();
+            objective.setSelectionRange(3, 9);
+
+            fieldWidth = 720;
+            container().classList.add(OPEN);
+            await flush();
+            expect(heights(fields)).toEqual(fields.map(heightFor));
+            expect(parseFloat(objective.style.height)).toBeLessThan(parseFloat(narrow[1]));
+
+            // Closing narrows the field again; the old wide height would clip the text.
+            fieldWidth = 480;
+            container().classList.remove(OPEN);
+            await flush();
+            expect(heights(fields)).toEqual(narrow);
+            fields.forEach((field) => {
+                expect(parseFloat(field.style.height)).toBeGreaterThanOrEqual(measuredContent(field));
+            });
+
+            expect(fields.map((field) => field.value)).toEqual(values);
+            FIELD_NAMES.forEach((name, index) => {
+                expect(document.querySelector(`textarea[name="${name}"]`)).toBe(fields[index]);
+            });
+            expect(document.activeElement).toBe(objective);
+            expect([objective.selectionStart, objective.selectionEnd]).toEqual([3, 9]);
+            expect(scroller.scrollTop).toBe(250);
+            fields.forEach((field) => expect(field.getAttribute('style')).toMatch(/^height: \d+px;$/));
+            controller.dispose();
+        } finally {
+            delete document.scrollingElement;
+        }
+    });
+
+    test('the page binding observes the real container through MutationObserver', async () => {
+        const fields = loadForm();
+        document.body.classList.add('oe-clinical-workspace');
+        const controller = attach(window);
+        fieldWidth = 720;
+        container().classList.add(OPEN);
+        await flush();
+        expect(heights(fields)).toEqual(fields.map(heightFor));
+        controller.dispose();
+    });
+
+    test('dispose disconnects the container observer and later class changes write nothing', async () => {
+        const fields = loadForm();
+        document.body.classList.add('oe-clinical-workspace');
+        const { calls, observe } = recordingObserve();
+        const controller = createAutoHeight({ body: document.body, fields, observe });
+        controller.dispose();
+        expect(calls).toHaveLength(2);
+        expect(calls.every((call) => call.disconnected)).toBe(true);
+
+        fieldWidth = 720;
+        container().classList.add(OPEN);
+        await flush();
+        expect(heights(fields)).toEqual(['', '', '', '']);
+    });
+
+    test('fields outside a document container observe only the body and still fit', () => {
+        const fields = loadForm();
+        const wrapper = container();
+        wrapper.replaceWith(...wrapper.childNodes);
+        document.body.classList.add('oe-clinical-workspace');
+        const { calls, observe } = recordingObserve();
+        let controller;
+        expect(() => {
+            controller = createAutoHeight({ body: document.body, fields, observe });
+        }).not.toThrow();
+        expect(calls.map((call) => call.target)).toEqual([document.body]);
+        expect(heights(fields)).toEqual(fields.map(heightFor));
+        controller.dispose();
+        expect(calls[0].disconnected).toBe(true);
+    });
+
+    test('legacy presentation ignores container class changes', async () => {
+        const fields = loadForm();
+        fields[1].style.height = '77px';
+        const controller = createAutoHeight({ body: document.body, fields, observe: classObserver });
+        container().classList.add(OPEN);
+        await flush();
+        container().classList.remove(OPEN);
+        await flush();
+        expect(heights(fields)).toEqual(['', '77px', '', '']);
+        controller.dispose();
+    });
+
+    test('a container change during print keeps native heights until print ends, then fits the new width', async () => {
+        const fields = loadForm();
+        fields[2].style.height = '55px';
+        document.body.classList.add('oe-clinical-workspace');
+        const controller = createAutoHeight({ body: document.body, fields, observe: classObserver });
+        window.dispatchEvent(new Event('beforeprint'));
+        fieldWidth = 720;
+        container().classList.add(OPEN);
+        await flush();
+        expect(heights(fields)).toEqual(['', '', '55px', '']);
+        window.dispatchEvent(new Event('afterprint'));
+        expect(heights(fields)).toEqual(fields.map(heightFor));
+        expect(fields[3].value).toBe(SAVED.plan);
+        controller.dispose();
+    });
+});
+
 describe('SOAP document auto-height while printing', () => {
     // jsdom has no matchMedia; emulate the print query with either listener API.
     function emulatePrintMedia({ legacyListeners = false, matches = false } = {}) {
@@ -664,6 +811,40 @@ describe('SOAP document template and styles', () => {
         const field = workbenchRule('.oe-soap-document textarea.form-control');
         expect(field.getPropertyValue('min-height')).toBe('4.5rem');
         expect(template()).toMatch(/cols="60" rows="6"/);
+    });
+
+    test('widens the document to 1200px only on wide screens while the reference is open', () => {
+        const OPEN = '.oe-soap-document.oe-soap-document--reference-open';
+        const wide = rules().filter((media) => Array.from(media.cssRules)
+            .some((rule) => rule.selectorText && rule.selectorText.includes('--reference-open')));
+        expect(wide).toHaveLength(1);
+        expect(wide[0].media.mediaText).toBe('screen and (min-width: 992px)');
+        const inner = Array.from(wide[0].cssRules);
+        expect(inner).toHaveLength(1);
+        expect(inner[0].selectorText).toBe(`body.oe-clinical-soap.oe-clinical-workspace ${OPEN}`);
+        expect(inner[0].style).toHaveLength(1);
+        expect(inner[0].style.getPropertyValue('max-width')).toBe('1200px');
+        expect(css().match(/--reference-open/g)).toHaveLength(1);
+    });
+
+    test('media queries use prefix notation the declared older browsers understand', () => {
+        const queries = rules().map((media) => media.media.mediaText);
+        expect(queries).toEqual(['screen', 'screen and (min-width: 992px)', 'screen and (max-width: 640px)']);
+        expect(css()).not.toMatch(/@media[^{]*[<>]/);
+        expect(css()).not.toMatch(/stylelint-disable/);
+        const narrow = rules().find((media) => media.media.mediaText === 'screen and (max-width: 640px)');
+        const declarations = Array.from(narrow.cssRules).map((rule) => [rule.selectorText, rule.style.cssText]);
+        expect(declarations).toEqual([
+            ['body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document', 'padding-block: 1.1rem 1rem; border-radius: 0;'],
+            ['body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document h2', 'font-size: 1.4rem;'],
+        ]);
+    });
+
+    test('the collapsed document keeps its 860px sheet', () => {
+        const base = rules().find((media) => media.media.mediaText === 'screen');
+        const sheet = Array.from(base.cssRules)
+            .find((rule) => rule.selectorText === 'body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document');
+        expect(sheet.style.getPropertyValue('max-width')).toBe('860px');
     });
 
     test('gives note text a document line rhythm on paper', () => {

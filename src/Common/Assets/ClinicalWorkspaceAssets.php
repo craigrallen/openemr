@@ -33,6 +33,7 @@ final readonly class ClinicalWorkspaceAssets
         'encounter-document.css',
         'finder.css',
         'mode.js',
+        'patient-messages.css',
         'soap-document.css',
         'soap-document.js',
         'soap-reference.css',

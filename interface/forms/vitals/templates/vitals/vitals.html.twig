@@ -32,9 +32,10 @@
         console.error("Failed to find vitalsForm object to initialize javascript vitals form");
     }
 </script>
-<link rel="stylesheet" href="{{ FORM_ACTION|attr }}/interface/forms/vitals/vitals.css?v={{ assetVersion|attr_url }}" />
+<link rel="stylesheet" href="{{ FORM_ACTION|attr }}/interface/forms/vitals/vitals.css?v={{ (assetVersion ~ '-vitals-document-3')|attr_url }}" />
+<script src="{{ FORM_ACTION|attr }}/interface/clinical-workspace/mode.js?v={{ (assetVersion ~ '-vitals-document-3')|attr_url }}" defer></script>
 </head>
-<body>
+<body class="oe-clinical-vitals">
 
  <div class="container mt-3">
     {% if validationErrors is defined and validationErrors is not empty %}
@@ -79,7 +80,7 @@
                 </div>
                 {% endif %}
                 <div id="chart" class="chart-dygraphs" style="margin-left: -15px"></div>
-                    <div class="table-responsive">
+                    <div class="table-responsive" id="vitals-measurements" role="region" aria-label="{{ 'Vitals'|xla }}" tabindex="0">
 
                         <table class="table">
 

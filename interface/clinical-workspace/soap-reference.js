@@ -17,6 +17,7 @@
     const STATUSES = ['available', 'none', 'denied', 'unavailable'];
     const MAX_NOTES = 5;
     const RENDERED = 'data-soap-reference-rendered';
+    const OPEN_LAYOUT = 'oe-soap-document--reference-open';
 
     function parsePayload(panel) {
         try {
@@ -69,6 +70,10 @@
         field.dispatchEvent(new view.Event('input', { bubbles: true }));
         field.dispatchEvent(new view.KeyboardEvent('keyup', { bubbles: true }));
         live.textContent = labels.copied;
+        // Hand the clinician the appended draft to review: focus it, caret after the copied text.
+        // focus() is a no-op if a handler above detached the field; textareas always support selection.
+        field.focus();
+        field.setSelectionRange(field.value.length, field.value.length);
     }
 
     function setStatus(status, key, withheld) {
@@ -143,11 +148,20 @@
         const toggle = panel.querySelector('.oe-soap-reference__toggle');
         const body = toggle && win.document.getElementById(toggle.getAttribute('aria-controls'));
         if (toggle && body) {
+            // Presentation only: soap-document.css widens the sheet while this class is set.
+            const container = panel.closest('.oe-soap-document');
+            const syncLayout = () => {
+                if (container) {
+                    container.classList.toggle(OPEN_LAYOUT, toggle.getAttribute('aria-expanded') === 'true' && !body.hidden);
+                }
+            };
+            syncLayout();
             // Only the reference body is shown or hidden; the editor is never moved or replaced.
             toggle.addEventListener('click', () => {
                 const open = toggle.getAttribute('aria-expanded') !== 'true';
                 toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
                 body.hidden = !open;
+                syncLayout();
             });
         }
         return panel;
