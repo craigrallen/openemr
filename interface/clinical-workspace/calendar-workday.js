@@ -31,7 +31,14 @@
                 surface,
                 observe: (target, callback) => {
                     const observer = new root.MutationObserver(callback);
-                    observer.observe(target, { childList: true, subtree: true });
+                    observer.observe(target, {
+                        childList: true,
+                        subtree: true,
+                        characterData: true,
+                        attributes: true,
+                        attributeOldValue: true,
+                        attributeFilter: ['class', 'style', 'id', 'data-eid', 'data-pid', 'href', 'date', 'provider', 'title']
+                    });
                     return observer;
                 }
             });
@@ -49,6 +56,12 @@
     const PATIENT_LINK = 'a.link_title[data-pid]';
     const GROUP_LINK = 'a[href^="javascript:goGid("]';
     const REQUIRED_LABELS = ['count-one', 'count', 'empty', 'unavailable', 'first', 'time-unknown'];
+    // Booking fields compared before an action delegates: what is shown plus what routes it.
+    const SNAPSHOT_FIELDS = ['eid', 'nodeId', 'groups', 'providerId', 'providerName', 'startMin',
+        'timeLabel', 'patientLabel', 'linkPid', 'linkHref'];
+    // The production calendar hover handler toggles event_highlight on every mouseover/mouseout.
+    const PRESENTATION_CLASSES = ['event_highlight'];
+    const COLUMN_ATTRIBUTES = ['provider', 'date', 'title'];
 
     function readInt(value) {
         if (typeof value !== 'string' || !/^-?\d+$/.test(value.trim())) return null;
@@ -128,11 +141,16 @@
                 provider.count += 1;
                 state.bookings.push({
                     eid: node.getAttribute('data-eid') || '',
+                    // EditEvent routes on the full id (date-eid-category) and the groups class.
+                    nodeId: node.id,
+                    groups: node.classList.contains('groups'),
                     providerId: provider.id,
                     providerName: provider.name,
                     startMin: startMinutes(node, timing),
                     timeLabel: cleanText(node.querySelector('a.event_time')),
                     patientLabel: patientLabel(link),
+                    linkPid: link.getAttribute('data-pid'),
+                    linkHref: link.getAttribute('href'),
                     node,
                     columnIndex,
                     order: order++
@@ -208,26 +226,42 @@
             surface.hidden = false;
         }
 
+        // Observer delivery is asynchronous, so a click can land after the grid changed but
+        // before the summary re-rendered. Re-read the grid: act only when the booking shown is
+        // still the first booking, on the same node, with every snapshotted field unchanged.
+        // Otherwise show the fresh summary and do nothing for this click.
+        const sameBooking = (a, b) => a.node === b.node && SNAPSHOT_FIELDS.every((key) => a[key] === b[key]);
+        function confirmedFirst() {
+            const shown = state && state.first;
+            const fresh = collectSchedule(doc, surface).first;
+            if (shown && fresh && sameBooking(fresh, shown)) return shown;
+            render();
+            return null;
+        }
+
         function onClick(event) {
             const trigger = event.target.closest('[data-role]');
             if (!trigger || !surface.contains(trigger) || disposed) return;
-            const next = state && state.first;
             switch (trigger.getAttribute('data-role')) {
                 case 'open-booking': {
-                    const anchor = next && next.node.isConnected ? next.node.querySelector('a.event_time') : null;
+                    const first = confirmedFirst();
+                    const anchor = first ? first.node.querySelector('a.event_time') : null;
                     if (anchor) anchor.click();
                     break;
                 }
                 case 'open-patient': {
-                    const link = next && next.node.isConnected ? bookingLink(next.node) : null;
+                    const first = confirmedFirst();
+                    const link = first ? bookingLink(first.node) : null;
                     if (link) link.click();
                     break;
                 }
-                case 'show-booking':
-                    if (next && next.node.isConnected && typeof next.node.scrollIntoView === 'function') {
-                        next.node.scrollIntoView({ block: 'center', inline: 'nearest' });
+                case 'show-booking': {
+                    const first = confirmedFirst();
+                    if (first && typeof first.node.scrollIntoView === 'function') {
+                        first.node.scrollIntoView({ block: 'center', inline: 'nearest' });
                     }
                     break;
+                }
                 case 'new-appointment':
                 case 'today': {
                     const control = original(trigger.getAttribute('data-role'));
@@ -241,10 +275,40 @@
 
         surface.addEventListener('click', onClick);
         const grid = doc.getElementById('bigCal');
-        // Direct-select drops .apptMarker nodes on every mousemove; only event changes matter.
-        const touchesEvent = (records) => !Array.isArray(records) || records.some((record) =>
-            [...Array.from(record.addedNodes || []), ...Array.from(record.removedNodes || [])].some((n) =>
-                n.nodeType === 1 && (n.classList.contains('event') || (n.querySelector && n.querySelector('.event')))));
+        // Direct-select (library/js/calendarDirectSelect.js) appends and moves an
+        // a.apptMarker.event on every mousemove; it is never a booking, so its churn is ignored.
+        // Anything else collectSchedule reads -- event nodes and their text/attributes, column
+        // date/provider/title, provider headers -- triggers a re-read, except a class change that
+        // only adds/removes presentation classes (hover). render() writes only inside the
+        // surface, which sits outside #bigCal, so a refresh cannot re-trigger itself.
+        const MARKER = '.apptMarker';
+        const classTokens = (value) => new Set((value || '').split(/\s+/).filter(Boolean));
+        // Compares the pre-change class list with the current one; within one batch the earliest
+        // record for a node still carries any net non-presentation change, so none is lost.
+        const presentationOnly = (record, target) => {
+            const before = classTokens(record.oldValue);
+            const after = classTokens(target.getAttribute('class'));
+            return [...before, ...after].every((c) => before.has(c) === after.has(c) || PRESENTATION_CLASSES.includes(c));
+        };
+        const isWatchedNode = (n) => n.nodeType === 1 && !n.matches(MARKER)
+            && (n.matches('.event, .providerheader') || !!n.querySelector('.event:not(' + MARKER + '), .providerheader'));
+        const relevant = (record) => {
+            const t = record.target;
+            const target = t && (t.nodeType === 1 ? t : t.parentElement);
+            if (target && target.closest(MARKER)) return false;
+            if (record.type === 'attributes') {
+                if (record.attributeName === 'class' && presentationOnly(record, target)) return false;
+                if (target.closest('.event, .providerheader')) return true;
+                // A column that just lost its provider no longer matches [provider]; match on td.schedule.
+                return (target.matches('td.schedule') && COLUMN_ATTRIBUTES.includes(record.attributeName))
+                    || (record.attributeName === 'class' && classTokens(record.oldValue).has('event'));
+            }
+            if (target && target.closest('.event, .providerheader')) return true;
+            if (record.type === 'characterData') return false;
+            // A replaced provider header is reported on its column, so check the moved nodes.
+            return [...Array.from(record.addedNodes || []), ...Array.from(record.removedNodes || [])].some(isWatchedNode);
+        };
+        const touchesEvent = (records) => !Array.isArray(records) || records.some(relevant);
         const observer = observe && grid
             ? observe(grid, (records) => { if (!disposed && touchesEvent(records)) render(); })
             : null;
