@@ -27,9 +27,15 @@ function note(encounter, date, overrides = {}) {
     };
 }
 
-function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
+function mount(payload, { draft = {}, eligibility = 'allowed', wrapper = false, expanded = false } = {}) {
     window.top.isSoapEdit = false;
     document.body.innerHTML = '';
+    // Optional stand-in for the template's .oe-soap-document container around editor and panel.
+    const host = wrapper ? document.createElement('div') : document.body;
+    if (wrapper) {
+        host.className = 'container mt-3 oe-soap-document';
+        document.body.appendChild(host);
+    }
     const form = document.createElement('form');
     form.setAttribute('name', 'soap');
     SECTION_NAMES.forEach((name) => {
@@ -39,7 +45,7 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
         field.setAttribute('onkeyup', 'top.isSoapEdit = true;');
         form.appendChild(field);
     });
-    document.body.appendChild(form);
+    host.appendChild(form);
 
     const panel = document.createElement('aside');
     panel.className = 'oe-soap-reference';
@@ -49,12 +55,12 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'oe-soap-reference__toggle';
-    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     toggle.setAttribute('aria-controls', 'oe-soap-reference-body');
     panel.appendChild(toggle);
     const body = document.createElement('div');
     body.id = 'oe-soap-reference-body';
-    body.hidden = true;
+    body.hidden = !expanded;
     const status = document.createElement('p');
     status.className = 'oe-soap-reference__status';
     status.setAttribute('data-status-available', 'Read-only reference');
@@ -72,8 +78,8 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
     live.setAttribute('aria-live', 'polite');
     body.appendChild(live);
     panel.appendChild(body);
-    document.body.appendChild(panel);
-    return { form, panel, toggle, body, status, list, live };
+    host.appendChild(panel);
+    return { form, panel, toggle, body, status, list, live, wrapper: wrapper ? host : null };
 }
 
 const field = (name) => document.querySelector(`form[name="soap"] textarea[name="${name}"]`);
@@ -230,6 +236,221 @@ describe('SOAP previous-note reference', () => {
         render(dom.panel);
         expect(dom.list.children).toHaveLength(0);
         expect(dom.status.textContent).toBe('Earlier SOAP notes could not be loaded.');
+    });
+});
+
+describe('SOAP reference open-layout class', () => {
+    const OPEN = 'oe-soap-document--reference-open';
+    const payload = () => ({ status: 'available', withheld: false, notes: [note(21, '2026-08-08')] });
+
+    test('starts without the class while the reference is collapsed', () => {
+        const dom = mount(payload(), { wrapper: true });
+        attach(window);
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('initialises the class from a reference that is already expanded', () => {
+        const dom = mount(payload(), { wrapper: true, expanded: true });
+        attach(window);
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(true);
+    });
+
+    test('follows the toggle open and closed, changing only the container class', () => {
+        const dom = mount(payload(), { wrapper: true, draft: { plan: 'unsaved plan' } });
+        const editor = field('plan');
+        const before = dom.wrapper.className;
+        attach(window);
+
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(dom.wrapper.className).toBe(`${before} ${OPEN}`);
+
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(dom.wrapper.className).toBe(before);
+
+        expect(field('plan')).toBe(editor);
+        expect(editor.value).toBe('unsaved plan');
+        expect(dom.form.parentNode).toBe(dom.wrapper);
+        expect(dom.panel.parentNode).toBe(dom.wrapper);
+        expect(window.top.isSoapEdit).toBe(false);
+    });
+
+    test('repeated attach binds one listener and keeps the class in step', () => {
+        const dom = mount(payload(), { wrapper: true });
+        attach(window);
+        attach(window);
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(true);
+        expect(dom.wrapper.className.split(' ').filter((name) => name === OPEN)).toHaveLength(1);
+        dom.toggle.click();
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('a page without the document container still toggles and adds no class anywhere', () => {
+        const dom = mount(payload());
+        expect(() => attach(window)).not.toThrow();
+        dom.toggle.click();
+        expect(dom.body.hidden).toBe(false);
+        dom.toggle.click();
+        expect(dom.body.hidden).toBe(true);
+        dom.toggle.click();
+        expect(document.querySelector(`.${OPEN}`)).toBeNull();
+    });
+
+    test('a panel without a toggle leaves the container alone', () => {
+        const dom = mount(payload(), { wrapper: true, expanded: true });
+        dom.toggle.remove();
+        expect(() => attach(window)).not.toThrow();
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('drives the real template container from its toggle', () => {
+        mountFixture('soap-form-saved-note.html');
+        attach(window);
+        const container = document.querySelector('.oe-soap-document');
+        const toggle = document.querySelector('.oe-soap-reference__toggle');
+        expect(container.classList.contains(OPEN)).toBe(false);
+        toggle.click();
+        expect(container.classList.contains(OPEN)).toBe(true);
+        toggle.click();
+        expect(container.classList.contains(OPEN)).toBe(false);
+    });
+});
+
+describe('SOAP reference copy hands the appended draft to the clinician for review', () => {
+    const copyButton = (dom, name, index = 0) => dom.list
+        .querySelectorAll('li')[index]
+        .querySelector(`[data-section="${name}"] button.oe-soap-reference__copy`);
+
+    // Keyboard activation: the button has focus when it is clicked.
+    function press(button) {
+        button.focus();
+        button.click();
+    }
+
+    function expectCaretAtEnd(editor) {
+        expect(document.activeElement).toBe(editor);
+        expect(editor.selectionStart).toBe(editor.value.length);
+        expect(editor.selectionEnd).toBe(editor.value.length);
+    }
+
+    test('focuses the matching field with a collapsed caret after the appended multiline text', () => {
+        const prior = '  Prior line one\n\n\tindented line two  \n';
+        const draft = 'current draft  \n  second line\n';
+        const payload = { status: 'available', withheld: false, notes: [note(21, '2026-08-08', { plan: prior })] };
+        const dom = mount(payload, { draft: { plan: draft } });
+        const payloadBefore = dom.panel.getAttribute('data-soap-reference');
+        attach(window);
+
+        const button = copyButton(dom, 'plan');
+        const source = button.closest('[data-section]').querySelector('.oe-soap-reference__text');
+        expect(button.type).toBe('button');
+        press(button);
+
+        const editor = field('plan');
+        expect(editor.value).toBe(`${draft}\n\n${prior}`);
+        expectCaretAtEnd(editor);
+        expect(source.textContent).toBe(prior);
+        expect(dom.panel.getAttribute('data-soap-reference')).toBe(payloadBefore);
+        expect(['subjective', 'objective', 'assessment'].map((name) => field(name).value)).toEqual(['', '', '']);
+    });
+
+    test('focuses an initially empty field with the caret after the copied text', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(22, '2026-08-09', { subjective: '\n  spaced  \n' })] });
+        attach(window);
+        press(copyButton(dom, 'subjective'));
+        const editor = field('subjective');
+        expect(editor.value).toBe('\n  spaced  \n');
+        expectCaretAtEnd(editor);
+    });
+
+    test('moves focus only after the existing input and keyup handlers have run', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(23, '2026-08-10')] }, {
+            draft: { objective: 'draft' },
+        });
+        const editor = field('objective');
+        const order = [];
+        editor.addEventListener('input', () => order.push(['input', document.activeElement === editor, editor.value]));
+        editor.addEventListener('keyup', () => order.push(['keyup', document.activeElement === editor, window.top.isSoapEdit]));
+        editor.addEventListener('focus', () => order.push(['focus', true, editor.value]));
+        attach(window);
+        press(copyButton(dom, 'objective'));
+
+        expect(order).toEqual([
+            ['input', false, 'draft\n\nSynthetic O 23'],
+            ['keyup', false, true],
+            ['focus', true, 'draft\n\nSynthetic O 23'],
+        ]);
+        expectCaretAtEnd(editor);
+    });
+
+    test('each copy focuses its own section field across sections and notes', () => {
+        const dom = mount({
+            status: 'available',
+            withheld: false,
+            notes: [note(25, '2026-08-12'), note(24, '2026-08-11')],
+        }, { draft: { assessment: 'kept' } });
+        attach(window);
+
+        press(copyButton(dom, 'plan', 0));
+        expectCaretAtEnd(field('plan'));
+
+        press(copyButton(dom, 'subjective', 1));
+        expectCaretAtEnd(field('subjective'));
+
+        press(copyButton(dom, 'plan', 1));
+        expect(field('plan').value).toBe('Synthetic P 25\n\nSynthetic P 24');
+        expectCaretAtEnd(field('plan'));
+
+        expect(field('subjective').value).toBe('Synthetic S 24');
+        expect(field('objective').value).toBe('');
+        expect(field('assessment').value).toBe('kept');
+    });
+
+    test.each([
+        ['read-only', (editor) => { editor.readOnly = true; }],
+        ['disabled', (editor) => { editor.disabled = true; }],
+        ['missing', (editor) => { editor.remove(); }],
+    ])('a %s target copies nothing and leaves focus and selection alone', (_label, lock) => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(26, '2026-08-13')] }, {
+            draft: { assessment: 'signed text' },
+        });
+        const editor = field('assessment');
+        editor.setSelectionRange(2, 4);
+        lock(editor);
+        attach(window);
+
+        const button = copyButton(dom, 'assessment');
+        press(button);
+
+        expect(document.activeElement).toBe(button);
+        expect(editor.value).toBe('signed text');
+        expect([editor.selectionStart, editor.selectionEnd]).toEqual([2, 4]);
+        expect(window.top.isSoapEdit).toBe(false);
+        expect(dom.live.textContent).toBe('This field cannot be edited; nothing was copied.');
+    });
+
+    test('server default-deny offers no copy, so focus never moves to the draft', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(27, '2026-08-14')] }, { eligibility: 'denied' });
+        attach(window);
+        dom.toggle.focus();
+        expect(dom.list.querySelector('button')).toBeNull();
+        expect(document.activeElement).toBe(dom.toggle);
+        expect(SECTION_NAMES.map((name) => field(name).value)).toEqual(['', '', '', '']);
+    });
+
+    test('does not focus a field that an existing handler detached during the copy', () => {
+        const dom = mount({ status: 'available', withheld: false, notes: [note(28, '2026-08-15')] });
+        const editor = field('plan');
+        editor.addEventListener('input', () => editor.remove());
+        attach(window);
+
+        const button = copyButton(dom, 'plan');
+        expect(() => press(button)).not.toThrow();
+        expect(editor.value).toBe('Synthetic P 28');
+        expect(document.activeElement).not.toBe(editor);
     });
 });
 

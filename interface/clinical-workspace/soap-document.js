@@ -71,6 +71,9 @@
 
         fields.forEach((field) => field.addEventListener('input', onInput));
         const modeObserver = observe(body, sync);
+        // soap-reference.js widens or narrows the sheet by class; refit even without ResizeObserver.
+        const container = fields.length > 0 ? fields[0].closest('.oe-soap-document') : null;
+        const layoutObserver = container ? observe(container, sync) : null;
 
         if (view && view.ResizeObserver) {
             // Refit only on width change; a manual drag of the resize handle changes height only.
@@ -105,6 +108,7 @@
                 disposed = true;
                 fields.forEach((field) => field.removeEventListener('input', onInput));
                 if (modeObserver) modeObserver.disconnect();
+                if (layoutObserver) layoutObserver.disconnect();
                 if (resizeObserver) resizeObserver.disconnect();
                 if (view) {
                     view.removeEventListener('resize', refresh);
