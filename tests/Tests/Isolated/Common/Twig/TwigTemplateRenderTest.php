@@ -269,7 +269,9 @@ class TwigTemplateRenderTest extends TestCase
             self::assertStringContainsString('<div id="bottomLeft" class="sidebar-wrapper">', $html, $view);
 
             $original = strpos($html, '$("#wrapper").toggleClass("toggled");');
-            $helper = strpos($html, '<script src="/interface/clinical-workspace/calendar-sidebar.js?v=' . self::ASSET_VERSION . '"></script>');
+            // Versioned by the helper file's own mtime (CalendarRenderDataBuilder), not the global assetVersion.
+            $helper = strpos($html, '<script src="/interface/clinical-workspace/calendar-sidebar.js?v=1700000321"></script>');
+            self::assertStringNotContainsString('calendar-sidebar.js?v=' . self::ASSET_VERSION, $html, $view);
             self::assertIsInt($original, $view);
             self::assertIsInt($helper, $view);
             self::assertGreaterThan($original, $helper, $view);
@@ -577,6 +579,7 @@ class TwigTemplateRenderTest extends TestCase
             'isToday'                 => false,
             'webroot'                 => '',
             'body_class'              => '',
+            'calendarSidebarVersion'  => '1700000321',
         ];
 
         yield 'calendar month-screen empty' => [

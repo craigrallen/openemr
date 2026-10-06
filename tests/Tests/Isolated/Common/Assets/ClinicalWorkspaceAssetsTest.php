@@ -135,6 +135,22 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function calendarSidebarScriptIsVersionedFromItsOwnFile(): void
+    {
+        $this->writeAsset('calendar-sidebar.js', 1_700_000_789);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('1700000789', $assets->version('calendar-sidebar.js'));
+
+        $this->writeAsset('calendar-sidebar.js', 1_700_090_000);
+        self::assertSame('1700090000', $assets->version('calendar-sidebar.js'));
+
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/calendar-sidebar.js';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('calendar-sidebar.js'));
+    }
+
+    #[Test]
     public function calendarWorkdayAssetsAreVersionedPerFile(): void
     {
         $this->writeAsset('calendar-workday.css', 1_700_000_700);
