@@ -30,7 +30,11 @@ left_nav.setPatient = function(pname, pid, pubpid, frname, str_dob, hasPicture)
     {
         app_view_model.application_data.patient().pname(pname);
         app_view_model.application_data.patient().pubpid(pubpid);
-        app_view_model.application_data.patient().str_dob(str_dob);
+        // Some callers (e.g. patient notes) republish the open patient without
+        // a DOB; null/undefined means "not supplied", so keep the known value.
+        if (str_dob !== null && str_dob !== undefined) {
+            app_view_model.application_data.patient().str_dob(str_dob);
+        }
 
         return;
     }
