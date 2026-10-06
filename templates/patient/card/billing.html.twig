@@ -1,7 +1,7 @@
 {% extends "patient/card/card_base.html.twig" %}
 
 {% block content %}
-<div class="container">
+<div class="container oe-card-details oe-card-details--billing">
     <div class="row">
         <div class="col-4">{{ "Patient Balance Due"|xlt }}</div>
         <div class="col">{{ patientBalance|money|text }}</div>
