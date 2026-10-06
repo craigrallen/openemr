@@ -10,6 +10,7 @@
 */
 
 use OpenEMR\Core\OEGlobalsBag;
+use OpenEMR\Services\CalendarFacilityQuery;
 use OpenEMR\Services\HolidayService;
 
 // Returns an array of the facility ids and names that the user is allowed to access.
@@ -17,37 +18,7 @@ use OpenEMR\Services\HolidayService;
 //
 function getUserFacilities($uID, $orderby = 'id', $inventory = false): array
 {
-    $restrict = $inventory ? OEGlobalsBag::getInstance()->getBoolean('gbl_fac_warehouse_restrictions') : OEGlobalsBag::getInstance()->getBoolean('restrict_user_facility');
-    if ($restrict) {
-        // No entries in this table means the user is not restricted.
-        $countrow = sqlQuery(
-            "SELECT count(*) AS count FROM users_facility WHERE " .
-            "tablename = 'users' AND table_id = ?",
-            [$uID]
-        );
-    }
-    if (!$restrict || empty($countrow['count'])) {
-        $rez = sqlStatement(
-            "SELECT id, name, color, inactive FROM facility " .
-            "ORDER BY $orderby"
-        );
-    } else {
-        // This query gets facilities that the user is authorized to access.
-        $rez = sqlStatement(
-            "SELECT f.id, f.name, f.color, f.inactive " .
-            "FROM facility AS f " .
-            "JOIN users AS u ON u.id = ? " .
-            "WHERE f.id = u.facility_id OR f.id IN " .
-            "(SELECT DISTINCT uf.facility_id FROM users_facility AS uf WHERE uf.tablename = 'users' AND uf.table_id = u.id) " .
-            "ORDER BY f.$orderby",
-            [$uID]
-        );
-    }
-    $returnVal = [];
-    while ($row = sqlFetchArray($rez)) {
-        $returnVal[] = $row;
-    }
-    return $returnVal;
+    return CalendarFacilityQuery::forLegacyContext()->getUserFacilities($uID, $orderby, $inventory);
 }
 
 // Returns an array of warehouse IDs for the given user and facility.
