@@ -1508,7 +1508,7 @@ class TwigTemplateRenderTest extends TestCase
             bool $checked = false,
             string $js = '',
         ): string => implode('|', [$tag, $type, $name, $id, $value, $method, '', $required ? 'required' : '', $checked ? 'checked' : '', $js, '']);
-        $saveForm = static fn (string $type) => [
+        $saveForm = static fn (string $type): array => [
             $sig('form', id: $type . '-form', method: 'post'),
             $sig('input', 'hidden', 'csrf_token', value: 'synthetic-csrf-token'),
             $sig('input', 'hidden', 'pref_type', value: $type),
