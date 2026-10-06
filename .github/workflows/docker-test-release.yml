@@ -5,9 +5,9 @@
 # openemr core's flatter layout that means flex + binary + release; the
 # matrix is built dynamically inside docker-test-core.yml.
 #
-# Triggers on changes to docker/release/** since that's the Dockerfile this
-# workflow primarily exists to validate. Changes to flex / binary fire their
-# own targeted test-flex-*.yml and BATS workflows respectively.
+# Triggers on docker/release/** and docker/railway/** because this production
+# caller also runs Railway's dedicated image acceptance job. Changes to flex /
+# binary fire their own targeted test-flex-*.yml and BATS workflows respectively.
 #
 # Also triggers on version.php changes -- docker-build-release.yml bakes
 # version.php's contents into the shipped image as OCI labels (IMAGE_VERSION
@@ -48,6 +48,7 @@ on:
     paths:
     - '.github/workflows/docker-test-release.yml'
     - 'docker/release/**'
+    - 'docker/railway/**'
     - 'version.php'
     - '.github/actions/test-actions-core/action.yml'
     - '.github/workflows/docker-test-core.yml'
@@ -55,6 +56,7 @@ on:
     paths:
     - '.github/workflows/docker-test-release.yml'
     - 'docker/release/**'
+    - 'docker/railway/**'
     - 'version.php'
     - '.github/actions/test-actions-core/action.yml'
     - '.github/workflows/docker-test-core.yml'
