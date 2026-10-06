@@ -27,9 +27,15 @@ function note(encounter, date, overrides = {}) {
     };
 }
 
-function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
+function mount(payload, { draft = {}, eligibility = 'allowed', wrapper = false, expanded = false } = {}) {
     window.top.isSoapEdit = false;
     document.body.innerHTML = '';
+    // Optional stand-in for the template's .oe-soap-document container around editor and panel.
+    const host = wrapper ? document.createElement('div') : document.body;
+    if (wrapper) {
+        host.className = 'container mt-3 oe-soap-document';
+        document.body.appendChild(host);
+    }
     const form = document.createElement('form');
     form.setAttribute('name', 'soap');
     SECTION_NAMES.forEach((name) => {
@@ -39,7 +45,7 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
         field.setAttribute('onkeyup', 'top.isSoapEdit = true;');
         form.appendChild(field);
     });
-    document.body.appendChild(form);
+    host.appendChild(form);
 
     const panel = document.createElement('aside');
     panel.className = 'oe-soap-reference';
@@ -49,12 +55,12 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'oe-soap-reference__toggle';
-    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     toggle.setAttribute('aria-controls', 'oe-soap-reference-body');
     panel.appendChild(toggle);
     const body = document.createElement('div');
     body.id = 'oe-soap-reference-body';
-    body.hidden = true;
+    body.hidden = !expanded;
     const status = document.createElement('p');
     status.className = 'oe-soap-reference__status';
     status.setAttribute('data-status-available', 'Read-only reference');
@@ -72,8 +78,8 @@ function mount(payload, { draft = {}, eligibility = 'allowed' } = {}) {
     live.setAttribute('aria-live', 'polite');
     body.appendChild(live);
     panel.appendChild(body);
-    document.body.appendChild(panel);
-    return { form, panel, toggle, body, status, list, live };
+    host.appendChild(panel);
+    return { form, panel, toggle, body, status, list, live, wrapper: wrapper ? host : null };
 }
 
 const field = (name) => document.querySelector(`form[name="soap"] textarea[name="${name}"]`);
@@ -230,6 +236,86 @@ describe('SOAP previous-note reference', () => {
         render(dom.panel);
         expect(dom.list.children).toHaveLength(0);
         expect(dom.status.textContent).toBe('Earlier SOAP notes could not be loaded.');
+    });
+});
+
+describe('SOAP reference open-layout class', () => {
+    const OPEN = 'oe-soap-document--reference-open';
+    const payload = () => ({ status: 'available', withheld: false, notes: [note(21, '2026-08-08')] });
+
+    test('starts without the class while the reference is collapsed', () => {
+        const dom = mount(payload(), { wrapper: true });
+        attach(window);
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('initialises the class from a reference that is already expanded', () => {
+        const dom = mount(payload(), { wrapper: true, expanded: true });
+        attach(window);
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(true);
+    });
+
+    test('follows the toggle open and closed, changing only the container class', () => {
+        const dom = mount(payload(), { wrapper: true, draft: { plan: 'unsaved plan' } });
+        const editor = field('plan');
+        const before = dom.wrapper.className;
+        attach(window);
+
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(dom.wrapper.className).toBe(`${before} ${OPEN}`);
+
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('false');
+        expect(dom.wrapper.className).toBe(before);
+
+        expect(field('plan')).toBe(editor);
+        expect(editor.value).toBe('unsaved plan');
+        expect(dom.form.parentNode).toBe(dom.wrapper);
+        expect(dom.panel.parentNode).toBe(dom.wrapper);
+        expect(window.top.isSoapEdit).toBe(false);
+    });
+
+    test('repeated attach binds one listener and keeps the class in step', () => {
+        const dom = mount(payload(), { wrapper: true });
+        attach(window);
+        attach(window);
+        dom.toggle.click();
+        expect(dom.toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(true);
+        expect(dom.wrapper.className.split(' ').filter((name) => name === OPEN)).toHaveLength(1);
+        dom.toggle.click();
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('a page without the document container still toggles and adds no class anywhere', () => {
+        const dom = mount(payload());
+        expect(() => attach(window)).not.toThrow();
+        dom.toggle.click();
+        expect(dom.body.hidden).toBe(false);
+        dom.toggle.click();
+        expect(dom.body.hidden).toBe(true);
+        dom.toggle.click();
+        expect(document.querySelector(`.${OPEN}`)).toBeNull();
+    });
+
+    test('a panel without a toggle leaves the container alone', () => {
+        const dom = mount(payload(), { wrapper: true, expanded: true });
+        dom.toggle.remove();
+        expect(() => attach(window)).not.toThrow();
+        expect(dom.wrapper.classList.contains(OPEN)).toBe(false);
+    });
+
+    test('drives the real template container from its toggle', () => {
+        mountFixture('soap-form-saved-note.html');
+        attach(window);
+        const container = document.querySelector('.oe-soap-document');
+        const toggle = document.querySelector('.oe-soap-reference__toggle');
+        expect(container.classList.contains(OPEN)).toBe(false);
+        toggle.click();
+        expect(container.classList.contains(OPEN)).toBe(true);
+        toggle.click();
+        expect(container.classList.contains(OPEN)).toBe(false);
     });
 });
 

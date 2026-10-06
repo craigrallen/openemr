@@ -78,7 +78,18 @@
   }
 }
 
-@media screen and (width <= 640px) {
+/*
+ * Wider sheet while the previous-SOAP reference is open beside it (class set by
+ * soap-reference.js). Below 992px the columns stack and the 860px sheet stays. Prefix
+ * notation so the older declared browsers apply it (enforced by .stylelintrc.json).
+ */
+@media screen and (min-width: 992px) {
+  body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document.oe-soap-document--reference-open {
+    max-width: 1200px;
+  }
+}
+
+@media screen and (max-width: 640px) {
   body.oe-clinical-soap.oe-clinical-workspace .oe-soap-document {
     padding-block: 1.1rem 1rem;
     border-radius: 0;

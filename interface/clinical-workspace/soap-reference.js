@@ -17,6 +17,7 @@
     const STATUSES = ['available', 'none', 'denied', 'unavailable'];
     const MAX_NOTES = 5;
     const RENDERED = 'data-soap-reference-rendered';
+    const OPEN_LAYOUT = 'oe-soap-document--reference-open';
 
     function parsePayload(panel) {
         try {
@@ -147,11 +148,20 @@
         const toggle = panel.querySelector('.oe-soap-reference__toggle');
         const body = toggle && win.document.getElementById(toggle.getAttribute('aria-controls'));
         if (toggle && body) {
+            // Presentation only: soap-document.css widens the sheet while this class is set.
+            const container = panel.closest('.oe-soap-document');
+            const syncLayout = () => {
+                if (container) {
+                    container.classList.toggle(OPEN_LAYOUT, toggle.getAttribute('aria-expanded') === 'true' && !body.hidden);
+                }
+            };
+            syncLayout();
             // Only the reference body is shown or hidden; the editor is never moved or replaced.
             toggle.addEventListener('click', () => {
                 const open = toggle.getAttribute('aria-expanded') !== 'true';
                 toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
                 body.hidden = !open;
+                syncLayout();
             });
         }
         return panel;
