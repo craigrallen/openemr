@@ -33,14 +33,19 @@ describe('stylelint allows the old-browser prefix breakpoint only in vitals.css'
         expect(appendedCss).toContain('@media screen and (min-width: 1200px)');
         const config = rc();
         config.overrides = config.overrides.map((o) => ({ ...o, files: o.files.map((f) => path.join(repo, f)) }));
+        // Resolve the CLI before creating scratch files so a resolution failure leaves nothing behind.
+        const bin = path.join(path.dirname(require.resolve('stylelint/package.json')), 'bin/stylelint.mjs');
+        // stylelint-config-standard 40 is ESM and exports only its entry (no ./package.json), so locate
+        // the installed package from that entry and confirm it before rooting --config-basedir there.
+        const configStandardDir = path.dirname(require.resolve('stylelint-config-standard'));
+        expect(JSON.parse(fs.readFileSync(path.join(configStandardDir, 'package.json'), 'utf8')).name).toBe('stylelint-config-standard');
+        const configBasedir = path.resolve(configStandardDir, '../..');
         fs.mkdirSync(path.join(repo, 'tmp'), { recursive: true });
         const dir = fs.mkdtempSync(path.join(repo, 'tmp', 'stylelint-'));
         const configFile = path.join(dir, 'stylelintrc.json');
         fs.writeFileSync(configFile, JSON.stringify(config));
         const ignoreFile = path.join(dir, 'stylelintignore');
         fs.writeFileSync(ignoreFile, '');
-        const bin = path.join(path.dirname(require.resolve('stylelint/package.json')), 'bin/stylelint.mjs');
-        const configBasedir = path.resolve(path.dirname(require.resolve('stylelint-config-standard/package.json')), '../..');
         const lint = (args, input) => {
             const run = spawnSync(process.execPath, [bin, '--config', configFile, '--ignore-path', ignoreFile, '--config-basedir', configBasedir, '--formatter', 'json', ...args], { input, encoding: 'utf8' });
             expect(run.error).toBeUndefined();

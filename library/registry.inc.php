@@ -121,7 +121,7 @@ function isRegistered($directory, $state = 1): bool
     return false;
 }
 
-function getTherapyGroupCategories()
+function getTherapyGroupCategories(): array
 {
     return [''];
 }
@@ -129,7 +129,7 @@ function getTherapyGroupCategories()
 // This gets an array including both standard and LBF visit form types,
 // one row per form type, sorted by category, priority, is lbf, name.
 //
-function getFormsByCategory($state = '1', $lbfonly = false)
+function getFormsByCategory($state = '1', $lbfonly = false): array
 {
     global $attendant_type;
     $all = [];
