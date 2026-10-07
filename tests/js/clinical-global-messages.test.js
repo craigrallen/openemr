@@ -358,26 +358,148 @@ describe('global-messages.css contract', () => {
         }
     });
 
-    test('compose sheet pairs ink on paper without restyling its fields', () => {
-        const sheet = merged(`${scope} #messages-div .jumbotron`);
-        expect(sheet.background).toBe('var(--oe-paper, #fff)');
-        expect(sheet.color).toBe('var(--oe-ink, #17343b)');
-        for (const selector of selectorsOf()) {
-            expect(selector).not.toMatch(/form-control|#note\b|textarea/);
-        }
-    });
-
-    test('nothing is hidden, clipped or forced except the three documented utility overrides', () => {
+    test('nothing is hidden, clipped or forced except the documented utility overrides', () => {
         expect(css()).not.toMatch(/display:\s*none|visibility:\s*hidden|opacity:\s*0[;\s]|\bresize:|outline:\s*(0|none)/);
+        expect(css()).not.toMatch(/overflow(-[xy])?:\s*hidden|text-overflow|white-space:\s*nowrap/);
         const forced = rules().flatMap(({ selectors, important }) => important.map((prop) => `${selectors.join()}|${prop}`));
         expect(forced.sort()).toEqual([
             `${scope} #container_div > .row .navbar|background`,
             `${scope} #main-nav-pills|background-color`,
             `${scope} #messages-div .more .text-body|color`,
+            // .p-2 on the compose sheet and .text-dark/.bg-light on #note are !important utilities.
+            `${COMPOSE}|padding`,
+            `${COMPOSE} #note|color`,
+            `${COMPOSE} #note|background-color`,
         ].sort());
         const hex = new Set((css().match(/#[0-9a-f]{3,6}\b/gi) || []).map((h) => h.toLowerCase()));
-        const allowed = ['#17343b', '#526a70', '#d9e4e2', '#fff', '#086878', '#f6f8f9', '#e1e8eb', '#f0f5f6', '#e4f0f1'];
+        const allowed = ['#17343b', '#526a70', '#d9e4e2', '#fff', '#086878', '#f6f8f9', '#e1e8eb', '#f0f5f6', '#e4f0f1',
+            // Reference field border and focus ring (researched index.html).
+            '#a9bbc3', '#b65020'];
         for (const value of hex) expect([value, allowed.includes(value)]).toEqual([value, true]);
+    });
+});
+
+// New / existing message form (#new_note > .jumbotron): the original controls, in their original order,
+// presented as a document-style composer. Presentation only; no control is added, moved or hidden.
+const COMPOSE = `${scope} #messages-div .jumbotron`;
+const INK = 'var(--oe-ink, #17343b)';
+const PAPER = 'var(--oe-paper, #fff)';
+
+describe('global-messages.css: document-style message composer', () => {
+    test('the compose sheet is a padded document with a ruled title', () => {
+        const sheet = rules().find(({ selectors }) => selectors.includes(COMPOSE));
+        expect(sheet.declarations['background-color']).toBe(PAPER);
+        expect(sheet.declarations.color).toBe(INK);
+        // .p-2 is an !important utility; document padding needs the same weight and shrinks with the viewport.
+        expect(sheet.important).toEqual(['padding']);
+        expect(sheet.declarations.padding).toMatch(/^[\d.]+rem clamp\(/);
+        const title = merged(`${COMPOSE} > h4:first-child`);
+        expect(title['font-size']).toBe('24px');
+        expect(title['font-weight']).toBe('650');
+        expect(title.color).toBe(INK);
+        expect(title['border-block-end']).toBe('1px solid var(--oe-line, #d9e4e2)');
+        expect(title['overflow-wrap']).toBe('anywhere');
+    });
+
+    test('metadata labels and fields pair their own ink and background', () => {
+        const label = merged(`${COMPOSE} label`);
+        expect(label.color).toBe(INK);
+        expect(label['font-weight']).toBe('600');
+        // Labels keep the theme size so .oe-empty-label spacers still line Clear buttons up with fields.
+        expect(label['font-size']).toBeUndefined();
+        const field = merged(`${COMPOSE} .form-control`);
+        expect(field.color).toBe(INK);
+        expect(field['background-color']).toBe(PAPER);
+        // background-color only: the patient picker's .oe-patient-background image must survive.
+        expect(field.background).toBeUndefined();
+        expect(field['border-color']).toBe('#a9bbc3');
+        expect(field.height).toBe('auto');
+        expect(field['min-height']).toBe('40px');
+        for (const { selectors, declarations } of rules()) {
+            // ::placeholder text sits on its field's paper (tested below); every other surface pairs both.
+            if (selectors.every((s) => s.endsWith('::placeholder'))) continue;
+            if (selectors.some((s) => s.startsWith(COMPOSE)) && (declarations.color || declarations['background-color'])) {
+                expect([selectors.join(), Boolean(declarations.color && declarations['background-color'])])
+                    .toEqual([selectors.join(), true]);
+            }
+        }
+    });
+
+    test('focused fields keep the pair in both themes and show the reference focus ring', () => {
+        // The theme's .form-control:focus repaints fields (dark in the dark theme); the scoped rule restates the pair.
+        const focus = merged(`${COMPOSE} .form-control:focus`);
+        expect(focus.color).toBe(INK);
+        expect(focus['background-color']).toBe(PAPER);
+        expect(focus['border-color']).toBe('var(--oe-petrol, #086878)');
+        expect(focus.outline).toBe('3px solid #b65020');
+        expect(focus['outline-offset']).toBe('1px');
+        expect(focus['box-shadow']).toBe('none');
+    });
+
+    test('placeholders on the paper fields are muted ink, not the dark theme\'s pale hint colour', () => {
+        // The dark theme's ::placeholder is #ced4da: 1.49:1 on the paper fields (patient/recipient hints).
+        // Field focus does not repaint it, so one rule covers both states; opacity 1 stops browser fading.
+        const hint = rules().find(({ selectors }) => selectors.includes(`${COMPOSE} .form-control::placeholder`));
+        expect(hint).toBeDefined();
+        expect(hint.selectors).toEqual([`${COMPOSE} .form-control::placeholder`]);
+        expect(hint.declarations).toEqual({ color: 'var(--oe-muted, #526a70)', opacity: '1' });
+        expect(hint.important).toEqual([]);
+        // The paper behind it is the field's own (unfocused and focused).
+        expect(merged(`${COMPOSE} .form-control`)['background-color']).toBe(PAPER);
+        expect(merged(`${COMPOSE} .form-control:focus`)['background-color']).toBe(PAPER);
+        // No placeholder styling leaks outside the composer.
+        for (const selector of selectorsOf()) {
+            if (/placeholder/.test(selector)) expect(selector.startsWith(COMPOSE)).toBe(true);
+        }
+    });
+
+    test('the note is a quiet, readable writing surface', () => {
+        const note = rules().find(({ selectors }) => selectors.includes(`${COMPOSE} #note`));
+        // .text-dark/.bg-light are !important theme utilities; both halves of the pair are forced together.
+        expect(note.important.sort()).toEqual(['background-color', 'color']);
+        expect(note.declarations.color).toBe(INK);
+        expect(note.declarations['background-color']).toBe(PAPER);
+        expect(note.declarations['border-width']).toBe('0 0 1px');
+        expect(note.declarations['border-radius']).toBe('0');
+        expect(note.declarations['font-size']).toBe('14px');
+        expect(note.declarations['line-height']).toBe('1.7');
+        expect(note.declarations['min-height']).toBe('10rem');
+        // The read-only thread above the note (.text-light.bg-dark) keeps the theme pair.
+        expect(selectorsOf().some((s) => /bg-dark|text-light/.test(s))).toBe(false);
+    });
+
+    test('metadata fields wrap to readable widths instead of squeezing into half columns', () => {
+        expect(merged(`${COMPOSE} .oe-custom-line > .row`)['row-gap']).toBe('0.75rem');
+        const column = merged(`${COMPOSE} .oe-custom-line > .row > div`);
+        expect(column.flex).toBe('1 1 11rem');
+        expect(column['max-width']).toBe('100%');
+        expect(column['min-width']).toBe('0');
+        // The Clear button column keeps the button's own width.
+        expect(merged(`${COMPOSE} .oe-custom-line > .row > div:last-child`).flex).toBe('0 1 auto');
+        for (const { selectors, declarations } of rules()) {
+            if (selectors.some((s) => s.startsWith(COMPOSE))) {
+                expect([selectors.join(), declarations.width, declarations['max-height'], declarations.order, declarations.position])
+                    .toEqual([selectors.join(), undefined, undefined, undefined, undefined]);
+            }
+        }
+    });
+
+    test('send, print and cancel wrap under a footer rule', () => {
+        const actions = merged(`${COMPOSE} .position-override`);
+        expect(actions.display).toBe('flex');
+        expect(actions['flex-wrap']).toBe('wrap');
+        expect(actions.gap).toBe('0.5rem');
+        expect(actions['border-block-start']).toBe('1px solid var(--oe-line, #d9e4e2)');
+    });
+
+    test('every composer button, including the patient/user Clear buttons, is full size', () => {
+        // Native QA: the .btn-undo Clear buttons rendered 36px tall; sizing only the footer missed them.
+        const button = merged(`${COMPOSE} .btn`);
+        expect(button['min-height']).toBe('38px');
+        expect(button['white-space']).toBe('normal');
+        // Theme button colours are untouched.
+        expect(button.color).toBeUndefined();
+        expect(button['background-color']).toBeUndefined();
     });
 });
 

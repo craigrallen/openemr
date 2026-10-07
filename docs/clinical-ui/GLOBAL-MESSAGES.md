@@ -11,7 +11,7 @@ It adapts the default message board to the accepted research composition, within
 | `interface/main/messages/messages.php` | Adds one `use` line. Adds a four-line asset block just before `</head>`, inside the default (non-`go`) branch. Adds a body class: `body_top` becomes `body_top oe-clinical-global-messages`. Adds four selection-class lines, each directly after an original row-painting line (see below). |
 | `src/Common/Assets/ClinicalWorkspaceAssets.php` | Adds `'global-messages.css'` to the supported list. No new logic. |
 | `interface/clinical-workspace/global-messages.css` | New stylesheet. Every rule is inside `@media screen` and scoped to `body.oe-clinical-workspace.oe-clinical-global-messages`. |
-| `tests/js/clinical-global-messages.test.js` | Jest contracts: source baseline, CSS and mode controller. 20 tests: 7 PHP-source, 11 CSS-contract, 2 mode-controller. |
+| `tests/js/clinical-global-messages.test.js` | Jest contracts: source baseline, CSS and mode controller. 27 tests: 7 PHP-source, 10 CSS-contract, 8 composer, 2 mode-controller. |
 | `tests/Tests/Isolated/Common/Assets/ClinicalWorkspaceAssetsTest.php` | Two new cases (per-file version, shipped file) and one near-miss rejection case (`global_messages.css`). |
 
 The page loads its assets the same way as the other routes: `workspace.css` (`media="screen"`, because that sheet is not media-scoped internally), then `global-messages.css`, then `mode.js` (`defer`). Each URL is `attr(webroot)` plus `?v=attr_url($clinicalAssets->version(...))`. No served link expression uses `filemtime`, `__DIR__` or `v_js_includes`.
@@ -49,8 +49,15 @@ The page loads its assets the same way as the other routes: `workspace.css` (`me
   - **Current filter:** the disabled span for the current filter becomes an ink-on-pale chip.
 - **The original table scrolls horizontally.** The outer layout table gets `table-layout: fixed`. `#MessageList` gets `overflow-x: auto; max-width: 100%`. The inner table gets `min-width: 640px`. Nothing is hidden: the stylesheet contains no `display: none`, `visibility: hidden`, `opacity: 0` or width media queries.
 - **Dark compiled theme:** every surface painted light in the Messages pane also sets its own ink (sheet, table, `th`, `td`, hover, selected cells, tabs, compose jumbotron, `#messages-div a.btn-secondary`).
-  - **`!important` overrides:** exactly three, each needed to beat a theme `!important` utility, and test-enumerated: the heading `.bg-light` background, the tab `.bg-light` background, and the See All/Just Mine icon's `.text-body` colour.
-- **Danger and status colours are preserved.** No selector targets `.text-danger`, `.bg-*`, `.text-muted` or `.btn-delete`. The only `btn-danger` rule is `#messages-div a.btn-danger { color: #fff }`, which undoes `workspace.css`'s petrol link colour. Form fields (`.form-control`, `#note`, the `bg-dark` note history) keep their theme pairs.
+  - **`!important` overrides:** exactly six, each needed to beat a theme `!important` utility, and test-enumerated: the heading `.bg-light` background, the tab `.bg-light` background, the See All/Just Mine icon's `.text-body` colour, the compose sheet's `.p-2` padding, and `#note`'s `.text-dark` colour and `.bg-light` background (forced together as one pair).
+- **Danger and status colours are preserved.** No selector targets `.text-danger`, `.bg-*`, `.text-muted` or `.btn-delete`. The only `btn-danger` rule is `#messages-div a.btn-danger { color: #fff }`, which undoes `workspace.css`'s petrol link colour. The read-only `bg-dark` note history keeps its theme pair; composer fields set their own pair (below).
+- **Document-style composer (`#new_note` > `.jumbotron`, `task=addnew|edit`).** CSS only; every control, label, hidden input, handler and value stays in its original element and order.
+  - **Sheet:** paper/ink with document padding `1.5rem clamp(0.75rem, 4vw, 2.25rem)`; the legend `h4` is a 24px/650 title over a line rule (reference `.doc` / `.doc-title`).
+  - **Labels and fields:** labels are ink on paper, weight 600, theme size (so `.oe-empty-label` spacers still align the Clear buttons). `.form-control` fields set ink on paper, the reference `#a9bbc3` border, `height: auto; min-height: 40px`. Only `background-color` is set, so the patient picker's `.oe-patient-background` image survives.
+  - **Focus:** `.form-control:focus` restates ink on paper (the dark theme's own focus rule otherwise repaints it), petrol border and the reference `3px solid #b65020` ring.
+  - **Placeholders:** `.form-control::placeholder` is `var(--oe-muted, #526a70)` at `opacity: 1` (5.75:1 on paper). The dark theme's pale grey hint was 1.49:1 on the paper fields (patient/recipient). Focus keeps paper, so one rule covers both states. It is scoped to the composer.
+  - **Note:** `#note` is a ruled writing surface: ink on paper, bottom border only, 14px/1.7, `min-height: 10rem`. `resize` is untouched.
+  - **Narrow widths:** metadata columns are `flex: 1 1 11rem; max-width: 100%; min-width: 0` (the Clear column keeps its button width), so fields wrap to full rows instead of squeezing into `col-6` halves. Send/Print/Cancel are a wrapping footer under a line rule, `min-height: 38px`, `white-space: normal`; theme button colours are untouched.
 - **Stylelint:** no width queries, so the `media-feature-range-notation` prefix allowlist and `clinical-calendar-stylelint.test.js` are unchanged. The new file passes the repo `.stylelintrc.json`.
 
 ## Test evidence
@@ -190,11 +197,20 @@ These results are as reported by the controller; the author did not run them.
 | External native fixture (`qa.py`, real PHP render, Chrome) | 268 checks passed. The first failed run (226 passed, 40 failed) is preserved in `qa-first-failed/`. |
 | Independent review (Codex/Astra) | final pass covered all 6 changed files plus the harness guards; no P1/P2 introduced |
 
+The table above predates the composer slice. Final controller evidence for the composer and placeholder corrections:
+
+| Gate | Result |
+|------|--------|
+| Full Jest | 48 suites, 964 tests passed |
+| External harness unit tests (`test_qa.py`) | 25 passed, with the inherited ResourceWarning |
+| External native fixture (`compose-placeholder-final/qa.json`, real PHP render, Chrome) | 388 passed, 0 failed, exit 0, complete. Includes the real `::placeholder` measurement, the probe, and the blurred and focused states. |
+| Independent review (Codex/Astra, `openemr-compose-final-review.txt`) | no P1/P2 introduced |
+
 **PHPStan note:** the first full run failed during setup because two ClaimRev module classes were missing. That was an environment problem, not a code one. The controller fixed it by restoring the real ignored module, rebuilding the worktree's own correctly rooted autoloader and clearing the cache. The rerun passed.
 
 ## Not done / remaining
 
-- **State:** uncommitted, no PR. It is published only when the controller does so.
+- **State:** draft PR #41. The composer and placeholder corrections are recorded below, pending publication. They are published only when the controller does so; no commit SHA is claimed here.
 - **No acceptance:** none of the 22 requested features is accepted or completed. No seeded demo rows were added, and coverage was not recounted live.
 - **Fixture limits of the native evidence:**
   - Screenshots lack the icon fonts, which cannot load offline.
@@ -209,5 +225,16 @@ These results are as reported by the controller; the author did not run them.
   - The disabled pager chevron uses `.text-muted`, an `!important` utility, and stays theme-coloured. It is a decorative disabled indicator.
   - The legacy heading help icon's inline `style="color: var(--gray)"` is unchanged.
   - The legacy inline `@media (max-width: 768px)` block in `messages.php` is unchanged.
-- **Compose form:** the new/existing message form (`task=addnew|edit`) only gets the paper sheet. It is not a reference document composition.
-- **No acceptance claim:** this is not design-fidelity acceptance, clinical acceptance or deployment evidence.
+- **Compose form:** presentation slice only (see above). Not covered: the `task=edit` thread/linked-documents/procedure-order variant in a browser (the native fixture renders `task=addnew` only), the `messages_due_date` datetime field, the patient/user pickers' popups and the actual send/print round trip. Not design-fidelity acceptance.
+- **Composer evidence (this slice):** Jest RED 7 failed / 18 passed, then GREEN 25/25; stylelint clean; `test_qa.py` RED 9 errors (`compose_problems` missing), then 19/19. `qa.py` adds `compose` to the light/dark x 1440/1024/390/320 matrix (legacy + print identical to baseline, inventory/reach/contrast/overflow/exceptions) plus a composer gate (controls inside the sheet, button labels unclipped and >= 38px, fields >= min(140px, 90% of sheet), note >= 14px/1.5, >= 120px tall, >= 80% sheet width, >= 4.5:1, every visible field focused with an indicator at >= 4.5:1). Only `--render-only` was run here (PASS, 9/9); the browser matrix is for the controller to run.
+- **Composer native runs (controller, before the placeholder correction):** the first run (`compose-qa/qa.json`) was 380 passed, 8 failed. The failures were the patient/user Clear (`.btn-undo`) buttons at 36px. After the full-size button rule, `compose-final/qa.json` was 388 passed, 0 failed. Both are offline fixture runs. Neither measured `::placeholder`, so they predate and do not cover the correction below.
+- **Placeholder correction (review P2, after the 388/0 run):**
+  - **Jest:** RED 1 failed / 26 passed, then GREEN 27/27. The full `tests/js` run is 38 suites, 899 tests passed. Stylelint is clean.
+  - **`test_qa.py`:** RED 5 failed + 1 error (19 prior passed), then 25/25.
+  - **`qa.py` gate:** for every composer `.form-control` with a non-empty placeholder and empty value, the gate reads the computed `::placeholder` colour and opacity over the field's backdrop. It does this blurred and after a real `focus()`. Both states must reach >= 4.5:1, and every field must have both states.
+  - **Probe:** a probe input with a known `::placeholder` style must read back, or the gate fails. An engine that ignores the pseudo-element cannot pass silently.
+  - **Runs (author):** only `--render-only` was rerun (PASS, 9/9).
+- **Superseded:** the "no native run yet" and "predate the correction" statements above are superseded by the controller's final run, `compose-placeholder-final/qa.json`: 388 passed, 0 failed, exit 0, measuring real `::placeholder` with the probe, blurred and focused (see the final controller table).
+- **Fixture screenshot limits (final run):** the fixture is not authenticated or deployed. Missing icon fonts still show as squares, and the recipient field's single-line hint is still visibly truncated at 320px.
+- **Not covered by the final run:** send, edit, role and database behaviour. None of these is accepted.
+- **No acceptance claim:** this is not design-fidelity or full-fidelity acceptance, clinical acceptance, send/edit/role/database acceptance, or deployment evidence.

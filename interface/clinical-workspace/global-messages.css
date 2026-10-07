@@ -222,12 +222,105 @@
     border-color: var(--oe-line, #d9e4e2);
   }
 
-  /* New / existing message form: a document sheet; fields keep their theme pairs. */
+  /*
+   * New / existing message form (#new_note): the original controls in their original order as a
+   * document-style composer (reference .doc). .p-2 on the sheet and .text-dark/.bg-light on #note are
+   * !important utilities, so those three declarations carry the same weight. The read-only thread
+   * above the note (.text-light.bg-dark) keeps the theme pair.
+   */
   body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron {
-    padding: 1rem;
+    padding: 1.5rem clamp(0.75rem, 4vw, 2.25rem) !important;
     color: var(--oe-ink, #17343b);
-    background: var(--oe-paper, #fff);
+    background-color: var(--oe-paper, #fff);
     border: 1px solid var(--oe-line, #d9e4e2);
     border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron > h4:first-child {
+    margin-block-end: 1rem;
+    padding-block-end: 0.75rem;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-block-end: 1px solid var(--oe-line, #d9e4e2);
+    font-size: 24px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  /* Labels keep the theme size so .oe-empty-label spacers still align the Clear buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron label {
+    margin-block-end: 0.25rem;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    font-weight: 600;
+  }
+
+  /* Metadata columns: at least 11rem each, wrapping instead of squeezing into col-6 halves. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row {
+    row-gap: 0.75rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row > div {
+    flex: 1 1 11rem;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row > div:last-child {
+    flex: 0 1 auto;
+  }
+
+  /* background-color only: the patient picker's .oe-patient-background image stays. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control {
+    height: auto;
+    min-height: 40px;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-color: #a9bbc3;
+  }
+
+  /*
+   * Hints sit on the field's paper: the dark theme's pale grey placeholder is 1.49:1 there. Focus does not
+   * repaint it, so one rule covers both states; opacity 1 stops browsers fading it below the muted ink.
+   */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control::placeholder {
+    color: var(--oe-muted, #526a70);
+    opacity: 1;
+  }
+
+  /* The theme's .form-control:focus repaints fields (dark in the dark theme); restate the pair. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control:focus {
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-color: var(--oe-petrol, #086878);
+    outline: 3px solid #b65020;
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  /* The note: a ruled writing surface rather than a grey box. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron #note {
+    min-height: 10rem;
+    color: var(--oe-ink, #17343b) !important;
+    background-color: var(--oe-paper, #fff) !important;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* Send / Print / Cancel: wrapping footer of theme buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .position-override {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-block-start: 1rem;
+    border-block-start: 1px solid var(--oe-line, #d9e4e2);
+  }
+
+  /* Every composer button is full size, including the patient/user Clear (.btn-undo) buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .btn {
+    min-height: 38px;
+    white-space: normal;
   }
 }
