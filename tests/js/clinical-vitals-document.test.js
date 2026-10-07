@@ -25,6 +25,8 @@ const FIXTURE = 'tests/Tests/Isolated/Forms/Vitals/fixtures/vitals-form-document
 // sha256 of the files at master ba11545, before this change.
 const ORIGINAL = {
     template: 'f80b7a9140ea7c4342b89fded9e5a5aa198cd9586a3d338f622990cb20853277',
+    // The template at upstream 6685e878, which adds only upstream #14291 (15b56b20) on top of ba11545.
+    upstreamTemplate: '767cba280a447f2bda2a7f5ae771c64d36cfdac1ffc5f449b8b2f92d697f3e01',
     history: '48c9c41df89df53612ef37c24544238c2aac13b6a1557c8a6f73067cedd13c37',
     css: 'd3b596fc535636da92b90579a08eb6ec5d44427891bb0337756119d6c1cd09ce',
     modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599'
@@ -49,6 +51,12 @@ const TEMPLATE_EDITS = [
         '<div class="table-responsive">'
     ]
 ];
+// Upstream #14291 (15b56b20, fixes #13016): the web root reaches the reason code widget unencoded.
+// Not part of this change; reverting it as well must land exactly on ba11545.
+const UPSTREAM_TEMPLATE_EDITS = [[
+    'window.vitalsForm.init({{ FORM_ACTION|js_escape }}, vitalsTranslations);',
+    'window.vitalsForm.init({{ FORM_ACTION|js_url }}, vitalsTranslations);'
+]];
 const HISTORY_EDITS = [[
     '<div class="table-responsive" id="vitals-history-measurements" role="region" aria-label="{{ \'Vitals History\'|xla }}" tabindex="0">',
     '<div class="table-responsive">'
@@ -70,7 +78,18 @@ function splitCss() {
 
 describe('vitals template source preservation', () => {
     test('the only template changes are the asset tags, body class and named scroll region', () => {
-        expect(sha256(revert(read(TEMPLATE), TEMPLATE_EDITS))).toBe(ORIGINAL.template);
+        const upstream = revert(read(TEMPLATE), TEMPLATE_EDITS);
+        expect(sha256(upstream)).toBe(ORIGINAL.upstreamTemplate);
+        expect(sha256(revert(upstream, UPSTREAM_TEMPLATE_EDITS))).toBe(ORIGINAL.template);
+    });
+
+    test('the reason code widget still receives the web root unencoded (upstream #14291)', () => {
+        // Rendered behaviour is covered by tests/Tests/Isolated/Forms/ReasonCodeWidgetWebRootTest.php;
+        // this pins the source so a rebase of the workbench edits cannot reintroduce |js_url.
+        const source = read(TEMPLATE);
+        expect(source.match(/window\.vitalsForm\.init\(/g)).toHaveLength(1);
+        expect(source).toContain('window.vitalsForm.init({{ FORM_ACTION|js_escape }}, vitalsTranslations);');
+        expect(source).not.toMatch(/FORM_ACTION\|js_url/);
     });
 
     test('the history table only gains its named scroll region', () => {

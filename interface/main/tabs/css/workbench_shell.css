@@ -265,7 +265,6 @@ body.workbench-active { width: 100% !important;
   margin: 0 4px 0 0;
   margin-inline: 0 4px;
   overflow: visible;
-  clip: auto;
   white-space: nowrap;
   color: var(--wb-muted);
   font-size: 10px;

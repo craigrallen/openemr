@@ -648,6 +648,8 @@ final readonly class CalendarRenderDataBuilder
             ];
         }
 
+        $selectableFacilities = self::selectableFacilities($facilities, $pcFacility);
+
         return [
             'viewtype'                => 'month',
             'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
@@ -666,10 +668,10 @@ final readonly class CalendarRenderDataBuilder
             'nextMonthName'           => $nextMonthName,
             'currentMiniCal'          => $currentMini,
             'monthSelectorHtml'       => $monthSelectorHtml,
-            'showFacilitySelect'      => count($facilities) > 1,
+            'showFacilitySelect'      => self::showFacilitySelect($selectableFacilities, $showAllFacilitiesOption),
             'showAllFacilitiesOption' => $showAllFacilitiesOption,
             'pc_facility'             => $pcFacility,
-            'facilities'              => self::sanitizeFacilityColors($facilities),
+            'facilities'              => self::sanitizeFacilityColors($selectableFacilities),
             'provinfo'                => $provinfo,
             'selectedUsernames'       => $selectedUsernames,
             'providersGrid'           => $providersGrid,
@@ -885,6 +887,8 @@ final readonly class CalendarRenderDataBuilder
             ];
         }
 
+        $selectableFacilities = self::selectableFacilities($facilities, $pcFacility);
+
         return [
             'viewtype'                => 'day',
             'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
@@ -903,10 +907,10 @@ final readonly class CalendarRenderDataBuilder
             'nextMonthName'           => $nextMonthName,
             'currentMiniCal'          => $currentMini,
             'monthSelectorHtml'       => $monthSelectorHtml,
-            'showFacilitySelect'      => count($facilities) > 1,
+            'showFacilitySelect'      => self::showFacilitySelect($selectableFacilities, $showAllFacilitiesOption),
             'showAllFacilitiesOption' => $showAllFacilitiesOption,
             'pc_facility'             => $pcFacility,
-            'facilities'              => self::sanitizeFacilityColors($facilities),
+            'facilities'              => self::sanitizeFacilityColors($selectableFacilities),
             'provinfo'                => $provinfo,
             'selectedUsernames'       => $selectedUsernames,
             'timeRows'                => $timeRows,
@@ -1064,6 +1068,8 @@ final readonly class CalendarRenderDataBuilder
             ];
         }
 
+        $selectableFacilities = self::selectableFacilities($facilities, $pcFacility);
+
         return [
             'viewtype'                => 'week',
             'calendarSidebarVersion'  => $this->assets->version('calendar-sidebar.js'),
@@ -1082,10 +1088,10 @@ final readonly class CalendarRenderDataBuilder
             'nextMonthName'           => $nextMonthName,
             'currentMiniCal'          => $currentMini,
             'monthSelectorHtml'       => $monthSelectorHtml,
-            'showFacilitySelect'      => count($facilities) > 1,
+            'showFacilitySelect'      => self::showFacilitySelect($selectableFacilities, $showAllFacilitiesOption),
             'showAllFacilitiesOption' => $showAllFacilitiesOption,
             'pc_facility'             => $pcFacility,
-            'facilities'              => self::sanitizeFacilityColors($facilities),
+            'facilities'              => self::sanitizeFacilityColors($selectableFacilities),
             'provinfo'                => $provinfo,
             'selectedUsernames'       => $selectedUsernames,
             'timeRows'                => $timeRows,
@@ -1454,6 +1460,63 @@ final readonly class CalendarRenderDataBuilder
             'displayBgColor'     => 'var(--gray300)',
             'displayContentHtml' => "<span class='text-center text-danger'>" . attr($facilityName) . '</span>',
         ];
+    }
+
+    /**
+     * The facilities the calendar offers: the active ones, plus the selected one even if it has
+     * since been deactivated, so the picker still shows what the calendar is filtered on.
+     *
+     * Rows without an `inactive` key count as active.
+     *
+     * @param  list<array<string, mixed>> $facilities
+     * @return list<array<string, mixed>>
+     */
+    private static function selectableFacilities(array $facilities, int $pcFacility): array
+    {
+        $result = [];
+        foreach ($facilities as $facility) {
+            $id = $facility['id'] ?? null;
+            $isSelected = is_numeric($id) && (int) $id === $pcFacility;
+            if (self::isInactiveFacility($facility) && !$isSelected) {
+                continue;
+            }
+            $result[] = $facility;
+        }
+        return $result;
+    }
+
+    /**
+     * Whether the calendar shows its facility picker: when there is more than one facility to
+     * choose from, or when the only one left is the selected facility, since deactivated, and
+     * "All Facilities" is offered to clear that selection.
+     *
+     * @param  list<array<string, mixed>> $selectableFacilities
+     */
+    private static function showFacilitySelect(array $selectableFacilities, bool $showAllFacilitiesOption): bool
+    {
+        if (count($selectableFacilities) > 1) {
+            return true;
+        }
+        if (!$showAllFacilitiesOption) {
+            return false;
+        }
+        foreach ($selectableFacilities as $facility) {
+            if (self::isInactiveFacility($facility)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a facility row is marked inactive; the database hands the flag back as an int or a string.
+     *
+     * @param  array<string, mixed> $facility
+     */
+    private static function isInactiveFacility(array $facility): bool
+    {
+        $inactive = $facility['inactive'] ?? 0;
+        return $inactive === 1 || $inactive === '1';
     }
 
     /**
