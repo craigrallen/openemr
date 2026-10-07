@@ -1,0 +1,60 @@
+<div class='tab current' id='tab_General'>
+<div class='container-fluid lbfdata'>
+<div class='row mb-2'><div class='col-sm-12' style='color:#0000ff'>SYNTHETIC general subtitle</div></div>
+<div class='form-row mb-2'><div class='col-sm-12 p-2 label' style='background-color: var(--gray300)'>SYNTHETIC general subtitle</div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_text'>SYNTHETIC text:</div><div class='col-sm-9' id='value_id_text_syn_text'>&nbsp;<input type='text'
+            class='form-control form-control-sm mb-1 mw-100'
+            name='form_syn_text'
+            id='form_syn_text'
+            size='40'
+            maxlength='255'
+            title='SYNTHETIC text field'
+            value='SYNTHETIC value' onchange='checkSkipConditions();' /></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_date'>SYNTHETIC date:</div><div class='col-sm-9' id='value_id_text_syn_date'>&nbsp;<input type='text' size='10' class='datepicker form-control form-control-sm mb-1 mw-100' name='form_syn_date' id='form_syn_date' value='2000-01-01' title='SYNTHETIC date field'  onchange='checkSkipConditions();'  /></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_list'>SYNTHETIC list:</div><div class='col-sm-9' id='value_id_text_syn_list'>&nbsp;<select name='form_syn_list' id='form_syn_list' class='form-control form-control-sm mb-1 mw-100' title='SYNTHETIC list field' onchange='checkSkipConditions();'><option value=''>Unassigned</option><option value='a' selected>SYNTHETIC option A</option><option value='b'>SYNTHETIC option B</option></select></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_search'>SYNTHETIC searchable list:</div><div class='col-sm-9' id='value_id_text_syn_search'>&nbsp;<select name='form_syn_search' id='form_syn_search' class='select-dropdown' title='SYNTHETIC searchable list field' onchange='checkSkipConditions();'><option value=''>Unassigned</option><option value='x'>SYNTHETIC option X</option><option value='y' selected>SYNTHETIC option Y with a deliberately long label</option></select></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_note'>SYNTHETIC note:</div><div class='col-sm-9' id='value_id_text_syn_note'>&nbsp;<textarea name='form_syn_note' class='form-control form-control-sm mb-1 mw-100' id='form_syn_note' title='SYNTHETIC note field' cols='40' rows='3' onchange='checkSkipConditions();' >SYNTHETIC note body</textarea></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_template'>SYNTHETIC template:</div><div class='col-sm-9' id='value_id_text_syn_template'>&nbsp;<div><a href='../../../library/custom_template/custom_template.php?type=form_syn_template&contextName=' class='iframe_medium text-body text-decoration-none'><div id='form_syn_template_div' class='text-area' style='min-width: 133px'>SYNTHETIC populated custom template text that a clinician reads</div><div style='display: none'><textarea name='form_syn_template' id='form_syn_template' class='form-control form-control-sm mb-1 mw-100' style='display: none' onchange='checkSkipConditions();' >SYNTHETIC populated custom template text that a clinician reads</textarea></div></a></div></div></div>
+</div>
+</div>
+<div class='tab' id='tab_Family History'>
+<div class='container-fluid lbfdata'>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_relatives'>SYNTHETIC relatives:</div><div class='col-sm-9' id='value_id_text_syn_relatives'>&nbsp;<table class='w-100' cellpadding='0' cellspacing='0' title='SYNTHETIC checkbox list'><tr><td width='50%' nowrap><input type='checkbox' name='form_syn_relatives[a]' id='form_syn_relatives[a]' value='1' onchange='checkSkipConditions();' checked  />SYNTHETIC relative A</td><td width='50%' nowrap><input type='checkbox' name='form_syn_relatives[b]' id='form_syn_relatives[b]' value='1' onchange='checkSkipConditions();'  />SYNTHETIC relative B</td></tr></table></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_textlist'>SYNTHETIC text list:</div><div class='col-sm-9' id='value_id_text_syn_textlist'>&nbsp;<table class='table'><tr><td>SYNTHETIC item one&nbsp;</td><td><input type='text' name='form_syn_textlist[one]' id='form_syn_textlist[one]' size='20' class='form-control form-control-sm mb-1 mw-100' value='SYNTHETIC entry'  onchange='checkSkipConditions();'  /></td></tr><tr><td>SYNTHETIC item two&nbsp;</td><td><input type='text' name='form_syn_textlist[two]' id='form_syn_textlist[two]' size='20' class='form-control form-control-sm mb-1 mw-100' value=''  onchange='checkSkipConditions();'  /></td></tr></table></div></div>
+</div>
+</div>
+<div class='tab' id='tab_Lifestyle'>
+<div class='container-fluid lbfdata'>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_coffee'>SYNTHETIC coffee:</div><div class='col-sm-9' id='value_id_text_syn_coffee'>&nbsp;<table class='table'><tr><td><input type='text' class='form-control' name='form_syn_coffee' id='form_syn_coffee' size='20' class='form-control form-control-sm mb-1 mw-100' maxlength='255' value='SYNTHETIC two cups'  />&nbsp;</td><td class='font-weight-bold'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Status:&nbsp;&nbsp;</td><td class='text'><input type='radio' name='radio_syn_coffee' id='radio_syn_coffee[current]' class='form-check-inline' value='currentsyn_coffee' onchange='checkSkipConditions();' checked />Current&nbsp;</td><td class='text'><input type='radio' name='radio_syn_coffee' id='radio_syn_coffee[quit]' class='form-check-inline' value='quitsyn_coffee' onchange='checkSkipConditions();' />Quit&nbsp;</td><td class='text'><input type='text' size='6' class='datepicker form-control form-control-sm mb-1 mw-100' name='date_syn_coffee' id='date_syn_coffee' value='' title='SYNTHETIC quit date' onchange='checkSkipConditions();'  /></td><td class='text'><input type='radio' name='radio_syn_coffee' id='radio_syn_coffee[never]' class='form-check-inline' value='neversyn_coffee' onchange='checkSkipConditions();' />Never&nbsp;</td><td class='text'><input type='radio' name='radio_syn_coffee' id='radio_syn_coffee[not_applicable]' class='form-check-inline' value='not_applicablesyn_coffee' onchange='checkSkipConditions();' />N/A&nbsp;</td></tr></table></div></div>
+</div>
+<br /><span class='bold'><input type='checkbox' name='form_cb_grp-HIS-3a' value='1' onclick='return divclick(this,"div_grp-HIS-3a");' checked /><b>SYNTHETIC open group</b></span>
+<div id='div_grp-HIS-3a' class='section' style='display:block;'>
+<div class='container-fluid lbfdata'>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_exercise'>SYNTHETIC exercise:</div><div class='col-sm-9' id='value_id_text_syn_exercise'>&nbsp;<input type='text'
+            class='form-control form-control-sm mb-1 mw-100'
+            name='form_syn_exercise'
+            id='form_syn_exercise'
+            size='20'
+            title=''
+            value='SYNTHETIC daily walk' onchange='checkSkipConditions();' /></div></div>
+</div>
+</div>
+<br /><span class='bold'><input type='checkbox' name='form_cb_grp-HIS-3b' value='1' onclick='return divclick(this,"div_grp-HIS-3b");' /><b>SYNTHETIC closed group</b></span>
+<div id='div_grp-HIS-3b' class='section' style='display:none;'>
+<div class='container-fluid lbfdata'>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_hidden_text'>SYNTHETIC hidden-group text:</div><div class='col-sm-9' id='value_id_text_syn_hidden_text'>&nbsp;<input type='text'
+            class='form-control form-control-sm mb-1 mw-100'
+            name='form_syn_hidden_text'
+            id='form_syn_hidden_text'
+            size='20'
+            title=''
+            value='' onchange='checkSkipConditions();' /></div></div>
+</div>
+</div>
+</div>
+<div class='tab' id='tab_Other'>
+<div class='container-fluid lbfdata'>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_exams'>SYNTHETIC exams:</div><div class='col-sm-9' id='value_id_text_syn_exams'>&nbsp;<table class='table'><tr><td class='font-weight-bold'>Exam or Test</td><td class='font-weight-bold'>N/A&nbsp;</td><td class='font-weight-bold'>Nor&nbsp;</td><td class='font-weight-bold'>Abn&nbsp;</td><td class='font-weight-bold'>Date/Notes</td></tr><tr><td>SYNTHETIC exam&nbsp;</td><td><input type='radio' name='form_syn_exams[e1]' id='form_syn_exams[e1][0]' value='0' onchange='checkSkipConditions();' checked /></td><td><input type='radio' name='form_syn_exams[e1]' id='form_syn_exams[e1][1]' value='1' onchange='checkSkipConditions();' /></td><td><input type='radio' name='form_syn_exams[e1]' id='form_syn_exams[e1][2]' value='2' onchange='checkSkipConditions();' /></td><td><input type='text' name='form_text_syn_exams[e1]' id='form_text_syn_exams[e1]' size='20' class='form-control form-control-sm mb-1 mw-100' value='SYNTHETIC exam note' onchange='checkSkipConditions();' /></td></tr></table></div></div>
+<div class='form-row'><div class='col-sm-3 pt-1 label_custom' id='label_id_syn_static'>SYNTHETIC static:</div><div class='col-sm-9' id='value_id_text_syn_static'>&nbsp;SYNTHETIC-static-text-without-natural-break-points-that-must-wrap-inside-a-narrow-frame</div></div>
+</div>
+</div>

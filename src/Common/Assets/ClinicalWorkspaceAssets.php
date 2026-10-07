@@ -33,6 +33,7 @@ final readonly class ClinicalWorkspaceAssets
         'calendar-workday.js',
         'encounter-document.css',
         'finder.css',
+        'history-editor.css',
         'lbf-document.css',
         'mode.js',
         'patient-messages.css',
