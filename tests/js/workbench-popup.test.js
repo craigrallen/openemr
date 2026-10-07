@@ -33,7 +33,7 @@ function loadPopupApi() {
     return require(popupPath);
 }
 
-function startIn(win) {
+function initializePopupIn(win) {
     const api = loadPopupApi();
     return api.createPopupController({ win });
 }
@@ -46,7 +46,7 @@ describe('workbench popup context discovery', () => {
         const shell = makeShell();
         const dialogFrame = shell.document.querySelector('iframe.modalIframe');
         const child = makeWindow('<body class="body_top"></body>', { parent: shell, frameElement: dialogFrame });
-        const controller = startIn(child);
+        const controller = initializePopupIn(child);
 
         expect(controller.active).toBe(true);
         expect(htmlClasses(child)).toEqual(expect.arrayContaining(['oe-workbench-context', 'oe-workbench-popup']));
@@ -57,7 +57,7 @@ describe('workbench popup context discovery', () => {
         const shell = makeShell();
         const tabFrame = shell.document.querySelector('iframe[name="pat"]');
         const child = makeWindow('<body></body>', { parent: shell, frameElement: tabFrame });
-        startIn(child);
+        initializePopupIn(child);
 
         expect(htmlClasses(child)).toContain('oe-workbench-context');
         expect(htmlClasses(child)).not.toContain('oe-workbench-popup');
@@ -69,14 +69,14 @@ describe('workbench popup context discovery', () => {
             parent: shell, frameElement: shell.document.querySelector('iframe.modalIframe')
         });
         const inner = makeWindow('<body></body>', { parent: dialog, frameElement: dialog.document.querySelector('iframe') });
-        startIn(inner);
+        initializePopupIn(inner);
 
         expect(htmlClasses(inner)).toEqual(expect.arrayContaining(['oe-workbench-context', 'oe-workbench-popup']));
     });
 
     test('the active shell marks its own root for local modals but never as popup content', () => {
         const shell = makeShell();
-        const controller = startIn(shell);
+        const controller = initializePopupIn(shell);
 
         expect(controller.active).toBe(true);
         expect(htmlClasses(shell)).toEqual(['oe-workbench-context']);
@@ -86,7 +86,7 @@ describe('workbench popup context discovery', () => {
     test('a standalone window inherits the workbench through window.opener', () => {
         const shell = makeShell();
         const popup = makeWindow('<body></body>', { opener: shell });
-        startIn(popup);
+        initializePopupIn(popup);
 
         expect(htmlClasses(popup)).toEqual(expect.arrayContaining(['oe-workbench-context', 'oe-workbench-popup']));
     });
@@ -95,7 +95,7 @@ describe('workbench popup context discovery', () => {
         const shell = makeShell();
         const tab = makeWindow('<body></body>', { parent: shell, frameElement: shell.document.querySelector('iframe[name="pat"]') });
         const popup = makeWindow('<body></body>', { opener: tab });
-        startIn(popup);
+        initializePopupIn(popup);
 
         expect(htmlClasses(popup)).toContain('oe-workbench-popup');
     });
@@ -103,9 +103,9 @@ describe('workbench popup context discovery', () => {
     test('nested popups follow the original host, not the intermediate legacy window', async () => {
         const shell = makeShell();
         const first = makeWindow('<body></body>', { opener: shell });
-        startIn(first);
+        initializePopupIn(first);
         const second = makeWindow('<body></body>', { opener: first });
-        startIn(second);
+        initializePopupIn(second);
         expect(htmlClasses(second)).toContain('oe-workbench-popup');
 
         shell.document.body.classList.remove('workbench-active');
@@ -131,7 +131,7 @@ describe('workbench popup refusal cases', () => {
         const a = makeWindow('<body></body>');
         const b = makeWindow('<body></body>', { opener: a });
         a.opener = b;
-        const controller = startIn(b);
+        const controller = initializePopupIn(b);
 
         expect(controller.active).toBe(false);
     });
@@ -139,7 +139,7 @@ describe('workbench popup refusal cases', () => {
     test('a cross-origin opener carrying workbench-active is never trusted', () => {
         const foreign = makeWindow('<body class="workbench-active"><div id="mainBox"></div></body>', { url: 'https://other.test/main.php' });
         const popup = makeWindow('<body></body>', { opener: foreign });
-        startIn(popup);
+        initializePopupIn(popup);
 
         expect(htmlClasses(popup)).toEqual([]);
     });
@@ -156,7 +156,7 @@ describe('workbench popup refusal cases', () => {
         });
         const child = makeWindow('<body></body>', { parent: denied });
 
-        expect(() => startIn(child)).not.toThrow();
+        expect(() => initializePopupIn(child)).not.toThrow();
         expect(htmlClasses(child)).toEqual([]);
     });
 
@@ -164,7 +164,7 @@ describe('workbench popup refusal cases', () => {
         const shell = makeShell();
         const popup = makeWindow('<body></body>', { opener: shell });
         Object.defineProperty(shell, 'closed', { configurable: true, get: () => true });
-        startIn(popup);
+        initializePopupIn(popup);
 
         expect(htmlClasses(popup)).toEqual([]);
     });
@@ -173,7 +173,7 @@ describe('workbench popup refusal cases', () => {
         const shell = makeShell();
         shell.document.documentElement.removeChild(shell.document.body);
         const popup = makeWindow('<body></body>', { opener: shell });
-        startIn(popup);
+        initializePopupIn(popup);
 
         expect(htmlClasses(popup)).toEqual([]);
     });
@@ -183,7 +183,7 @@ describe('workbench popup lifecycle', () => {
     test('follows the host mode toggle in both directions', async () => {
         const shell = makeShell(false);
         const child = makeWindow('<body></body>', { parent: shell, frameElement: shell.document.querySelector('iframe.modalIframe') });
-        startIn(child);
+        initializePopupIn(child);
         expect(htmlClasses(child)).toEqual([]);
 
         shell.document.body.classList.add('workbench-active');
@@ -198,7 +198,7 @@ describe('workbench popup lifecycle', () => {
     test('unload disposes owned classes and the host observer, preserving external classes', async () => {
         const shell = makeShell();
         const child = makeWindow('<html class="theme-x oe-workbench-context"><body></body></html>', { opener: shell });
-        startIn(child);
+        initializePopupIn(child);
         expect(htmlClasses(child)).toEqual(['theme-x', 'oe-workbench-context', 'oe-workbench-popup']);
 
         child.dispatchEvent(new child.Event('pagehide'));
@@ -221,7 +221,7 @@ describe('workbench popup lifecycle', () => {
         child.returnValue = 'keep';
         child.dlgclose = jest.fn();
         const before = child.document.body.outerHTML;
-        startIn(child);
+        initializePopupIn(child);
 
         expect(child.document.body.outerHTML).toBe(before);
         expect(child.returnValue).toBe('keep');
