@@ -11,6 +11,7 @@
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
+use OpenEMR\Core\Header;
 
 require_once dirname(__FILE__, 5) . '/globals.php';
 
@@ -33,6 +34,7 @@ sqlQuery("delete from `module_prior_authorizations` where `id` = ?", [$_GET['id'
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title><?php echo xlt('Delete Record') ?></title>
+    <?php echo Header::setupAssets(['workbench-popup']); ?>
 </head>
 <body>
     <p><?php echo "<br> <br>" .  xlt("If you are seeing this message the record was deleted. Click done, pls"); ?></p>

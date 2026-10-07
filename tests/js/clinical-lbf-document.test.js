@@ -34,7 +34,7 @@ const SCOPE = 'body.oe-clinical-lbf.oe-clinical-workspace .oe-lbf-document';
 const ORIGINAL = {
     newPhp: 'd648c93bc7035ba8ff59edf40131cbec923c41551e1b601b6cabc74e643ebf31',
     viewPhp: '17b54f5571222d16add2cf07633b8ed7f80a0e5ec2267f7993495940848efe1d',
-    modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599',
+    modeJs: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573',
     workspaceCss: 'e0a3157173a255e448183856804215b678840de3bc63c18227a7e34d78b1f16e'
 };
 
