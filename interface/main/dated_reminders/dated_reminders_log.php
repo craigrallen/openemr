@@ -54,7 +54,7 @@ if ($_GET) {
         $remindersArray[$RA['messageID']]['fromName'] = $RA['fromName'];
     }
 
-    echo '<div class="row">
+    echo '<div class="row oe-reminder-results">
             <div class="col-12 results-section mb-3">';
 
     if (empty($remindersArray)) {
@@ -111,7 +111,7 @@ if ($_GET) {
 ?>
 <html>
   <head>
-    <?php Header::setupHeader(['datetime-picker']); ?>
+    <?php Header::setupHeader(['datetime-picker', 'workbench-reminder-popup']); ?>
 
     <script>
       $(function () {
@@ -141,8 +141,8 @@ if ($_GET) {
       })
     </script>
 </head>
-<body>
-    <div class="container">
+<body class="oe-reminder-log">
+    <div class="container oe-reminder-sheet">
     <!-- Required for the popup date selectors -->
         <div id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></div>
         <?php
@@ -154,7 +154,7 @@ if ($_GET) {
         ?>
         <div class="row">
             <div class="col-12 mb-2">
-                <h2 class="title">
+                <h2 class="title oe-reminder-heading">
                     <?php echo xlt('Dated Message Log'); ?>
                     <i id="show_hide" class="fa fa-eye-slash ml-2" data-toggle="tooltip" data-placement="top" title="<?php echo xla('Click to Hide Filters'); ?>"></i>
                 </h2>
@@ -167,7 +167,7 @@ if ($_GET) {
                             <h5 class="mb-0"><?php echo xlt('Filters') ?></h5>
                         </div>
                         <div class="card-body">
-                            <div class="section-header mb-2">
+                            <div class="section-header mb-2 oe-reminder-section">
                                 <h6 class="text-muted"><?php echo xlt('Message Date Range');?></h6>
                             </div>
                             <div class="form-group row">
@@ -181,7 +181,7 @@ if ($_GET) {
                                 </div>
                             </div>
 
-                            <div class="section-header mt-4 mb-2">
+                            <div class="section-header mt-4 mb-2 oe-reminder-section">
                                 <h6 class="text-muted"><?php echo xlt('Message Participants');?></h6>
                             </div>
                             <div class="form-group row">
@@ -225,7 +225,7 @@ if ($_GET) {
                                 </div>
                             </div>
 
-                            <div class="section-header mt-4 mb-2">
+                            <div class="section-header mt-4 mb-2 oe-reminder-section">
                                 <h6 class="text-muted"><?php echo xlt('Message Status');?></h6>
                             </div>
                             <div class="form-group">
@@ -239,7 +239,7 @@ if ($_GET) {
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer">
+                        <div class="card-footer oe-reminder-actions">
                             <button type="button" id="submitForm" class="btn btn-primary">
                                 <i class="fa fa-refresh mr-1"></i><?php echo xlt('Apply Filters') ?>
                             </button>

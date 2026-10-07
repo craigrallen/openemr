@@ -1,0 +1,184 @@
+/*
+ * Shared workbench popup frame. Inert unless popup.js marks <html> inside an active
+ * same-origin workbench, or the dlgopen modal sits directly on the active shell body
+ * (outside #mainBox, so the shell tokens are not inherited and are restated here).
+ * Screen only: print and print preview keep the legacy rendering.
+ */
+@media screen {
+  html.oe-workbench-context,
+  body.workbench-active > .dialogModal {
+    --oe-wb-ink: #17343b;
+    --oe-wb-muted: #526a70;
+    --oe-wb-line: #d9e4e2;
+    --oe-wb-paper: #fff;
+    --oe-wb-canvas: #f3f7f5;
+    --oe-wb-petrol: #086878;
+    --oe-wb-on-petrol: #fff;
+    --oe-wb-disabled-ink: #4a5f64;
+    --oe-wb-disabled-paper: #eef2f1;
+    --oe-wb-warning-ink: #5c4300;
+    --oe-wb-warning-paper: #fff4d6;
+  }
+
+  /* Dialog frame: dlgopen chrome on the shell, and local Bootstrap modals in content. */
+  html.oe-workbench-context .modal-content,
+  body.workbench-active > .dialogModal .modal-content {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    box-shadow: 0 18px 48px rgb(23 52 59 / 22%);
+  }
+
+  /* A header wearing any bg-* palette class (Bootstrap or legacy custom) or a text
+     colour utility is semantic, e.g. an error dialog; it and its close control keep theirs. */
+  html.oe-workbench-context .modal-header:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']),
+  body.workbench-active > .dialogModal .modal-header:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    border-bottom: 1px solid var(--oe-wb-line);
+    border-radius: 8px 8px 0 0;
+  }
+
+  html.oe-workbench-context .modal-title,
+  body.workbench-active > .dialogModal .modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  html.oe-workbench-context .modal-header:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) .close,
+  body.workbench-active > .dialogModal .modal-header:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) .close {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    opacity: 1;
+    text-shadow: none;
+  }
+
+  html.oe-workbench-context .modal-footer,
+  body.workbench-active > .dialogModal .modal-footer {
+    background-color: var(--oe-wb-canvas);
+    border-top: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context .modal-backdrop,
+  body.workbench-active > .modal-backdrop {
+    background-color: #17343b;
+  }
+
+  /* Genuine popup content: paper sheet, ink text, quiet sections. */
+  html.oe-workbench-popup body {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    font-family: Arial, sans-serif;
+  }
+
+  /* Bootstrap's dark theme gives .table its own near-white ink, so the popup
+     body's paper needs a matching neutral table pair. Keep palette tables and
+     explicit colour utilities under their theme rules. */
+  html.oe-workbench-popup .table:not(.table-dark, .table-active, .table-primary, .table-secondary, .table-success, .table-danger, .table-warning, .table-info, .table-light, [class^='bg-'], [class*=' bg-'], [class^='text-'], [class*=' text-']) {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Bootstrap colour utilities (bg-*, text-<colour>) carry meaning such as an error
+     header; elements wearing them, and headers of cards wearing them, keep their own. */
+  html.oe-workbench-popup .title:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) {
+    color: var(--oe-wb-ink);
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup fieldset,
+  html.oe-workbench-popup .card:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-popup legend:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']),
+  html.oe-workbench-popup .card:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) > .card-header:not([class^='bg-'], [class*=' bg-'], [class~='text-primary'], [class~='text-secondary'], [class~='text-success'], [class~='text-danger'], [class~='text-warning'], [class~='text-info'], [class~='text-light'], [class~='text-dark'], [class~='text-white'], [class~='text-muted']) {
+    color: var(--oe-wb-muted);
+    background-color: var(--oe-wb-paper);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  html.oe-workbench-popup .form-control,
+  html.oe-workbench-popup select,
+  html.oe-workbench-popup textarea,
+  html.oe-workbench-popup input:not([type]),
+  html.oe-workbench-popup input[type='text'],
+  html.oe-workbench-popup input[type='search'],
+  html.oe-workbench-popup input[type='number'],
+  html.oe-workbench-popup input[type='date'],
+  html.oe-workbench-popup .select2-container--default .select2-selection {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Borders stay Bootstrap's so .is-invalid/.is-valid and .was-validated cues survive. */
+  html.oe-workbench-popup .form-control:focus,
+  html.oe-workbench-popup select:focus,
+  html.oe-workbench-popup textarea:focus,
+  html.oe-workbench-popup input:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup .form-control:disabled,
+  html.oe-workbench-popup .form-control[readonly],
+  html.oe-workbench-popup select:disabled,
+  html.oe-workbench-popup textarea:disabled,
+  html.oe-workbench-popup input:disabled {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup .btn-primary,
+  html.oe-workbench-context .modal .btn-primary,
+  body.workbench-active > .dialogModal .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup .alert-warning {
+    color: var(--oe-wb-warning-ink);
+    background-color: var(--oe-wb-warning-paper);
+    border-color: #e7cf8a;
+  }
+
+  /* Overlays appended to the content body: datepicker and select2. */
+  html.oe-workbench-context .xdsoft_datetimepicker {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-context .xdsoft_datetimepicker .xdsoft_date,
+  html.oe-workbench-context .xdsoft_datetimepicker .xdsoft_time {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context .xdsoft_datetimepicker .xdsoft_date.xdsoft_current {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+    box-shadow: none;
+  }
+
+  html.oe-workbench-context .select2-dropdown {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context .select2-results__option--highlighted[aria-selected] {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+  }
+}

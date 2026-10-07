@@ -1,12 +1,16 @@
 /* Route-local presentation switch. It never changes form state or parent UI. */
 (function (root, factory) {
-    const api = factory();
+    const discovery = typeof module === 'object' && module.exports
+        ? require('./popup.js')
+        : root && root.OpenEMRWorkbenchPopup;
+    const api = factory(discovery);
     if (typeof module === 'object' && module.exports) module.exports = api;
     if (root && root.document) {
         const start = () => {
             const controller = api.createModeController({
                 body: root.document.body,
                 parentWindow: root.parent,
+                openerWindow: root.opener,
                 origin: root.location.origin,
                 observe: (target, callback) => {
                     const observer = new root.MutationObserver(callback);
@@ -22,7 +26,7 @@
             start();
         }
     }
-}(typeof window === 'undefined' ? null : window, function () {
+}(typeof window === 'undefined' ? null : window, function (discovery) {
     const MAX_ANCESTORS = 8;
 
     // Routes such as SOAP sit in load_form.php inside encounter_top.php inside main.php,
@@ -49,7 +53,15 @@
         return host;
     }
 
-    function createModeController({ body, parentWindow, origin, observe, mode }) {
+    // The shared popup walk also follows window.opener, so standalone route windows opened
+    // from the workbench inherit it. Pages without the Header bundle keep the parent walk.
+    function resolveHost(self, parentWindow, openerWindow, origin) {
+        if (!discovery) return findWorkbenchHost(self, parentWindow, origin);
+        const found = discovery.findWorkbenchHost({ self, parentWindow, openerWindow, origin });
+        return found ? found.body : null;
+    }
+
+    function createModeController({ body, parentWindow, openerWindow, origin, observe, mode }) {
         let observer;
         let active = false;
         let disposed = false;
@@ -62,7 +74,7 @@
         if (mode === 'workbench') {
             update(true);
         } else {
-            const hostBody = findWorkbenchHost(body.ownerDocument.defaultView, parentWindow, origin);
+            const hostBody = resolveHost(body.ownerDocument.defaultView, parentWindow, openerWindow, origin);
             if (hostBody) {
                 const sync = () => update(hostBody.classList.contains('workbench-active'));
                 sync();

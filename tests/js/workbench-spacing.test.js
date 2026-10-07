@@ -7,9 +7,9 @@
 // declaration wins by specificity and order; they make no geometry claims.
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
+const process = require('node:process');
 const postcss = require('postcss');
-const parser = require('postcss-selector-parser');
-const { selectorSpecificity } = require('@csstools/selector-specificity');
 
 const root = path.join(__dirname, '../..');
 const shellCss = fs.readFileSync(path.join(root, 'interface/main/tabs/css/workbench_shell.css'), 'utf8');
@@ -31,9 +31,37 @@ function topLevelRules(css) {
     return rules;
 }
 
+// @csstools/selector-specificity 6 ships ESM only, which Jest's module registry cannot load (its
+// createRequire is intercepted too). Score every selector the cascade can meet in one native ESM
+// Node process that imports the installed package and its postcss-selector-parser peer.
+const ORACLE_SELECTORS = ['main', '#mainBox:not(.workbench-legacy) main', ':where(#mainBox) .workbench-main'];
+const specificities = (() => {
+    const selectors = [...new Set([
+        ...ORACLE_SELECTORS,
+        ...[...topLevelRules(themeMainBlock), ...topLevelRules(shellCss)].flatMap((rule) => rule.selectors)
+    ])];
+    const script = `
+        import parser from 'postcss-selector-parser';
+        import { selectorSpecificity } from '@csstools/selector-specificity';
+        const out = {};
+        for (const selector of JSON.parse(process.argv[1])) {
+            const s = selectorSpecificity(parser().astSync(selector).first);
+            out[selector] = [s.a, s.b, s.c];
+        }
+        process.stdout.write(JSON.stringify(out));
+    `;
+    const run = spawnSync(process.execPath, ['--input-type=module', '-e', script, JSON.stringify(selectors)], { cwd: root, encoding: 'utf8' });
+    if (run.error || run.status !== 0) {
+        throw new Error(`specificity oracle failed (status ${run.status}): ${run.error ?? run.stderr}`);
+    }
+    return new Map(Object.entries(JSON.parse(run.stdout)));
+})();
+
 function specificityOf(selector) {
-    const s = selectorSpecificity(parser().astSync(selector).first);
-    return [s.a, s.b, s.c];
+    if (!specificities.has(selector)) {
+        throw new Error(`no specificity computed for ${selector}`);
+    }
+    return specificities.get(selector);
 }
 
 function compare(a, b) {
@@ -91,6 +119,14 @@ function mount(mainBoxClass) {
         + `<aside class="workbench-rail"></aside>${mainMarkup}</div></div>`;
     return document.getElementById('workbenchContent');
 }
+
+describe('specificity oracle', () => {
+    test('the natively loaded scorer ranks ids, classes and types as the cascade needs', () => {
+        expect(specificityOf('main')).toEqual([0, 0, 1]);
+        expect(specificityOf('#mainBox:not(.workbench-legacy) main')).toEqual([1, 1, 1]);
+        expect(specificityOf(':where(#mainBox) .workbench-main')).toEqual([0, 1, 0]);
+    });
+});
 
 describe('workbench content column offset', () => {
     test('counterexample: theme main rule alone pushes the real <main> 250px right', () => {

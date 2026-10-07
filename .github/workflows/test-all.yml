@@ -69,6 +69,18 @@ jobs:
           echo 'full=false' >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Check Codecov flags
+      # Every CI config needs its own Codecov flag (see ci/codecov_flags.sh).
+      # Checks all configs, not just the ones this run tests.
+      run: |
+        shopt -s nullglob
+        shopt -s extglob
+        dirs=( ci/!(compose-shared-*)/docker-compose.yml )
+        dirs=( "${dirs[@]%/docker-compose.yml}" )
+        dirs=( "${dirs[@]#ci/}" )
+        ci/parse_docker_dir.sh "${dirs[@]}" | ci/codecov_flags.sh
+        python3 -m unittest discover -s tests/ci -p 'test_codecov_retired_flags.py'
+
     - name: Collect Docker Dirs
       id: docker-dirs
       env:

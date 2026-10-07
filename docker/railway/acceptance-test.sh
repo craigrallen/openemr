@@ -11,8 +11,8 @@
 # against a throwaway MariaDB with a named volume on sites/ and checks, in the
 # real Apache/PHP runtime:
 #   - the archive contains the Railway build inputs;
-#   - readiness is non-2xx until install and safety verification pass, and
-#     again when a safety global drifts;
+#   - readiness is 200 after install and safety verification, and non-2xx
+#     when a safety global drifts;
 #   - the HTTP boundary is additive: sensitive paths stay 403 with valid
 #     boundary credentials;
 #   - web PHP cannot open outbound connections (no SOAP/Redis) or spawn
@@ -20,8 +20,13 @@
 #   - no generated secret appears in container logs;
 #   - admin login works, and survives container replacement with a schema
 #     migration (run by upstream as apache) on the same volume;
-#   - startup refuses a missing sites mount and unsafe credentials.
-# Needs Docker and openssl. Never prints the generated secrets.
+#   - startup refuses (exit 64, before upstream openemr.sh) a missing sites
+#     mount, missing/upstream-default/short/unsafe credentials, the default
+#     admin user and MANUAL_SETUP=yes;
+#   - the image records and reads back the git revision it was built from.
+# Needs Docker and openssl. Never prints the generated secrets; on GitHub
+# Actions they are also registered with the runner's log masking.
+# Also run in CI by the railway-test job of .github/workflows/docker-test-core.yml.
 #
 # Usage: docker/railway/acceptance-test.sh [--skip-build]
 #
@@ -50,6 +55,13 @@ MYSQL_PWD="${MYSQL_ROOT_PASS}"
 OE_USER=oe-accept-admin
 OE_HTTP_BOUNDARY_USER=tester
 export MYSQL_ROOT_PASS MYSQL_PASS OE_PASS OE_HTTP_BOUNDARY_PASS MARIADB_ROOT_PASSWORD MYSQL_PWD OE_USER OE_HTTP_BOUNDARY_USER
+# Defence in depth on CI: have the runner mask the generated values should
+# any output path ever echo one.
+if [[ "${GITHUB_ACTIONS:-}" = "true" ]]; then
+    for secret in "${MYSQL_ROOT_PASS}" "${MYSQL_PASS}" "${OE_PASS}" "${OE_HTTP_BOUNDARY_PASS}"; do
+        echo "::add-mask::${secret}"
+    done
+fi
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1"; failures=$((failures + 1)); }
@@ -71,8 +83,15 @@ tree=$(GIT_INDEX_FILE="${tmp}/index" git -C "${repo}" write-tree)
 git -C "${repo}" archive --format=tar "${tree}" > "${tmp}/source.tar"
 check "source archive contains docker/railway/Dockerfile" grep -qx docker/railway/Dockerfile <(tar tf "${tmp}/source.tar")
 check "source archive contains docker/release/openemr.sh" grep -qx docker/release/openemr.sh <(tar tf "${tmp}/source.tar")
+# The image records the revision it was built from; only claim HEAD when the
+# archived tree is exactly HEAD's tree.
+source_rev=$(git -C "${repo}" rev-parse HEAD)
+[[ "${tree}" = "$(git -C "${repo}" rev-parse 'HEAD^{tree}')" ]] || source_rev="${source_rev}+worktree"
+built=0
 if [[ "${1:-}" != "--skip-build" ]]; then
-    docker build --quiet -f docker/railway/Dockerfile -t "${image}" - < "${tmp}/source.tar" >/dev/null
+    docker build --quiet -f docker/railway/Dockerfile -t "${image}" \
+        --build-arg "RAILWAY_GIT_COMMIT_SHA=${source_rev}" - < "${tmp}/source.tar" >/dev/null
+    built=1
 fi
 
 # --- helpers ---------------------------------------------------------------
@@ -129,14 +148,71 @@ source "${repo}/docker/railway/acceptance-lib.sh"
 no_secrets_in_logs() { logs_free_of_secrets "${app}" "${tmp}/app.log"; }
 
 # --- refusals (no database needed) -------------------------------------------
+# Starts the image and waits up to 60 s for it to exit, so a regression that
+# no longer refuses fails here instead of hanging; sets refusal_out and
+# refusal_rc ("running" when it did not exit).
+refusal_run() {
+    local name="${run}-refuse" deadline=$((SECONDS + 60))
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+    docker run -d --name "${name}" --network "${net}" "$@" "${image}" >/dev/null
+    refusal_rc=running
+    while ((SECONDS < deadline)); do
+        if [[ "$(docker inspect -f '{{.State.Running}}' "${name}")" = "false" ]]; then
+            refusal_rc=$(docker inspect -f '{{.State.ExitCode}}' "${name}")
+            break
+        fi
+        sleep 1
+    done
+    refusal_out=$(docker logs "${name}" 2>&1 || true)
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+}
+
+# docker run -e arguments for the valid generated environment with NAME=value
+# overrides; an empty value leaves NAME unset. Sets env_out.
+env_args() {
+    local name kv skip
+    env_out=(-e "MYSQL_HOST=${db}")
+    for name in MYSQL_ROOT_PASS MYSQL_PASS OE_USER OE_PASS; do
+        skip=0
+        for kv in "$@"; do
+            if [[ "${kv%%=*}" = "${name}" ]]; then skip=1; fi
+        done
+        if ((skip == 0)); then env_out+=(-e "${name}"); fi
+    done
+    for kv in "$@"; do
+        if [[ -n "${kv#*=}" ]]; then env_out+=(-e "${kv}"); fi
+    done
+}
+
+# One unsafe setting on an otherwise valid, mounted configuration: the
+# entrypoint must exit 64 with the given reason before upstream startup.
+refusal_exit() {
+    local reason="$1"
+    shift
+    env_args "$@"
+    refusal_run -v "${sites}:${oe_root}/sites" "${env_out[@]}"
+    check "refuses (exit 64): ${reason}" test "${refusal_rc}" = 64
+    check "refusal reports: ${reason}" grep -qF "REFUSING to start: ${reason}" <<<"${refusal_out}"
+    check "refusal output echoes no generated secret: ${reason}" bash -c \
+        '! grep -qF -e "$1" -e "$2" -e "$3" <<<"$4"' _ "${MYSQL_ROOT_PASS}" "${MYSQL_PASS}" "${OE_PASS}" "${refusal_out}"
+}
+
 docker network create "${net}" >/dev/null
-out=$(docker run --rm --network "${net}" -e MYSQL_HOST="${db}" -e MYSQL_ROOT_PASS -e MYSQL_PASS \
-    -e OE_USER -e OE_PASS "${image}" 2>&1 || true)
-check "refuses to start without a sites volume" grep -q 'not a mounted volume' <<<"${out}"
-out=$(docker run --rm --network "${net}" -v "${sites}:${oe_root}/sites" -e MYSQL_HOST="${db}" \
-    -e MYSQL_ROOT_PASS -e MYSQL_PASS -e OE_USER -e OE_PASS="${OE_PASS}=x" "${image}" 2>&1 || true)
-check "refuses a credential containing '='" grep -q 'REFUSING.*OE_PASS' <<<"${out}"
-check "refusal output does not echo the credential" bash -c '! grep -qF "$1" <<<"$2"' _ "${OE_PASS}" "${out}"
+env_args
+refusal_run "${env_out[@]}"
+check "refuses to start without a sites volume" grep -q 'not a mounted volume' <<<"${refusal_out}"
+check "refuses without a sites volume (exit 64)" test "${refusal_rc}" = 64
+env_args OE_PASS="${OE_PASS}=x"
+refusal_run -v "${sites}:${oe_root}/sites" "${env_out[@]}"
+check "refuses a credential containing '='" grep -q 'REFUSING.*OE_PASS' <<<"${refusal_out}"
+check "refusal output does not echo the credential" bash -c '! grep -qF "$1" <<<"$2"' _ "${OE_PASS}" "${refusal_out}"
+refusal_exit 'MYSQL_ROOT_PASS is not set' MYSQL_ROOT_PASS=
+refusal_exit 'MYSQL_ROOT_PASS is the upstream default' MYSQL_ROOT_PASS=root
+refusal_exit 'MYSQL_PASS is the upstream default' MYSQL_PASS=openemr
+refusal_exit 'OE_PASS is the upstream default' OE_PASS=pass
+refusal_exit 'OE_PASS is shorter than 16 characters' OE_PASS=Short1short
+refusal_exit 'OE_USER must be set to a non-default name' OE_USER=admin
+refusal_exit 'MANUAL_SETUP=yes would expose the web installer' MANUAL_SETUP=yes
 
 # --- fresh install -------------------------------------------------------------
 docker run -d --name "${db}" --network "${net}" -e MARIADB_ROOT_PASSWORD mariadb:11.4 >/dev/null
@@ -148,6 +224,15 @@ done
 start_app
 check "fresh install becomes ready" wait_ready
 base="http://$(app_port)"
+
+if ((built)); then
+    check "image label records the source revision" test \
+        "$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${image}")" = "${source_rev}"
+    check "container reads back the source revision from /root/source-commit" bash -c \
+        '[[ "$(docker exec "$1" cat /root/source-commit)" = "$2 "* ]]' _ "${app}" "${source_rev}"
+else
+    echo "NOTE: --skip-build: source revision read-back not checked (image built elsewhere)"
+fi
 
 check "readiness endpoint needs no boundary credentials" test "$(http_code "${base}${readyz}")" = 200
 check "readiness .php URL is denied (403), only the extensionless path is exempt" \
