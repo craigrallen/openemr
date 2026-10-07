@@ -27,7 +27,7 @@ const ORIGINAL = {
     template: 'f80b7a9140ea7c4342b89fded9e5a5aa198cd9586a3d338f622990cb20853277',
     history: '48c9c41df89df53612ef37c24544238c2aac13b6a1557c8a6f73067cedd13c37',
     css: 'd3b596fc535636da92b90579a08eb6ec5d44427891bb0337756119d6c1cd09ce',
-    modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599'
+    modeJs: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573'
 };
 
 // Bumped from -vitals-document-1 when the observation-date rule was added after the first published head,

@@ -160,6 +160,12 @@ assets:
     basePath: '%webroot%/library/'
     script: dialog.js
     autoload: true
+    # Inert unless a same-origin parent/opener chain reaches an active workbench.
+  workbench-popup:
+    basePath: '%webroot%/interface/clinical-workspace/'
+    script: popup.js
+    link: popup.css
+    autoload: true
   select2:
     basePath: '%assets_static_relative%/select2/dist/'
     script: js/select2.full.min.js
