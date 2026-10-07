@@ -236,6 +236,33 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function historyDocumentStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('history-document.css', 1_700_001_201);
+        $this->writeAsset('workspace.css', 1_700_001_202);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700001201', $assets->version('history-document.css'));
+        self::assertSame('1700001202', $assets->version('workspace.css'));
+    }
+
+    #[Test]
+    public function missingHistoryDocumentStylesheetVersionIsZero(): void
+    {
+        self::assertSame('0', (new ClinicalWorkspaceAssets($this->directory))->version('history-document.css'));
+    }
+
+    #[Test]
+    public function shippedHistoryDocumentStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/history-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('history-document.css'));
+    }
+
+    #[Test]
     public function recordWorkspaceStylesheetIsVersionedPerFile(): void
     {
         $this->writeAsset('workspace.css', 1_700_000_901);
@@ -290,6 +317,34 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('global-messages.css'));
+    }
+
+    #[Test]
+    public function globalMessagesAndHistoryDocumentStylesheetsAreBothSupported(): void
+    {
+        $this->writeAsset('global-messages.css', 1_700_002_001);
+        $this->writeAsset('history-document.css', 1_700_002_002);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700002001', $assets->version('global-messages.css'));
+        self::assertSame('1700002002', $assets->version('history-document.css'));
+
+        $this->writeAsset('history-document.css', 1_700_002_100);
+        self::assertSame('1700002001', $assets->version('global-messages.css'));
+        self::assertSame('1700002100', $assets->version('history-document.css'));
+
+        unlink($this->directory . '/global-messages.css');
+        self::assertSame('0', $assets->version('global-messages.css'));
+        self::assertSame('1700002100', $assets->version('history-document.css'));
+
+        foreach (['history_document.css', 'global_messages.css', '../clinical-workspace/history-document.css'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
     }
 
     #[Test]

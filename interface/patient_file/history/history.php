@@ -64,6 +64,9 @@ if (!empty($grparr['']['grp_size'])) {
 }
 <?php } ?>
 </style>
+<?php $clinicalAssets = new \OpenEMR\Common\Assets\ClinicalWorkspaceAssets(); // Screen-only; inert until mode.js finds an active workbench. ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/history-document.css?v=<?php echo attr_url($clinicalAssets->version('history-document.css')); ?>">
+<script src="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 <?php
 $arrOeUiSettings = [
     'heading_title' => xl('History and Lifestyle'),
@@ -79,9 +82,9 @@ $arrOeUiSettings = [
 $oemr_ui = new OemrUI($arrOeUiSettings);
 ?>
 </head>
-<body>
+<body class="oe-clinical-history-document">
 
-<div id="container_div" class="<?php echo $oemr_ui->oeContainer();?> mt-3">
+<div id="container_div" class="<?php echo $oemr_ui->oeContainer();?> mt-3 oe-history-document">
     <div class="row">
         <div class="col-12">
             <?php
@@ -118,7 +121,7 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
         $menuPatient = new PatientMenuRole();
         $menuPatient->displayHorizNavBarMenu();
         ?>
-        <div class="row">
+        <div class="row oe-history-actions">
             <div class="col-sm-12">
                 <div class="btn-group">
                     <a href="history_full.php" class="btn btn-primary btn-edit" onclick="top.restoreSession()">

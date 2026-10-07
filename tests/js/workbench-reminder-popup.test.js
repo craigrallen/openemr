@@ -45,10 +45,26 @@ const INSERTIONS = {
     ],
 };
 
-const normalize = (source, insertions) => insertions.reduce((text, [added, original, count]) => {
+// Independent upstream fix (5619373..9cbb8ee), not part of the reminder adaptation: the
+// patientName title now echoes its escaped translation instead of discarding it.
+const PATIENT_NAME_TITLE_FIX = [
+    "onclick='sel_patient()' title='<?php echo xla('Click to select patient'); ?>' readonly />",
+    "onclick='sel_patient()' title='<?php xla('Click to select patient'); ?>' readonly />",
+];
+const UPSTREAM = {
+    add: [PATIENT_NAME_TITLE_FIX],
+    log: [],
+};
+
+const revertUpstream = (source, fixes) => fixes.reduce((text, [fixed, original]) => {
+    expect(text.split(fixed)).toHaveLength(2);
+    return text.replace(fixed, original);
+}, source);
+
+const normalize = (source, insertions, upstream = []) => insertions.reduce((text, [added, original, count]) => {
     expect(text.split(added)).toHaveLength(count + 1);
     return text.split(added).join(original);
-}, source);
+}, revertUpstream(source, upstream));
 
 const CONTRACT_KEYS = ['tag', 'id', 'name', 'type', 'value', 'method', 'action', 'onsubmit', 'onclick', 'onchange', 'onkeydown', 'onkeyup', 'multiple', 'readonly'];
 
@@ -73,9 +89,30 @@ test('only the reminder stylesheet is registered and both rendered heads request
     expect(log()).toMatch(/<body class="oe-reminder-log">/);
 });
 
-test('whole route sources differ from the baseline only by the enumerated insertions', () => {
-    expect(hash(normalize(add(), INSERTIONS.add))).toBe(BASELINE.add);
-    expect(hash(normalize(log(), INSERTIONS.log))).toBe(BASELINE.log);
+test('whole route sources differ from the baseline only by the enumerated insertions and upstream fix', () => {
+    expect(hash(normalize(add(), INSERTIONS.add, UPSTREAM.add))).toBe(BASELINE.add);
+    expect(hash(normalize(log(), INSERTIONS.log, UPSTREAM.log))).toBe(BASELINE.log);
+});
+
+test('patientName keeps the upstream escaped translated title echo', () => {
+    const input = add().split('\n').filter(line => line.includes("id='patientName'"));
+    expect(input).toHaveLength(1);
+    expect(input[0]).toContain("title='<?php echo xla('Click to select patient'); ?>'");
+    expect(input[0]).toContain(PATIENT_NAME_TITLE_FIX[0]);
+});
+
+test('upstream fix normalization is exact and still guards the patientName contract', () => {
+    for (const mutate of [
+        (s) => s.replace("title='<?php echo xla('Click to select patient'); ?>'", "title='<?php echo xla('Click to pick patient'); ?>'"),
+        (s) => s.replace("title='<?php echo xla('Click to select patient'); ?>'", "title='<?php echo xlt('Click to select patient'); ?>'"),
+        (s) => s.replace("title='<?php echo xla('Click to select patient'); ?>'", "title='<?php xla('Click to select patient'); ?>'"),
+        (s) => s.replace("onclick='sel_patient()' title=", "onclick='pick_patient()' title="),
+        (s) => s.replace(PATIENT_NAME_TITLE_FIX[0], `${PATIENT_NAME_TITLE_FIX[0]}\n${PATIENT_NAME_TITLE_FIX[0]}`),
+    ]) {
+        const mutated = mutate(add());
+        expect(mutated).not.toBe(add());
+        expect(() => normalize(mutated, INSERTIONS.add, UPSTREAM.add)).toThrow();
+    }
 });
 
 test('normalization rejects changed control contracts', () => {
@@ -83,12 +120,25 @@ test('normalization rejects changed control contracts', () => {
         [(s) => s.replace('name="sendTo[]"', 'name="sendTo"'), add(), 'add'],
         [(s) => s.replace("id=\"priority_2\" value='2'", "id=\"priority_2\" value='4'"), add(), 'add'],
         [(s) => s.replace("<button type='submit'", "<button type='button'"), add(), 'add'],
+        [(s) => s.replace("id='patientName' name='patientName'", "id='patientName' name='patient'"), add(), 'add'],
+        [(s) => s.replace("<input type='text' id='patientName'", "<input type='search' id='patientName'"), add(), 'add'],
+        [(s) => s.replace('name="PatientID" id="PatientID"', 'name="pid" id="PatientID"'), add(), 'add'],
+        [(s) => s.replace('id="addDR" class="form-horizontal" method="post" onsubmit="return top.restoreSession()"', 'id="addDR" class="form-horizontal" method="post" action="other.php" onsubmit="return top.restoreSession()"'), add(), 'add'],
         [(s) => s.replace('method="get" id="logForm"', 'method="post" id="logForm"'), log(), 'log'],
     ]) {
         const mutated = mutate(source);
         expect(mutated).not.toBe(source);
-        expect(hash(normalize(mutated, INSERTIONS[key]))).not.toBe(BASELINE[key]);
+        expect(hash(normalize(mutated, INSERTIONS[key], UPSTREAM[key]))).not.toBe(BASELINE[key]);
         expect(controls(mutated)).not.toEqual(controls(source));
+    }
+    for (const mutate of [
+        (s) => s.replace("$patID = $_POST['PatientID'];", "$patID = $_GET['PatientID'];"),
+        (s) => s.replace('$("#PatientID").val(pid);', '$("#PatientID").val(0);'),
+        (s) => s.replace('attr(getPatName($patientID))', 'text(getPatName($patientID))'),
+    ]) {
+        const mutated = mutate(add());
+        expect(mutated).not.toBe(add());
+        expect(hash(normalize(mutated, INSERTIONS.add, UPSTREAM.add))).not.toBe(BASELINE.add);
     }
 });
 
