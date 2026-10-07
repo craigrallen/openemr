@@ -27,8 +27,13 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 // The stylesheet is read leniently so its absence fails the content assertions, not the loader.
 const readIfPresent = (relative) => (fs.existsSync(path.join(root, relative)) ? read(relative) : '');
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
+// Git blob id of the file's exact bytes, so a pin names the immutable object, not just a checkout.
+const gitBlob = (relative) => {
+    const bytes = fs.readFileSync(path.join(root, relative));
+    return crypto.createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+};
 
-const PAGE = 'interface/patient_file/history/history_full.php';
+const PAGE ='interface/patient_file/history/history_full.php';
 const CSS = 'interface/clinical-workspace/history-editor.css';
 const SCOPE = 'body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor';
 const CLEARFIX = `${SCOPE} div#HIS::after`;
@@ -38,12 +43,36 @@ const FOCUS_RING = { outline: '2px solid var(--oe-petrol)', 'outline-offset': '2
 // sha256 at master 5619373a, before this change.
 const ORIGINAL = {
     historyFull: '4d3477666fe13eb96b0a2389ed0a48bca5b57c14992d14d20cc67c5ddc87371b',
-    // The separate History VIEW lane (PR43) owns history.php; this slice must not touch it.
-    historyView: 'e03c50d90eac4878e258559c968f4b27f331461f3742d104546722533017b8af',
     historySave: 'ba85d549fefef0d59be6aa4e63218e3ce845762572d0061096628a86ac4d6c75',
-    optionsInc: '871990a09b8cb24023d2d876458a0fd6dbd34d5416d4f04868e505046b54f6fb',
-    modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599',
     workspaceCss: '0534d5ab77f344a94cf485a5e0cfa6c80a8de7745c3f533694998058d261590c'
+};
+
+// Files this editor slice never edits but that other, independently reviewed changes did. Each is
+// pinned to the immutable commit, git blob and sha256 that introduced it; the editor's own
+// 5619373a pin is kept as `original` for the record.
+const UPSTREAM = {
+    // History VIEW lane (PR43), developed independently of this editor and now integrated beside it.
+    historyView: {
+        commit: '539f99685482a00c987942b83a8b6ba02632dc68',
+        blob: '5a203fc62495c0cd2c39ce61bcaadc87696af476',
+        sha256: '4f16b5b5ee113a7e89fb424fdb489e0f5c21f975175df50ce3cad329ef1b958c',
+        original: 'e03c50d90eac4878e258559c968f4b27f331461f3742d104546722533017b8af'
+    },
+    // Shared mode engine from merged PR #45 (popup parent/opener provenance).
+    modeJs: {
+        commit: '11509275488d706d5241cb17dad65bbd28139451',
+        blob: '811312261fe6359cc4375fffe3a39b01f0920a34',
+        sha256: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573',
+        original: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599'
+    },
+    // Upstream OpenEMR return-type refactors (#14347, #14392) arriving via the ee94cec7 merge of
+    // upstream master 6685e878: native return types only, no change to emitted markup.
+    optionsInc: {
+        commit: 'ee94cec7a1869c9769f6578031d1d39f68ee53c5',
+        blob: 'dcfee530e92db5c12ce6a2e3ea8cdcabb7cb4de0',
+        sha256: 'fa65adf79c28958ebc3ce0f0d8dc5a82878e5cf932e86c3222e39a054d6c00f8',
+        original: '871990a09b8cb24023d2d876458a0fd6dbd34d5416d4f04868e505046b54f6fb'
+    }
 };
 
 const WEBROOT = '<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>';
@@ -86,12 +115,19 @@ describe('history_full.php source preservation', () => {
         expect(sha256(revert(read(PAGE), PAGE_EDITS))).toBe(ORIGINAL.historyFull);
     });
 
-    test('the History view lane, the save handler, the layout renderer, mode.js and workspace.css are untouched', () => {
-        expect(sha256(read('interface/patient_file/history/history.php'))).toBe(ORIGINAL.historyView);
+    test('the save handler and workspace.css keep their original bytes', () => {
         expect(sha256(read('interface/patient_file/history/history_save.php'))).toBe(ORIGINAL.historySave);
-        expect(sha256(read('library/options.inc.php'))).toBe(ORIGINAL.optionsInc);
-        expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(ORIGINAL.modeJs);
         expect(sha256(read('interface/clinical-workspace/workspace.css'))).toBe(ORIGINAL.workspaceCss);
+    });
+
+    test('the History view, the shared mode.js and the layout renderer match their approved upstream source exactly', () => {
+        [
+            ['interface/patient_file/history/history.php', UPSTREAM.historyView],
+            ['interface/clinical-workspace/mode.js', UPSTREAM.modeJs],
+            ['library/options.inc.php', UPSTREAM.optionsInc]
+        ].forEach(([file, pin]) => {
+            expect([file, gitBlob(file), sha256(read(file))]).toEqual([file, pin.blob, pin.sha256]);
+        });
     });
 
     test('the head block follows the page style, so it wins the cascade, and precedes the OemrUI setup', () => {

@@ -27,8 +27,13 @@ const root = path.join(__dirname, '../..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const readIfPresent = (relative) => (fs.existsSync(path.join(root, relative)) ? read(relative) : '');
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
+// Git blob id of the file's exact bytes, so a pin names the immutable object, not just a checkout.
+const gitBlob = (relative) => {
+    const bytes = fs.readFileSync(path.join(root, relative));
+    return crypto.createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+};
 
-const HISTORY = 'interface/patient_file/history/history.php';
+const HISTORY ='interface/patient_file/history/history.php';
 const CSS = 'interface/clinical-workspace/history-document.css';
 const BODY = 'body.oe-clinical-history-document.oe-clinical-workspace';
 const SCOPE = `${BODY} #container_div.oe-history-document`;
@@ -36,8 +41,24 @@ const SCOPE = `${BODY} #container_div.oe-history-document`;
 // sha256 at master 5619373, before this change.
 const ORIGINAL = {
     historyPhp: 'e03c50d90eac4878e258559c968f4b27f331461f3742d104546722533017b8af',
-    modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599',
     workspaceCss: '0534d5ab77f344a94cf485a5e0cfa6c80a8de7745c3f533694998058d261590c'
+};
+
+// sha256 of the shared mode.js blob at 11509275 (merged PR #45 popup parent/opener provenance
+// engine), an independently approved baseline this feature reuses without editing. The original
+// 5619373 route pin was 10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599.
+const SHARED_ENGINE = {
+    commit: '11509275',
+    modeJs: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573'
+};
+
+// The History EDITOR (history_full.php) is a separate, independently reviewed lane (PR44) that is
+// now integrated beside this view. It is pinned to its published source at d6dc903c rather than
+// forbidden from carrying workbench markup; this view must still leak no route scope into it.
+const APPROVED_EDITOR = {
+    commit: 'd6dc903c07277531ea26a9efa05d8b8a25bb5f59',
+    blob: '2b0c0d25ce363ae1eef9528239ce629cca75f727',
+    historyFull: '976f4b3426630f9c65f9e14eec7275b87c8fc467a06a5cd2fef7134a91e520dd'
 };
 
 const WEBROOT = '<?php echo attr(\\OpenEMR\\Core\\OEGlobalsBag::getInstance()->getWebRoot()); ?>';
@@ -128,15 +149,17 @@ describe('history.php source preservation', () => {
         expect(source).not.toMatch(/clinical-workspace\/workspace\.css/);
     });
 
-    test('mode.js and workspace.css are reused unchanged; the helper allowlists the new stylesheet', () => {
-        expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(ORIGINAL.modeJs);
+    test('shared mode.js matches the merged engine baseline, workspace.css the original; the helper allowlists the new stylesheet', () => {
+        expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(SHARED_ENGINE.modeJs);
         expect(sha256(read('interface/clinical-workspace/workspace.css'))).toBe(ORIGINAL.workspaceCss);
         expect(read('src/Common/Assets/ClinicalWorkspaceAssets.php')).toMatch(/\n {8}'history-document\.css',\n/);
     });
 
-    test('the editor, the layout renderer and the core history theme are untouched', () => {
+    test('the editor matches its approved lane source with no View scope; the layout renderer and core history theme are untouched', () => {
+        const editor = 'interface/patient_file/history/history_full.php';
         expect(readIfPresent(CSS)).not.toBe('');
-        expect(read('interface/patient_file/history/history_full.php')).not.toMatch(/oe-clinical|clinical-workspace/);
+        expect([gitBlob(editor), sha256(read(editor))]).toEqual([APPROVED_EDITOR.blob, APPROVED_EDITOR.historyFull]);
+        expect(read(editor)).not.toMatch(/oe-history-document|oe-clinical-history-document|oe-history-actions|history-document\.css/);
         expect(read('library/options.inc.php')).not.toMatch(/oe-history-document|oe-clinical-history-document/);
         expect(read('interface/themes/core/patient/history.scss')).not.toMatch(/oe-clinical/);
     });
