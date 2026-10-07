@@ -320,6 +320,34 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function globalMessagesAndHistoryEditorStylesheetsAreBothSupported(): void
+    {
+        $this->writeAsset('global-messages.css', 1_700_002_001);
+        $this->writeAsset('history-editor.css', 1_700_002_002);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700002001', $assets->version('global-messages.css'));
+        self::assertSame('1700002002', $assets->version('history-editor.css'));
+
+        $this->writeAsset('history-editor.css', 1_700_002_100);
+        self::assertSame('1700002001', $assets->version('global-messages.css'));
+        self::assertSame('1700002100', $assets->version('history-editor.css'));
+
+        unlink($this->directory . '/global-messages.css');
+        self::assertSame('0', $assets->version('global-messages.css'));
+        self::assertSame('1700002100', $assets->version('history-editor.css'));
+
+        foreach (['history_editor.css', 'global_messages.css', '../clinical-workspace/history-editor.css'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
     public function globalMessagesAndHistoryDocumentStylesheetsAreBothSupported(): void
     {
         $this->writeAsset('global-messages.css', 1_700_002_001);

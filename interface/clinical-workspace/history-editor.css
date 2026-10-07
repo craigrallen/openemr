@@ -1,0 +1,171 @@
+/*
+ * History and Lifestyle editor as a quiet document inside the clinical workbench.
+ *
+ * history_full.php links this file with media="screen", and every rule is scoped to the route
+ * body class plus the oe-clinical-workspace class that mode.js adds inside an active workbench,
+ * then to the editor container. Direct (legacy) and print presentations are unaffected.
+ *
+ * The route does not load the shared workspace.css, so its body font, canvas and container
+ * gutters never apply here. The palette tokens are declared on the editor container instead
+ * (same values as workspace.css).
+ *
+ * The page writes id="HIS" on both the form and the tab wrapper, so every rule names form#HIS
+ * or div#HIS. The tabs and fields come from display_layout_tabs()/display_layout_tabs_data_editable()
+ * in library/options.inc.php. No rule hides, sizes, floats or re-fonts a tab, group, label or
+ * control, so tab switching (tabbify), group show/hide, skip conditions, select2, datepickers and
+ * the theme's HIS font settings behave as before. The one generated box is the float clearfix below.
+ */
+@media screen {
+  /* Presentation tokens only; typography stays with the theme. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor {
+    --oe-ink: #17343b;
+    --oe-muted: #526a70;
+    --oe-line: #d9e4e2;
+    --oe-paper: #fff;
+    --oe-petrol: #086878;
+    --oe-subtle: #e4eeec;
+  }
+
+  /*
+   * The form as one ruled sheet. Subtitle cells carry an inline background-color: var(--gray300),
+   * which is dark in the dark theme; redefining it here resolves that inline value to a light
+   * token under the sheet's ink. The sheet is geometry-neutral: no padding, border or margin, so
+   * nothing moves or widens; its rule line is an inset shadow.
+   */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor form#HIS {
+    --gray300: var(--oe-subtle);
+
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-radius: 0.5rem;
+    box-shadow: inset 0 0 0 1px var(--oe-line), 0 1px 2px rgb(23 52 59 / 6%);
+  }
+
+  /*
+   * The theme floats ul.tabNav and div.tabContainer (core/tabs.scss), and div#HIS is float-none, so
+   * without containment the sheet would end at the actions. A generated clearfix closes the tab wrapper
+   * without changing the display or float of any real element.
+   */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+
+  /* Save / Cancel: wrap instead of overflowing a narrow frame; Save carries the workbench accent. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-save {
+    background-color: var(--oe-petrol);
+    color: #fff;
+    border-color: var(--oe-petrol);
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-save:hover,
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-save:focus {
+    background-color: #06525f;
+    color: #fff;
+    border-color: #06525f;
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-cancel {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-color: var(--oe-line);
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-cancel:hover,
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn-cancel:focus {
+    background-color: var(--oe-subtle);
+    color: var(--oe-ink);
+    border-color: var(--oe-line);
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor .oe-history-editor-actions .btn:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Tab strip: quiet underline tabs in place of the primary-colour bar. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS ul.tabNav {
+    background-color: var(--oe-paper);
+    border-bottom: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS ul.tabNav a {
+    background-color: var(--oe-paper);
+    color: var(--oe-muted);
+    border-bottom: 2px solid transparent;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS ul.tabNav a:hover {
+    background-color: var(--oe-paper);
+    color: var(--oe-petrol);
+  }
+
+  /* The theme removes the tab focus outline; restore a visible keyboard ring. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS ul.tabNav a:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: -2px;
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS ul.tabNav li.current a {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-bottom-color: var(--oe-petrol);
+  }
+
+  /* Tab panels: paper instead of the pale fill. Visibility stays with the theme's .current rule. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tabContainer div.tab {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-color: transparent;
+  }
+
+  /* Collapsible groups keep their theme border and inline display; only the surface changes. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab div.section {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /*
+   * Lifestyle fields (generate_form_field type 28) nest a Bootstrap table.table, whose dark theme
+   * colour is near-white. Explicit semantic table variants keep their own pairing.
+   */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata table.table:not([class*='table-']),
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata table.table:not([class*='table-']) td {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /*
+   * Custom-template fields (type 34) wrap their text in a.text-body, whose Bootstrap utility sets the
+   * theme body colour with !important (near-white in the dark theme). Re-pair it on the sheet.
+   */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata a.text-body {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink) !important;
+  }
+
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata a.text-body .text-area {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /* Value cells: long static text wraps. Controls are not resized and no cell becomes a scroll container. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata [id^='value_id_'] {
+    overflow-wrap: anywhere;
+  }
+
+  /* The theme leaves no visible keyboard focus on radios, checkboxes and template links; draw one. */
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab input[type='radio']:focus-visible,
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab input[type='checkbox']:focus-visible,
+  body.oe-clinical-history-editor.oe-clinical-workspace #container_div.oe-history-editor div#HIS div.tab .lbfdata a.text-body:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+}

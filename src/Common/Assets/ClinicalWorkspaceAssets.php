@@ -35,6 +35,7 @@ final readonly class ClinicalWorkspaceAssets
         'finder.css',
         'global-messages.css',
         'history-document.css',
+        'history-editor.css',
         'lbf-document.css',
         'mode.js',
         'patient-messages.css',

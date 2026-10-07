@@ -243,6 +243,9 @@ div.tab {
     width: auto;
 }
 </style>
+<?php $clinicalAssets = new \OpenEMR\Common\Assets\ClinicalWorkspaceAssets(); // Screen-only; inert until mode.js finds an active workbench. ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/history-editor.css?v=<?php echo attr_url($clinicalAssets->version('history-editor.css')); ?>">
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 <?php
 $arrOeUiSettings = [
     'heading_title' => xl('Edit History and Lifestyle'),
@@ -258,9 +261,9 @@ $arrOeUiSettings = [
 $oemr_ui = new OemrUI($arrOeUiSettings);
 ?>
 </head>
-<body>
+<body class="oe-clinical-history-editor">
 
-<div id="container_div" class="container-xl mt-3">
+<div id="container_div" class="container-xl mt-3 oe-history-editor">
     <div class="row">
         <div class="col-12">
             <?php require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getProjectDir() . "/interface/patient_file/summary/dashboard_header.php"); ?>
@@ -285,7 +288,7 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
                 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                 <input type='hidden' name='mode' value='save' />
 
-                <div class="btn-group">
+                <div class="btn-group oe-history-editor-actions">
                     <button type="submit" class="btn btn-primary btn-save"><?php echo xlt('Save'); ?></button>
                     <a href="history.php" class="btn btn-secondary btn-cancel" onclick="top.restoreSession()">
                         <?php echo xlt('Cancel'); ?>

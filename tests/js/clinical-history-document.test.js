@@ -27,8 +27,13 @@ const root = path.join(__dirname, '../..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const readIfPresent = (relative) => (fs.existsSync(path.join(root, relative)) ? read(relative) : '');
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
+// Git blob id of the file's exact bytes, so a pin names the immutable object, not just a checkout.
+const gitBlob = (relative) => {
+    const bytes = fs.readFileSync(path.join(root, relative));
+    return crypto.createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+};
 
-const HISTORY = 'interface/patient_file/history/history.php';
+const HISTORY ='interface/patient_file/history/history.php';
 const CSS = 'interface/clinical-workspace/history-document.css';
 const BODY = 'body.oe-clinical-history-document.oe-clinical-workspace';
 const SCOPE = `${BODY} #container_div.oe-history-document`;
@@ -45,6 +50,15 @@ const ORIGINAL = {
 const SHARED_ENGINE = {
     commit: '11509275',
     modeJs: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573'
+};
+
+// The History EDITOR (history_full.php) is a separate, independently reviewed lane (PR44) that is
+// now integrated beside this view. It is pinned to its published source at d6dc903c rather than
+// forbidden from carrying workbench markup; this view must still leak no route scope into it.
+const APPROVED_EDITOR = {
+    commit: 'd6dc903c07277531ea26a9efa05d8b8a25bb5f59',
+    blob: '2b0c0d25ce363ae1eef9528239ce629cca75f727',
+    historyFull: '976f4b3426630f9c65f9e14eec7275b87c8fc467a06a5cd2fef7134a91e520dd'
 };
 
 const WEBROOT = '<?php echo attr(\\OpenEMR\\Core\\OEGlobalsBag::getInstance()->getWebRoot()); ?>';
@@ -141,9 +155,11 @@ describe('history.php source preservation', () => {
         expect(read('src/Common/Assets/ClinicalWorkspaceAssets.php')).toMatch(/\n {8}'history-document\.css',\n/);
     });
 
-    test('the editor, the layout renderer and the core history theme are untouched', () => {
+    test('the editor matches its approved lane source with no View scope; the layout renderer and core history theme are untouched', () => {
+        const editor = 'interface/patient_file/history/history_full.php';
         expect(readIfPresent(CSS)).not.toBe('');
-        expect(read('interface/patient_file/history/history_full.php')).not.toMatch(/oe-clinical|clinical-workspace/);
+        expect([gitBlob(editor), sha256(read(editor))]).toEqual([APPROVED_EDITOR.blob, APPROVED_EDITOR.historyFull]);
+        expect(read(editor)).not.toMatch(/oe-history-document|oe-clinical-history-document|oe-history-actions|history-document\.css/);
         expect(read('library/options.inc.php')).not.toMatch(/oe-history-document|oe-clinical-history-document/);
         expect(read('interface/themes/core/patient/history.scss')).not.toMatch(/oe-clinical/);
     });
