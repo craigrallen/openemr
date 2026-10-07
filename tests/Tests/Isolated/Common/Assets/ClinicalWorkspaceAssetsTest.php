@@ -235,6 +235,33 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function historyDocumentStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('history-document.css', 1_700_001_201);
+        $this->writeAsset('workspace.css', 1_700_001_202);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700001201', $assets->version('history-document.css'));
+        self::assertSame('1700001202', $assets->version('workspace.css'));
+    }
+
+    #[Test]
+    public function missingHistoryDocumentStylesheetVersionIsZero(): void
+    {
+        self::assertSame('0', (new ClinicalWorkspaceAssets($this->directory))->version('history-document.css'));
+    }
+
+    #[Test]
+    public function shippedHistoryDocumentStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/history-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('history-document.css'));
+    }
+
+    #[Test]
     public function recordWorkspaceStylesheetIsVersionedPerFile(): void
     {
         $this->writeAsset('workspace.css', 1_700_000_901);

@@ -1,0 +1,131 @@
+/*
+ * History and Lifestyle view as a quiet document inside the clinical workbench.
+ *
+ * history.php links this file with media="screen", and every rule is scoped to the route class
+ * plus the oe-clinical-workspace class that mode.js adds inside an active workbench. Direct
+ * (legacy) and print presentations are unaffected.
+ *
+ * The route does not load the shared workspace.css: its body font and mobile container padding
+ * would change History typography and push Bootstrap's -15px rows past the viewport. The few
+ * palette tokens used here are declared on the route body instead (same values as workspace.css).
+ *
+ * The tabs and tables come from display_layout_tabs()/display_layout_tabs_data() in
+ * library/options.inc.php. No rule hides, sizes, floats or re-fonts a tab, panel, label or value,
+ * so tab switching (tabbify), skip conditions and the configured HIS font size behave as before.
+ */
+@media screen {
+  /* Presentation tokens only; typography stays with the theme. */
+  body.oe-clinical-history-document.oe-clinical-workspace {
+    --oe-ink: #17343b;
+    --oe-muted: #526a70;
+    --oe-line: #d9e4e2;
+    --oe-paper: #fff;
+    --oe-petrol: #086878;
+    --oe-subtle: #e4eeec;
+  }
+
+  /* Bootstrap's own 15px gutters, matching the -15px row margins at every width. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  /*
+   * The layout as one ruled sheet. The renderer writes subtitle cells with an inline
+   * background-color: var(--gray300), which is dark in the dark theme; redefining it here keeps
+   * that inline value but resolves it to a light token under the sheet's ink.
+   */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS {
+    --gray300: var(--oe-subtle);
+
+    padding: 0.25rem 1rem 1rem;
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border: 1px solid var(--oe-line);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgb(23 52 59 / 6%);
+  }
+
+  /* Tab strip: quiet underline tabs in place of the primary-colour bar. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS ul.tabNav {
+    background-color: var(--oe-paper);
+    border-bottom: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS ul.tabNav a {
+    background-color: var(--oe-paper);
+    color: var(--oe-muted);
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS ul.tabNav a:hover {
+    background-color: var(--oe-paper);
+    color: var(--oe-petrol);
+  }
+
+  /* The theme removes the tab focus outline; restore a visible keyboard ring. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS ul.tabNav a:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: -2px;
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS ul.tabNav li.current a {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-bottom-color: var(--oe-petrol);
+  }
+
+  /* Tab panels: paper instead of the pale fill. Visibility stays with the theme's .current rule. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS div.tabContainer div.tab {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+    border-color: transparent;
+  }
+
+  /* Subtitle and spacer label cells: sheet ink (subtitles keep their inline background). */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS div.tab td.label {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /*
+   * Lifestyle values (generate_display_field type 28) nest a Bootstrap table.table, whose dark
+   * theme colour is near-white. Status text, strong and icons inherit from these cells.
+   */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS div.tab td.data table.table,
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS div.tab td.data table.table td {
+    background-color: var(--oe-paper);
+    color: var(--oe-ink);
+  }
+
+  /* Long free-text values wrap inside their cell instead of widening the table. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document #HIS div.tab td.data {
+    overflow-wrap: anywhere;
+  }
+
+  /* Edit action: ruled off above the sheet, carrying the workbench accent. */
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document .oe-history-actions {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--oe-line);
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document .oe-history-actions .btn-edit {
+    background-color: var(--oe-petrol);
+    color: #fff;
+    border-color: var(--oe-petrol);
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document .oe-history-actions .btn-edit:hover,
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document .oe-history-actions .btn-edit:focus {
+    background-color: #06525f;
+    color: #fff;
+    border-color: #06525f;
+  }
+
+  body.oe-clinical-history-document.oe-clinical-workspace #container_div.oe-history-document .oe-history-actions .btn-edit:focus-visible {
+    outline: 2px solid var(--oe-petrol);
+    outline-offset: 2px;
+  }
+}
