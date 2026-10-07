@@ -71,16 +71,21 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
      */
     public static function migratedPages(): array
     {
-        // [path, baseline sha256 at 5619373, markers that must precede the opt-in]
+        // [path, baseline sha256 at 5619373 unless noted, markers that must precede the opt-in]
         return [
             'dispense label (dlgopen)' => [
                 'interface/drugs/dispense_drug.php',
                 '65a545871d768db317f6250bed79e0be92ac191893deef70616a161814ffc481',
                 ['die(text($e->getMessage()));', 'include_opener.js', '<head>', '</style>', '<title>'],
             ],
+            // Re-pinned to blob 58522b32 at upstream fork baseline
+            // 9cbb8eec161f8ffff529503260999f1ac31f6d1c, whose only delta from 5619373
+            // is convertToDataArray() gaining a PHPDoc and an `: array` return type.
+            // Pre-upstream digest at 5619373 (blob d77f75de):
+            // 908293a8a12eed11ed57772f8d04ef4974b067e8ee64eb1ed7de2db3b66f3910
             'shot record html branch' => [
                 'interface/patient_file/summary/shot_record.php',
-                '908293a8a12eed11ed57772f8d04ef4974b067e8ee64eb1ed7de2db3b66f3910',
+                '5843a40221f20779a1abd9cbce5c015a32e7e412de6cfd36b1669455677294b3',
                 ['$pdf->ezStream();', 'function printHTML(', '<head>', '</style>', '<title>'],
             ],
             'prior auth deleter (dlgopen)' => [
@@ -102,9 +107,16 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
             // html=1 overlays plotted text (body color: red) at pt coordinates on chart
             // images; the popup body ink would recolour it. pdf=1 streams a PDF whose
             // chart inputs imagepng() writes to temporary files, not a browser PNG.
+            // Re-pinned to blob 7c8a9ea0 at upstream fork baseline
+            // 9cbb8eec161f8ffff529503260999f1ac31f6d1c, whose only delta from 5619373
+            // is return types on unitsWt/unitsDist (string), convertHeightToUs/
+            // convertWeightToUs (float) and convertpoint (array), plus ten redundant
+            // (string) casts dropped from imagestring() calls. Pre-upstream digest at
+            // 5619373 (blob 59d4d517):
+            // 9d7f087883b146dd0c78b520402abee722577bc1d33bc911a441f5c1271391ad
             'growth chart png/pdf/registered html' => [
                 'interface/forms/vitals/growthchart/chart.php',
-                '9d7f087883b146dd0c78b520402abee722577bc1d33bc911a441f5c1271391ad',
+                '2eb9f7afdb5dfb3b4f3b16fc94562a31e54b7a571614e99cd38d17618aa9bf1d',
             ],
             // Deprecated contrib utility: <html><body> with no <head>. It is a real popup
             // (contrib/util/dupecheck/index.php opens it via window.open()), left out of
@@ -160,6 +172,53 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
         $this->assertStringNotContainsString('workbench-popup', $source);
         $this->assertStringNotContainsString('Header::', $source);
         $this->assertSame($baseline, hash('sha256', $source), "$path must stay byte-identical");
+    }
+
+    /**
+     * Unapproved edits applied in memory to the current sources.
+     *
+     * @return array<string, array{string, string, string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function unapprovedEdits(): array
+    {
+        $shot = 'interface/patient_file/summary/shot_record.php';
+        $chart = 'interface/forms/vitals/growthchart/chart.php';
+        return [
+            'shot: patient scope dropped' => [$shot, ' where p.pid = ?", [$pid]);', ' where 1 = 1", []);'],
+            'shot: pre-upstream signature restored' => [$shot, 'function convertToDataArray($data_array): array', 'function convertToDataArray($data_array)'],
+            'shot: extra asset in head' => [$shot, "  </head>\n", "<?php echo Header::setupAssets(['no-bootstrap']); ?>\n  </head>\n"],
+            'shot: pdf margins altered' => [$shot, '$pdf->ezSetMargins(72, 30, 50, 30);', '$pdf->ezSetMargins(36, 30, 50, 30);'],
+            'chart: acl guard altered' => [$chart, "AclMain::aclCheckCore('patients', 'med')", "AclMain::aclCheckCore('patients', 'demo')"],
+            'chart: unit conversion altered' => [$chart, 'return $height * 0.393701;', 'return $height * 0.3937;'],
+            'chart: dropped gd cast restored' => [$chart, '$datatable_hc_offset), $datatable_y, unitsDist($head_circ), $color);', '$datatable_hc_offset), $datatable_y, (string) unitsDist($head_circ), $color);'],
+            'chart: return type removed' => [$chart, 'function convertpoint($coord): array', 'function convertpoint($coord)'],
+            'chart: extra asset in head' => [$chart, "    </head>\n", "    <script src=\"extra.js\"></script>\n    </head>\n"],
+            'chart: pdf margins altered' => [$chart, '$pdf->ezSetMargins(0, 0, 0, 0);', '$pdf->ezSetMargins(5, 5, 5, 5);'],
+        ];
+    }
+
+    #[DataProvider('unapprovedEdits')]
+    public function testUnapprovedEditsBreakThePins(string $path, string $search, string $replace): void
+    {
+        $pins = [];
+        foreach (self::migratedPages() as [$page, $baseline]) {
+            $pins[$page] = [$baseline, true];
+        }
+        foreach (self::excludedPages() as [$page, $baseline]) {
+            $pins[$page] = [$baseline, false];
+        }
+        $this->assertArrayHasKey($path, $pins);
+        [$baseline, $optIn] = $pins[$path];
+
+        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn($source) : $source);
+        $source = self::source($path);
+        $this->assertSame($baseline, $digest($source), "$path must match its pin before the edit");
+        $this->assertSame(1, substr_count($source, $search), "$path: edit anchor must be unique");
+
+        $edited = str_replace($search, $replace, $source);
+        $this->assertNotSame($baseline, $digest($edited), "$path: unapproved edit must break the pin");
     }
 
     #[RunInSeparateProcess]
