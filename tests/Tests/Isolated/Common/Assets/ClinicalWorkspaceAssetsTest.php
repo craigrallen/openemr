@@ -112,6 +112,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss lbf stylesheet' => ['lbf_document.css'],
             'lbf stylesheet outside the workspace' => ['../forms/LBF/lbf-document.css'],
             'trailing nul' => ["mode.js\0"],
+            'near-miss global messages stylesheet' => ['global_messages.css'],
         ];
     }
 
@@ -268,6 +269,27 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-messages.css'));
+    }
+
+    #[Test]
+    public function globalMessagesStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('global-messages.css', 1_700_001_201);
+        $this->writeAsset('patient-messages.css', 1_700_001_202);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700001201', $assets->version('global-messages.css'));
+        self::assertSame('1700001202', $assets->version('patient-messages.css'));
+    }
+
+    #[Test]
+    public function shippedGlobalMessagesStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/global-messages.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('global-messages.css'));
     }
 
     #[Test]
