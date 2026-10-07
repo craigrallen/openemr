@@ -79,6 +79,7 @@ jobs:
         dirs=( "${dirs[@]%/docker-compose.yml}" )
         dirs=( "${dirs[@]#ci/}" )
         ci/parse_docker_dir.sh "${dirs[@]}" | ci/codecov_flags.sh
+        python3 -m unittest discover -s tests/ci -p 'test_codecov_retired_flags.py'
 
     - name: Collect Docker Dirs
       id: docker-dirs
