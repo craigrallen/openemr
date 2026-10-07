@@ -64,6 +64,42 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function popupStylesheetsUseTheirOwnModificationTimesAndMissingFallback(): void
+    {
+        $names = ['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'];
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        foreach ($names as $index => $name) {
+            self::assertSame('0', $assets->version($name));
+            $this->writeAsset($name, 1_700_003_001 + $index);
+        }
+
+        foreach ($names as $index => $name) {
+            self::assertSame((string) (1_700_003_001 + $index), $assets->version($name));
+        }
+
+        $this->writeAsset('patient-results-popup.css', 1_700_003_100);
+        self::assertSame('1700003100', $assets->version('patient-results-popup.css'));
+        self::assertSame('1700003001', $assets->version('issue-popup.css'));
+        self::assertSame('1700003002', $assets->version('patient-picker-popup.css'));
+
+        unlink($this->directory . '/issue-popup.css');
+        self::assertSame('0', $assets->version('issue-popup.css'));
+    }
+
+    #[Test]
+    public function shippedPopupStylesheetsUseTheirActualModificationTimes(): void
+    {
+        $assets = new ClinicalWorkspaceAssets();
+        foreach (['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'] as $name) {
+            $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/' . $name;
+            self::assertFileExists($shipped);
+            clearstatcache(true, $shipped);
+            self::assertSame((string) filemtime($shipped), $assets->version($name));
+        }
+    }
+
+    #[Test]
     public function missingSupportedAssetFallsBackToZero(): void
     {
         $assets = new ClinicalWorkspaceAssets($this->directory);
@@ -113,6 +149,10 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'lbf stylesheet outside the workspace' => ['../forms/LBF/lbf-document.css'],
             'trailing nul' => ["mode.js\0"],
             'near-miss global messages stylesheet' => ['global_messages.css'],
+            'near-miss issue stylesheet' => ['issue_popup.css'],
+            'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
+            'near-miss patient results stylesheet' => ['patient_results_popup.css'],
+            'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
         ];
     }
 

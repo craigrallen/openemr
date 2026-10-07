@@ -1,0 +1,417 @@
+/*
+ * Add/Edit Issue (add_edit_issue.php) as a composed document inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-popup (set by popup.js only inside an active
+ * workbench) plus the route's body class, and the sheet is linked with media="screen", so the
+ * standalone page and print keep the legacy rendering. Tokens come from popup.css.
+ *
+ * newtype() shows and hides #row_* blocks with inline display, Bootstrap owns .collapse, and
+ * tabbify() owns .tab/.current; no rule here sets display or visibility on any of them. Grid
+ * rows only re-flow their children, so a child hidden inline simply drops out of the grid.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-issue-editor {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* Sheet and tab strip. The theme floats the strip and container, so the sheet clears them. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-sheet {
+    max-width: 980px;
+    margin-right: auto;
+    margin-left: auto;
+    padding: 4px 18px 24px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-sheet::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-tabs {
+    margin: 0;
+    padding: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-tabs li a {
+    margin-right: 4px;
+    padding: 8px 16px;
+    color: var(--oe-wb-muted);
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-tabs li.current a {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    box-shadow: inset 0 2px 0 var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-tab-container > .tab {
+    margin-bottom: 0;
+    padding: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 0 8px 8px;
+    box-shadow: 0 1px 2px rgb(23 52 59 / 6%);
+  }
+
+  /* The document body: one paper sheet with ruled sections. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document {
+    padding: 22px 26px 20px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-radius: 0 8px 8px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .row {
+    margin-right: -8px;
+    margin-left: -8px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .row > [class*='col'] {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-group {
+    margin-bottom: 16px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document label,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .col-form-label {
+    margin: 0 0 6px;
+    padding: 0;
+    color: var(--oe-wb-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-check-label,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .radio-inline {
+    margin-bottom: 0;
+    color: var(--oe-wb-ink);
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+
+  /* Header: issue type on the left, Active on the right, ruled off from the record. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px 20px;
+    margin: 0 0 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-header > [class*='col'] {
+    flex: none;
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type > label {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type-options {
+    padding: 6px 14px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    font-size: 0.92rem;
+    line-height: 2.1;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type-options input[type='radio'] {
+    margin: 0 6px 0 0;
+    vertical-align: -2px;
+    accent-color: var(--oe-wb-petrol);
+    cursor: pointer;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type-options input[type='radio']:disabled {
+    cursor: not-allowed;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type-options input[type='radio']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-type-options input[type='radio'] ~ input[type='radio'] {
+    margin-left: 16px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-status .form-check {
+    margin-top: 22px;
+    padding: 7px 14px 7px 36px;
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 999px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-status .form-check-input {
+    margin-top: 0.3rem;
+    margin-left: -1.35rem;
+    accent-color: var(--oe-wb-petrol);
+  }
+
+  /* Identity: picklist and title across the sheet, begin/end dates side by side. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-identity {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 18px;
+    margin: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-identity > [class*='col'] {
+    flex: none;
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-identity > #row_titles,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-identity > .oe-issue-title {
+    grid-column: 1 / -1;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-title #form_title {
+    min-height: 42px;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-date .form-control {
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-date #form_begin,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-date #form_end {
+    min-height: 40px;
+    font-size: 0.95rem;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-date #form_end::placeholder {
+    color: var(--oe-wb-muted);
+    opacity: 1;
+  }
+
+  /* Allergy, device and medication blocks keep their Bootstrap columns. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-allergy,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-device,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-medication {
+    color: var(--oe-wb-ink);
+  }
+
+  /* Notes: a readable writing area. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-notes #form_comments {
+    min-height: 112px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  /* Coding Add / Remove under More fields. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-more .btn-group .btn {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+  }
+
+  /* Shared control surface. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-control {
+    min-height: 38px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .input-group > .form-control {
+    border-radius: 6px 0 0 6px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-control:disabled,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-control[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    border: 1px solid var(--oe-wb-line);
+    background-image: none;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .input-group-append .btn {
+    color: var(--oe-wb-petrol);
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 0 6px 6px 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .input-group-append .btn:focus {
+    border-color: var(--oe-wb-petrol);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgb(8 104 120 / 18%);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .select2-container--bootstrap4 .select2-selection {
+    min-height: 38px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document .select2-container--bootstrap4.select2-container--focus .select2-selection {
+    border-color: var(--oe-wb-petrol);
+    box-shadow: 0 0 0 3px rgb(8 104 120 / 18%);
+  }
+
+  /* More fields: a ruled continuation of the sheet. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-more .oe-issue-more-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0 18px;
+    margin: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-more .oe-issue-more-row > [class*='col'] {
+    flex: none;
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-more .oe-issue-more-row:first-child {
+    margin-top: 4px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-adherence-heading h5 {
+    margin: 8px 0 12px;
+    padding-top: 16px;
+    color: var(--oe-wb-ink);
+    border-top: 1px solid var(--oe-wb-line);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-adherence {
+    color: var(--oe-wb-ink);
+  }
+
+  /* Action bar: disclosure, then Save / Cancel; wraps instead of overflowing. */
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-actions-row {
+    margin-top: 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .oe-issue-disclosure {
+    padding: 8px 4px;
+    color: var(--oe-wb-petrol);
+    background: transparent;
+    border: 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .oe-issue-disclosure:hover,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .oe-issue-disclosure:focus {
+    color: var(--oe-wb-ink);
+    text-decoration: underline;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .oe-issue-disclosure:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-commit {
+    gap: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-save,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-cancel {
+    min-height: 38px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-save {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-save:hover,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-save:focus {
+    color: var(--oe-wb-on-petrol);
+    background: #06525f;
+    border-color: #06525f;
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-cancel {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-cancel:hover,
+  html.oe-workbench-popup body.oe-issue-editor .oe-issue-actions .btn-cancel:focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  @media (width <= 640px) {
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-sheet {
+      padding-right: 8px;
+      padding-left: 8px;
+    }
+
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-document {
+      padding: 16px;
+    }
+
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-header,
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-document > .oe-issue-identity,
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-more .oe-issue-more-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.oe-workbench-popup body.oe-issue-editor .oe-issue-status .form-check {
+      margin-top: 0;
+    }
+  }
+}

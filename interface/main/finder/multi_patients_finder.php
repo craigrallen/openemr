@@ -16,6 +16,7 @@
 
 require_once('../../globals.php');
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -43,6 +44,8 @@ if (isset($_GET['patients'])) {
 <head>
     <?php Header::setupHeader(['select2', 'opener']); ?>
     <title><?php echo xlt('Patient Finder'); ?></title>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-picker-popup.css?v=<?php echo attr_url($clinicalAssets->version('patient-picker-popup.css')); ?>">
 
     <style>
         #searchCriteria {
@@ -97,12 +100,12 @@ if (isset($_GET['patients'])) {
 
 </head>
 
-<body>
-<div class="container-fluid">
-    <div id="searchCriteria">
-        <form>
-            <div class="row align-items-center">
-                <div class="col-4">
+<body class="oe-patient-picker">
+<div class="container-fluid oe-picker-sheet">
+    <div id="searchCriteria" class="oe-picker-search">
+        <form class="oe-picker-form">
+            <div class="row align-items-center oe-picker-layout">
+                <div class="col-4 oe-picker-field oe-picker-name">
                     <div class="select-box form-inline">
                         <label for="by-name"><?php echo xlt('Patient name') . ':'; ?></label>
                         <select id="by-name" name="by-name" class="input-sm">
@@ -110,7 +113,7 @@ if (isset($_GET['patients'])) {
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-4 oe-picker-field oe-picker-id">
                     <div class="select-box form-inline">
                         <label for="by-id"><?php echo xlt('Patient ID'); ?>:</label>
                         <select id="by-id" name="by-id" class="input-sm">
@@ -118,8 +121,8 @@ if (isset($_GET['patients'])) {
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
-                    <div class="btn-group" role="group" aria-label="Form Buttons">
+                <div class="col-4 oe-picker-action-column">
+                    <div class="btn-group oe-picker-actions" role="group" aria-label="Form Buttons">
                         <button id="add-to-list" type="button" class="btn btn-primary btn-add btn-sm"><?php echo xlt('Add to list'); ?></button>
                         <button id="send-patients" type="button" class="btn btn-primary btn-save btn-sm" onclick="selPatients()"><?php echo xlt('OK'); ?></button>
                     </div>
@@ -127,8 +130,8 @@ if (isset($_GET['patients'])) {
             </div>
         </form>
     </div>
-    <div class="table-responsive">
-        <table id="results-table" class="table table-sm">
+    <div class="table-responsive oe-picker-results">
+        <table id="results-table" class="table table-sm oe-picker-table">
             <thead id="searchResultsHeader" class="head">
             <tr>
                 <th class="srName"><?php echo xlt('Name'); ?></th>

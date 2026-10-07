@@ -15,6 +15,7 @@ require_once("../../globals.php");
 use OpenEMR\BC\Utilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Common\Utils\PaginationUtils;
@@ -51,6 +52,8 @@ $from_page = $_REQUEST['from_page'] ?? "";
 <html>
 <head>
     <?php Header::setupHeader('opener'); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-results-popup.css?v=<?php echo attr_url($clinicalAssets->version('patient-results-popup.css')); ?>">
 <style>
 form {
     padding: 0px;
@@ -152,7 +155,7 @@ form {
 </script>
 
 </head>
-<body class="body_top">
+<body class="body_top oe-patient-results">
 
 <form method='post' action='patient_select.php' name='theform' onsubmit='return top.restoreSession()'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
@@ -304,7 +307,7 @@ if ($popup) {
 
 </form>
 
-<table class="w-100 border-0" cellpadding='5' cellspacing='0'>
+<table class="w-100 border-0 oe-results-toolbar" cellpadding='5' cellspacing='0'>
  <tr>
   <td class='text'>
     <?php if ($from_page == "cdr_report") { ?>
@@ -350,6 +353,7 @@ if ($popup) {
   </tr>
 </table>
 
+<div class="oe-results-scroll" role="region" aria-label="<?php echo xla('Patient search results'); ?>" tabindex="0">
 <div id="searchResultsHeader" class="head">
 <table>
 <tr>
@@ -405,7 +409,6 @@ if ($popup) {
 <div id="searchResults">
 
 <table>
-<tr>
 <?php
 if ($result) {
     foreach ($result as $iter) {
@@ -528,6 +531,7 @@ if ($result) {
 ?>
 </table>
 </div>  <!-- end searchResults DIV -->
+</div>  <!-- end shared results scroll -->
 
 <script>
 
