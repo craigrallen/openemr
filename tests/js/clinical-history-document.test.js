@@ -36,8 +36,15 @@ const SCOPE = `${BODY} #container_div.oe-history-document`;
 // sha256 at master 5619373, before this change.
 const ORIGINAL = {
     historyPhp: 'e03c50d90eac4878e258559c968f4b27f331461f3742d104546722533017b8af',
-    modeJs: '10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599',
     workspaceCss: '0534d5ab77f344a94cf485a5e0cfa6c80a8de7745c3f533694998058d261590c'
+};
+
+// sha256 of the shared mode.js blob at 11509275 (merged PR #45 popup parent/opener provenance
+// engine), an independently approved baseline this feature reuses without editing. The original
+// 5619373 route pin was 10736b36a4ad44ae3dd0c7a519708bf5957c2d53b88dd2057ec8e791f61f2599.
+const SHARED_ENGINE = {
+    commit: '11509275',
+    modeJs: '6a0a4bcfbe040be385376399df95870b9934b8181056fa5fbcd5a7128fcd6573'
 };
 
 const WEBROOT = '<?php echo attr(\\OpenEMR\\Core\\OEGlobalsBag::getInstance()->getWebRoot()); ?>';
@@ -128,8 +135,8 @@ describe('history.php source preservation', () => {
         expect(source).not.toMatch(/clinical-workspace\/workspace\.css/);
     });
 
-    test('mode.js and workspace.css are reused unchanged; the helper allowlists the new stylesheet', () => {
-        expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(ORIGINAL.modeJs);
+    test('shared mode.js matches the merged engine baseline, workspace.css the original; the helper allowlists the new stylesheet', () => {
+        expect(sha256(read('interface/clinical-workspace/mode.js'))).toBe(SHARED_ENGINE.modeJs);
         expect(sha256(read('interface/clinical-workspace/workspace.css'))).toBe(ORIGINAL.workspaceCss);
         expect(read('src/Common/Assets/ClinicalWorkspaceAssets.php')).toMatch(/\n {8}'history-document\.css',\n/);
     });
