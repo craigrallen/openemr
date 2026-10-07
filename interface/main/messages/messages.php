@@ -23,6 +23,7 @@
 require_once("../../globals.php");
 
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Logging\EventAuditLogger;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -181,8 +182,12 @@ if (!empty($_REQUEST['go'])) { ?>
 
     echo "<title>" .  xlt('Message Center') . "</title>";
     ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url($clinicalAssets->version('workspace.css')); ?>">
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/global-messages.css?v=<?php echo attr_url($clinicalAssets->version('global-messages.css')); ?>">
+    <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 </head>
-<body class='body_top'>
+<body class='body_top oe-clinical-global-messages'>
     <div id="container_div" class="<?php echo attr($oemr_ui->oeContainer()); ?>">
         <div class="row">
             <div class="col-sm-12">
@@ -748,11 +753,13 @@ if (!empty($_REQUEST['go'])) { ?>
                                     document.getElementById("checkAll").checked = true;<?php
                                     for ($i = 1; $i <= $count; $i++) {
                                         echo "document.getElementById(\"check$i\").checked=true; document.getElementById(\"row$i\").style.background='var(--gray200)';  ";
+                                        echo "document.getElementById(\"row$i\").classList.add('oe-message-selected');  ";
                                     } ?>
                                 } else {
                                     document.getElementById("checkAll").checked = false;<?php
                                     for ($i = 1; $i <= $count; $i++) {
                                         echo "document.getElementById(\"check$i\").checked=false; document.getElementById(\"row$i\").style.background='var(--light)';  ";
+                                        echo "document.getElementById(\"row$i\").classList.remove('oe-message-selected');  ";
                                     } ?>
                                 }
                             }
@@ -761,10 +768,12 @@ if (!empty($_REQUEST['go'])) { ?>
                             function selectRow(row) {
                                 event.stopPropagation();
                                 document.getElementById(row).style.background = "var(--gray200)";
+                                document.getElementById(row).classList.add('oe-message-selected');
                             }
                             function deselectRow(row) {
                                 event.stopPropagation();
                                 document.getElementById(row).style.background = "var(--light)";
+                                document.getElementById(row).classList.remove('oe-message-selected');
                             }
 
                             function makeMessageRowsClickable() {

@@ -10807,16 +10807,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/Ccr.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:createAuditArray\\(\\) has parameter \\$am_id with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:createAuditArray\\(\\) has parameter \\$table_name with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:discardCCRData\\(\\) has parameter \\$data with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
@@ -10888,16 +10878,6 @@ $ignoreErrors[] = [
 ];
 $ignoreErrors[] = [
     'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:insert_patient\\(\\) has parameter \\$audit_master_id with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:parseXmlStream\\(\\) has parameter \\$content with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method Ccr\\\\Model\\\\CcrTable\\:\\:parseXmlStream\\(\\) has parameter \\$field_mapping with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../interface/modules/zend_modules/module/Ccr/src/Ccr/Model/CcrTable.php',
 ];
@@ -13673,6 +13653,11 @@ $ignoreErrors[] = [
 ];
 $ignoreErrors[] = [
     'message' => '#^Method ESign\\\\SignableIF\\:\\:sign\\(\\) has parameter \\$amendment with no type specified\\.$#',
+    'count' => 1,
+    'path' => __DIR__ . '/../../library/ESign/SignableIF.php',
+];
+$ignoreErrors[] = [
+    'message' => '#^Method ESign\\\\SignableIF\\:\\:sign\\(\\) has parameter \\$lock with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../library/ESign/SignableIF.php',
 ];
@@ -21567,16 +21552,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../library/edihistory/edih_csv_inc.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Function edih_277_csv_data\\(\\) has parameter \\$obj277 with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../library/edihistory/edih_csv_parse.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Function edih_837_csv_data\\(\\) has parameter \\$obj837 with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../library/edihistory/edih_csv_parse.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Function edih_parse_select\\(\\) has parameter \\$file_path with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../library/edihistory/edih_csv_parse.php',
@@ -27163,26 +27138,6 @@ $ignoreErrors[] = [
 ];
 $ignoreErrors[] = [
     'message' => '#^Method OpenEMR\\\\Billing\\\\EdiHistory\\\\X12File\\:\\:__construct\\(\\) has parameter \\$text with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Billing/EdiHistory/X12File.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\Billing\\\\EdiHistory\\\\X12File\\:\\:edih_file_text\\(\\) has parameter \\$delimiters with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Billing/EdiHistory/X12File.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\Billing\\\\EdiHistory\\\\X12File\\:\\:edih_file_text\\(\\) has parameter \\$file_text with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Billing/EdiHistory/X12File.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\Billing\\\\EdiHistory\\\\X12File\\:\\:edih_file_text\\(\\) has parameter \\$segments with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Billing/EdiHistory/X12File.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\Billing\\\\EdiHistory\\\\X12File\\:\\:edih_file_text\\(\\) has parameter \\$type with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../src/Billing/EdiHistory/X12File.php',
 ];
@@ -37193,11 +37148,6 @@ $ignoreErrors[] = [
 ];
 $ignoreErrors[] = [
     'message' => '#^Method OpenEMR\\\\Services\\\\FHIR\\\\Observation\\\\FhirObservationVitalsService\\:\\:getVitalSignsUuidMappings\\(\\) has parameter \\$uuid with no type specified\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Services/FHIR/Observation/FhirObservationVitalsService.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\Services\\\\FHIR\\\\Observation\\\\FhirObservationVitalsService\\:\\:insertOpenEMRRecord\\(\\) has parameter \\$openEmrRecord with no type specified\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../src/Services/FHIR/Observation/FhirObservationVitalsService.php',
 ];

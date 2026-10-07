@@ -16,6 +16,7 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
 $pid = $session->get('pid', 0);
 require_once($srcdir . "/options.inc.php");
 
+use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Services\FacilityService;
 
@@ -44,7 +45,10 @@ if ($_GET['output'] == "html") {
 }
 
 
-function convertToDataArray($data_array)
+/**
+ * @return array<int, non-empty-array<string, mixed>>
+ */
+function convertToDataArray($data_array): array
 {
     $current = 0;
     $data = [];
@@ -210,6 +214,7 @@ function printHTML($res, $res2, $data, $title): void
     }
   </style>
   <title><?php echo xl('Shot Record'); ?></title>
+    <?php echo Header::setupAssets(['workbench-popup']); ?>
   </head>
   <body>
 

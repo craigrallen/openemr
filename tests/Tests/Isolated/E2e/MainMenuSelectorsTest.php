@@ -156,6 +156,21 @@ final class MainMenuSelectorsTest extends TestCase
     }
 
     #[Test]
+    public function mainMenuAlertPollingOnlySwallowsMissingAlerts(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../../E2e/Base/BaseTrait.php');
+        self::assertIsString($source);
+        $start = strpos($source, 'private function goToMainMenuLink(');
+        self::assertIsInt($start);
+        $end = strpos($source, 'private function ', $start + 1);
+        self::assertIsInt($end);
+        $body = substr($source, $start, $end - $start);
+
+        self::assertStringContainsString('catch (NoAlertOpenException | NoSuchAlertException)', $body);
+        self::assertStringNotContainsString('catch (\Throwable)', $body);
+    }
+
+    #[Test]
     public function emptyWorkbenchAreaPathIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -1,0 +1,326 @@
+/*
+ * Message and Reminder Center (interface/main/messages/messages.php, default board only)
+ * inside the active workbench: 28px document heading, wrapping tab/filter/action
+ * toolbars and paper sheets around the original panes. Presentation only; every
+ * tab, filter link, sort link, checkbox, button, form and handler stays in the DOM
+ * in its original order. MedEx go= pages never load this sheet. Loaded after
+ * workspace.css; legacy, direct and print views keep the theme.
+ *
+ * Every surface painted light also sets its own ink: the compiled dark theme sets
+ * colours on descendants directly (.table, .bg-light, .text-body, .nav-link.disabled).
+ */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-global-messages {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Heading partial: navbar-light bg-light, nested in .row > .col-sm-12 > .clearfix. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #container_div > .row .navbar {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-block: 0.5rem 0;
+    padding: 0;
+    background: transparent !important;
+    border: 0;
+  }
+
+  /* Reference workspace heading: 28px, semibold, tight tracking, wraps long translations. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #container_div > .row .navbar .navbar-brand {
+    margin-inline-end: 0.5rem;
+    padding: 0;
+    color: var(--oe-ink, #17343b);
+    font-size: 28px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  /* Messages / Reminders / Recalls / SMS Zone tabs. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #main-nav-pills {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background-color: var(--oe-paper, #fff) !important;
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #main-nav-pills .nav-link {
+    padding: 0.45rem 0.9rem;
+    color: var(--oe-petrol, #086878);
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #main-nav-pills .nav-link.active {
+    color: #fff;
+    background-color: var(--oe-petrol, #086878);
+  }
+
+  /* Messages pane only is a paper sheet; Bootstrap's .tab-pane/.active rules keep owning display. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div {
+    margin-inline: 0;
+    padding: 1rem 0.25rem;
+    color: var(--oe-ink, #17343b);
+    background: var(--oe-paper, #fff);
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div h4 {
+    color: var(--oe-ink, #17343b);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+   * Reminders, Recalls and SMS keep the theme: undo workspace.css's canvas/ink, ink headings and
+   * petrol links with the theme's own pair (--white is its surface, --body-color its text), so
+   * theme utilities such as dated_reminders.php's .text-body progress text stay readable.
+   */
+  body.oe-clinical-workspace.oe-clinical-global-messages #reminders-div,
+  body.oe-clinical-workspace.oe-clinical-global-messages #recalls-div,
+  body.oe-clinical-workspace.oe-clinical-global-messages #sms-div {
+    color: var(--body-color);
+    background-color: var(--white);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #reminders-div h4,
+  body.oe-clinical-workspace.oe-clinical-global-messages #recalls-div h4,
+  body.oe-clinical-workspace.oe-clinical-global-messages #sms-div h4,
+  body.oe-clinical-workspace.oe-clinical-global-messages #reminders-div a:not(.btn),
+  body.oe-clinical-workspace.oe-clinical-global-messages #recalls-div a:not(.btn),
+  body.oe-clinical-workspace.oe-clinical-global-messages #sms-div a:not(.btn) {
+    color: var(--body-color);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #reminders-div a.btn-secondary,
+  body.oe-clinical-workspace.oe-clinical-global-messages #recalls-div a.btn-secondary,
+  body.oe-clinical-workspace.oe-clinical-global-messages #sms-div a.btn-secondary {
+    /* Theme pair: exactly the light theme's button; body text on gray200 in dark. */
+    color: var(--body-color);
+    background-color: var(--gray200);
+  }
+
+  /* Filter toolbar: "My Messages" + See All/Just Mine, then All/Active/Inactive. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > .d-flex {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-block-end: 0.75rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > .d-flex > h4 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > .d-flex > .nav {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > .d-flex .nav-link {
+    padding: 0.35rem 0.75rem;
+    color: var(--oe-petrol, #086878);
+    border-radius: 0.3rem;
+  }
+
+  /* The current filter is a disabled span; show it as the selected chip. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > .d-flex .nav-link.disabled {
+    color: var(--oe-ink, #17343b);
+    background-color: #e4f0f1;
+    font-weight: 700;
+  }
+
+  /* Heading expand/help links: dark navbar-light links are translucent white. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #container_div > .row .navbar #pageHeadingNav .nav-link {
+    color: var(--oe-muted, #526a70);
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .more .text-body {
+    color: var(--oe-petrol, #086878) !important;
+  }
+
+  /* Original list: outer layout table > td > form#MessageList > table. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div > .col-sm-12 > table {
+    table-layout: fixed;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList > .table {
+    min-width: 640px;
+    margin: 0;
+    color: var(--oe-ink, #17343b);
+    background-color: transparent;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList thead th {
+    padding: 0.65rem 0.75rem;
+    color: var(--oe-muted, #526a70);
+    background-color: #f6f8f9;
+    border-block-end: 1px solid var(--oe-line, #d9e4e2);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-align: start;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList .messages-item-row > td {
+    padding: 0.65rem 0.75rem;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-block-start: 1px solid #e1e8eb;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList .messages-item-row:hover > td {
+    color: var(--oe-ink, #17343b);
+    background-color: #f0f5f6;
+  }
+
+  /* selectRow()/deselectRow()/selectAll() paint the row with theme greys and toggle this class. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList .messages-item-row.oe-message-selected > td {
+    color: var(--oe-ink, #17343b);
+    background-color: #e4f0f1;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #MessageList .messages-item-link {
+    font-weight: 600;
+  }
+
+  /* Action toolbar: Add New, Delete, optional Direct buttons, then the pager. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .row.oe-margin-t-10 > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .row.oe-margin-t-10 > div > .text-right {
+    margin-inline-start: auto;
+    color: var(--oe-muted, #526a70);
+  }
+
+  /* workspace.css colours every link petrol; restore the theme's white danger text. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div a.btn-danger {
+    color: #fff;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div a.btn-secondary {
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-color: var(--oe-line, #d9e4e2);
+  }
+
+  /*
+   * New / existing message form (#new_note): the original controls in their original order as a
+   * document-style composer (reference .doc). .p-2 on the sheet and .text-dark/.bg-light on #note are
+   * !important utilities, so those three declarations carry the same weight. The read-only thread
+   * above the note (.text-light.bg-dark) keeps the theme pair.
+   */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron {
+    padding: 1.5rem clamp(0.75rem, 4vw, 2.25rem) !important;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border: 1px solid var(--oe-line, #d9e4e2);
+    border-radius: 0.45rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron > h4:first-child {
+    margin-block-end: 1rem;
+    padding-block-end: 0.75rem;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-block-end: 1px solid var(--oe-line, #d9e4e2);
+    font-size: 24px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  /* Labels keep the theme size so .oe-empty-label spacers still align the Clear buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron label {
+    margin-block-end: 0.25rem;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    font-weight: 600;
+  }
+
+  /* Metadata columns: at least 11rem each, wrapping instead of squeezing into col-6 halves. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row {
+    row-gap: 0.75rem;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row > div {
+    flex: 1 1 11rem;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .oe-custom-line > .row > div:last-child {
+    flex: 0 1 auto;
+  }
+
+  /* background-color only: the patient picker's .oe-patient-background image stays. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control {
+    height: auto;
+    min-height: 40px;
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-color: #a9bbc3;
+  }
+
+  /*
+   * Hints sit on the field's paper: the dark theme's pale grey placeholder is 1.49:1 there. Focus does not
+   * repaint it, so one rule covers both states; opacity 1 stops browsers fading it below the muted ink.
+   */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control::placeholder {
+    color: var(--oe-muted, #526a70);
+    opacity: 1;
+  }
+
+  /* The theme's .form-control:focus repaints fields (dark in the dark theme); restate the pair. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .form-control:focus {
+    color: var(--oe-ink, #17343b);
+    background-color: var(--oe-paper, #fff);
+    border-color: var(--oe-petrol, #086878);
+    outline: 3px solid #b65020;
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  /* The note: a ruled writing surface rather than a grey box. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron #note {
+    min-height: 10rem;
+    color: var(--oe-ink, #17343b) !important;
+    background-color: var(--oe-paper, #fff) !important;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* Send / Print / Cancel: wrapping footer of theme buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .position-override {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-block-start: 1rem;
+    border-block-start: 1px solid var(--oe-line, #d9e4e2);
+  }
+
+  /* Every composer button is full size, including the patient/user Clear (.btn-undo) buttons. */
+  body.oe-clinical-workspace.oe-clinical-global-messages #messages-div .jumbotron .btn {
+    min-height: 38px;
+    white-space: normal;
+  }
+}

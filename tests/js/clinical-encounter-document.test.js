@@ -307,7 +307,11 @@ describe('encounter-document.css', () => {
 
     test('lints clean as itself under the repo config and ignore file, and the lint is not a no-op', () => {
         const bin = path.join(path.dirname(require.resolve('stylelint/package.json')), 'bin/stylelint.mjs');
-        const configBasedir = path.resolve(path.dirname(require.resolve('stylelint-config-standard/package.json')), '../..');
+        // stylelint-config-standard 40 is ESM and exports only its entry (no ./package.json), so locate
+        // the installed package from that entry and confirm it before rooting --config-basedir there.
+        const configStandardDir = path.dirname(require.resolve('stylelint-config-standard'));
+        expect(JSON.parse(fs.readFileSync(path.join(configStandardDir, 'package.json'), 'utf8')).name).toBe('stylelint-config-standard');
+        const configBasedir = path.resolve(configStandardDir, '../..');
         const file = path.join(repo, CSS);
         fs.mkdirSync(path.join(repo, 'tmp'), { recursive: true });
         const dir = fs.mkdtempSync(path.join(repo, 'tmp', 'stylelint-encounter-'));

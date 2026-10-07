@@ -41,12 +41,30 @@ jobs:
       # that hold a Dockerfile. Skips development-* dirs (those carry
       # docker-compose.yml, not a top-level Dockerfile).
       # Use that output as a test matrix in github actions.
+      #
+      # DEDICATED_LANES (fork-local): images whose contract the generic
+      # test-actions-core pipeline cannot exercise, each verified by its own
+      # job below instead. docker/railway builds this checkout from the
+      # repository root (not docker/railway) and refuses the upstream default
+      # credentials, MANUAL_SETUP and an unmounted sites/ that the generic
+      # InstallerAuto path relies on; it runs in railway-test. Every entry
+      # must have such a job: tests/Tests/Isolated/Ci/
+      # DockerTestCoreRailwayLaneIsolatedTest.php enforces it.
+      env:
+        DEDICATED_LANES: railway
       run: |
         shopt -s nullglob
         dirs=()
         for f in docker/*/Dockerfile; do
           d=${f%/Dockerfile}
-          [ -L "$d" ] || dirs+=( "$d" )
+          [ -L "$d" ] && continue
+          case " ${DEDICATED_LANES} " in
+            *" ${d#docker/} "*)
+              echo "::notice::${d} is verified by its dedicated job, not the generic matrix"
+              continue
+              ;;
+          esac
+          dirs+=( "$d" )
         done
         if (( "${#dirs[@]}" == 0 )); then
           echo 'No Dockerfiles found in docker/ subdirectories.' >&2
@@ -123,6 +141,49 @@ jobs:
           ${{ matrix.docker_dir == 'binary'
           && 'CdaValidateDocumentsTest|QrdaReportServiceTest|CcdaGeneratorTest|CcdaServiceDocumentRequestorTest'
           || '' }}
+
+  # Fork-local lane for the Railway test-server image (TEST USE ONLY; see
+  # docker/railway/README.md). Its contract differs from binary/flex/release
+  # on purpose, so it is not run through test-actions-core:
+  #   - it builds this checkout with the repository root as context;
+  #   - it refuses missing/default credentials, MANUAL_SETUP=yes and an
+  #     unmounted sites/ before upstream openemr.sh runs, so the public
+  #     InstallerAuto step (rootpass=root, admin/pass) must fail by design;
+  #   - Apache only starts after the mail/SMS/payment safety globals are
+  #     written and read back, behind a PHP-level egress guard.
+  # The application code itself is the same checkout the release variant
+  # builds and runs the full unit/fixtures/services/validators/controllers/
+  # common suites against above; this job verifies the Railway image.
+  # acceptance-test.sh builds the image from the export-ignore-filtered git
+  # archive Railway fetches, then runs it against a throwaway MariaDB with a
+  # disposable named volume and per-run random credentials (masked in the
+  # log): real-image refusals, readiness gating, locked installer/setup
+  # routes behind the HTTP boundary, web egress guard, safety-global
+  # read-back and drift detection, admin login, secret-free logs, source
+  # revision read-back, and a container replacement with a schema migration.
+  # Nothing here talks to Railway or uses real credentials.
+  railway-test:
+    name: "Production Docker (railway)"
+    needs: [collect-production-targets]
+    if: ${{ inputs.is_production_docker }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: Railway image acceptance (build + ephemeral runtime)
+      env:
+        EXPECTED_SHA: ${{ github.sha }}
+      run: |
+        head=$(git rev-parse HEAD)
+        if [ "${head}" != "${EXPECTED_SHA}" ]; then
+          echo "::error::checkout is ${head}, expected ${EXPECTED_SHA}"
+          exit 1
+        fi
+        docker/railway/acceptance-test.sh
 
   development-test:
     name: "Development Docker Alpine-${{ inputs.alpine_version }} (PHP ${{ matrix.php_version }}, ${{ matrix.mode }})"
