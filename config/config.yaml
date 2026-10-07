@@ -166,6 +166,9 @@ assets:
     script: popup.js
     link: popup.css
     autoload: true
+  workbench-reminder-popup:
+    basePath: '%webroot%/interface/clinical-workspace'
+    link: /reminder-popup.css
   select2:
     basePath: '%assets_static_relative%/select2/dist/'
     script: js/select2.full.min.js

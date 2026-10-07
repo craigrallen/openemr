@@ -1,0 +1,201 @@
+/* Dated reminder documents inside an active workbench popup only. */
+@media screen {
+  html.oe-workbench-popup body.oe-reminder-editor,
+  html.oe-workbench-popup body.oe-reminder-log {
+    background: #f3f7f5;
+    color: #17343b;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-sheet,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-sheet {
+    max-width: 1040px;
+    padding: 24px clamp(16px, 3vw, 36px) 40px;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-document,
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .card,
+  html.oe-workbench-popup body.oe-reminder-log .filter-section > form > .card {
+    border: 1px solid #d9e4e2;
+    border-radius: 7px;
+    background: #fff;
+    box-shadow: 0 8px 28px rgb(23 52 59 / 7%);
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-heading.bg-primary.text-white:not(.bg-secondary, .bg-success, .bg-danger, .bg-warning, .bg-info, .bg-light, .bg-dark, .text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-muted),
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-heading:not([class*='bg-'], [class*='text-']) {
+    background: #fff !important;
+    color: #17343b !important;
+    border-bottom: 1px solid #d9e4e2;
+    padding: 18px 22px;
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-log h2.oe-reminder-heading {
+    padding: 8px 0 14px;
+    margin: 0 0 8px;
+  }
+
+  /* Only the routes' known neutral primary headers; semantic variants keep their palette. */
+  html.oe-workbench-popup body.oe-reminder-log .filter-section .card-header.bg-primary.text-white:not(.bg-secondary, .bg-success, .bg-danger, .bg-warning, .bg-info, .bg-light, .bg-dark, .text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-muted),
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .card-header.bg-primary.text-white:not(.bg-secondary, .bg-success, .bg-danger, .bg-warning, .bg-info, .bg-light, .bg-dark, .text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-muted),
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .card-header.bg-primary.text-white:not(.bg-secondary, .bg-success, .bg-danger, .bg-warning, .bg-info, .bg-light, .bg-dark, .text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-muted) {
+    background: #fff !important;
+    color: #526a70 !important;
+    border-bottom: 1px solid #d9e4e2;
+    padding: 16px 22px;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-document > .card-body,
+  html.oe-workbench-popup body.oe-reminder-log .filter-section .card-body {
+    padding: 20px 22px 8px;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-section,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-section {
+    border-bottom: 1px solid #d9e4e2;
+    padding: 0 0 8px;
+  }
+
+  /* The shared .section-header has width: 685px; editor markup also clips it inline. */
+  html.oe-workbench-popup body.oe-reminder-editor .section-header.oe-reminder-section,
+  html.oe-workbench-popup body.oe-reminder-log .section-header.oe-reminder-section {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible !important;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-section h6.text-muted:not(.text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-white, [class*='bg-']),
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-section h6.text-muted:not(.text-primary, .text-secondary, .text-success, .text-danger, .text-warning, .text-info, .text-light, .text-dark, .text-white, [class*='bg-']) {
+    color: #526a70 !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .form-group label:not([class*='text-']),
+  html.oe-workbench-popup body.oe-reminder-log .form-group label:not([class*='text-']) {
+    color: #17343b;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor small.text-muted:not([class*='bg-'], .text-danger, .text-warning),
+  html.oe-workbench-popup body.oe-reminder-log small.text-muted:not([class*='bg-'], .text-danger, .text-warning) {
+    color: #526a70 !important;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']) {
+    color: #17343b;
+    background: #fff;
+    border-color: #526a70;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']):hover,
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']):focus {
+    color: #17343b;
+    background: #eef4f2;
+    border-color: #17343b;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']):focus {
+    outline: 2px solid #17343b;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']):disabled,
+  html.oe-workbench-popup body.oe-reminder-editor .btn.btn-outline-secondary:not(.btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-light, .btn-outline-dark, [class*='bg-'], [class*='text-']).disabled {
+    color: #526a70;
+    background: #fff;
+    border-color: #526a70;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-actions,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-actions {
+    background: #f7faf9;
+    border-top: 1px solid #d9e4e2;
+    padding: 16px 22px;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results {
+    margin-top: 12px;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table-responsive,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table-responsive {
+    overflow-x: auto;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table {
+    margin: 0;
+  }
+
+  /* Only where the wrapper can scroll it; a loose table must not widen the page. */
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table-responsive > .table,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table-responsive > .table {
+    min-width: 660px;
+  }
+
+  /* Neutral tables only: dark and contextual table variants keep their palette. */
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table:not(.table-dark, .table-active, .table-primary, .table-secondary, .table-success, .table-danger, .table-warning, .table-info, .table-light, [class^='bg-'], [class*=' bg-'], [class^='text-'], [class*=' text-']),
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table:not(.table-dark, .table-active, .table-primary, .table-secondary, .table-success, .table-danger, .table-warning, .table-info, .table-light, [class^='bg-'], [class*=' bg-'], [class^='text-'], [class*=' text-']) {
+    color: #17343b;
+    background: #fff;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table th,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table th {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Bootstrap paints .thead-light cells directly, so pair ink and paper on neutral cells. */
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table:not(.table-dark, .table-active, .table-primary, .table-secondary, .table-success, .table-danger, .table-warning, .table-info, .table-light, [class^='bg-'], [class*=' bg-'], [class^='text-'], [class*=' text-']) > thead.thead-light > tr:not([class*='table-'], [class*='bg-'], [class*='text-']) > th:not([class*='table-'], [class*='bg-'], [class*='text-']),
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table:not(.table-dark, .table-active, .table-primary, .table-secondary, .table-success, .table-danger, .table-warning, .table-info, .table-light, [class^='bg-'], [class*=' bg-'], [class^='text-'], [class*=' text-']) > thead.thead-light > tr:not([class*='table-'], [class*='bg-'], [class*='text-']) > th:not([class*='table-'], [class*='bg-'], [class*='text-']) {
+    color: #17343b;
+    background-color: #eef4f2;
+    border-color: #d9e4e2;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .table td,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .table td {
+    vertical-align: top;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-reminder-results .alert-info,
+  html.oe-workbench-popup body.oe-reminder-log .oe-reminder-results .alert-info {
+    background: #eef4f2;
+    color: #17343b;
+    border: 1px solid #d9e4e2;
+  }
+
+  /* Readonly character counter: fit its widest value (3 digits) instead of a 1/6 column. */
+  html.oe-workbench-popup body.oe-reminder-editor .form-row > .col-2:has(> #countdown) {
+    flex: 0 0 auto;
+    max-width: none;
+    width: auto;
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor #countdown {
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+    width: calc(3ch + 1rem + 2px);
+  }
+
+  html.oe-workbench-popup body.oe-reminder-editor .oe-error-modal {
+    margin-bottom: 16px;
+  }
+}

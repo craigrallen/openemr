@@ -15,6 +15,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Session\SessionWrapperFactory;
+use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Services\FacilityService;
 
@@ -225,6 +226,7 @@ body {
 }
 </style>
    <title><?php echo xlt('Prescription Label') ; ?></title>
+   <?php echo Header::setupAssets(['workbench-popup']); ?>
 </head>
 <body leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>
 <center>

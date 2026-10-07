@@ -167,7 +167,7 @@ if (isset($this_message['pid'])) {
 
     <title><?php echo xlt('Send a Reminder') ?></title>
 
-    <?php Header::setupHeader(['datetime-picker', 'opener' ,'topdialog', 'common', 'moment']); ?>
+    <?php Header::setupHeader(['datetime-picker', 'opener' ,'topdialog', 'common', 'moment', 'workbench-reminder-popup']); ?>
 
     <script>
       $(function () {
@@ -310,15 +310,15 @@ if (isset($this_message['pid'])) {
     </style>
 
   </head>
-  <body>
+  <body class="oe-reminder-editor">
 <!-- Required for the popup date selectors -->
 <div id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></div>
 
-    <div class="container">
+    <div class="container oe-reminder-sheet">
         <div class="row">
             <div class="col-12 mb-3">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
+                <div class="card oe-reminder-document">
+                    <div class="card-header bg-primary text-white oe-reminder-heading">
                         <h5 class="mb-0"><?php echo attr($reminder_title) ?></h5>
                     </div>
                     <div class="card-body">
@@ -329,7 +329,7 @@ if (isset($this_message['pid'])) {
                                 <div class="text-center" id="errorMessage"></div>
                             </fieldset>
 
-                            <div class="section-header mb-2" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
+                            <div class="section-header mb-2 oe-reminder-section" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
                                 <h6 class="text-muted"><?php echo xlt('Message Recipients');?></h6>
                             </div>
 
@@ -376,7 +376,7 @@ if (isset($this_message['pid'])) {
                                 </div>
                             </div>
 
-                            <div class="section-header mt-4 mb-2" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
+                            <div class="section-header mt-4 mb-2 oe-reminder-section" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
                                 <h6 class="text-muted"><?php echo xlt('Due Date & Priority');?></h6>
                             </div>
 
@@ -422,7 +422,7 @@ if (isset($this_message['pid'])) {
                                 </div>
                             </div>
 
-                            <div class="section-header mt-4 mb-2" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
+                            <div class="section-header mt-4 mb-2 oe-reminder-section" style="max-width: 100%; box-sizing: border-box; overflow: hidden;">
                                 <h6 class="text-muted"><?php echo xlt('Message Content');?></h6>
                             </div>
 
@@ -441,7 +441,7 @@ if (isset($this_message['pid'])) {
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer">
+                        <div class="card-footer oe-reminder-actions">
                             <button type='submit' class='btn btn-primary' name="sendButton" id="sendButton" value="<?php echo xla('Send This Message');?>" onclick='return this.clicked = true;'>
                                 <i class="fa fa-paper-plane mr-1"></i><?php echo xlt('Send This Message'); ?>
                             </button>
@@ -453,7 +453,7 @@ if (isset($this_message['pid'])) {
                 </div>
             </div>
 
-            <div class="col-12 mt-4">
+            <div class="col-12 mt-4 oe-reminder-results">
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><?php echo xlt('Messages Sent Today') ?></h5>
