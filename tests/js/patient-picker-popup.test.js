@@ -9,6 +9,11 @@ const root = path.join(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const source = () => read('interface/main/finder/multi_patients_finder.php');
 const css = () => read('interface/clinical-workspace/patient-picker-popup.css');
+test('popup breakpoints use prefix syntax at their original widths', () => {
+    const media = [];
+    postcss.parse(css()).walkAtRules('media', rule => media.push(rule.params));
+    expect(media).toEqual(['screen', '(max-width: 720px)', '(max-width: 480px)']);
+});
 const baselineHash = 'e4983cd6c38fbe1c24d7da0a3e91835fcb850f3156b80852e155d726d9f2e2d0';
 const changes = [
     ['use OpenEMR\\Common\\Csrf\\CsrfUtils;', 'use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;\nuse OpenEMR\\Common\\Csrf\\CsrfUtils;'],

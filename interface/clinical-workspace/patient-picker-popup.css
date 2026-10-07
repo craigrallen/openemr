@@ -207,7 +207,7 @@
     background: var(--oe-wb-petrol);
   }
 
-  @media (width <= 720px) {
+  @media (max-width: 720px) {
     html.oe-workbench-popup body.oe-patient-picker .oe-picker-layout {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
@@ -217,7 +217,7 @@
     }
   }
 
-  @media (width <= 480px) {
+  @media (max-width: 480px) {
     html.oe-workbench-popup body.oe-patient-picker .oe-picker-sheet {
       padding: 14px;
     }

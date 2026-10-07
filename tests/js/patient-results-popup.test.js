@@ -9,6 +9,11 @@ const root = path.join(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const source = () => read('interface/main/finder/patient_select.php');
 const css = () => read('interface/clinical-workspace/patient-results-popup.css');
+test('results popup has no context width queries', () => {
+    const media = [];
+    postcss.parse(css()).walkAtRules('media', rule => media.push(rule.params));
+    expect(media).toEqual(['screen']);
+});
 const baselineHash = '7c728ed57e987c663a4d000fe4a765e78e68d12a516fd4691b7f9ea19005c6a9';
 const presentationChanges = [
     ['use OpenEMR\\Common\\Acl\\AclMain;', 'use OpenEMR\\Common\\Acl\\AclMain;\nuse OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;'],

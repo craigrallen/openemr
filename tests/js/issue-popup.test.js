@@ -9,6 +9,11 @@ const root = path.join(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const source = () => read('interface/patient_file/summary/add_edit_issue.php');
 const css = () => read('interface/clinical-workspace/issue-popup.css');
+test('issue popup breakpoint uses prefix syntax at its original width', () => {
+    const media = [];
+    postcss.parse(css()).walkAtRules('media', rule => media.push(rule.params));
+    expect(media).toEqual(['screen', '(max-width: 640px)']);
+});
 // sha256 of add_edit_issue.php before the workbench presentation edits.
 const baselineHash = '2b5ef5dde0f28164529a8ed98ded4eee7ec66338db06d558b5ba699171258224';
 const scope = 'html.oe-workbench-popup body.oe-issue-editor';

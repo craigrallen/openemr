@@ -394,7 +394,7 @@
     background: var(--oe-wb-canvas);
   }
 
-  @media (width <= 640px) {
+  @media (max-width: 640px) {
     html.oe-workbench-popup body.oe-issue-editor .oe-issue-sheet {
       padding-right: 8px;
       padding-left: 8px;
