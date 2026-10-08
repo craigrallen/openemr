@@ -28,6 +28,9 @@ describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => 
         }, {
             files: ['interface/clinical-workspace/patient-picker-popup.css', 'interface/clinical-workspace/patient-results-popup.css', 'interface/clinical-workspace/issue-popup.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
+        }, {
+            files: ['interface/clinical-workspace/patient-search.css'],
+            rules: { 'media-feature-range-notation': 'prefix' }
         }]);
         expect(rc().rules['media-feature-range-notation']).toBeUndefined();
     });
@@ -83,6 +86,13 @@ describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => 
                 expect(lint(stdinAs(name), prefix)).toEqual({ status: 0, rules: [] });
                 expect(lint(stdinAs(name), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             }
+            // Patient search: the shipped sheet lints clean, its exact name takes prefix only,
+            // and neither a near-miss name nor a sibling directory inherits the override.
+            expect(lint([path.join(repo, 'interface/clinical-workspace/patient-search.css')])).toEqual({ status: 0, rules: [] });
+            expect(lint(stdinAs('patient-search.css'), prefix)).toEqual({ status: 0, rules: [] });
+            expect(lint(stdinAs('patient-search.css'), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(stdinAs('patient-search-copy.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(['--stdin-filename', path.join(repo, 'interface/main/calendar/patient-search.css')], prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('patient-picker-popup-copy.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('patient-picker-popup-copy.css'), context)).toEqual({ status: 0, rules: [] });
         } finally {
