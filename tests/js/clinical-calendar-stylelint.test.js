@@ -13,23 +13,26 @@ const cssPath = path.join(repo, 'interface/clinical-workspace/calendar.css');
 const finderCssPath = path.join(repo, 'interface/clinical-workspace/finder.css');
 const soapDocumentCssPath = path.join(repo, 'interface/clinical-workspace/soap-document.css');
 
-describe('stylelint allows the theme breakpoint notation only in calendar.css, finder.css, soap-document.css and encounter-document.css', () => {
+describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => {
     const rcPath = path.join(repo, '.stylelintrc.json');
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
-    test('override is a four-file prefix notation plus the vitals.css override, not a disabled rule', () => {
-        // The full override list is an allowlist: the four workspace sheets plus the separately reviewed vitals.css.
+    test('override is the complete exact-file prefix allowlist, not a disabled rule', () => {
+        // The full override list is an allowlist: the four workspace sheets, vitals.css and three popup sheets.
         expect(rc().overrides).toEqual([{
             files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/soap-document.css', 'interface/clinical-workspace/encounter-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
         }, {
             files: ['interface/forms/vitals/vitals.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
+        }, {
+            files: ['interface/clinical-workspace/patient-picker-popup.css', 'interface/clinical-workspace/patient-results-popup.css', 'interface/clinical-workspace/issue-popup.css'],
+            rules: { 'media-feature-range-notation': 'prefix' }
         }]);
         expect(rc().rules['media-feature-range-notation']).toBeUndefined();
     });
 
-    test('calendar.css, finder.css and soap-document.css lint clean while other files still require context notation', () => {
+    test('authorized CSS lints clean and CLI guards reject the wrong notation on either side', () => {
         // Stylelint loads plugins via dynamic import, which Jest's VM cannot host; run the real CLI.
         // Overrides and extends resolve against --config-basedir, so root both explicitly; this
         // runs the same whether node_modules is local or shared.
@@ -61,6 +64,9 @@ describe('stylelint allows the theme breakpoint notation only in calendar.css, f
             expect(lint([cssPath])).toEqual({ status: 0, rules: [] });
             expect(lint([finderCssPath])).toEqual({ status: 0, rules: [] });
             expect(lint([soapDocumentCssPath])).toEqual({ status: 0, rules: [] });
+            for (const name of ['patient-picker-popup.css', 'patient-results-popup.css', 'issue-popup.css']) {
+                expect(lint([path.join(repo, 'interface/clinical-workspace', name)])).toEqual({ status: 0, rules: [] });
+            }
             const prefix = '@media (max-width: 768px) {\n  a {\n    color: #fff;\n  }\n}\n';
             const context = '@media (width <= 768px) {\n  a {\n    color: #fff;\n  }\n}\n';
             // The override is not a disable: calendar.css itself rejects context notation...
@@ -73,6 +79,12 @@ describe('stylelint allows the theme breakpoint notation only in calendar.css, f
             // ...and every other file keeps the repo-wide context notation.
             expect(lint(stdinAs('other.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('other.css'), context)).toEqual({ status: 0, rules: [] });
+            for (const name of ['patient-picker-popup.css', 'patient-results-popup.css', 'issue-popup.css']) {
+                expect(lint(stdinAs(name), prefix)).toEqual({ status: 0, rules: [] });
+                expect(lint(stdinAs(name), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            }
+            expect(lint(stdinAs('patient-picker-popup-copy.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(stdinAs('patient-picker-popup-copy.css'), context)).toEqual({ status: 0, rules: [] });
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }

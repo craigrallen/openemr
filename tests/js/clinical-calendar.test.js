@@ -286,7 +286,7 @@ describe('calendar toolbar and mini calendar fit the workbench frame', () => {
         expect(fs.readFileSync(cssPath, 'utf8')).not.toMatch(/stylelint-disable/);
     });
 
-    test('stylelint enforces prefix media notation for calendar.css, finder.css, soap-document.css, encounter-document.css and vitals.css only', () => {
+    test('stylelint enforces prefix media notation for the exact authorized CSS files only', () => {
         const config = JSON.parse(fs.readFileSync(path.join(repo, '.stylelintrc.json'), 'utf8'));
         expect(config.rules['media-feature-range-notation']).toBeUndefined();
         expect(config.overrides).toEqual([{
@@ -294,6 +294,9 @@ describe('calendar toolbar and mini calendar fit the workbench frame', () => {
             rules: { 'media-feature-range-notation': 'prefix' },
         }, {
             files: ['interface/forms/vitals/vitals.css'],
+            rules: { 'media-feature-range-notation': 'prefix' },
+        }, {
+            files: ['interface/clinical-workspace/patient-picker-popup.css', 'interface/clinical-workspace/patient-results-popup.css', 'interface/clinical-workspace/issue-popup.css'],
             rules: { 'media-feature-range-notation': 'prefix' },
         }]);
     });

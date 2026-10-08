@@ -21,6 +21,7 @@ require_once \OpenEMR\Core\OEGlobalsBag::getInstance()->getProjectDir() . '/cust
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Lists\IssueTypeRegistry;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -353,6 +354,8 @@ function getCodeText($code)
 <head>
 <?php Header::setupHeader(['common', 'datetime-picker', 'select2']); ?>
 <title><?php echo ($issue) ? xlt('Edit Issue') : xlt('Add New Issue'); ?></title>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr($webroot); ?>/interface/clinical-workspace/issue-popup.css?v=<?php echo attr_url($clinicalAssets->version('issue-popup.css')); ?>">
 
 <style>
     div.section {
@@ -730,9 +733,9 @@ function getCodeText($code)
     $('div').hide();
 </script>
 </head>
-<body>
-    <div class="container-fluid mt-3">
-        <ul class="tabNav">
+<body class="oe-issue-editor">
+    <div class="container-fluid mt-3 oe-issue-sheet">
+        <ul class="tabNav oe-issue-tabs">
             <li class='current'><a href='#'><?php echo xlt('Issue'); ?></a></li>
             <?php
             // Build html tab data for each visit form linked to this issue.
@@ -761,12 +764,12 @@ function getCodeText($code)
             }
             ?>
         </ul>
-        <div class="tabContainer">
+        <div class="tabContainer oe-issue-tab-container">
             <div class='tab current h-auto'>
-                <form name='theform' method="post" onsubmit='return validate()'>
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class='col-sm-6'>
+                <form name='theform' method="post" onsubmit='return validate()' class="oe-issue-form">
+                    <div class="container-fluid oe-issue-document">
+                        <div class="row oe-issue-header">
+                            <div class='col-sm-6 oe-issue-type'>
                                 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                                 <?php
                                 // action setting not required in html5.  By default form will submit to itself.
@@ -776,6 +779,7 @@ function getCodeText($code)
                                 }
                                 ?>
                                     <label><?php echo xlt('Type'); ?>:</label>
+                                    <div class="oe-issue-type-options">
                                     <?php
                                     $index = 0;
                                     foreach ($ISSUE_TYPES as $key => $value) {
@@ -797,20 +801,21 @@ function getCodeText($code)
                                         ++$index;
                                     }
                                     ?>
+                                    </div>
                             </div>
-                            <div class="col-md-6 d-flex justify-content-end">
+                            <div class="col-md-6 d-flex justify-content-end oe-issue-status">
                                 <div class="form-check" id='row_active'>
                                     <input type="checkbox" class="form-check-input" name="form_active" id="form_active" value='1' <?php echo (!empty($irow['enddate'])) ? "" : "checked"; ?> onclick='activeClicked(this);' title='<?php echo xla('Indicates if this issue is currently active'); ?>'>
                                     <label class="form-check-label" for="form_active"><?php echo xlt('Active{{Issue}}'); ?></label>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row oe-issue-identity">
                             <div class="form-group col" id='row_titles'>
                                 <label for="form_titles" class=""><?php echo xlt('Select from list or type your own in Title'); ?></label>
                                 <select name='form_titles' id='form_titles' class="form-control select2" multiple onchange='set_text()'><option></option></select>
                             </div>
-                            <div class="form-group col">
+                            <div class="form-group col oe-issue-title">
                                 <label for="title_diagnosis"><?php echo xlt('Title'); ?>:</label>
                                 <div class="input-group">
                                     <input type='text' class="form-control" name='form_title' id='form_title' value='<?php echo attr($irow['title'] ?? '') ?>' />
@@ -820,16 +825,16 @@ function getCodeText($code)
                                 </div>
                                 <input type='hidden' name='form_title_id' value='<?php echo attr($irow['list_option_id'] ?? '') ?>'>
                             </div>
-                            <div class="form-group col-sm-12 col-md-3">
+                            <div class="form-group col-sm-12 col-md-3 oe-issue-date">
                                 <label for="form_begin"><?php echo xlt('Begin Date and Time'); ?>:</label>
                                 <input type='text' class='datepicker form-control' name='form_begin' id='form_begin' value='<?php echo attr(trim(DateFormatterUtils::oeFormatDateTime($irow['begdate'] ?? ''))) ?>' title='<?php echo xla('yyyy-mm-dd HH:MM date of onset, surgery or start of medication'); ?>' />
                             </div>
-                            <div class="form-group col-sm-12 col-md-3" id='row_enddate'>
+                            <div class="form-group col-sm-12 col-md-3 oe-issue-date" id='row_enddate'>
                                 <label for="form_begin"><?php echo xlt('End Date and Time'); ?>:</label>
                                 <input type='text' class='datepicker form-control' placeholder="<?php echo xlt('leave blank if still active'); ?>" name='form_end' id='form_end' value='<?php echo attr(trim(DateFormatterUtils::oeFormatDateTime($irow['enddate'] ?? ''))) ?>' title='<?php echo xla('yyyy-mm-dd HH:MM date of recovery or end of medication'); ?>' />
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row oe-issue-allergy">
                             <!-- Reaction For Medication Allergy -->
                             <div class="form-group col" id='row_reaction'>
                                 <label for="form_reaction"><?php echo xlt('Reaction'); ?>:</label>
@@ -847,7 +852,7 @@ function getCodeText($code)
                             <!-- End of reaction -->
                         </div>
                         <?php if ($thistype == 'medical_device' || (!empty($irow['type']) && $irow['type'] == 'medical_device')) : ?>
-                        <div class="row">
+                        <div class="row oe-issue-device">
                             <div class="form-group col-12">
                                 <label class="col-form-label" for="form_udi"><?php echo xlt('UDI{{Unique Device Identifier}}'); ?>:</label>
                                 <div class="input-group">
@@ -863,20 +868,20 @@ function getCodeText($code)
                             </div>
                         </div>
                         <?php endif; ?>
-                        <div class="row">
+                        <div class="row oe-issue-medication">
                             <?php if (($irow['type'] ?? '') == 'medication') : ?>
                                 <!-- any medication specific issue information goes here -->
                                 <?php include "add_edit_issue_medication_fragment.php"; ?>
                             <?php endif; ?>
                         </div>
-                        <div class="row">
+                        <div class="row oe-issue-notes">
                             <div class="form-group col-12" id='row_comments'>
                                 <label class="col-form-label" for="form_comments"><?php echo xlt('Comments'); ?>:</label>
                                 <textarea class="form-control" name='form_comments' id='form_comments' rows="2" id='form_comments'><?php echo text($irow['comments'] ?? '') ?></textarea>
                             </div>
                         </div>
-                        <div id="expanded_options" class="collapse">
-                            <div class="row">
+                        <div id="expanded_options" class="collapse oe-issue-more">
+                            <div class="row oe-issue-more-row">
                                 <div class="form-group col-sm-12 col-md-6" id='row_active_codes'>
                                     <label for="form_active_codes" class="col-form-label"><?php echo xlt('Active Issue Codes'); ?>:</label>
                                     <select name='form_active_codes' id='form_active_codes' class= "form-control" size='4'
@@ -904,7 +909,7 @@ function getCodeText($code)
                                         title='<?php echo xla('Click to select or change coding'); ?>' readonly />
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row oe-issue-more-row">
                                 <div class="form-group col-sm-12 col-md-4" id='row_occurrence'>
                                     <label for="form_occur"><?php echo xlt('Occurrence'); ?>:</label>
                                     <?php
@@ -941,7 +946,7 @@ function getCodeText($code)
                                     </div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row oe-issue-more-row">
                                 <!-- Verification Status for Medication Allergy -->
                                 <div class="form-group col-sm-12 col-md-4" id='row_verification'>
                                     <label class="col-form-label" for="form_verification"><?php echo xlt('Verification Status'); ?>:</label>
@@ -977,12 +982,12 @@ function getCodeText($code)
                             </div>
                         </div>
                         <?php if (!empty($irow['id']) && ($irow['type'] ?? '') == 'medication') : ?>
-                        <div class="row">
+                        <div class="row oe-issue-adherence-heading">
                             <div class="col-12">
                                 <h5><?php echo xlt("Medication Adherence"); ?></h5>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row oe-issue-adherence">
 
                             <div class="form-group col-sm-12 col-md-6">
                                 <label class="col-form-label" for="form_medication[medication_adherence_date_asserted]"><?php echo xlt('Date Asserted'); ?>:</label>
@@ -1003,16 +1008,16 @@ function getCodeText($code)
                             </div>
                         </div>
                         <?php endif; ?>
-                        <div class="row">
-                            <div class="col d-flex justify-content-end">
-                                <button type="button" class="btn btn-text mr-3" data-toggle="collapse" data-target="#expanded_options" aria-expanded="false" aria-controls="expanded_options"><?php echo xlt("Show More Fields"); ?>&nbsp;<i class="fa fa-angles-down"></i></button>
-                                <div class="btn-group" role="group">
+                        <div class="row oe-issue-actions-row">
+                            <div class="col d-flex justify-content-end oe-issue-actions">
+                                <button type="button" class="btn btn-text mr-3 oe-issue-disclosure" data-toggle="collapse" data-target="#expanded_options" aria-expanded="false" aria-controls="expanded_options"><?php echo xlt("Show More Fields"); ?>&nbsp;<i class="fa fa-angles-down"></i></button>
+                                <div class="btn-group oe-issue-commit" role="group">
                                     <button type='submit' name='form_save' value="<?php echo xla('Save'); ?>" class="btn btn-primary btn-save"><?php echo xlt('Save'); ?></button>
                                     <button type="button" class="btn btn-secondary btn-cancel" onclick='closeme();'><?php echo xlt('Cancel'); ?></button>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row oe-issue-ippf">
                             <?php
                             if (!empty($ISSUE_TYPES['ippf_gcac'])) {
                                 if (empty($issue) || $irow['type'] == 'ippf_gcac') {

@@ -1,0 +1,229 @@
+/* Multi-patient picker inside an active clinical workbench popup only. */
+@media screen {
+  html.oe-workbench-popup body.oe-patient-picker {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-sheet {
+    max-width: 1020px;
+    margin: 0 auto;
+    padding: 20px 24px 28px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #searchCriteria {
+    text-align: left;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    padding: 18px;
+    font-weight: normal;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr) auto;
+    align-items: end;
+    gap: 16px;
+    margin: 0;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-layout > .col-4 {
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    padding: 0;
+    flex: none;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-field .select-box {
+    display: block;
+    width: 100%;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-field label {
+    display: block;
+    width: 100%;
+    margin: 0 0 7px;
+    color: var(--oe-wb-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #by-name,
+  html.oe-workbench-popup body.oe-patient-picker #by-id,
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-field .select2-container {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4 .select2-selection--single {
+    height: 40px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+    color: var(--oe-wb-ink);
+    line-height: 38px;
+    padding-left: 12px;
+    padding-right: 32px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4 .select2-selection--single .select2-selection__placeholder {
+    color: var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+    top: 0;
+    height: 38px;
+    right: 9px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4.select2-container--focus .select2-selection--single,
+  html.oe-workbench-popup body.oe-patient-picker .select2-container--bootstrap4.select2-container--open .select2-selection--single {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-actions {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-actions .btn {
+    min-height: 40px;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.25;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #add-to-list {
+    color: var(--oe-wb-petrol);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #add-to-list:hover,
+  html.oe-workbench-popup body.oe-patient-picker #add-to-list:focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #send-patients {
+    min-width: 68px;
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker .oe-picker-results {
+    margin-top: 0;
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table {
+    width: 100%;
+    margin: 20px 0 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table th {
+    padding: 12px 14px;
+    color: var(--oe-wb-muted);
+    background: var(--oe-wb-canvas);
+    border-bottom: 1px solid var(--oe-wb-line);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--oe-wb-line);
+    vertical-align: middle;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table .remove-patient {
+    color: var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-patient-picker #results-table .remove-patient:hover,
+  html.oe-workbench-popup body.oe-patient-picker #results-table .remove-patient:focus {
+    color: var(--danger);
+  }
+
+  /* Select2 places this menu under <body>, outside the search form. */
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-dropdown {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgb(23 52 59 / 14%);
+  }
+
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-search__field {
+    min-height: 38px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 5px;
+  }
+
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-search__field:focus {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-results__option {
+    padding: 9px 12px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected],
+  html.oe-workbench-popup .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected='true'] {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+  }
+
+  @media (max-width: 720px) {
+    html.oe-workbench-popup body.oe-patient-picker .oe-picker-layout {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    html.oe-workbench-popup body.oe-patient-picker .oe-picker-action-column {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    html.oe-workbench-popup body.oe-patient-picker .oe-picker-sheet {
+      padding: 14px;
+    }
+
+    html.oe-workbench-popup body.oe-patient-picker .oe-picker-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
