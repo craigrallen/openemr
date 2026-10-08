@@ -59,6 +59,14 @@
             "rules": {
                 "media-feature-range-notation": "prefix"
             }
+        },
+        {
+            "files": [
+                "interface/clinical-workspace/patient-search.css"
+            ],
+            "rules": {
+                "media-feature-range-notation": "prefix"
+            }
         }
     ]
 }
