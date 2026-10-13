@@ -159,7 +159,7 @@ class VoidDialogRouteTest extends TestCase
                 static fn() => $generate($wrong, ''),
                 static fn() => $generate(VoidDialogRouteHarness::REASON_DESCRIPTOR, 'SYNTHETIC'),
                 static fn() => $generate(VoidDialogRouteHarness::REASON_DESCRIPTOR, '', 'extra'),
-                static fn() => Header::setupHeader(['common', 'opener']),
+                static fn(): string => Header::setupHeader(['common', 'opener']),
             ] as $index => $call
         ) {
             ob_start();
