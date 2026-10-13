@@ -17,6 +17,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -43,6 +44,8 @@ if (isset($_GET['editlid'])) {
 <html>
 <head>
 <?php Header::setupHeader(['datetime-picker', 'opener']); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/disclosure-popup.css?v=<?php echo attr_url($clinicalAssets->version('disclosure-popup.css')); ?>">
 
 <script>
 //function to validate fields in record disclosure page
@@ -94,22 +97,22 @@ $(function () {
 
 </script>
 </head>
-<body>
-    <div class="container" id="record-disclosure">
+<body class="oe-disclosure-editor">
+    <div class="container oe-disclosure-sheet" id="record-disclosure">
         <div class="row">
-            <div class="col-12">
+            <div class="col-12 oe-disclosure-header">
                 <?php
                 if (!empty($editlid)) {
                     ?><!--Edit the disclosures-->
-                    <h2 class="title"><?php echo xlt('Edit Disclosure'); ?></h2><?php
+                    <h2 class="title oe-disclosure-title"><?php echo xlt('Edit Disclosure'); ?></h2><?php
                 } else { ?>
-                    <span class="title"><?php echo xlt('Record Disclosure'); ?></span><?php
+                    <span class="title oe-disclosure-title"><?php echo xlt('Record Disclosure'); ?></span><?php
                 } ?>
             </div>
             <div class="col-12">
-                <form name="disclosure_form" id="disclosure_form" method="POST" action="disclosure_full.php">
+                <form name="disclosure_form" id="disclosure_form" class="oe-disclosure-form" method="POST" action="disclosure_full.php">
                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
-                    <div class="btn-group">
+                    <div class="btn-group oe-disclosure-actions">
                         <button class='btn btn-primary btn-save' name='form_save' id='form_save'>
                             <?php echo xlt('Save'); ?>
                         </button>
@@ -120,7 +123,7 @@ $(function () {
 
                     <input type='hidden' name='mode' value="disclosure" />
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-disclosure-field">
                         <label><?php echo xlt('Date'); ?>:</label>
                         <?php
                         if (!empty($editlid)) {
@@ -138,7 +141,7 @@ $(function () {
                         } ?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-disclosure-field">
                         <label><?php echo xlt('Type of Disclosure'); ?>:</label>
                         <?php
                         if (!empty($editlid)) {
@@ -150,7 +153,7 @@ $(function () {
                         } ?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-disclosure-field">
                         <label><?php echo xlt('Recipient of the Disclosure'); ?>:</label>
                         <?php
                         if (!empty($editlid)) {
@@ -162,7 +165,7 @@ $(function () {
                         }?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-disclosure-field">
                         <label><?php echo xlt('Description of the Disclosure'); ?>:</label>
                         <?php if (!empty($editlid)) { ?>
                             <textarea class="form-control" name="desc_disc" wrap="auto" rows="4" cols="30"><?php echo text($description); ?></textarea>

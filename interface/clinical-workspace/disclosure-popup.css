@@ -1,0 +1,134 @@
+/*
+ * Record/Edit Disclosure (record_disclosure.php) as a composed document sheet.
+ *
+ * disclosure_full.php opens this route in a dlgopen iframe; it can also load in a normal patient
+ * frame. popup.js marks <html> with oe-workbench-context in both cases only inside an active
+ * workbench, so every rule pairs that marker with the route's body class, and the sheet is linked
+ * with media="screen": the standalone page, legacy mode and print keep the legacy rendering.
+ * Tokens come from popup.css.
+ *
+ * submitform() paints invalid fields with inline background colours; inline styles outrank every
+ * rule here (none is marked important), and control paint skips Bootstrap's validation states.
+ * Typography is inherited unchanged and the datepicker overlay is left to popup.css.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-disclosure-editor {
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* One paper sheet; Bootstrap's container, row and column gutters are folded into its padding. */
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-sheet {
+    max-width: 44rem;
+    margin-block: 0.5rem;
+    margin-inline: auto;
+    padding-block: 0.75rem 1rem;
+    padding-inline: 0.75rem;
+    overflow-x: auto;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-sheet > .row {
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-sheet > .row > [class*='col'] {
+    padding-inline: 0;
+  }
+
+  /* Ruled header: the Record span and the Edit heading read as the same document title. */
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-header {
+    margin-block-end: 0.75rem;
+    padding-block-end: 0.5rem;
+    border-block-end: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-title {
+    display: block;
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  /* The original Save and Cancel buttons wrap at their own size instead of overflowing. */
+  html.oe-workbench-context body.oe-disclosure-editor .btn-group.oe-disclosure-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-actions .btn {
+    flex: 0 1 auto;
+    max-width: 100%;
+    margin-inline: 0;
+    white-space: normal;
+    border-radius: 4px;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-actions .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-actions .btn-secondary {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-actions .btn:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Field rhythm: label above control, even spacing between fields. */
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field {
+    margin-block: 0.75rem 0;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field label {
+    display: block;
+    margin-block-end: 0.25rem;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field input.form-control,
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field select.form-control {
+    width: 100%;
+    max-width: 20rem;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field textarea.form-control {
+    width: 100%;
+    min-height: 8rem;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field .form-control:not(.is-invalid, .is-valid, .was-validated *):disabled,
+  html.oe-workbench-context body.oe-disclosure-editor .oe-disclosure-field .form-control:not(.is-invalid, .is-valid, .was-validated *)[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background: var(--oe-wb-disabled-paper);
+  }
+}
