@@ -88,7 +88,11 @@ test('real Finder route links a helper-versioned finder stylesheet after the sha
 test('DataTables results sit in an additive sheet wrapper with every original dom feature in order', () => {
     const dom = source().match(/"dom":\s*'([^']*)'/);
     expect(dom).not.toBeNull();
-    expect(dom[1]).toBe('Rlf<"oe-finder-results"rt><"mytopdiv">ip');
+    expect(dom[1]).toBe('R<"oe-search-toolbar"lf><"oe-finder-results"rt><"oe-search-footer"<"mytopdiv">ip>');
+    // Strip the quoted wrapper class names first, so letters inside them (e.g. the "t" and "r"
+    // in "toolbar") can't masquerade as DataTables tokens; what remains must be exactly the
+    // original R, l, f, r, t, i, p tokens, in their original relative order.
+    expect(dom[1].replace(/"[^"]*"/g, '').replace(/[^Rlfrtip]/g, '')).toBe('Rlfrtip');
     expect(twig()).toMatch(/<div class="table mt-2 oe-finder-results">/);
 });
 

@@ -416,6 +416,43 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function patientSearchStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('patient-search.css'));
+
+        $this->writeAsset('finder.css', 1_700_004_001);
+        $this->writeAsset('patient-search.css', 1_700_004_002);
+        self::assertSame('1700004002', $assets->version('patient-search.css'));
+
+        $this->writeAsset('patient-search.css', 1_700_004_100);
+        self::assertSame('1700004100', $assets->version('patient-search.css'));
+        self::assertSame('1700004001', $assets->version('finder.css'));
+
+        unlink($this->directory . '/patient-search.css');
+        self::assertSame('0', $assets->version('patient-search.css'));
+
+        foreach (['patient_search.css', 'patient-search.CSS', '../clinical-workspace/patient-search.css', 'patient-search.css?v=1'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedPatientSearchStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/patient-search.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
     public function shippedSoapDocumentAssetsExist(): void
     {
         $assets = new ClinicalWorkspaceAssets();

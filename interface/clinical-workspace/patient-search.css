@@ -1,0 +1,152 @@
+/*
+ * Patient Finder popup (find_patient_popup.php) opened from the calendar to search for
+ * and select a patient. Every rule is scoped to html.oe-workbench-popup (set by popup.js
+ * only inside an active workbench) plus the route's body class, so the standalone legacy
+ * chrome and print keep their existing rendering. Tokens come from popup.css; every
+ * control, column, AJAX hook and click handler stays in the DOM in its original order.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-patient-search {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-criteria {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper) !important;
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls {
+    align-items: end;
+    gap: 0.5rem 1rem;
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls label {
+    color: var(--oe-wb-muted);
+    font-weight: 600;
+  }
+
+  /* Neutral surface only: native/Bootstrap validation state keeps its own palette and icons. */
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls select:not(.is-invalid, .is-valid, .was-validated *),
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls input:not(.is-invalid, .is-valid, .was-validated *) {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls select:disabled,
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls select[readonly],
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls input:disabled,
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls input[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls select:not(.is-invalid, .is-valid, .was-validated *):focus,
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls input:not(.is-invalid, .is-valid, .was-validated *):focus {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-search #submitbtn {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-patient-search #submitbtn:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-search .oe-search-results-scroll {
+    overflow-x: auto;
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-patient-search #searchResultsHeader th,
+  html.oe-workbench-popup body.oe-patient-search #searchResults td {
+    border-color: var(--oe-wb-line) !important;
+  }
+
+  /* Recolour the mouse-over highlight with the workbench petrol token instead of the
+     standalone page's hardcoded blue; higher ancestor specificity wins over the inline
+     <style> rule only when the workbench marker is present. */
+  html.oe-workbench-popup body.oe-patient-search .highlight {
+    background-color: var(--oe-wb-petrol);
+    color: var(--oe-wb-on-petrol);
+  }
+}
+
+/* Prefix syntax: the declared older browsers drop range-syntax queries. */
+@media screen and (max-width: 640px) {
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls,
+  html.oe-workbench-popup body.oe-patient-search .oe-search-controls > * {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/*
+ * Main Patient Finder (dynamic_finder.php + finder.html.twig), loaded after finder.css.
+ * Scoped to the same body.oe-clinical-workspace.oe-clinical-finder marker finder.css uses,
+ * so this is additive main-route styling only: the page heading, tabs and the DataTables
+ * toolbar/footer wrappers the "dom" option now composes. No control, column, filter, row,
+ * PID handler, preference or CSRF/ACL branch is touched; this only classes existing markup
+ * and the DataTables-generated wrapper divs.
+ */
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-tabs .nav-link {
+    color: var(--oe-muted);
+    font-weight: 600;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .oe-finder-tabs .nav-link.active {
+    color: var(--oe-ink);
+    border-bottom-color: var(--oe-petrol);
+  }
+
+  /* Toolbar: DataTables-generated wrapper around the existing length+filter controls. */
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    margin-block-end: 1rem;
+  }
+
+  /* Keeps the search input legible and full-width once it wraps to its own row. */
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-toolbar #pt_table_filter {
+    flex: 1 1 100%;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-toolbar #pt_table_filter input {
+    width: 100%;
+  }
+
+  /* Footer: DataTables-generated wrapper around the existing mytopdiv plus info+pagination. */
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.25rem;
+  }
+}
+
+/* Prefix syntax: this file keeps the declared older-browser prefix notation throughout. */
+@media screen and (max-width: 640px) {
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-toolbar #pt_table_length {
+    flex: 1 1 100%;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-finder .oe-search-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

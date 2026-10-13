@@ -17,6 +17,7 @@
 require_once('../../globals.php');
 
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -48,6 +49,9 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
 <head>
     <?php Header::setupHeader(['common', 'datetime-picker', 'opener']); ?>
     <title><?php echo xlt('Patient Finder'); ?></title>
+
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-search.css?v=<?php echo attr_url($clinicalAssets->version('patient-search.css')); ?>">
 
     <style>
       form {
@@ -121,13 +125,13 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
     } ?>
     <!-- ViSolve: Verify the noresult parameter -->
 </head>
-<body class="body_top">
+<body class="body_top oe-patient-search">
     <div class="table-responsive-sm">
-        <div id="searchCriteria" class="bg-light p-2 pt-3">
+        <div id="searchCriteria" class="bg-light p-2 pt-3 oe-search-criteria">
             <form method='post' name='theform' id="theform" action='find_patient_popup.php?<?php if (isset($_GET['pflag'])) {
                 echo "pflag=0";
                                                                                            } ?>'>
-                <div class="form-row">
+                <div class="form-row oe-search-controls">
                     <label for="searchby" class="col-form-label col-form-label-sm col"><?php echo xlt('Search by:'); ?></label>
                     <select name='searchby' id='searchby' class="form-control form-control-sm col">
                         <option value="Last"><?php echo xlt('Name'); ?></option>
@@ -178,6 +182,7 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
         <?php endif; ?>
 
         <?php if (isset($result)) : ?>
+            <div class="oe-search-results-scroll">
             <table class="table table-sm">
                 <thead id="searchResultsHeader" class="head">
                 <tr>
@@ -225,6 +230,7 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
                 ?>
                 </tbody>
             </table>
+            </div>
 
         <?php endif; ?>
 
