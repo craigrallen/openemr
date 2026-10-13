@@ -20,6 +20,7 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Lists\IssueTypeRegistry;
 use OpenEMR\Core\Header;
@@ -101,6 +102,8 @@ $peres = sqlStatement("SELECT * FROM issue_encounter WHERE pid = ?", [$pid]);
 <html>
 <head>
     <?php Header::setupHeader(['opener', 'topdialog', 'dialog']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/issues-encounters-document.css?v=<?php echo attr_url($clinicalAssets->version('issues-encounters-document.css')); ?>">
 
 <title><?php echo xlt('Issues and Encounters'); ?></title>
 
@@ -262,8 +265,8 @@ function doclick(pfx, id) {
 </script>
 
 </head>
-<body>
-    <div class="container">
+<body class="oe-issues-encounters">
+    <div class="container oe-ie-document">
         <form method='post' action='problem_encounter.php' onsubmit='return top.restoreSession()'>
             <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
             <?php
@@ -278,14 +281,14 @@ function doclick(pfx, id) {
             echo "' />\n";
             ?>
             <div class="table-responsive">
-                <table class="table">
+                <table class="table oe-ie-layout">
                     <tr>
-                        <td colspan='2' class="text-center font-weight-bold">
+                        <td colspan='2' class="text-center font-weight-bold oe-ie-identity">
                             <?php echo xlt('Issues and Encounters for'); ?> <?php echo text($patdata['fname']) . " " . text($patdata['lname']) . " (" . text($pid) . ")</b>\n"; ?>
                         </td>
                     </tr>
-                    <tr>
-                        <td class="text-center align-top p-0 pl-3">
+                    <tr class="oe-ie-sections">
+                        <td class="text-center align-top p-0 pl-3 oe-ie-section oe-ie-issues">
                             <div class="table-responsive">
                                 <table class="table table-sm">
                                     <tr class='head'>
@@ -313,7 +316,7 @@ function doclick(pfx, id) {
                                 </table>
                             </div>
                         </td>
-                        <td class="text-center align-top p-0 pr-3">
+                        <td class="text-center align-top p-0 pr-3 oe-ie-section oe-ie-encounters">
                             <div class="table-responsive">
                                 <table class="table table-sm">
                                     <tr class='head'>
@@ -342,7 +345,7 @@ function doclick(pfx, id) {
                     </tr>
                     <tr>
                         <td colspan='2' class="text-center">
-                            <div class="btn-group">
+                            <div class="btn-group oe-ie-actions">
                                 <button type="submit" class="btn btn-primary btn-sm btn-save" name='form_save' value='<?php echo xla('Save'); ?>' disabled>
                                     <?php echo xlt('Save'); ?>
                                 </button>
@@ -356,7 +359,7 @@ function doclick(pfx, id) {
                 </table>
             </div>
         </form>
-        <p>
+        <p class="oe-ie-instructions">
             <span class="font-weight-bold"><?php echo xlt('Instructions:'); ?></span> <?php echo xlt('Choose a section and click an item within it; then in the other section you will see the related items highlighted, and you can click in that section to add and delete relationships.'); ?>
         </p>
     </div>
