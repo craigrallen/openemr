@@ -14,8 +14,6 @@ declare(strict_types=1);
 
 namespace OpenEMR\Tests\Isolated\PatientFile\ProblemEncounter\Doubles;
 
-use OpenEMR\Tests\Isolated\PatientFile\ProblemEncounter\ProblemEncounterScenario;
-
 final class IssueTypeRegistryDouble
 {
     /**

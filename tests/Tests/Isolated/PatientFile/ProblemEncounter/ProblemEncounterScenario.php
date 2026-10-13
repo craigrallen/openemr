@@ -58,9 +58,9 @@ final class ProblemEncounterScenario
     }
 
     /**
-     * @return array<string, string>|false
+     * @return array<string, string>
      */
-    public static function sqlQuery(string $statement, mixed $binds): array|false
+    public static function sqlQuery(string $statement, mixed $binds): array
     {
         self::$queries[] = [$statement, $binds];
         return self::$patient;
