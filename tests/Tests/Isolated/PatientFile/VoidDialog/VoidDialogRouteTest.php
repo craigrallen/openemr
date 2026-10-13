@@ -65,7 +65,7 @@ class VoidDialogRouteTest extends TestCase
         foreach ([ClinicalWorkspaceAssets::class => '/src/Common/Assets/ClinicalWorkspaceAssets.php', OEGlobalsBag::class => '/src/Core/OEGlobalsBag.php'] as $class => $file) {
             self::assertSame(VoidDialogRouteHarness::repositoryRoot() . $file, (new \ReflectionClass($class))->getFileName());
         }
-        self::assertSame(VoidDialogHeaderDouble::class, (new \ReflectionClass(Header::class))->getName());
+        self::assertSame(__DIR__ . '/VoidDialogHeaderDouble.php', (new \ReflectionClass(Header::class))->getFileName());
         self::assertSame(1, substr_count($html, VoidDialogRouteHarness::ESCAPED_REASON_SELECT));
         self::assertStringNotContainsString(VoidDialogRouteHarness::SYNTHETIC_REASON, $html);
     }
