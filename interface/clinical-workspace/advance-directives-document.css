@@ -1,0 +1,153 @@
+/*
+ * Advance Directives (patient_file/summary/advancedirectives.php) as a small document sheet.
+ *
+ * demographics.php opens this route with dlgopen at 400x500. popup.js marks <html> with
+ * oe-workbench-context only inside an active workbench, so every rule pairs that marker with the
+ * route's body class, and the sheet is linked with media="screen": the standalone page, legacy
+ * mode and print keep the legacy rendering. Tokens come from popup.css and are fixed values; each
+ * text/surface pair below is declared together and the declared pair meets 4.5:1. That is a
+ * source property, not a guarantee about every compiled theme: a theme rule that wins the
+ * cascade replaces the declared pair (Cancel is answered below; others are not verified).
+ *
+ * Typography, the generated Completed select, the Last Reviewed date field, the Save/Cancel
+ * buttons, the document links, the inline-styled EMPTY marker and the NPI attestation warning
+ * text are kept; only paint, spacing and wrapping change. Field paint skips Bootstrap validation
+ * states. No breakpoints: narrow frames wrap.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-advance-directives {
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* One paper sheet; Bootstrap's container gutter is folded into its padding. */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-document {
+    max-width: 36rem;
+    margin-block: 0.5rem;
+    margin-inline: auto;
+    padding-block: 0.75rem;
+    padding-inline: 0.75rem;
+    overflow-x: auto;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives h3 {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-advance-directives hr {
+    border-block-start-color: var(--oe-wb-line);
+  }
+
+  /* Completed and Last Reviewed stack as label-above-field entries. */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-fields .form-group {
+    margin-block-end: 0.75rem;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-fields label {
+    display: block;
+    margin-block-end: 0.25rem;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-fields .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    max-width: 100%;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-fields .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-fields .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder {
+    color: var(--oe-wb-muted);
+  }
+
+  /* Save and Cancel wrap onto separate lines at full size; long translations break. */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions .btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-radius: 4px;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions .btn-save {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  /*
+   * Cancel is a .btn-link. The colour themes paint .btn-link ink and surface with !important in
+   * every state, so only this pair is !important; this selector out-specifies theirs. The border
+   * is left to the theme.
+   */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions .btn-cancel {
+    color: var(--oe-wb-petrol) !important;
+    background: var(--oe-wb-paper) !important;
+    border-color: var(--oe-wb-line);
+  }
+
+  /*
+   * :focus is the fallback where :focus-visible is unsupported. They are separate rules because
+   * an unknown pseudo-class drops its whole selector list. Neither removes the outline.
+   */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions .btn:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-actions .btn:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Filed advance directive documents: one link and date per entry; long names break. */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-documents {
+    overflow-wrap: anywhere;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-documents a,
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-documents a:hover {
+    color: var(--oe-wb-petrol);
+    background: var(--oe-wb-paper);
+    text-decoration: underline;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-documents a:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-documents a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* The original NPI attestation warning, restated as a paired warning notice. */
+  html.oe-workbench-context body.oe-advance-directives .oe-ad-attestation {
+    padding-block: 0.5rem;
+    color: var(--oe-wb-warning-ink);
+    background: var(--oe-wb-warning-paper);
+    border-inline-start: 4px solid var(--oe-wb-warning-ink);
+  }
+}
