@@ -1,0 +1,250 @@
+/*
+ * Amendments list and editor (list_amendments.php, add_edit_amendments.php) as a document.
+ * The demographics card links open them in the normal patient content frame (the .rx_modal
+ * dialog binding exists but the card's links do not carry that class), so every rule is
+ * scoped to html.oe-workbench-context, which popup.js sets for frames and popups of an active
+ * workbench, plus the route's body class. The sheet is linked with media="screen", so the
+ * standalone page, explicit legacy mode and print keep the legacy rendering. Tokens come
+ * from popup.css, which defines them on the same context marker.
+ *
+ * Only classes on existing elements are styled; nothing is hidden, reordered or clipped.
+ * Text-bearing descendants restate an explicit ink/surface pair so the dark theme's light
+ * body ink and link colour never land on the popup's paper. Spacing is logical for RTL.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-amendments-list,
+  html.oe-workbench-context body.oe-amendments-editor {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* One paper sheet; the frame may be as narrow as a phone, so padding scales down. */
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-sheet,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-sheet {
+    max-width: 960px;
+    margin-block: 12px;
+    margin-inline: auto;
+    padding: clamp(12px, 4vw, 24px);
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 7px;
+    overflow-x: auto;
+  }
+
+  /* Narrow frames: the sheet's own padding replaces Bootstrap's negative row gutters. */
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-sheet > .row,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-sheet > .row {
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-sheet > .row > [class*='col'],
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-sheet > .row > [class*='col'] {
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-title,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-title {
+    margin-block: 0 14px;
+    padding-block-end: 10px;
+    color: var(--oe-wb-ink);
+    border-block-end: 1px solid var(--oe-wb-line);
+    font-size: 1.25rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  /* Actions wrap instead of overflowing a narrow dialog. */
+  html.oe-workbench-context body.oe-amendments-list .btn-group.oe-amendments-actions,
+  html.oe-workbench-context body.oe-amendments-editor .btn-group.oe-amendments-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-block-end: 8px;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-actions .btn,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-actions .btn {
+    margin: 0;
+    border-radius: 5px;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .btn:focus-visible,
+  html.oe-workbench-context body.oe-amendments-editor .btn:focus-visible,
+  html.oe-workbench-context body.oe-amendments-list a:focus-visible,
+  html.oe-workbench-context body.oe-amendments-editor a:focus-visible,
+  html.oe-workbench-context body.oe-amendments-list input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list td.oe-amendments-actions .btn {
+    margin-block-end: 8px;
+    margin-inline-end: 8px;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-actions .btn-primary,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-actions .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-actions .btn-secondary,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-actions .btn-secondary {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-muted);
+  }
+
+  /* List toolbar: a layout table; cells keep table display and only lose their rules. */
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-toolbar {
+    margin-block-end: 4px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-toolbar td {
+    padding: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-block-start: 0;
+    vertical-align: middle;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-selection a,
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows a {
+    color: var(--oe-wb-petrol);
+    text-decoration: underline;
+  }
+
+  /* Register of requests. */
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-register {
+    overflow-x: auto;
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 7px;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-history {
+    margin-block-end: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    font-size: 0.875rem;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows thead th,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-history thead th {
+    padding: 10px 14px;
+    color: var(--oe-wb-muted);
+    background: var(--oe-wb-canvas);
+    border-color: var(--oe-wb-line);
+    border-block-end: 1px solid var(--oe-wb-line);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: start;
+    text-transform: uppercase;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows tbody td,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-history tbody td {
+    padding: 12px 14px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows tbody td + td {
+    border-block-start: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-rows input[type='checkbox'] {
+    accent-color: var(--oe-wb-petrol);
+  }
+
+  /* A flex item of .row; its table grid cannot shrink below min-content, so the sheet scrolls. */
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-history {
+    max-width: 100%;
+    margin-inline: 0;
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-history tbody tr:hover > td {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* The empty state keeps its text-danger colour; only its spacing is set. */
+  html.oe-workbench-context body.oe-amendments-list .oe-amendments-empty {
+    margin-block: 12px 0;
+    padding-block: 12px;
+    padding-inline: 14px;
+    border-inline-start: 3px solid currentcolor;
+  }
+
+  /* Editor: a single readable field stack with a comfortable measure. */
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-form {
+    max-width: 46rem;
+  }
+
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field label {
+    display: block;
+    margin-block-end: 6px;
+    color: var(--oe-wb-ink);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    min-height: 38px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid color-mix(in srgb, var(--oe-wb-muted) 75%, var(--oe-wb-paper));
+    border-radius: 4px;
+  }
+
+  /* Locked (read-only amendment) controls; after the neutral reset, which has equal specificity. */
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field .form-control:disabled,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field .form-control[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background: var(--oe-wb-disabled-paper);
+    opacity: 1;
+  }
+
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Short fields cap their width but always shrink to the frame. */
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field select.form-control,
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field input.form-control {
+    width: 100%;
+    max-width: 22rem;
+  }
+
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-field textarea.form-control {
+    width: 100%;
+    min-height: 6.5rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  /* The history rule is a flex item of .row; give it the row's width. */
+  html.oe-workbench-context body.oe-amendments-editor .oe-amendments-sheet > .row > hr {
+    flex: 1 0 100%;
+    max-width: 100%;
+    margin-block: 20px 16px;
+    margin-inline: 0;
+    border-block-start: 1px solid var(--oe-wb-line);
+  }
+}
