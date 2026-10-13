@@ -153,6 +153,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss void dialog stylesheet' => ['void_dialog.css'],
+            'void dialog route basename' => ['void_dialog.php'],
+            'void dialog stylesheet traversal' => ['../clinical-workspace/void-dialog.css'],
         ];
     }
 
@@ -450,6 +453,44 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function voidDialogStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('void-dialog.css'));
+
+        $this->writeAsset('workspace.css', 1_700_005_001);
+        $this->writeAsset('void-dialog.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('void-dialog.css'));
+
+        $this->writeAsset('void-dialog.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('void-dialog.css'));
+        self::assertSame('1700005001', $assets->version('workspace.css'));
+
+        unlink($this->directory . '/void-dialog.css');
+        self::assertSame('0', $assets->version('void-dialog.css'));
+        self::assertSame('1700005001', $assets->version('workspace.css'));
+
+        foreach (['void_dialog.css', 'Void-Dialog.css', 'void-dialog.CSS', '../clinical-workspace/void-dialog.css', 'void-dialog.css?v=1', 'void-dialog.js'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedVoidDialogStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/void-dialog.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('void-dialog.css'));
     }
 
     #[Test]

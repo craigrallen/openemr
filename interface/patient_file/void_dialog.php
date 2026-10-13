@@ -10,6 +10,7 @@
 require_once('../globals.php');
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.inc.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 
 ?>
@@ -18,6 +19,8 @@ use OpenEMR\Core\Header;
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <?php Header::setupHeader(['common', 'datetime-picker', 'opener']); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/void-dialog.css?v=<?php echo attr_url($clinicalAssets->version('void-dialog.css')); ?>">
 
 <title><?php echo xlt('Void Dialog'); ?></title>
 
@@ -47,15 +50,15 @@ function DoSubmit() {
 
 </head>
 
-<body>
+<body class="oe-void-dialog">
 
-<div class="container-fluid">
+<div class="container-fluid oe-void-document">
 
 <form method='post'>
 
 <center>
 
-<table border='0'>
+<table border='0' class='oe-void-fields'>
 
  <tr>
   <td valign='top' nowrap><b><?php echo xlt('Void Reason'); ?>:</b></td>
@@ -84,7 +87,7 @@ generate_form_field(
 </table>
 
 <?php
-echo "<p>\n";
+echo "<p class='oe-void-actions'>\n";
 echo "<input type='button' value='" . xla('Submit') . "' onclick='DoSubmit()' />&nbsp;\n";
 echo "<input type='button' value='" . xla('Cancel') . "' onclick='window.close()' />\n";
 echo "</p>\n";

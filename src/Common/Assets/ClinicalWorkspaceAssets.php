@@ -49,6 +49,7 @@ final readonly class ClinicalWorkspaceAssets
         'soap-reference.js',
         'visit-history.css',
         'visit-history.js',
+        'void-dialog.css',
         'workspace.css',
     ];
 
