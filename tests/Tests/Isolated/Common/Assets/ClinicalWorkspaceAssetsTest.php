@@ -153,6 +153,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss advance directives stylesheet' => ['advance_directives_document.css'],
+            'advance directives route basename' => ['advancedirectives.php'],
+            'advance directives stylesheet traversal' => ['../clinical-workspace/advance-directives-document.css'],
         ];
     }
 
@@ -450,6 +453,44 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function advanceDirectivesStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('advance-directives-document.css'));
+
+        $this->writeAsset('workspace.css', 1_700_006_001);
+        $this->writeAsset('advance-directives-document.css', 1_700_006_002);
+        self::assertSame('1700006002', $assets->version('advance-directives-document.css'));
+
+        $this->writeAsset('advance-directives-document.css', 1_700_006_100);
+        self::assertSame('1700006100', $assets->version('advance-directives-document.css'));
+        self::assertSame('1700006001', $assets->version('workspace.css'));
+
+        unlink($this->directory . '/advance-directives-document.css');
+        self::assertSame('0', $assets->version('advance-directives-document.css'));
+        self::assertSame('1700006001', $assets->version('workspace.css'));
+
+        foreach (['advance_directives_document.css', 'Advance-Directives-Document.css', 'advance-directives-document.CSS', '../clinical-workspace/advance-directives-document.css', 'advance-directives-document.css?v=1', 'advance-directives-document.js', 'advancedirectives.css'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedAdvanceDirectivesStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/advance-directives-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('advance-directives-document.css'));
     }
 
     #[Test]

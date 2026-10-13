@@ -14,6 +14,7 @@ require_once("../../globals.php");
 $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActiveSession();
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.inc.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Core\Header;
@@ -28,6 +29,8 @@ use OpenEMR\Services\UserService;
     <title><?php echo xlt('Advance Directives'); ?></title>
 
     <?php Header::setupHeader(['datetime-picker','opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/advance-directives-document.css?v=<?php echo attr_url($clinicalAssets->version('advance-directives-document.css')); ?>">
 
     <?php
     $pid ??= $session->get('pid');
@@ -84,15 +87,15 @@ use OpenEMR\Services\UserService;
     </script>
 </head>
 
-<body class="body_top">
-    <div class="container">
+<body class="body_top oe-advance-directives">
+    <div class="container oe-ad-document">
         <div class="row">
             <div class="col-12">
                 <h3><?php echo xlt('Advance Directives'); ?></h3>
             </div>
         </div>
         <div class="row">
-            <div class="col-12">
+            <div class="col-12 oe-ad-fields">
                 <form action='advancedirectives.php' method='post' onsubmit='return validate(this)'>
                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                     <div class="form-group">
@@ -104,7 +107,7 @@ use OpenEMR\Services\UserService;
                         <?php generate_form_field(['data_type' => 4,'field_id' => 'adreviewed', 'edit_options' => 'F'], $form_adreviewed); ?>
                     </div>
                     <div class="form-group">
-                        <div class="btn-group" role="group">
+                        <div class="btn-group oe-ad-actions" role="group">
                             <button type="submit" id="create" class="btn btn-secondary btn-save"><?php echo xla('Save'); ?></button>
                             <button type="button" id="cancel" class="btn btn-link btn-cancel"><?php echo xla('Cancel'); ?></button>
                         </div>
@@ -114,7 +117,7 @@ use OpenEMR\Services\UserService;
         </div>
         <hr>
         <div class="row">
-            <div class="col-12">
+            <div class="col-12 oe-ad-documents">
                 <?php
                 $query = "SELECT id FROM categories WHERE name='Advance Directive'";
                 $myrow2 = sqlQuery($query);
@@ -160,7 +163,7 @@ use OpenEMR\Services\UserService;
         <?php if (empty($userRecord['npi'])) : ?>
         <!-- API will not be able to provide the legal attestation for which user that reviewed this information without a valid medical license number (NPI) -->
         <div class="row mt-2">
-            <div class="col-12 alert-danger">
+            <div class="col-12 alert-danger oe-ad-attestation">
                 <p><?php echo xlt("No national provider number is setup for your account."); ?></p>
                 <p><?php echo xlt("The system will not be able to provide legal attestation that you have reviewed this information without a valid national provider number."); ?></p>
             </div>
