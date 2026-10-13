@@ -19,6 +19,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
@@ -132,6 +133,8 @@ $customAttributes = ( $onlyRead ) ? ["disabled" => "true"] : null;
 <?php Header::setupHeader('datetime-picker');
 echo "<title>" . xlt('Amendments') . "</title>";
 ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/amendments-popup.css?v=<?php echo attr_url($clinicalAssets->version('amendments-popup.css')); ?>">
 
 <script>
 
@@ -164,14 +167,14 @@ $(function () {
 
 </head>
 
-<body>
-    <div class="container">
+<body class="oe-amendments-editor">
+    <div class="container oe-amendments-sheet">
         <div class="row">
             <div class="col-12">
-                <h2><?php echo xlt('Amendments'); ?></h2>
+                <h2 class="oe-amendments-title"><?php echo xlt('Amendments'); ?></h2>
             </div>
             <div class="col-12">
-                <div class="btn-group">
+                <div class="btn-group oe-amendments-actions">
                     <?php if (! $onlyRead) { ?>
                         <a href=# onclick="formValidation()" class="btn btn-primary btn-sm btn-save"><span><?php echo xlt('Save');?></span></a>
                     <?php } ?>
@@ -179,10 +182,10 @@ $(function () {
                 </div>
             </div>
             <div class="col-12">
-                <form action="add_edit_amendments.php" name="add_edit_amendments" id="add_edit_amendments" method="post" onsubmit='return top.restoreSession()'>
+                <form action="add_edit_amendments.php" name="add_edit_amendments" id="add_edit_amendments" class="oe-amendments-form" method="post" onsubmit='return top.restoreSession()'>
                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-amendments-field">
                         <label><?php echo xlt('Requested Date'); ?></label>
                         <?php if (! $onlyRead) { ?>
                             <input type='text' size='10' class='form-control datepicker' name="amendment_date" id="amendment_date"
@@ -195,12 +198,12 @@ $(function () {
                         <?php } ?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-amendments-field">
                         <label><?php echo xlt('Requested By'); ?></label>
                         <?php echo generate_select_list("form_amendment_by", "amendment_from", ($amendment_by ?? ''), 'Amendment Request By', ' ', '', '', '', $customAttributes); ?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-amendments-field">
                         <label><?php echo xlt('Request Description'); ?></label>
                         <textarea <?php echo ( $onlyRead ) ? "readonly" : "";  ?> id="desc" class="form-control" name="desc" rows="4" cols="30"><?php
                         if (!empty($amendment_id)) {
@@ -211,12 +214,12 @@ $(function () {
                         ?></textarea>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-amendments-field">
                         <label><?php echo xlt('Request Status'); ?></label>
                         <?php echo generate_select_list("form_amendment_status", "amendment_status", ($amendment_status ?? ''), 'Amendment Status', ' ', '', '', '', $customAttributes); ?>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group mt-3 oe-amendments-field">
                         <label><?php echo xlt('Comments'); ?></label>
                         <textarea <?php echo ( $onlyRead ) ? "readonly" : "";  ?> id="note" class="form-control" name="note" rows="4" cols="30"><?php
                         if (!empty($amendment_id)) {
@@ -234,10 +237,10 @@ $(function () {
             <?php if (!empty($amendment_id)) { ?>
             <hr />
             <div class="col-12">
-                <h2><?php echo xlt("History") ; ?></h2>
+                <h2 class="oe-amendments-title"><?php echo xlt("History") ; ?></h2>
             </div>
 
-            <table class="table table-bordered table-hover">
+            <table class="table table-bordered table-hover oe-amendments-history">
                 <!-- some columns are sortable -->
                 <thead class="table-primary font-weight-bold">
                     <tr>
