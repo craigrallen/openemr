@@ -36,6 +36,7 @@ final readonly class ClinicalWorkspaceAssets
         'global-messages.css',
         'history-document.css',
         'history-editor.css',
+        'inventory-lot-popup.css',
         'issue-popup.css',
         'lbf-document.css',
         'mode.js',

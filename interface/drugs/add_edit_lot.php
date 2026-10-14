@@ -21,6 +21,7 @@ require_once("$srcdir/options.inc.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -150,6 +151,8 @@ if (!$drug_id) {
         echo " " . xlt('Lot'); ?></title>
 
     <?php Header::setupHeader(['datetime-picker', 'opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/inventory-lot-popup.css?v=<?php echo attr_url($clinicalAssets->version('inventory-lot-popup.css')); ?>">
 
     <style>
       td {
@@ -335,7 +338,7 @@ if (!$drug_id) {
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-inventory-lot-popup">
     <?php
     if ($lot_id) {
         $row = sqlQuery("SELECT * FROM drug_inventory WHERE drug_id = ? " .
@@ -584,11 +587,11 @@ if (!$drug_id) {
     }
     $title = $lot_id ? xl("Update Lot") : xl("Add Lot");
     ?>
-    <h3 class="ml-1"><?php echo text($title); ?></h3>
-    <form method='post' name='theform' action='add_edit_lot.php?drug=<?php echo attr_url($drug_id); ?>&lot=<?php echo attr_url($lot_id); ?>' onsubmit='return validate()'>
+    <h3 class="ml-1 oe-inventory-lot-title"><?php echo text($title); ?></h3>
+    <form class='oe-inventory-lot-form' method='post' name='theform' action='add_edit_lot.php?drug=<?php echo attr_url($drug_id); ?>&lot=<?php echo attr_url($lot_id); ?>' onsubmit='return validate()'>
         <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
-        <table class="table table-borderless w-100">
+        <table class="table table-borderless w-100 oe-inventory-lot-fields">
 
             <tr id='row_sale_date'>
                 <td class="text-nowrap align-top"><?php echo xlt('Date'); ?>:</td>
@@ -766,7 +769,7 @@ if (!$drug_id) {
 
         </table>
 
-        <div class="btn-group mt-3">
+        <div class="btn-group mt-3 oe-inventory-lot-actions">
             <input type='submit' class="btn btn-primary" name='form_save' value='<?php echo $lot_id ? xla('Update') : xla('Add') ?>' />
 
             <?php if ($lot_id && ($auth_admin || AclMain::aclCheckCore('inventory', 'destruction'))) { ?>

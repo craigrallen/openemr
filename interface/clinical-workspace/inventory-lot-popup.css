@@ -1,0 +1,161 @@
+/*
+ * Add/Update Lot (interface/drugs/add_edit_lot.php) as a quiet document inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-popup (set by popup.js only inside an active
+ * workbench) plus the route's body class, and the sheet is linked with media="screen", so the
+ * standalone page and print keep the legacy rendering. Tokens come from popup.css.
+ *
+ * trans_type_changed() hides #row_* with inline display:none and restores them with ''. Rows
+ * here get a plain (non-important) flex display, so the inline none always wins and a restored
+ * row falls back to this layout; no rule targets row ids, visibility or [style]. The route's own
+ * td font-size and every other type setting are left alone.
+ */
+html.oe-workbench-popup body.oe-inventory-lot-popup {
+  padding: 12px 16px 20px;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-canvas);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-title {
+  max-width: 640px;
+  margin-bottom: 10px;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-canvas);
+}
+
+/* The form is the sheet; the field table and the actions both sit on it. */
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-form {
+  max-width: 640px;
+  margin-left: 0.25rem;
+  padding: 6px 20px 18px;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+  border: 1px solid var(--oe-wb-line);
+  border-radius: 8px;
+}
+
+/*
+ * Each row becomes a wrapping label/value line. The label keeps its translated width
+ * (max-content) and the value claims 15rem, so when the sheet is narrower than both the value
+ * cell drops beneath its label without a media query.
+ */
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields {
+  display: block;
+  margin-bottom: 0;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields > tbody {
+  display: block;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields > tbody > tr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--oe-wb-line);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields > tbody > tr > td {
+  padding: 0;
+  border: 0;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields > tbody > tr > td:first-child {
+  flex: 0 0 11rem;
+  min-width: max-content;
+  color: var(--oe-wb-muted);
+  background-color: var(--oe-wb-paper);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields > tbody > tr > td:last-child {
+  flex: 1 1 15rem;
+  min-width: 0;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+}
+
+/* Fields: paper and ink travel together in every state. */
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields input[type='text'],
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields select {
+  max-width: 100%;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+  border: 1px solid var(--oe-wb-line);
+  border-radius: 4px;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields input[type='text']::placeholder {
+  color: var(--oe-wb-muted);
+  opacity: 1;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields input[type='text'][readonly] {
+  color: var(--oe-wb-disabled-ink);
+  background-color: var(--oe-wb-disabled-paper);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields input[type='text']:focus,
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields select:focus {
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+  border-color: var(--oe-wb-petrol);
+  box-shadow: none;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields input[type='text']:focus-visible,
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-fields select:focus-visible {
+  outline: 2px solid var(--oe-wb-petrol);
+  outline-offset: 1px;
+}
+
+/* Actions: native inputs keep their labels on one line and wrap as whole buttons. */
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn {
+  flex: 0 0 auto;
+  margin-left: 0;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn-primary {
+  color: var(--oe-wb-on-petrol);
+  background-color: var(--oe-wb-petrol);
+  border-color: var(--oe-wb-petrol);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn-primary.btn-print {
+  color: var(--oe-wb-petrol);
+  background-color: var(--oe-wb-paper);
+  border-color: var(--oe-wb-petrol);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn-danger {
+  color: #fff;
+  background-color: #a32121;
+  border-color: #a32121;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn-warning {
+  color: var(--oe-wb-warning-ink);
+  background-color: var(--oe-wb-warning-paper);
+  border-color: var(--oe-wb-warning-ink);
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn:focus {
+  box-shadow: none;
+}
+
+html.oe-workbench-popup body.oe-inventory-lot-popup .oe-inventory-lot-actions .btn:focus-visible {
+  outline: 2px solid var(--oe-wb-ink);
+  outline-offset: 2px;
+}

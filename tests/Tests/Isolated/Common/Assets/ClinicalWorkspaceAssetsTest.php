@@ -453,6 +453,43 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function inventoryLotPopupStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('inventory-lot-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('inventory-lot-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('inventory-lot-popup.css'));
+
+        $this->writeAsset('inventory-lot-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('inventory-lot-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/inventory-lot-popup.css');
+        self::assertSame('0', $assets->version('inventory-lot-popup.css'));
+
+        foreach (['inventory_lot_popup.css', 'inventory-lot-popup.CSS', '../clinical-workspace/inventory-lot-popup.css', 'inventory-lot-popup.css?v=1'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedInventoryLotPopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/inventory-lot-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('inventory-lot-popup.css'));
+    }
+
+    #[Test]
     public function shippedSoapDocumentAssetsExist(): void
     {
         $assets = new ClinicalWorkspaceAssets();
