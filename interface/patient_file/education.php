@@ -16,6 +16,7 @@ require_once("../globals.php");
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.inc.php");
 
 use OpenEMR\BC\ServiceContainer;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -111,13 +112,15 @@ if (!empty($_POST['bn_submit'])) {
     <title><?php echo xlt('Education'); ?></title>
 
     <?php Header::setupHeader(); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/education-popup.css?v=<?php echo attr_url($clinicalAssets->version('education-popup.css')); ?>">
 
 </head>
-<body>
-    <div class="container mt-3">
-        <div class="row">
+<body class="oe-education-popup">
+    <div class="container mt-3 oe-education-sheet">
+        <div class="row oe-education-head">
             <div class="col-12">
-                <h3>
+                <h3 class="oe-education-title">
                     <?php
                     echo xlt('Educational materials for');
                     echo ' ' . text($codetype) . ' ';
@@ -136,22 +139,22 @@ if (!empty($_POST['bn_submit'])) {
                 ?>
             </div>
         </div>
-        <div class='row'>
+        <div class='row oe-education-body'>
             <div class='col-12'>
                 <form method='post' action='education.php' onsubmit='return top.restoreSession()'>
                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                     <input type='hidden' name='type' value='<?php echo attr($codetype); ?>' />
                     <input type='hidden' name='code' value='<?php echo attr($codevalue); ?>' />
                     <input type='hidden' name='language' value='<?php echo attr($language); ?>' />
-                    <div class='form-group'>
+                    <div class='form-group oe-education-source'>
                         <label for="source"><?php echo xlt('Select source'); ?></label>
                         <select name='source' id='source' class='form-control'>
                             <option value='MLP'><?php echo xlt('MedlinePlus Connect'); ?></option>
                             <option value='Local'><?php echo xlt('Local Content'); ?></option>
                         </select>
                     </div>
-                    <div class='form-group'>
-                        <div class='btn-group' role='group'>
+                    <div class='form-group oe-education-actions'>
+                        <div class='btn-group oe-education-buttons' role='group'>
                             <button type='submit' class='btn btn-primary btn-search' name='bn_submit' value='bn_submit'>
                                 <?php echo xlt('Submit'); ?>
                             </button>
