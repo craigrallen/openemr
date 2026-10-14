@@ -1,0 +1,64 @@
+/*
+ * Order Summary (interface/orders/order_manifest.php) as a workbench document.
+ * Inert unless <html> carries oe-workbench-context: set by popup.js through a
+ * retained opener, or by the route's own bootstrap for a target=_blank tab that
+ * opened without one. Tokens come from popup.css on that context class; this
+ * sheet adds no fonts, so a standalone tab keeps the route's own typography.
+ * Screen only: print keeps the route's original rendering.
+ *
+ * Only the .table-active info table element and the plain header row are
+ * repainted, each as a pair. The inline-striped procedure rows, every cell,
+ * checkbox and button keep their theme and inline paint.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-order-manifest {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  /* The original form as a paper sheet. */
+  html.oe-workbench-context body.oe-order-manifest > form {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  html.oe-workbench-context body.oe-order-manifest .ordsum table,
+  html.oe-workbench-context body.oe-order-manifest .ordsum td,
+  html.oe-workbench-context body.oe-order-manifest .ordsum th {
+    border-color: var(--oe-wb-line);
+  }
+
+  /* The theme gives .table its own ink and .table-active only a translucent tint, so the
+     paper sheet alone would leave a dark theme's near-white text on white. Pair both on the
+     info table itself; canvas keeps it distinct from the paper. Cells inherit. */
+  html.oe-workbench-context body.oe-order-manifest .ordsum > table.table-active {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-order-manifest .ordsum tr.head {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  /* Whole buttons move to a new line; their labels are untouched. */
+  html.oe-workbench-context body.oe-order-manifest > form > .btn-group {
+    flex-wrap: wrap;
+  }
+
+  /* Fallback for browsers without :focus-visible; kept apart so neither list is dropped. */
+  html.oe-workbench-context body.oe-order-manifest > form > .btn-group .btn:focus,
+  html.oe-workbench-context body.oe-order-manifest .ordsum input[type='checkbox']:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-order-manifest > form > .btn-group .btn:focus-visible,
+  html.oe-workbench-context body.oe-order-manifest .ordsum input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}

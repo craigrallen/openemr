@@ -453,6 +453,65 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function orderManifestStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('order-manifest-popup.css'));
+
+        $this->writeAsset('patient-results-popup.css', 1_700_005_001);
+        $this->writeAsset('order-manifest-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('order-manifest-popup.css'));
+
+        $this->writeAsset('order-manifest-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('order-manifest-popup.css'));
+        self::assertSame('1700005001', $assets->version('patient-results-popup.css'));
+
+        unlink($this->directory . '/order-manifest-popup.css');
+        self::assertSame('0', $assets->version('order-manifest-popup.css'));
+        self::assertSame('1700005001', $assets->version('patient-results-popup.css'));
+    }
+
+    #[Test]
+    #[DataProvider('orderManifestNearMissProvider')]
+    public function orderManifestNearMissIsRejectedEvenWhenTheFileExists(string $asset): void
+    {
+        // The near-miss exists on disk, so rejection is by name, not by absence.
+        $this->writeAsset('order_manifest_popup.css', 1_700_005_200);
+        $this->writeAsset('order-manifest-popup.css', 1_700_005_201);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $assets->version($asset);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function orderManifestNearMissProvider(): array
+    {
+        return [
+            'underscored name' => ['order_manifest_popup.css'],
+            'case variant' => ['Order-Manifest-Popup.css'],
+            'query suffix' => ['order-manifest-popup.css?v=1'],
+            'workspace traversal' => ['../clinical-workspace/order-manifest-popup.css'],
+            'route directory' => ['../orders/order-manifest-popup.css'],
+            'route script' => ['order_manifest.php'],
+        ];
+    }
+
+    #[Test]
+    public function shippedOrderManifestStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/order-manifest-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('order-manifest-popup.css'));
+    }
+
+    #[Test]
     public function shippedSoapDocumentAssetsExist(): void
     {
         $assets = new ClinicalWorkspaceAssets();
