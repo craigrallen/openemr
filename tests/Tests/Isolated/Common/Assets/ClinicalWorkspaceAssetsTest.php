@@ -100,6 +100,26 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function orderTypePopupStylesheetIsVersionedFromItsOwnFile(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('order-type-popup.css'));
+
+        $this->writeAsset('order-type-popup.css', 1_700_005_100);
+        $this->writeAsset('issue-popup.css', 1_700_005_200);
+        self::assertSame('1700005100', $assets->version('order-type-popup.css'));
+        self::assertSame('1700005200', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/order-type-popup.css');
+        self::assertSame('0', $assets->version('order-type-popup.css'));
+
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/order-type-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('order-type-popup.css'));
+    }
+
+    #[Test]
     public function missingSupportedAssetFallsBackToZero(): void
     {
         $assets = new ClinicalWorkspaceAssets($this->directory);
@@ -153,6 +173,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss order type stylesheet' => ['order_type_popup.css'],
+            'order type route name' => ['find_order_popup.css'],
+            'order type stylesheet traversal' => ['../clinical-workspace/order-type-popup.css'],
         ];
     }
 
