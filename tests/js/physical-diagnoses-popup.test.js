@@ -135,32 +135,54 @@ test('the asset helper allowlists exactly the new fixed basename in sorted posit
 });
 
 const scope = 'html.oe-workbench-popup body.oe-physical-diagnoses';
+// The only media blocks the sheet may hold: the screen block, plus one narrow screen breakpoint.
+const BASE_MEDIA = 'screen';
+const NARROW_MEDIA = /^screen and \(max-width: (\d+(?:\.\d+)?)px\)$/;
 const rules = () => {
     const out = [];
     postcss.parse(css()).walkRules(rule => {
         const decls = {};
         rule.walkDecls(d => { decls[d.prop] = `${d.value}${d.important ? ' !important' : ''}`; });
-        out.push({ selectors: rule.selectors, decls });
+        const media = rule.parent && rule.parent.type === 'atrule' ? rule.parent.params : null;
+        out.push({ selectors: rule.selectors, decls, media });
     });
     return out;
 };
-// Every rule listing the selector, merged in source order (later declarations win, as in the cascade).
+// Every base-block rule listing the selector, merged in source order (later declarations win, as in the cascade).
 const declsFor = selector => {
-    const matching = rules().filter(r => r.selectors.includes(selector));
+    const matching = rules().filter(r => r.media === BASE_MEDIA && r.selectors.includes(selector));
+    expect([selector, matching.length > 0]).toEqual([selector, true]);
+    return Object.assign({}, ...matching.map(r => r.decls));
+};
+// The narrow breakpoint's max-width in px, or null when the sheet has none.
+const narrowMax = () => {
+    const blocks = rules().map(r => NARROW_MEDIA.exec(r.media ?? '')).filter(Boolean);
+    return blocks.length ? Number(blocks[0][1]) : null;
+};
+// Declarations in effect at a frame width: base rules, then the narrow block when the frame is inside it.
+const declsAt = (selector, frame) => {
+    const max = narrowMax();
+    const narrow = max !== null && frame <= max;
+    const matching = rules().filter(r => r.selectors.includes(selector)
+        && (r.media === BASE_MEDIA || (narrow && NARROW_MEDIA.test(r.media ?? ''))));
     expect([selector, matching.length > 0]).toEqual([selector, true]);
     return Object.assign({}, ...matching.map(r => r.decls));
 };
 const at = part => `${scope} ${part}`;
 
 describe('route sheet', () => {
-    test('is one screen block, positively scoped to the shared popup marker and the route body', () => {
+    test('is one screen block (plus at most one narrow screen breakpoint), positively scoped to the shared popup marker and the route body', () => {
         const tree = postcss.parse(css());
         const top = tree.nodes.filter(node => node.type !== 'comment');
-        expect(top).toHaveLength(1);
+        expect([1, 2]).toContain(top.length);
         expect(top[0].type === 'atrule' && top[0].name === 'media' && top[0].params).toBe('screen');
+        if (top.length === 2) {
+            expect(top[1].type === 'atrule' && top[1].name === 'media' && NARROW_MEDIA.test(top[1].params)).toBe(true);
+        }
+        // No nested at-rules: every rule sits directly in one of the top-level screen blocks.
         const media = [];
         tree.walkAtRules(rule => media.push(`${rule.name} ${rule.params}`));
-        expect(media).toEqual(['media screen']);
+        expect(media).toEqual(top.map(node => `media ${node.params}`));
         const all = rules();
         expect(all.length).toBeGreaterThan(10);
         for (const { selectors } of all) {
@@ -344,7 +366,10 @@ describe('dialog resized after open (dialog.js keeps the open-time percentage)',
             expect(button.flex).not.toMatch(/^\d+ 0 /);
             expect(button).toMatchObject({ 'min-width': '0', 'max-width': '100%', 'white-space': 'normal' });
         }
-        expect(css()).not.toMatch(/@media[^{]*(max|min)-width/);
+        // The only width query allowed is the single narrow (max-width: N) screen block, in prefix
+        // notation so browsers without media range syntax still apply it.
+        expect(css()).not.toMatch(/@media[^{]*(min-width|[<>])/);
+        expect((css().match(/@media[^{]*max-width:/g) ?? []).length).toBeLessThanOrEqual(1);
     });
 
     describe('the real new.php launcher (500px opened at 1440px) resized to 320px and 390px', () => {
@@ -380,8 +405,8 @@ describe('dialog resized after open (dialog.js keeps the open-time percentage)',
             expect(frameUpperBound(390)).toBeLessThan(frameWidths[1]);
         });
 
-        test('KNOWN GAP, not expected usable: the estimated action and diagnosis budgets fail at these upper bounds', () => {
-            // Unresolved native acceptance gap, recorded rather than fixed: no product CSS is changed for estimates.
+        test('PR55 base rules alone (no narrow breakpoint) fail the estimated budgets at these upper bounds', () => {
+            // Recorded baseline failure of the base screen block, kept as a fact; the narrow breakpoint below answers it.
             const cellInline = 2 * px(declsFor(at('.oe-physical-diagnoses-table td'))['padding-inline'], 0);
             const order = declsFor(at(".oe-physical-diagnoses-table input[name^='form_ordering']"));
             const budgets = frame => {
@@ -397,6 +422,77 @@ describe('dialog resized after open (dialog.js keeps the open-time percentage)',
             for (const { action, diagnosis } of [narrow, wider]) {
                 expect(action).toBeLessThan(100);
                 expect(diagnosis).toBeLessThan(32);
+            }
+        });
+
+        // Conservative inner frames (100px and 124px sit below the 103.04px / 127.33px upper bounds) and the
+        // upper bounds themselves, plus the generic 146px frame. 180px and 500px must keep the base rules.
+        const narrowFrames = () => [100, frameUpperBound(320), 124, frameUpperBound(390), 146];
+        const wideFrames = [180, 500];
+        // Estimate, not measured: "Cancel" at 16px/600 Helvetica advance widths is about 52.5px; 56px is used.
+        const cancelText = 56;
+        // Estimate: five digits at 16px Helvetica (0.556em each) for the order input's maxlength='5'.
+        const orderText = 5 * 0.556 * rootFont;
+        const chromeAt = frame => {
+            const body = declsAt(scope, frame);
+            const sheet = declsAt(at('.oe-physical-diagnoses-sheet'), frame);
+            const border = Number(/^(\d+)px/.exec(sheet.border)[1]);
+            return 2 * px(inline(body.padding), frame) + 2 * px(inline(sheet.padding), frame) + 2 * border;
+        };
+
+        test('exactly one narrow screen breakpoint covers every launcher-derived frame and leaves 180px and 500px on the base rules', () => {
+            const max = narrowMax();
+            expect(max).not.toBeNull();
+            const blocks = postcss.parse(css()).nodes.filter(node => node.type === 'atrule' && NARROW_MEDIA.test(node.params));
+            expect(blocks).toHaveLength(1);
+            for (const frame of narrowFrames()) expect([frame, frame <= max]).toEqual([frame, true]);
+            for (const frame of wideFrames) expect([frame, frame <= max]).toEqual([frame, false]);
+        });
+
+        test('at every launcher-derived frame a whole single-line Save and Cancel fit inside the sheet (estimate)', () => {
+            for (const frame of narrowFrames()) {
+                const room = frame - chromeAt(frame);
+                for (const type of ['submit', 'button']) {
+                    const button = declsAt(at(`.oe-physical-diagnoses-actions input[type='${type}']`), frame);
+                    const border = Number(/^(\d+)px/.exec(declsFor(at(`.oe-physical-diagnoses-actions input[type='${type}']`)).border)[1]);
+                    const need = cancelText + 2 * px(button['padding-inline'], frame) + 2 * border;
+                    expect([frame, type, room >= need]).toEqual([frame, type, true]);
+                }
+            }
+        });
+
+        test('at every launcher-derived frame the cells stack in DOM order: diagnosis keeps >= 3em to type in, order keeps its five digits', () => {
+            const input = declsFor(at(".oe-physical-diagnoses-table input[type='text']"));
+            const inputChrome = 2 * px(input['padding-inline'], 0) + 2 * Number(/^(\d+)px/.exec(input.border)[1]);
+            for (const frame of narrowFrames()) {
+                for (const part of ['.oe-physical-diagnoses-table', '.oe-physical-diagnoses-table > tbody', '.oe-physical-diagnoses-table tr', '.oe-physical-diagnoses-table td']) {
+                    expect([frame, part, declsAt(at(part), frame).display]).toEqual([frame, part, 'block']);
+                }
+                // The legacy width='5%' / '95%' hints on the head cells would squeeze stacked labels.
+                expect(declsAt(at('.oe-physical-diagnoses-table td'), frame).width).toBe('auto');
+                const cellInline = 2 * px(declsAt(at('.oe-physical-diagnoses-table td'), frame)['padding-inline'], frame);
+                const diagnosisContent = frame - chromeAt(frame) - cellInline - inputChrome;
+                expect([frame, diagnosisContent >= 3 * rootFont]).toEqual([frame, true]);
+                const order = declsAt(at(".oe-physical-diagnoses-table input[name^='form_ordering']"), frame);
+                expect(order.width).toBe('4em');
+                expect([frame, px(order.width, frame) - inputChrome >= orderText]).toEqual([frame, true]);
+                expect([frame, px(order.width, frame) <= frame - chromeAt(frame) - cellInline]).toEqual([frame, true]);
+            }
+        });
+
+        test('the narrow block only stacks and tightens spacing: scoped, no fonts, hiding, order or control changes', () => {
+            const narrowRules = rules().filter(r => NARROW_MEDIA.test(r.media ?? ''));
+            expect(narrowRules.length).toBeGreaterThan(0);
+            const allowed = new Set(['padding', 'padding-block', 'padding-inline', 'display', 'width', 'border-block-end']);
+            for (const { selectors, decls } of narrowRules) {
+                for (const selector of selectors) expect(selector.startsWith(`${scope}`)).toBe(true);
+                for (const [prop, value] of Object.entries(decls)) {
+                    expect([selectors.join(), prop, allowed.has(prop)]).toEqual([selectors.join(), prop, true]);
+                    if (prop === 'display') expect(value).toBe('block');
+                    if (prop === 'width') expect(value).toBe('auto');
+                }
+                // Inputs and buttons keep their base sizes; only containers and button padding change.
+                expect(selectors.some(s => /input\[type='text'\]|form_ordering|form_diagnosis/.test(s))).toBe(false);
             }
         });
     });

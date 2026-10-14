@@ -144,3 +144,32 @@
     outline-offset: 2px;
   }
 }
+
+/* Tiny frames: the new.php dlgopen(500) dialog keeps 34.7% of the viewport after a resize, leaving
+   roughly 100-130px inside the iframe on a phone. Cells stack in their original DOM order and only
+   spacing tightens; fonts, controls and the button labels are unchanged. 180px and up keep the rules above. */
+@media screen and (max-width: 160px) {
+  html.oe-workbench-popup body.oe-physical-diagnoses {
+    padding: 4px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-sheet {
+    padding: 6px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table > tbody,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table tr {
+    display: block;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table td {
+    display: block;
+    width: auto;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit'],
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button'] {
+    padding-inline: 8px;
+  }
+}

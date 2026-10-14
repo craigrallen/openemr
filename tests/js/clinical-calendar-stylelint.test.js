@@ -18,7 +18,7 @@ describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => 
     const rc = () => JSON.parse(fs.readFileSync(rcPath, 'utf8'));
 
     test('override is the complete exact-file prefix allowlist, not a disabled rule', () => {
-        // The full override list is an allowlist: the four workspace sheets, vitals.css and three popup sheets.
+        // The full override list is an allowlist: the four workspace sheets, vitals.css, three popup sheets, patient-search.css and physical-diagnoses-popup.css.
         expect(rc().overrides).toEqual([{
             files: ['interface/clinical-workspace/calendar.css', 'interface/clinical-workspace/finder.css', 'interface/clinical-workspace/soap-document.css', 'interface/clinical-workspace/encounter-document.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
@@ -30,6 +30,9 @@ describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => 
             rules: { 'media-feature-range-notation': 'prefix' }
         }, {
             files: ['interface/clinical-workspace/patient-search.css'],
+            rules: { 'media-feature-range-notation': 'prefix' }
+        }, {
+            files: ['interface/clinical-workspace/physical-diagnoses-popup.css'],
             rules: { 'media-feature-range-notation': 'prefix' }
         }]);
         expect(rc().rules['media-feature-range-notation']).toBeUndefined();
@@ -95,6 +98,13 @@ describe('stylelint enforces the exact-file prefix breakpoint allowlist', () => 
             expect(lint(['--stdin-filename', path.join(repo, 'interface/main/calendar/patient-search.css')], prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('patient-picker-popup-copy.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
             expect(lint(stdinAs('patient-picker-popup-copy.css'), context)).toEqual({ status: 0, rules: [] });
+            // Physical diagnoses popup: shipped sheet lints clean, exact name takes prefix only,
+            // near-miss names and sibling directories keep the repo-wide context notation.
+            expect(lint([path.join(repo, 'interface/clinical-workspace/physical-diagnoses-popup.css')])).toEqual({ status: 0, rules: [] });
+            expect(lint(stdinAs('physical-diagnoses-popup.css'), prefix)).toEqual({ status: 0, rules: [] });
+            expect(lint(stdinAs('physical-diagnoses-popup.css'), context)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(stdinAs('physical-diagnoses-popup-copy.css'), prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
+            expect(lint(['--stdin-filename', path.join(repo, 'interface/forms/physical_exam/physical-diagnoses-popup.css')], prefix)).toEqual({ status: 2, rules: ['media-feature-range-notation'] });
         } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }
