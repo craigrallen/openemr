@@ -1,0 +1,152 @@
+/*
+ * Patient education materials chooser inside an active workbench popup only.
+ * Presentation of the existing nodes; popup.css supplies the tokens and activation.
+ * Screen only: print and print preview keep the legacy rendering.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-education-popup {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    padding: 0 16px 24px;
+  }
+
+  /* Quiet document sheet; Bootstrap's breakpoint widths give way to one readable measure. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-sheet {
+    max-width: min(100%, 44rem);
+    padding: 0;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 7px;
+    box-shadow: 0 8px 28px rgb(23 52 59 / 7%);
+  }
+
+  /* The sheet owns the gutters, so rows never push past a narrow inner window. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-sheet > .row {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-sheet > .row > .col-12 {
+    min-width: 0;
+    padding: 18px clamp(14px, 4vw, 22px);
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-head {
+    border-bottom: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-title {
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+
+  /* The semantic error paragraph keeps its own colour; only its spacing follows the sheet. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-head p {
+    margin: 10px 0 0;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-source > label {
+    color: var(--oe-wb-ink);
+    font-weight: 600;
+  }
+
+  /* Bootstrap fixes the control height; let it grow with the text instead of clipping it. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-source .form-control {
+    height: auto;
+    min-height: calc(1.5em + 0.75rem + 2px);
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-source .form-control option {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* :focus is the fallback ring for browsers without :focus-visible support. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-source .form-control:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-source .form-control:focus-visible {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    outline: 3px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-actions {
+    margin-bottom: 0;
+  }
+
+  /* Separate wrapping buttons instead of one joined, unbreakable group. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-primary:hover,
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-primary:focus,
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-primary:active {
+    color: var(--oe-wb-on-petrol);
+    background-color: #05535f;
+    border-color: #05535f;
+  }
+
+  /* Cancel is the quiet secondary action: ink on paper, not a filled grey block. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-secondary {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-secondary:hover,
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-secondary:focus,
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn-secondary:active {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    border-color: var(--oe-wb-ink);
+  }
+
+  /* :focus is the fallback ring for browsers without :focus-visible support. */
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-popup body.oe-education-popup .oe-education-buttons > .btn:focus-visible {
+    outline: 3px solid var(--oe-wb-ink);
+    outline-offset: 2px;
+  }
+}

@@ -153,6 +153,8 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss education stylesheet' => ['education_popup.css'],
+            'education stylesheet traversal' => ['../clinical-workspace/education-popup.css'],
         ];
     }
 
@@ -450,6 +452,35 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function educationPopupStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('education-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('education-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('education-popup.css'));
+
+        $this->writeAsset('education-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('education-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/education-popup.css');
+        self::assertSame('0', $assets->version('education-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+    }
+
+    #[Test]
+    public function shippedEducationPopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/education-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('education-popup.css'));
     }
 
     #[Test]
