@@ -1,0 +1,136 @@
+/*
+ * Group Finder inside an active clinical workbench popup only. Linked with
+ * media="screen" so print keeps the original sheet. The route's own width,
+ * height and column-percentage declarations, the scrolling results box and the
+ * spinner are left as declared. That is all this guarantees: the padding and
+ * margins added here change intrinsic layout, and alignment between the
+ * separately laid-out header and result tables, and fit in the dialog frame,
+ * are unverified. Capped controls use border-box sizing with no horizontal
+ * margin so their outer box stays within max-width: 100%.
+ */
+html.oe-workbench-popup body.oe-group-finder-popup {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchCriteria {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-canvas);
+  border-bottom: 1px solid var(--oe-wb-line);
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+  line-height: 2.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchCriteria select,
+html.oe-workbench-popup body.oe-group-finder-popup #searchparm {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+  border: 1px solid var(--oe-wb-line);
+  border-radius: 4px;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  margin: 0;
+  max-width: 100%;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #submitbtn {
+  color: var(--oe-wb-on-petrol);
+  background: var(--oe-wb-petrol);
+  border: 1px solid var(--oe-wb-petrol);
+  border-radius: 4px;
+  box-sizing: border-box;
+  padding: 3px 14px;
+  max-width: 100%;
+  font-weight: 600;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchCriteria select:focus,
+html.oe-workbench-popup body.oe-group-finder-popup #searchparm:focus {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+  border-color: var(--oe-wb-petrol);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #submitbtn:focus {
+  color: var(--oe-wb-on-petrol);
+  background: var(--oe-wb-petrol);
+}
+
+/* Fallback ring for browsers without :focus-visible. */
+html.oe-workbench-popup body.oe-group-finder-popup #searchCriteria select:focus,
+html.oe-workbench-popup body.oe-group-finder-popup #searchparm:focus,
+html.oe-workbench-popup body.oe-group-finder-popup #submitbtn:focus {
+  outline: 2px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchCriteria select:focus-visible,
+html.oe-workbench-popup body.oe-group-finder-popup #searchparm:focus-visible,
+html.oe-workbench-popup body.oe-group-finder-popup #submitbtn:focus-visible {
+  outline: 3px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchstatus {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+  border-left: 4px solid transparent;
+  margin: 12px 16px;
+  padding: 8px 12px;
+  text-align: left;
+  font-style: normal;
+  font-weight: 600;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchstatus.noResults {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-canvas);
+  border-left-color: var(--oe-wb-muted);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchstatus.tooManyResults {
+  color: var(--oe-wb-warning-ink);
+  background: var(--oe-wb-warning-paper);
+  border-left-color: var(--oe-wb-warning-ink);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchstatus.howManyResults {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+  border-left-color: var(--oe-wb-petrol);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchResultsHeader {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-canvas);
+  border-top: 1px solid var(--oe-wb-line);
+  border-bottom: 1px solid var(--oe-wb-line);
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchResultsHeader th {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-canvas);
+  padding: 8px 6px;
+  font-weight: 600;
+}
+
+html.oe-workbench-popup body.oe-group-finder-popup #searchResults td {
+  color: var(--oe-wb-ink);
+  background: var(--oe-wb-paper);
+  border-bottom: 1px solid var(--oe-wb-line);
+  padding: 8px 6px;
+}
+
+/* The original mouseover toggle; kept apart from focus and status colours. */
+html.oe-workbench-popup body.oe-group-finder-popup #searchResults tr.highlight td {
+  color: var(--oe-wb-on-petrol);
+  background: var(--oe-wb-petrol);
+}

@@ -339,6 +339,40 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function groupFinderPopupStylesheetIsVersionedPerFile(): void
+    {
+        $this->writeAsset('group-finder-popup.css', 1_700_003_201);
+        $this->writeAsset('patient-picker-popup.css', 1_700_003_202);
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+
+        self::assertSame('1700003201', $assets->version('group-finder-popup.css'));
+        self::assertSame('1700003202', $assets->version('patient-picker-popup.css'));
+
+        unlink($this->directory . '/group-finder-popup.css');
+        self::assertSame('0', $assets->version('group-finder-popup.css'));
+        self::assertSame('1700003202', $assets->version('patient-picker-popup.css'));
+
+        foreach (['group_finder_popup.css', 'find_group_popup.css', '../clinical-workspace/group-finder-popup.css'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedGroupFinderPopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/group-finder-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('group-finder-popup.css'));
+    }
+
+    #[Test]
     public function globalMessagesStylesheetIsVersionedPerFile(): void
     {
         $this->writeAsset('global-messages.css', 1_700_001_201);
