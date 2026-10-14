@@ -1,0 +1,132 @@
+/*
+ * Diagnosis Codes History picker (find_code_history.php) as a document sheet inside a
+ * workbench dialog.
+ *
+ * Every rule is scoped to the route body class plus the oe-clinical-workspace marker that
+ * mode.js sets only inside an active workbench, and the sheet is linked with media="screen",
+ * so the standalone page, explicit legacy mode and print keep the legacy rendering.
+ *
+ * Tokens are route-local and each colour rule pairs ink with a surface. Rows, cells, code
+ * buttons, the editor input and the tips card never set colour, so the original red matched
+ * rows, marks, active row, danger/warning palettes, hidden tips and the spinner stay with the
+ * theme and the inline script.
+ */
+@media screen {
+  body.oe-code-history.oe-clinical-workspace {
+    --oe-ch-ink: #1d2730;
+    --oe-ch-muted: #4a5763;
+    --oe-ch-canvas: #f3f5f6;
+    --oe-ch-paper: #fff;
+    --oe-ch-line: #d3dade;
+    --oe-ch-petrol: #1f5f6b;
+
+    color: var(--oe-ch-ink);
+    background-color: var(--oe-ch-canvas);
+  }
+
+  /* Current diagnoses editor: an opaque band that stays sticky, framed as a quiet field. */
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-editor {
+    padding-block: 0.5rem;
+    padding-inline: min(1rem, 4vw);
+    color: var(--oe-ch-ink);
+    background-color: var(--oe-ch-canvas);
+    border-bottom: 1px solid var(--oe-ch-line);
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-dx {
+    flex-wrap: nowrap;
+    padding: 0.5rem;
+    border: 1px solid var(--oe-ch-line);
+    border-radius: 6px;
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-dx #workingDx {
+    min-width: 0;
+  }
+
+  /* Usage tips: muted instructional card under the editor. */
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-tips {
+    margin-top: 0.5rem;
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-tips .card {
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-tips ul {
+    margin-bottom: 0.5rem;
+    padding-inline-start: 1.25rem;
+  }
+
+  /* Results sheet: the table scrolls inside the sheet rather than the page. */
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-sheet {
+    width: auto;
+    margin-block: 0.75rem 1rem;
+    margin-inline: min(1rem, 4vw);
+    padding-inline: 0;
+    color: var(--oe-ch-ink);
+    background-color: var(--oe-ch-paper);
+    border: 1px solid var(--oe-ch-line);
+    border-radius: 6px;
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-results {
+    margin-top: 0;
+    overflow-x: auto;
+  }
+
+  body.oe-code-history.oe-clinical-workspace #historyTable {
+    min-width: 32rem;
+    margin-bottom: 0;
+    color: var(--oe-ch-ink);
+    background-color: var(--oe-ch-paper);
+  }
+
+  body.oe-code-history.oe-clinical-workspace #historyTable thead th {
+    color: var(--oe-ch-muted);
+    background-color: var(--oe-ch-canvas);
+    border-bottom: 1px solid var(--oe-ch-line);
+    font-weight: 600;
+    white-space: normal;
+  }
+
+  body.oe-code-history.oe-clinical-workspace #historyTable td {
+    border-top: 1px solid var(--oe-ch-line);
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+  }
+
+  /* Focus: a :focus fallback, then a separate :focus-visible rule, for each control. */
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-dx .btn:focus,
+  body.oe-code-history.oe-clinical-workspace #workingDx:focus,
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-tips .btn:focus {
+    outline: 2px solid var(--oe-ch-petrol);
+    outline-offset: 2px;
+  }
+
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-dx .btn:focus-visible,
+  body.oe-code-history.oe-clinical-workspace #workingDx:focus-visible,
+  body.oe-code-history.oe-clinical-workspace .oe-code-history-tips .btn:focus-visible {
+    outline: 2px solid var(--oe-ch-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Full-size code labels wrap inside their cell. */
+  body.oe-code-history.oe-clinical-workspace #historyTable td .btn {
+    max-width: 100%;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-code-history.oe-clinical-workspace #historyTable td .btn:focus {
+    outline: 2px solid var(--oe-ch-petrol);
+    outline-offset: 2px;
+  }
+
+  body.oe-code-history.oe-clinical-workspace #historyTable td .btn:focus-visible {
+    outline: 2px solid var(--oe-ch-petrol);
+    outline-offset: 2px;
+  }
+}
