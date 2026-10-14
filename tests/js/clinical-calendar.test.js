@@ -301,6 +301,9 @@ describe('calendar toolbar and mini calendar fit the workbench frame', () => {
         }, {
             files: ['interface/clinical-workspace/patient-search.css'],
             rules: { 'media-feature-range-notation': 'prefix' },
+        }, {
+            files: ['interface/clinical-workspace/physical-diagnoses-popup.css'],
+            rules: { 'media-feature-range-notation': 'prefix' },
         }]);
     });
 
