@@ -19,6 +19,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -46,6 +47,8 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <html>
 <head>
 <?php Header::setupHeader(['opener']); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-match-popup.css?v=<?php echo attr_url($clinicalAssets->version('patient-match-popup.css')); ?>">
 <style>
     .oneResult {
     }
@@ -81,7 +84,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 </script>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-patient-match-popup">
 <form method='post' action='patient_select.php' onsubmit='return myRestoreSession()'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 <?php
@@ -120,10 +123,10 @@ if ($form_key) {
     $res = sqlStatement($sql, $clarr);
     ?>
 
-    <div id="searchResults">
+    <div id="searchResults" class="oe-match-document">
 
-        <table class="table table-striped table-sm">
-            <h5>
+        <table class="table table-striped table-sm oe-match-table">
+            <h5 class="oe-match-heading">
                 <?php
                 echo xlt('Matching for Patient') . ": " .
                     text("$form_lname, $form_fname") . text(" Dob = $form_DOB") .
@@ -175,7 +178,7 @@ if ($form_key) {
 }
 ?>
 
-<p>
+<p class="oe-match-actions">
     <input type='button' value='<?php echo xla('Add New Patient'); ?>' onclick="openPatient(0)"/>
     <input type='button' value='<?php echo xla('Cancel'); ?>' onclick="window.close()"/>
 </p>
