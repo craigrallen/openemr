@@ -1,0 +1,134 @@
+/*
+ * Destroy Lot (interface/drugs/destroy_lot.php) as a quiet document inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-popup (set by popup.js only inside an active
+ * workbench) plus the route's body class, and the sheet is linked with media="screen", so the
+ * standalone page and print keep the legacy rendering. Colours are popup.css tokens; the route's
+ * own td font-size and every other type setting are left alone.
+ */
+@media screen {
+  /* Colour themes paint .body_top with an !important background; match it on the route body only. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup {
+    padding: 12px 16px 20px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas) !important;
+  }
+
+  /* The form is the sheet; the field table and the native actions both sit on it. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-form {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 6px 20px 18px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  /* The legacy <center> stays in the markup; only its alignment is neutralised here. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-form > center {
+    text-align: start;
+  }
+
+  /*
+   * Each row becomes a wrapping label/value line. Both cells may shrink; when the sheet is
+   * narrower than both bases the value drops beneath its label without a media query.
+   */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields {
+    display: block;
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody {
+    display: block;
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody > tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody > tr:last-child {
+    border-bottom: 0;
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody > tr > td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Labels keep their legacy utility class; Bootstrap's !important no-wrap is relaxed here only. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody > tr > td:first-child {
+    flex: 0 1 10rem;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    color: var(--oe-wb-muted);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Display-only values (lot number, manufacturer) break rather than widen the sheet. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields > tbody > tr > td:last-child {
+    flex: 1 1 15rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields input[type='text'] {
+    max-width: 100%;
+    padding: 4px 8px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 4px;
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields input[type='text']:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-fields input[type='text']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Native inputs wrap as whole buttons; their labels are not reflowed or clipped. */
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 14px;
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-actions > .btn {
+    flex: 0 0 auto;
+    margin-left: 0;
+    border-radius: 4px;
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-actions > .btn-secondary {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-actions > .btn-secondary:hover {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-destroy-lot-popup .oe-destroy-lot-actions > .btn:focus-visible {
+    outline: 2px solid var(--oe-wb-ink);
+    outline-offset: 2px;
+  }
+}
