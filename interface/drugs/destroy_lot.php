@@ -17,6 +17,7 @@ require_once("drugs.inc.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -43,6 +44,8 @@ if (!$lot_id) {
 <title><?php echo xlt('Destroy Lot') ?></title>
 
 <?php Header::setupHeader(['datetime-picker', 'opener']); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/destroy-lot-popup.css?v=<?php echo attr_url($clinicalAssets->version('destroy-lot-popup.css')); ?>">
 
 <style>
     td {
@@ -73,7 +76,7 @@ if (!$lot_id) {
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-destroy-lot-popup">
 <?php
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
  // If we are saving, then save and close the window.
@@ -115,14 +118,14 @@ if ($_POST['form_save']) {
   "AND inventory_id = ?", [$drug_id,$lot_id]);
     ?>
 
-<form method='post' name='theform' onsubmit='return validate(this);'
+<form class='oe-destroy-lot-form' method='post' name='theform' onsubmit='return validate(this);'
  action='destroy_lot.php?drug=<?php echo attr_url($drug_id) ?>&lot=<?php echo attr_url($lot_id) ?>'>
 
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
 <center>
 
-<table class='table-borderless w-100'>
+<table class='table-borderless w-100 oe-destroy-lot-fields'>
 
  <tr>
   <td class="text-nowrap align-top" width='1%'><?php echo xlt('Lot Number'); ?>:</td>
@@ -185,7 +188,7 @@ if ($_POST['form_save']) {
 
 </table>
 
-<div class="btn-group">
+<div class="btn-group oe-destroy-lot-actions">
 <input type='submit' class="btn btn-primary" name='form_save' value='<?php echo xla('Submit') ;?>' />
 <input type='button' class="btn btn-secondary" value='<?php echo xla('Cancel'); ?>' onclick='window.close()' />
 </div>

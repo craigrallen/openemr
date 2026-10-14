@@ -66,7 +66,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     #[Test]
     public function popupStylesheetsUseTheirOwnModificationTimesAndMissingFallback(): void
     {
-        $names = ['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'];
+        $names = ['destroy-lot-popup.css', 'issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'];
         $assets = new ClinicalWorkspaceAssets($this->directory);
 
         foreach ($names as $index => $name) {
@@ -80,8 +80,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
 
         $this->writeAsset('patient-results-popup.css', 1_700_003_100);
         self::assertSame('1700003100', $assets->version('patient-results-popup.css'));
-        self::assertSame('1700003001', $assets->version('issue-popup.css'));
-        self::assertSame('1700003002', $assets->version('patient-picker-popup.css'));
+        self::assertSame('1700003001', $assets->version('destroy-lot-popup.css'));
+        self::assertSame('1700003002', $assets->version('issue-popup.css'));
+        self::assertSame('1700003003', $assets->version('patient-picker-popup.css'));
 
         unlink($this->directory . '/issue-popup.css');
         self::assertSame('0', $assets->version('issue-popup.css'));
@@ -91,7 +92,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     public function shippedPopupStylesheetsUseTheirActualModificationTimes(): void
     {
         $assets = new ClinicalWorkspaceAssets();
-        foreach (['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'] as $name) {
+        foreach (['destroy-lot-popup.css', 'issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'] as $name) {
             $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/' . $name;
             self::assertFileExists($shipped);
             clearstatcache(true, $shipped);
@@ -149,6 +150,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'lbf stylesheet outside the workspace' => ['../forms/LBF/lbf-document.css'],
             'trailing nul' => ["mode.js\0"],
             'near-miss global messages stylesheet' => ['global_messages.css'],
+            'near-miss destroy lot stylesheet' => ['destroy_lot_popup.css'],
             'near-miss issue stylesheet' => ['issue_popup.css'],
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
