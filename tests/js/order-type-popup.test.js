@@ -619,6 +619,7 @@ describe('documentation', () => {
         expect(doc).toMatch(/set_proc_type[^.]*inherited/i);
         expect(doc).toMatch(/CLI-only[^.]*404/i);
         expect(doc).toMatch(/system temp directory/i);
+        expect(doc).toMatch(/generated[^.]*temp tree[^.]*removed/i);
         expect(doc).not.toMatch(/\bAccepted\b/);
     });
 });
@@ -630,7 +631,6 @@ test('host PHP is the harness interpreter', () => {
 // --- Fixture confinement: the harness must never act as a web entry point -----------------------
 
 describe('find-order-popup harness is CLI-only and confines its route override', () => {
-    const harnessSource = () => fs.readFileSync(HARNESS, 'utf8');
 
     test('source: the CLI SAPI guard fails closed before any alias, argument, include or SQL double', () => {
         const php = harnessSource();
@@ -638,7 +638,7 @@ describe('find-order-popup harness is CLI-only and confines its route override',
         const guard = body.indexOf("if (PHP_SAPI !== 'cli') {");
         expect(guard).toBeGreaterThan(0);
         expect(body.slice(guard, body.indexOf('}', guard))).toMatch(/http_response_code\(404\);\s*exit\(1\);/);
-        for (const later of ['class_alias(', '$argv', '$_SERVER', 'json_decode(', 'require ', 'function sqlQuery', 'chdir(']) {
+        for (const later of ['class_alias(', '$argv', '$_SERVER', 'json_decode(', 'require ', 'FindOrderPopupHarness::createTree()', 'chdir(']) {
             expect([later, body.indexOf(later) > guard]).toEqual([later, true]);
         }
         // The only route include is the confined, validated path.
@@ -653,7 +653,7 @@ describe('find-order-popup harness is CLI-only and confines its route override',
     });
 
     test('CLI route override accepts only a find_order_popup.php copy inside the system temp directory', () => {
-        const outside = path.join(__dirname, 'fixtures/find-order-popup/globals.php');
+        const outside = path.join(root, ROUTE);
         const misnamed = path.join(scratch, 'other.php');
         fs.writeFileSync(misnamed, '<?php echo "INCLUDED";');
         for (const route of [outside, misnamed, path.join(scratch, 'missing', 'find_order_popup.php'), `${scratch}/../${path.basename(scratch)}/other.php`]) {
@@ -685,7 +685,7 @@ describe('find-order-popup harness is CLI-only and confines its route override',
         try {
             let ready = null;
             for (let i = 0; i < 50 && !ready; i++) {
-                ready = await get('/find-order-popup/globals.php').catch(() => null);
+                ready = await get('/missing.txt').catch(() => null);
                 if (!ready) await new Promise(resolve => setTimeout(resolve, 100));
             }
             expect(ready).not.toBeNull();
@@ -694,12 +694,96 @@ describe('find-order-popup harness is CLI-only and confines its route override',
                 expect([query, response.status, scriptOutput(response.body)]).toEqual([query, 404, '']);
                 expect(response.body).not.toMatch(/Procedure Picker|INCLUDED|sqlStatement/);
             }
-            // Sibling fixture entrypoints only declare strict types or a function: no output.
-            for (const file of ['/find-order-popup/globals.php', '/find-order-popup/cwd/qoe.inc.php']) {
-                expect([file, scriptOutput((await get(file)).body)]).toEqual([file, '']);
-            }
+            // No other fixture entrypoint exists: the include doubles are generated per run in a temp tree.
+            expect(fs.existsSync(path.join(__dirname, 'fixtures/find-order-popup'))).toBe(false);
         } finally {
             server.kill();
         }
+    });
+});
+
+const harnessSource = () => fs.readFileSync(HARNESS, 'utf8');
+
+// --- Fixture static-analysis contract (PHPStan: no global functions, typed scenario) -------------
+
+describe('find-order-popup harness keeps procedural doubles out of analysed source', () => {
+    // Named functions declared outside a class body, found with PHP's own tokenizer: generated
+    // adapter source inside heredoc strings is a string token, not a declaration.
+    const globalFunctions = file => {
+        const probe = `$t = token_get_all(file_get_contents($argv[1])); $depth = 0; $classDepth = []; $pendingClass = false; $out = [];
+foreach ($t as $i => $tok) {
+    if (is_array($tok)) {
+        if (in_array($tok[0], [T_CLASS, T_TRAIT, T_INTERFACE, T_ENUM], true)) { $pendingClass = true; }
+        if ($tok[0] === T_CURLY_OPEN || $tok[0] === T_DOLLAR_OPEN_CURLY_BRACES) { $depth++; }
+        if ($tok[0] === T_FUNCTION) {
+            for ($j = $i + 1; isset($t[$j]) && is_array($t[$j]) && $t[$j][0] === T_WHITESPACE; $j++);
+            if (isset($t[$j]) && is_array($t[$j]) && $t[$j][0] === T_STRING && $classDepth === []) { $out[] = $t[$j][1]; }
+        }
+        continue;
+    }
+    if ($tok === '{') { $depth++; if ($pendingClass) { $classDepth[] = $depth; $pendingClass = false; } }
+    if ($tok === '}') { if ($classDepth !== [] && end($classDepth) === $depth) { array_pop($classDepth); } $depth--; }
+}
+echo json_encode($out);`;
+        const result = spawnSync('php', ['-r', probe, file], { encoding: 'utf8' });
+        expect([result.status, result.stderr]).toEqual([0, '']);
+        return JSON.parse(result.stdout);
+    };
+    const fixturePhp = () => {
+        const out = [HARNESS];
+        const dir = path.join(__dirname, 'fixtures/find-order-popup');
+        if (fs.existsSync(dir)) {
+            for (const entry of fs.readdirSync(dir, { recursive: true })) if (String(entry).endsWith('.php')) out.push(path.join(dir, String(entry)));
+        }
+        return out;
+    };
+
+    test('no fixture file declares a named global function (adapters are generated, guarded strings)', () => {
+        // The probe itself must see a plain global declaration.
+        const sample = path.join(scratch, 'probe-sample.php');
+        fs.writeFileSync(sample, '<?php\nnamespace {\n    final class A { public function m(): void {} }\n    function leaked(): void {}\n    $s = <<<PHP\n    function inString(): void {}\n    PHP;\n}\n');
+        expect(globalFunctions(sample)).toEqual(['leaked']);
+        for (const file of fixturePhp()) expect([path.relative(root, file), globalFunctions(file)]).toEqual([path.relative(root, file), []]);
+        // Static qoe/globals fixture entrypoints are gone; the harness writes them per run.
+        expect(fixturePhp()).toEqual([HARNESS]);
+        const php = harnessSource();
+        for (const name of ['sqlQuery', 'sqlStatement', 'sqlFetchArray', 'generate_qoe_html']) {
+            expect([name, php.includes(`if (function_exists('${name}'))`) || php.includes(`'${name}'`)]).toEqual([name, true]);
+        }
+    });
+
+    test('malformed synthetic scenarios are rejected before anything renders', () => {
+        for (const scenario of [
+            '{"get":{"order":5}}',
+            '{"post":{"search_term":["x"]}}',
+            '{"rows":{"a":{"procedure_type_id":1}}}',
+            '{"rows":[{"name":{"x":1}}]}',
+            '{"ptrow":["x"]}',
+            '{"unknown":1}',
+            '"text"',
+        ]) {
+            const result = spawnSync('php', [HARNESS, scenario], { encoding: 'utf8' });
+            expect([scenario, result.status, result.stdout]).toEqual([scenario, 1, '']);
+            expect(result.stderr).toContain('Invalid scenario');
+        }
+    });
+
+    test('a preloaded real SQL helper makes the generated doubles refuse instead of redeclaring', () => {
+        const prepend = path.join(scratch, 'prepend.php');
+        fs.writeFileSync(prepend, '<?php function sqlQuery(): array { return []; }');
+        const result = spawnSync('php', ['-d', `auto_prepend_file=${prepend}`, HARNESS, JSON.stringify(PICKER.search)], { encoding: 'utf8' });
+        expect(result.status).not.toBe(0);
+        expect(result.stdout).not.toContain('Procedure Picker');
+        expect(result.stderr).toContain('refusing to double');
+    });
+
+    test('the generated include tree lives in the system temp directory and is removed after every run', () => {
+        const tmp = require('os').tmpdir();
+        const trees = () => fs.readdirSync(tmp).filter(name => name.startsWith('oe-find-order-popup-'));
+        const before = trees();
+        const { log } = run({ get: { typeid: '11', formid: '9', formseq: '2' }, ptrow: { name: 'Syn', procedure_type: 'ord', related_code: '', transport: '', procedure_code: 'S', procedure_type_name: 'lab' } });
+        expect(log.map(([kind]) => kind)).toEqual(['sqlQuery', 'qoe']);
+        expect(trees()).toEqual(before);
+        expect(harnessSource()).toContain("'oe-find-order-popup-'");
     });
 });
