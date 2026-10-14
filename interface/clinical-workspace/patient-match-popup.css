@@ -1,0 +1,106 @@
+/*
+ * Lab result patient matching (interface/orders/patient_match_dialog.php) within an
+ * active clinical workbench popup. Linked with media="screen", so print keeps the
+ * legacy rendering; inert outside html.oe-workbench-popup. Typography is inherited
+ * from the configured theme; only paper, ink, spacing and wrapping change here.
+ */
+html.oe-workbench-popup body.oe-patient-match-popup {
+  padding: 10px;
+  color: var(--oe-wb-ink) !important;
+  background-color: var(--oe-wb-canvas) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-document {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 12px;
+  border: 1px solid var(--oe-wb-line);
+  border-radius: 8px;
+  color: var(--oe-wb-ink);
+  background-color: var(--oe-wb-paper);
+}
+
+/* The heading is authored inside the table; the parser places it before the table. */
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-heading {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+  color: var(--oe-wb-ink) !important;
+  background-color: var(--oe-wb-paper) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
+  color: var(--oe-wb-ink) !important;
+  background-color: var(--oe-wb-paper) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table tr:nth-of-type(odd) {
+  color: var(--oe-wb-ink) !important;
+  background-color: var(--oe-wb-paper) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table th {
+  padding: 8px;
+  border-top: 0;
+  border-bottom: 1px solid var(--oe-wb-line);
+  text-align: start;
+  vertical-align: bottom;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--oe-wb-muted) !important;
+  background-color: var(--oe-wb-canvas) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table td {
+  padding: 8px;
+  border-top: 1px solid var(--oe-wb-line);
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--oe-wb-ink) !important;
+  background-color: var(--oe-wb-paper) !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table tr.oneresult {
+  cursor: pointer;
+}
+
+/* The route's own mouseover highlight stays visible as a quiet tinted row. */
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table tr.oneresult.highlight,
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-table tr.oneresult.highlight td {
+  color: var(--oe-wb-ink) !important;
+  background-color: #dcecea !important;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  margin: 12px 0 0;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-actions input {
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--oe-wb-petrol);
+  border-radius: 6px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--oe-wb-petrol);
+  background-color: var(--oe-wb-paper);
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-actions input:focus {
+  outline: 2px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
+
+html.oe-workbench-popup body.oe-patient-match-popup .oe-match-actions input:focus-visible {
+  outline: 3px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
