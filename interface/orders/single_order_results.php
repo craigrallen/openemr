@@ -17,6 +17,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->get("include_root") . "/
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -58,6 +59,8 @@ if (!empty($_POST['form_sign']) && !empty($_POST['form_sign_list'])) {
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/order-results-popup.css?v=<?php echo attr_url($clinicalAssets->version('order-results-popup.css')); ?>">
 <title><?php echo xlt('Order Results'); ?></title>
 <style>
 body {
@@ -73,7 +76,7 @@ body {
 </script>
 
 </head>
-<body>
+<body class="oe-order-results-popup">
 <?php if (empty($_POST['form_sign'])) {
     generate_order_report($orderid, true, true, $finals_only);
 } else { ?>

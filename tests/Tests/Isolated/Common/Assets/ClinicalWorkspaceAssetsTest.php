@@ -153,6 +153,10 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss order results stylesheet' => ['order_results_popup.css'],
+            'order results stylesheet traversal' => ['../clinical-workspace/order-results-popup.css'],
+            'order results stylesheet case variant' => ['Order-Results-Popup.css'],
+            'order results stylesheet query suffix' => ['order-results-popup.css?v=1'],
         ];
     }
 
@@ -450,6 +454,46 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function orderResultsPopupStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('order-results-popup.css'));
+
+        $this->writeAsset('patient-results-popup.css', 1_700_005_001);
+        $this->writeAsset('order-results-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('order-results-popup.css'));
+
+        $this->writeAsset('order-results-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('order-results-popup.css'));
+        self::assertSame('1700005001', $assets->version('patient-results-popup.css'));
+
+        unlink($this->directory . '/order-results-popup.css');
+        self::assertSame('0', $assets->version('order-results-popup.css'));
+        self::assertSame('1700005001', $assets->version('patient-results-popup.css'));
+
+        // A real file under each near-miss name proves rejection is by name, not by absence.
+        $this->writeAsset('order_results_popup.css', 1_700_005_200);
+        foreach (['order_results_popup.css', 'order-results-popup.CSS', '../clinical-workspace/order-results-popup.css', 'order-results-popup.css?v=1'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedOrderResultsPopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/order-results-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('order-results-popup.css'));
     }
 
     #[Test]
