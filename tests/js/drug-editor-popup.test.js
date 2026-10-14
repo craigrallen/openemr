@@ -541,7 +541,7 @@ const parse = () => {
     return list;
 };
 const block = (selector) => {
-    const found = parse().find((rule) => rule.selector === `${SCOPE} ${selector}`);
+    const found = parse().find((rule) => rule.selector.replace(/\s+/g, " ") === `${SCOPE} ${selector}`);
     expect([selector, !!found]).toEqual([selector, true]);
     return Object.fromEntries(found.nodes.filter((n) => n.type === 'decl').map((d) => [d.prop, d.value]));
 };
