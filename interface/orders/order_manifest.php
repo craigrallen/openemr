@@ -19,6 +19,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 
 // Check authorization.
@@ -333,6 +334,62 @@ $orderid = intval($_GET['orderid']);
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/order-manifest-popup.css?v=<?php echo attr_url($clinicalAssets->version('order-manifest-popup.css')); ?>">
+<script data-order-manifest-mode>
+    // A target=_blank tab opens without an opener, so popup.js cannot reach the shell.
+    // Follow the saved navigation mode instead, as main.php does: anything but 'legacy' is workbench.
+    (function (win) {
+        if ((win.parent && win.parent !== win) || win.opener) {
+            return;
+        }
+        var html = win.document.documentElement;
+        var owned = false;
+        var running = false;
+        function set(enabled) {
+            if (enabled && !html.classList.contains('oe-workbench-context')) {
+                html.classList.add('oe-workbench-context');
+                owned = true;
+            } else if (!enabled && owned) {
+                owned = false;
+                html.classList.remove('oe-workbench-context');
+            }
+        }
+        function sync() {
+            var legacy;
+            try {
+                legacy = win.localStorage.getItem('openemr.navigation.mode') === 'legacy';
+            } catch (error) {
+                legacy = true;
+            }
+            set(!legacy);
+        }
+        function onStorage(event) {
+            if (event.key === null || event.key === 'openemr.navigation.mode') {
+                sync();
+            }
+        }
+        function start() {
+            if (!running) {
+                running = true;
+                win.addEventListener('storage', onStorage);
+                sync();
+            }
+        }
+        function stop() {
+            running = false;
+            win.removeEventListener('storage', onStorage);
+            set(false);
+        }
+        win.addEventListener('pagehide', stop);
+        win.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                start();
+            }
+        });
+        start();
+    }(window));
+</script>
 <title><?php echo xlt('Order Summary'); ?></title>
 <style>
 body {
@@ -348,7 +405,7 @@ body {
 }
 </style>
 </head>
-<body>
+<body class="oe-order-manifest">
 <?php
   generate_order_summary($orderid);
 ?>
