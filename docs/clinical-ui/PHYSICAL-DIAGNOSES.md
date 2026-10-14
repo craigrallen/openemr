@@ -77,6 +77,11 @@ All of the following are byte-for-byte unchanged:
   - Body padding becomes 4px, sheet padding 6px, and Save/Cancel `padding-inline` 8px.
   - No font, input, name, type, value, order or callback changes, and nothing is hidden. Inputs keep their base sizes (order 4em, diagnosis inline `width:100%`).
   - Once stacked, the only labels are the Order / Diagnosis heading row at the top; individual stacked fields have no per-field label. That is the existing markup, unchanged.
+- **Vertical focus reach (`scroll-margin-block: 8px`).** The real dlgopen was opened at desktop size and then resized to 390/320. In that run, 10 focus rings were partly cut at the iframe bottom (`verification/physical-diagnoses-modal-20261014`). Native Tab scrolling stops at the control's border box, so the ring drawn outside it (2px plus a 1–2px offset, 4px at most) can fall outside the frame.
+  - Each text input and the Save/Cancel inputs now carry `scroll-margin-block: 8px` in their base screen rules. The `:focus` and `:focus-visible` rules are unchanged and still separate.
+  - No `scroll-padding` is used. The route has no doctype, so it renders in quirks mode, and `scrollingElement` is `<body>`. A native Chrome 155 probe (`verification/physical-diagnoses-focus-20261014/PROBE-quirks-focus-scroll.txt`) showed that `body` scroll-padding is inert there and that the viewport takes it from `<html>`. An `<html>` rule cannot be scoped to this route without changing every popup.
+  - Jest enforces the contract (`vertical focus reach`): every control's margin must cover the largest outline-width + outline-offset in the sheet, in the base screen block and positively scoped. Negative controls reject a missing margin, body padding used as a substitute, a margin below the ring, and activation that is unscoped, print-only, unreviewed or in a `:focus` rule.
+  - **Status:** the native reachability rerun is still pending. The controller reruns the actual-dialog harness and the baseline/print/legacy matrices on committed inputs.
 
 ## Evidence
 

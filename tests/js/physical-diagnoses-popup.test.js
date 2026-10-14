@@ -317,6 +317,118 @@ describe('route sheet', () => {
     });
 });
 
+// Vertical focus reach. Native Tab scrolling brings a control's border box into view, but its ring is
+// drawn outside that box (outline-width + outline-offset). In the real dlgopen after a 390/320 resize,
+// the ring was cut at the iframe bottom. Each focusable control reserves at least the largest ring with
+// scroll-margin-block, screen only, scoped, and never in a :focus rule. This route has no doctype, so it
+// renders in quirks mode: scrollingElement is <body>, yet Chrome takes viewport scroll-padding from
+// <html>. Body scroll-padding is inert, and an <html> rule cannot be scoped to this route, so no
+// scroll-padding is allowed.
+const FOCUSABLE = [
+    ".oe-physical-diagnoses-table input[type='text']",
+    ".oe-physical-diagnoses-actions input[type='submit']",
+    ".oe-physical-diagnoses-actions input[type='button']",
+];
+const pxValue = value => {
+    const match = /^(\d+(?:\.\d+)?)px$/.exec(value ?? '');
+    return match ? Number(match[1]) : NaN;
+};
+const focusReachProblems = text => {
+    const parsed = [];
+    postcss.parse(text).walkRules(rule => {
+        const decls = {};
+        rule.walkDecls(d => { decls[d.prop] = d.value; });
+        const media = rule.parent && rule.parent.type === 'atrule' ? rule.parent.params : null;
+        parsed.push({ selectors: rule.selectors, decls, media });
+    });
+    const problems = [];
+    // Largest ring any :focus or :focus-visible rule draws outside the border box.
+    let ring = 0;
+    for (const { selectors, decls } of parsed) {
+        if (selectors.some(s => s.includes(':focus')) && decls.outline) {
+            ring = Math.max(ring, pxValue(decls.outline.split(/\s+/)[0]) + (pxValue(decls['outline-offset']) || 0));
+        }
+    }
+    if (!(ring > 0)) problems.push('no measurable focus ring');
+    const allowed = new Map(FOCUSABLE.map(part => [at(part), 'scroll-margin-block']));
+    for (const { selectors, decls, media } of parsed) {
+        for (const prop of Object.keys(decls).filter(p => /^scroll-(margin|padding)/.test(p))) {
+            const label = `${selectors.join()} ${prop}`;
+            if (media !== BASE_MEDIA) problems.push(`${label}: not in the base screen block`);
+            if (selectors.some(s => s.includes(':focus'))) problems.push(`${label}: set in a focus rule`);
+            if (selectors.some(s => allowed.get(s) !== prop)) problems.push(`${label}: unscoped or unreviewed`);
+        }
+    }
+    const reserved = (selector, prop) => {
+        const merged = Object.assign({}, ...parsed.filter(r => r.media === BASE_MEDIA && r.selectors.includes(selector)).map(r => r.decls));
+        const value = pxValue(merged[prop]);
+        if (!(value >= ring)) problems.push(`${selector} ${prop}: ${merged[prop] ?? 'missing'} < ${ring}px ring`);
+    };
+    for (const part of FOCUSABLE) reserved(at(part), 'scroll-margin-block');
+    return problems;
+};
+
+describe('vertical focus reach (actual dlgopen resized to 390/320)', () => {
+    test('every focusable control reserves at least the largest focus ring', () => {
+        expect(focusReachProblems(css())).toEqual([]);
+    });
+
+    test('the reserve is exactly the reviewed declarations: one margin per control, no scroll-padding', () => {
+        const found = [];
+        for (const { selectors, decls, media } of rules()) {
+            for (const prop of Object.keys(decls).filter(p => /^scroll-/.test(p))) found.push([media, selectors.join(), prop, decls[prop]]);
+        }
+        expect(found).toEqual([
+            [BASE_MEDIA, at(FOCUSABLE[0]), 'scroll-margin-block', '8px'],
+            [BASE_MEDIA, FOCUSABLE.slice(1).map(at).join(), 'scroll-margin-block', '8px'],
+        ]);
+    });
+
+    test(':focus and :focus-visible rules stay independent and keep only their ring declarations', () => {
+        for (const { selectors, decls } of rules()) {
+            if (selectors.some(s => s.includes(':focus'))) {
+                expect([selectors.join(), Object.keys(decls).every(p => ['outline', 'outline-offset', 'border-color'].includes(p))])
+                    .toEqual([selectors.join(), true]);
+            }
+        }
+    });
+
+    describe('negative controls: the reach contract rejects', () => {
+        const strip = (text, prop) => text.replace(new RegExp(`${prop}:[^;]*;`, 'g'), '');
+        const fixture = ring => `@media screen {
+  ${at(FOCUSABLE[0])} { scroll-margin-block: 8px; }
+  ${at(FOCUSABLE[1])}, ${at(FOCUSABLE[2])} { scroll-margin-block: 8px; }
+  ${at(`${FOCUSABLE[1]}:focus`)} { outline: ${ring}; outline-offset: 2px; }
+}`;
+
+        test('the fixture itself passes, so each rejection below is caused by its one mutation', () => {
+            expect(focusReachProblems(fixture('2px solid red'))).toEqual([]);
+        });
+
+        test('a missing control margin, including when inert body scroll-padding replaces it', () => {
+            expect(focusReachProblems(strip(fixture('2px solid red'), 'scroll-margin-block'))).toHaveLength(3);
+            expect(focusReachProblems(fixture('2px solid red').replace(/(\.oe-physical-diagnoses-table input\[type='text'\]) \{ scroll-margin-block: 8px; \}/, '$1 { }')).join())
+                .toMatch(/input\[type='text'\] scroll-margin-block: missing/);
+            const padded = `${strip(fixture('2px solid red'), 'scroll-margin-block')}\n@media screen { ${scope} { scroll-padding-block: 8px; } }`;
+            expect(focusReachProblems(padded).join()).toMatch(/scroll-padding-block: unscoped or unreviewed.*missing|missing.*scroll-padding-block: unscoped or unreviewed/);
+        });
+
+        test('a reserve smaller than the largest outline-width + outline-offset', () => {
+            expect(focusReachProblems(fixture('7px solid red')).join()).toMatch(/8px < 9px ring/);
+            expect(focusReachProblems(fixture('2px solid red').replaceAll('8px', '3px')).length).toBeGreaterThan(0);
+        });
+
+        test('unscoped, unreviewed, focus-only or non-screen activation', () => {
+            const base = fixture('2px solid red');
+            expect(focusReachProblems(`${base}\ninput { scroll-margin-block: 8px; }`).join()).toMatch(/not in the base screen block/);
+            expect(focusReachProblems(`${base}\n@media screen { body.oe-physical-diagnoses input { scroll-margin-block: 8px; } }`).join()).toMatch(/unscoped/);
+            expect(focusReachProblems(`${base}\n@media print { ${at('input')} { scroll-margin-block: 8px; } }`).join()).toMatch(/not in the base screen block/);
+            expect(focusReachProblems(`${base}\n@media screen { ${at(`${FOCUSABLE[0]}:focus`)} { scroll-margin-block: 8px; } }`).join()).toMatch(/set in a focus rule/);
+            expect(focusReachProblems(`${base}\n@media screen { ${scope} { scroll-padding: 8px; } }`).join()).toMatch(/unreviewed/);
+        });
+    });
+});
+
 describe('dialog resized after open (dialog.js keeps the open-time percentage)', () => {
     // Generic hypothetical inner-frame budgets, not predictions for the new.php launcher (see the nested describe).
     const frameWidths = [146, 180];
