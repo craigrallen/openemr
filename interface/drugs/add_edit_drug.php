@@ -14,6 +14,7 @@ require_once("$srcdir/options.inc.php");
 use OpenEMR\Billing\HcpcsDrugDefaults;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Http\CurrentRequest;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -96,6 +97,8 @@ function writeTemplateLine($selector, $dosage, $period, $quantity, $refills, $pr
 echo ' ' . xlt('Drug'); ?></title>
 
 <?php Header::setupHeader(["opener"]); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/drug-editor-popup.css?v=<?php echo attr_url($clinicalAssets->version('drug-editor-popup.css')); ?>">
 
 <style>
 
@@ -197,7 +200,7 @@ function validate(f) {
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-drug-editor-popup">
 <?php
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
 // If we are saving, then save and close the window.
@@ -493,7 +496,7 @@ $ndcQuantityValue = is_numeric($drugRow['ndc_quantity'] ?? null)
 $title = $drug_id ? xl("Update Drug") : xl("Add Drug");
 ?>
 <h3 class="ml-1"><?php echo text($title);?></h3>
-<form method='post' name='theform' action='add_edit_drug.php?drug=<?php echo attr_url($drug_id); ?>'
+<form class='oe-drug-editor-form' method='post' name='theform' action='add_edit_drug.php?drug=<?php echo attr_url($drug_id); ?>'
  onsubmit='return validate(this);'>
     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
@@ -553,7 +556,7 @@ $title = $drug_id ? xl("Update Drug") : xl("Add Drug");
 
     <div class="form-group mt-3">
         <label><?php echo xlt('Limits'); ?>:</label>
-        <table class="table table-borderless pl-5">
+        <table class="table table-borderless pl-5 oe-drug-editor-limits">
             <tr>
                 <td class="align-top ">
                     <?php echo !empty(OEGlobalsBag::getInstance()->get('gbl_min_max_months')) ? xlt('Months') : xlt('Units'); ?>
@@ -677,7 +680,7 @@ $title = $drug_id ? xl("Update Drug") : xl("Add Drug");
         <label>
             <?php echo OEGlobalsBag::getInstance()->get('sell_non_drug_products') == 2 ? xlt('Fees') : xlt('Templates'); ?>:
         </label>
-        <table class='table table-borderless'>
+        <table class='table table-borderless oe-drug-editor-templates'>
             <thead>
                 <tr>
                     <th class='drugsonly'><?php echo xlt('Name'); ?></th>
@@ -752,7 +755,7 @@ $title = $drug_id ? xl("Update Drug") : xl("Add Drug");
         </table>
     </div>
 
-    <div class="btn-group">
+    <div class="btn-group oe-drug-editor-actions">
         <button type='submit' class="btn btn-primary btn-save" name='form_save'
          value='<?php echo  $drug_id ? xla('Update') : xla('Add') ; ?>'
          onclick='return this.clicked = true;'
