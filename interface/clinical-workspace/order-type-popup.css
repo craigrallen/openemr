@@ -1,0 +1,160 @@
+/*
+ * Procedure Picker (interface/orders/find_order_popup.php) as a document sheet inside a
+ * workbench dialog: a framed search/actions editor above a ruled results table.
+ *
+ * Every rule needs the oe-workbench-popup marker that the Header-autoloaded popup.js sets
+ * only inside an active workbench dialog or opener chain, plus the route body class. The
+ * sheet is linked with media="screen", so the standalone page, explicit legacy mode and
+ * print keep the original rendering.
+ *
+ * Colours come from the shared popup tokens and each painted rule pairs ink with its
+ * surface, so no theme can leave light text on the paper sheet. The Erase control keeps
+ * its theme danger palette. Nothing here sets fonts, hides, clips or forces one line; the
+ * search group and action row wrap instead, without width queries.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-order-type {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-sheet {
+    max-width: 960px;
+    padding-block: 16px 24px;
+    padding-inline: min(24px, 5vw);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-layout {
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-form {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  /* Search and actions: one quiet framed editor band. */
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-editor {
+    padding: min(16px, 4vw);
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-search {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-order-type #search_term {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-search > #search_term {
+    flex: 1 1 12rem;
+    min-width: 0;
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-popup body.oe-order-type #search_term::placeholder {
+    color: var(--oe-wb-muted);
+    opacity: 1;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn {
+    max-width: 100%;
+    margin-left: 0;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn-primary:hover,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn-primary:focus,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn-primary:active {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-ink);
+    border-color: var(--oe-wb-ink);
+  }
+
+  /* Results: a ruled document table that scrolls inside its own frame. */
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-results {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table {
+    margin-bottom: 0;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table th {
+    color: var(--oe-wb-muted);
+    background-color: var(--oe-wb-canvas);
+    border-top: 0;
+    border-bottom: 1px solid var(--oe-wb-line);
+    font-weight: 600;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-top: 1px solid var(--oe-wb-line);
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table tbody tr:nth-of-type(odd) td {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  /* Links sit on the paired paper or canvas cell surfaces above. */
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td a {
+    color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td a:hover,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td a:focus {
+    color: var(--oe-wb-ink);
+    text-decoration: underline;
+  }
+
+  /* Focus: a :focus fallback, then a separate :focus-visible rule, for each control. */
+  html.oe-workbench-popup body.oe-order-type #search_term:focus,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn:focus,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td a:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-order-type #search_term:focus-visible,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-actions > .btn:focus-visible,
+  html.oe-workbench-popup body.oe-order-type .oe-order-type-table td a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}
