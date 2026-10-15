@@ -5,8 +5,9 @@
 - **Ticket:** TECH-66, branch `TECH-66-delete-category-document`.
 - **Route:** `library/custom_template/delete_category.php`, opened from the
   Nation Notes `personalize.php` "Delete Category" link as a 500×500 dialog.
-- **Owner:** the controller owns verification, review and publication. This
-  production phase only edited files; it ran nothing locally.
+- **Owner:** the controller owns verification, review and publication. The
+  coding phase only edited files and ran nothing locally; the controller's
+  separate lint and diff checks are recorded under Evidence.
 - **Run budget:** this is run 1 of 2 under the maximum-two-run budget. The
   ordinary review gate is retained.
 
@@ -31,8 +32,13 @@ The tests and the original-route fixture were not changed in this phase.
 - **RED (genuine, hosted):** tests-only commit `91767968`, hosted Jest run
   `38801626263`: 10 failed, 1262 passed, 62 suites. The fixture comparison
   against the original route was verified exact.
-- **GREEN:** not yet run.
-- **Review:** not yet run.
+- **Controller checks (actual):** PHP syntax on the 2 changed PHP files,
+  stylelint on the CSS, and the diff check all passed.
+- **Review:** independent Codex Astra inline review of the six changed files,
+  no tools used; it found no introduced P1/P2 issues.
+- **GREEN:** hosted run on current production commit `963782e7` is pending and
+  is not claimed. Final evidence is kept outside the repo in
+  `verification/delete-category-20261015/DELIVERY.md`.
 
 ## What the sheet does
 
@@ -49,8 +55,14 @@ The tests and the original-route fixture were not changed in this phase.
 - Separate `a:focus` and `a:focus-visible` rules giving a
   `2px solid var(--oe-wb-petrol)` outline, offset `1px`.
 
-No display, font, sizing, overflow, visibility, control or tree changes. This
-adds geometry (padding and border); it does not prove the content fits.
+No display, font, explicit width/height, overflow, visibility, control or tree
+changes. Padding and border still affect the form's rendered size; the sheet
+does not prove the content fits.
+
+## Research reference
+
+This is a bounded adaptation of the popup paper/ink treatment only. There was
+no screenshot or layout comparison, and it is not full researched fidelity.
 
 ## Preserved behaviour
 

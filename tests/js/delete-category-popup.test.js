@@ -135,7 +135,7 @@ test('the caller dialog and the deletion endpoint gate are unchanged', () => {
     expect(ajax.indexOf(gate)).toBeLessThan(ajax.indexOf(remove));
 });
 
-test('the asset helper registers the sheet in sorted order (controller-owned)', () => {
+test('the asset helper registers the sheet in sorted order', () => {
     const helper = read('src/Common/Assets/ClinicalWorkspaceAssets.php');
     const list = helper.match(/SUPPORTED = \[([\s\S]*?)\];/);
     expect(list).not.toBeNull();
@@ -221,8 +221,9 @@ test('focus fallback and :focus-visible are separate, state-homogeneous rules fo
     expect(decls[1]).toEqual(focusRing);
 });
 
-// Cascade resolution against the theme rules that actually reach this page. This decides
-// which declaration wins; it does not measure rendered contrast.
+// Cascade resolution against explicitly hardcoded representative theme fragments, not
+// compiled theme CSS and not validated against the theme sources. This models which
+// declaration wins; it does not measure rendered contrast.
 // color_base.scss gives every flat colour theme `.body_top{background-color:$paler!important}`
 // (cobalt blue's $paler shown); tabs_style_full.scss styles .body_top without !important;
 // style_manila.scss forces `.text{color:darken($danger,40%)!important}` (value elided).
@@ -307,7 +308,8 @@ test.each(Object.keys(themes))('under the %s theme the sheet paints canvas, pape
         expect(declared(cell, 'background-color', rules)).toBe(paper);
         expect(inherited(cell, 'color', rules)).toBe(ink);
     }
-    // The image links inherit the cell ink; no link colour rule is needed.
+    // In this simplified model the image links inherit the cell ink. The model omits the
+    // native Bootstrap anchor rules, so this is not native link-colour coverage.
     for (const link of page.links) expect(inherited(link, 'color', rules)).toBe(ink);
 });
 
