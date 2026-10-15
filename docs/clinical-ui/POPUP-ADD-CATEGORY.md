@@ -86,13 +86,13 @@ Still open, not accepted:
 - A real save, and the opener/opener `#templateDD` update
 
 No API GET/POST, SQL, or live calls were made. There are no schema, deploy,
-or metadata changes. Independent review is pending.
+or metadata changes. Independent Codex Astra source review found no confirmed introduced P1/P2 defects; native and runtime acceptance remain open.
 
 ## Next candidate
 
 Controller inspected: `library/custom_template/delete_category.php` (119
 lines, untouched). It has a legacy body and table, and its actual caller is
-`personalize.php` (335 lines), which opens it in an `iframe_medium` 500×500
+`personalize.php:335`, which opens it in an `iframe_medium` 500×500
 dialog. This is the next, different candidate only. A fresh
 ownership/security preflight is required before any work. Any change must
 preserve the category and shared-user checks, the confirm step, the delete
