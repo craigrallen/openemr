@@ -21,6 +21,7 @@ require_once("../../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Calendar\ConfiguredScheduleHours;
 use OpenEMR\Common\Utils\ValidationUtils;
 use OpenEMR\Core\Header;
@@ -299,6 +300,8 @@ if (isset($_REQUEST['cktime'])) {
     // after this page is loaded.
 }
 ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/appointment-finder-popup.css?v=<?php echo attr_url($clinicalAssets->version('appointment-finder-popup.css')); ?>">
 
     <script>
         function setappt(year,mon,mday,hours,minutes) {
@@ -362,8 +365,8 @@ if (isset($_REQUEST['cktime'])) {
     </style>
 </head>
 
-<body class="body_top">
-<div class="container-fluid">
+<body class="body_top oe-appointment-finder-popup">
+<div class="container-fluid oe-appointment-finder-popup__document">
     <div id="searchCriteria">
         <form class="form-inline" method='post' name='theform' action='find_appt_popup.php?providerid=<?php echo attr_url($providerid) ?>&catid=<?php echo attr_url($input_catid) ?>'>
             <?php echo xlt('Start date:'); ?>

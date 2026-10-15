@@ -27,6 +27,7 @@ final readonly class ClinicalWorkspaceAssets
      */
     private const SUPPORTED = [
         'ajtooltip.js',
+        'appointment-finder-popup.css',
         'appointment.css',
         'calendar-sidebar.js',
         'calendar-workday.css',
