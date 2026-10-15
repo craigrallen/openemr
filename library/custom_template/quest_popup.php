@@ -30,6 +30,7 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 
 $content = $_REQUEST['content'];
@@ -38,6 +39,8 @@ $content = $_REQUEST['content'];
 <html>
     <head>
         <?php Header::setupHeader('opener'); ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr($webroot); ?>/interface/clinical-workspace/template-question-popup.css?v=<?php echo attr_url($clinicalAssets->version('template-question-popup.css')); ?>">
         <script>
             function showWhereInTextarea() {
                 opener.restoreSession();
@@ -77,10 +80,10 @@ $content = $_REQUEST['content'];
             }
         </script>
     </head>
-    <body class="body_top" onload="showWhereInTextarea()">
-        <table>
+    <body class="body_top oe-template-question" onload="showWhereInTextarea()">
+        <table class="oe-template-question-sheet">
             <tr class="text">
-                <td>
+                <td class="oe-template-question-options">
                     <?php
                     $res = sqlStatement("SELECT * FROM list_options WHERE list_id = 'nation_notes_replace_buttons' AND activity = 1 ORDER BY seq");
                     while ($row = sqlFetchArray($res)) {
@@ -92,12 +95,12 @@ $content = $_REQUEST['content'];
                 </td>
             </tr>
             <tr class="text">
-                <td>
+                <td class="oe-template-question-field">
                 <textarea name="quest" id="quest" rows="12" cols="70"><?php echo htmlspecialchars((string) $content, ENT_QUOTES);?></textarea>
                 </td>
             </tr>
             <tr>
-                <td colspan="2" align="center">
+                <td colspan="2" align="center" class="oe-template-question-actions">
                     <input type="button" name="save" value="<?php echo htmlspecialchars(xl('Save'), ENT_QUOTES);?>" onclick="save_this()">
                     <input type="button" name="cancel" value="<?php echo htmlspecialchars(xl('Cancel'), ENT_QUOTES);?>" onclick="javascript:window.close()">
                 </td>
