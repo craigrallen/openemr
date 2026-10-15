@@ -1,0 +1,69 @@
+/*
+ * Code Finder (find_code_popup.php) within an active clinical workbench popup.
+ * Presentation only: the original search form and results table are kept;
+ * the existing container becomes a quiet document on the workbench canvas.
+ * No font, button-palette or shared popup-frame changes.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-code-picker-popup {
+    background-color: var(--oe-wb-canvas);
+  }
+
+  /* The existing container-fluid becomes the paper document. */
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document {
+    padding: 12px 16px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+  }
+
+  /* Let the inline search form wrap inside the narrower document instead of overflowing. */
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document > .form-inline,
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document > .form-inline > .form-group {
+    flex-wrap: wrap;
+  }
+
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .form-control {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Focus: a simple :focus fallback, then :focus-visible in its own rule so a
+     browser that rejects :focus-visible does not also drop the fallback. */
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .form-control:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .form-control:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Buttons and result links get only the focus ring; their palettes are untouched. */
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .btn:focus,
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document a:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .btn:focus-visible,
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .table {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Kept last so disabled and readonly fields win over the normal and focus pairs. */
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .form-control:disabled,
+  html.oe-workbench-popup body.oe-code-picker-popup .oe-code-picker-popup__document .form-control[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+}
