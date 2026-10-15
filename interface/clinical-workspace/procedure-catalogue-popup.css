@@ -1,0 +1,92 @@
+/*
+ * Procedure catalogue (interface/orders/types.php) as a screen-only workbench document sheet.
+ *
+ * Scope is html.oe-workbench-context plus the route body class, not the popup marker: the same
+ * document opens as the dlgopen picker from orders_results.php and as the admin/super maintenance
+ * tab from the menu, and both get the sheet. Only paint, gutters, wrapping and focus change; fonts,
+ * sizes, line heights, hierarchy, controls and the AJAX tree stay as the route renders them.
+ *
+ * Every repaint pairs ink with paper from the shared --oe-wb-* palette (popup.css). Inline yellow
+ * and pink clinical marks, required/danger text and tree link colours keep their inherited paint,
+ * so their contrast against the sheet is whatever the route already ships and is not proved here.
+ * The single !important repaints theme .text-body icons, which dark/solar themes make near-white.
+ */
+
+@media screen {
+  html.oe-workbench-context body.oe-procedure-catalogue {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .oe-catalogue-sheet {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 4px;
+    padding: 12px 16px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .oe-catalogue-sheet > .row {
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .oe-catalogue-sheet > .row > .col-sm-12 {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .table {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue tr.head {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue tr.head .oe-text-black {
+    color: var(--oe-wb-ink);
+    background-color: transparent;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue #con0 tr.evenrow {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue #con0 tr.oddrow {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue #con0 td {
+    background-color: transparent;
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue #con0 .text-body {
+    color: var(--oe-wb-ink) !important;
+    background-color: transparent;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .btn-group {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .btn:focus,
+  html.oe-workbench-context body.oe-procedure-catalogue input[type='radio']:focus,
+  html.oe-workbench-context body.oe-procedure-catalogue input[type='checkbox']:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-catalogue .btn:focus-visible,
+  html.oe-workbench-context body.oe-procedure-catalogue input[type='radio']:focus-visible,
+  html.oe-workbench-context body.oe-procedure-catalogue input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}

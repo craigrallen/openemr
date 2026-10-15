@@ -17,6 +17,7 @@ require_once("../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -74,6 +75,8 @@ if ($popup && $_POST['form_save'] ?? '') {
 
 <head>
     <?php Header::setupHeader(['opener', 'datetime-picker']);?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/procedure-catalogue-popup.css?v=<?php echo attr_url($clinicalAssets->version('procedure-catalogue-popup.css')); ?>">
 
     <title><?php echo xlt('Configure Orders and Results'); ?></title>
 
@@ -287,7 +290,7 @@ if ($popup && $_POST['form_save'] ?? '') {
 
 </head>
 
-<body>
+<body class="oe-procedure-catalogue">
     <?php
     $help_icon = '';
     if (OEGlobalsBag::getInstance()->get('enable_help') == 1) {
@@ -298,7 +301,7 @@ if ($popup && $_POST['form_save'] ?? '') {
         $help_icon = '';
     }
     ?>
-    <div class="container mt-3">
+    <div class="container mt-3 oe-catalogue-sheet">
         <div class="row">
              <div class="col-sm-12">
                 <h2 id="header_title"><span id='header_text'><?php echo xlt('Configure Orders and Results');?></span><?php echo $help_icon; ?></h2>
