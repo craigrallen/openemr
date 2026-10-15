@@ -217,7 +217,7 @@ function parseCss(text) {
         const raw = buffer.trim();
         if (raw === '') return;
         const colon = raw.indexOf(':');
-        if (colon < 1) throw new Error(`unparseable declaration: ${raw}`);
+        if (colon < 1) throw new Error(`unparsable declaration: ${raw}`);
         let value = raw.slice(colon + 1).trim();
         const important = /!\s*important$/i.test(value);
         if (important) value = value.replace(/\s*!\s*important$/i, '');
