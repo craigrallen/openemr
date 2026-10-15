@@ -168,7 +168,7 @@ function sheetProblems(css, popupCss, theme) {
   try {
     top = parseCss(css);
   } catch (error) {
-    return [`unparseable: ${error.message}`];
+    return [`unparsable:${error.message}`];
   }
   if (top.length !== 1 || top[0].type !== 'atrule' || `${top[0].name} ${top[0].params}` !== 'media screen') {
     problems.push('sheet must be exactly one @media screen block');
