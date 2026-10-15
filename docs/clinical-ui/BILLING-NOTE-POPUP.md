@@ -11,7 +11,10 @@ acceptance evidence.
   62 suites, and no baseline or negative-control failures.
 - The production edits below have been made in source after that run. They
   have not been executed by Jest, PHP or a browser here; the controller owns
-  the hosted GREEN run and an independent review.
+  the hosted GREEN run, which remains pending.
+- Independent Codex Astra review at source 2e26d888 found no introduced P1/P2
+  defects. It was static only. The controller's two PHP syntax checks passed.
+  Neither is GREEN, runtime or clinical acceptance evidence.
 
 ## Surface
 
@@ -63,9 +66,10 @@ exact bytes at 18647270. The controller verified it byte-identical (`cmp`)
 with both the route as it stood and
 `git show origin/master:interface/patient_file/history/edit_billnote.php`.
 
-**Baseline and negative controls** (pass before and after implementation;
-they depend only on the fixture, the caller and the shared Header assets —
-none failed in the hosted RED run):
+**Baseline and negative controls** (passed in the hosted RED run before
+implementation; they depend only on the fixture, the caller and the shared
+Header assets. That they still pass after implementation is not claimed until
+the hosted GREEN run):
 
 - The fixture is untouched and has unique anchors.
 - The declared edit list is self-inverse on the fixture.
@@ -114,6 +118,8 @@ against the implemented source, GREEN pending):
   group are left alone).
 - No font, line-height or control geometry (width, height, padding, margin,
   resize), and nothing hidden or repositioned.
+- The original validation border/shadow cues remain. The added `:focus`
+  outline is presentation-only, and its native contrast is pending.
 - Validation selectors are never targeted. Any control border, shadow or
   background-image rule must carry
   `:not(.is-invalid, .is-valid, .was-validated *)`.
@@ -133,7 +139,14 @@ against the implemented source, GREEN pending):
 - RTL, the `printlegacy` path and print output.
 - Real Save and Cancel round trips: the stored note, `dlgclose()` and the
   opener reload.
+- Actual Save/Cancel and any runtime authorization exercise.
 - Restricted roles, a full fidelity comparison against the research, and
   clinical acceptance.
+
+## Inherited security limitation
+
+The existing `acct/bill` ACL is a global billing permission, and the `feid`
+query is unchanged. This slice does not establish patient-specific encounter
+authorization. Nothing here changes or verifies that behaviour.
 
 No merge, deploy, database or cron change is part of this slice.

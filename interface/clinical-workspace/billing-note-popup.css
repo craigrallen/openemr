@@ -25,7 +25,10 @@
     border-radius: 6px;
   }
 
-  /* The note itself: ink on paper in every state; borders and rings stay Bootstrap's. */
+  /*
+   * The note itself: ink on paper in every state. The original validation border/shadow cues
+   * remain; the added :focus outline is presentation-only, and its native contrast is pending.
+   */
   html.oe-workbench-context.oe-workbench-popup body.oe-billing-note #form_note {
     color: var(--oe-wb-ink);
     background-color: var(--oe-wb-paper);
