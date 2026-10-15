@@ -1,0 +1,46 @@
+/*
+ * Delete Category popup (library/custom_template/delete_category.php).
+ *
+ * Screen-only paper, ink and focus decoration for the legacy category table.
+ * The table keeps its natural layout, fonts and image Delete controls.
+ */
+@media screen {
+  /* Flat colour themes force .body_top{background-color:...!important}; only
+     an !important declaration here can replace that with the workbench canvas. */
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category {
+    background-color: var(--oe-wb-canvas) !important;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    padding: 12px;
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  /* Ink is paired with each tint on the cells themselves so a theme's
+     inherited row ink (e.g. manila's !important .text) cannot reach them. */
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form tr.reportTableHeadRow > th {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form tr.reportTableOddRow > td,
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form tr.reportTableEvenRow > td {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Plain :focus is the fallback; :focus-visible stays a separate rule so an
+     engine that rejects it does not discard the fallback. */
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form a:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-delete-category form.oe-delete-category-form a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+}
