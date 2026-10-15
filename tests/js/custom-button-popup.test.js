@@ -38,6 +38,7 @@ const ROUTE = 'library/custom_template/add_custombutton.php';
 const SHEET = 'interface/clinical-workspace/custom-button-popup.css';
 const HELPER = 'src/Common/Assets/ClinicalWorkspaceAssets.php';
 const FIXTURE = 'tests/clinical-ui/fixtures/custom-button-original.txt';
+const POPUP = 'interface/clinical-workspace/popup.css';
 const FIXTURE_BYTES = 9831;
 // The actual theme source that gives .body_top its !important canvas paint.
 const THEME = 'interface/themes/color_base.scss';
@@ -174,21 +175,33 @@ describe('TECH-62 route stylesheet', () => {
     const actions = `${scope} .oe-custom-button-actions`;
     // The theme paints .body_top background-color !important, so the canvas must answer in kind.
     const importantAllowlist = [[scope, 'background-color']];
-    // The action cell may wrap its existing buttons; every other layout change is refused.
-    const allowedLayout = new Set([
-        `layout/overflow change: ${actions} { display }`,
-        `layout/overflow change: ${actions} { flex-wrap }`,
-    ]);
 
     test('the stylesheet exists', () => {
         expect(sheet()).not.toBeNull();
     });
 
-    test('the stylesheet satisfies the popup invariants', () => {
-        const violations = stylesheetViolations(sheet() ?? '', { scope, importantAllowlist, tokens })
-            .filter(violation => !allowedLayout.has(violation));
-        expect(violations).toEqual([]);
+    test('the stylesheet satisfies the popup invariants with no layout exception', () => {
+        expect(stylesheetViolations(sheet() ?? '', { scope, importantAllowlist, tokens })).toEqual([]);
         expect(indentationViolations(sheet() ?? '')).toEqual([]);
+    });
+
+    test('no rule changes display, flex or any layout property, including on the action cell', () => {
+        const layout = /^(?:display|visibility|overflow(?:-[xy])?|position|min-width|max-width|width|height|flex[\w-]*|gap|(?:row|column)-gap|justify-[\w-]+|align-[\w-]+|float)$/;
+        const offenders = parseCss(sheet() ?? '').rules.flatMap(rule => rule.decls
+            .filter(decl => layout.test(decl.prop))
+            .flatMap(decl => rule.selectors.map(selector => `${selector} { ${decl.prop} }`)));
+        expect(offenders).toEqual([]);
+    });
+
+    test('every var() reference is defined by the actual popup.css', () => {
+        const popup = readOrNull(POPUP) ?? '';
+        const defined = new Set([...popup.matchAll(/^\s*(--oe-wb-[a-z0-9-]+)\s*:/gm)].map(m => m[1]));
+        expect(defined.size).toBeGreaterThan(0);
+        const css = sheet() ?? '';
+        const referenced = [...new Set([...css.matchAll(/var\(\s*(--[\w-]+)/g)].map(m => m[1]))];
+        expect(referenced.length).toBeGreaterThan(0);
+        expect(referenced.filter(token => !defined.has(token))).toEqual([]);
+        for (const token of referenced) expect(tokens).toContain(token);
     });
 
     test('the canvas background-color is the only !important declaration', () => {
@@ -260,7 +273,9 @@ describe('TECH-62 route stylesheet', () => {
         const map = declarationMap(parsed);
         expect(map[scope]).toBeDefined();
         expect(map[`${scope} .oe-custom-button-document`]).toBeDefined();
-        expect(map[actions]).toMatchObject({ display: 'flex', 'flex-wrap': 'wrap' });
+        expect(map[actions]).toMatchObject({ 'white-space': 'normal' });
+        expect(map[actions]).not.toHaveProperty('display');
+        for (const prop of Object.keys(map[actions] ?? {})) expect(prop).not.toMatch(/^(?:display|flex[\w-]*|gap|justify-[\w-]+|align-[\w-]+)$/);
         const selectors = parsed.rules.flatMap(rule => rule.selectors);
         expect(selectors.some(sel => sel.includes('.oe-custom-button-document') && sel.includes('.form-control'))).toBe(true);
     });
