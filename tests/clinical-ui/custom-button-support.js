@@ -303,12 +303,18 @@ function apply(text, edits) {
 const PHP_BLOCK = /<\?php[\s\S]*?\?>/g;
 const CONTROL_KEYS = ['name', 'type', 'value', 'readonly', 'style', 'size', 'id', 'method', 'action', 'onsubmit', 'title'];
 
+// Printable placeholder stem for flattened PHP blocks; controls() throws if the source already contains it.
+const PHP_SENTINEL = '@@oe-php-block-';
+
 // Every form/input with its contract attributes; PHP blocks kept verbatim so escaping is compared too.
 function controls(source) {
     const markup = source.slice(source.indexOf('<html>'));
+    if (markup.includes(PHP_SENTINEL)) {
+        throw new Error(`source already contains the PHP placeholder sentinel ${PHP_SENTINEL}`);
+    }
     const placeholders = [];
-    const flat = markup.replace(PHP_BLOCK, block => `\u0000${placeholders.push(block) - 1}\u0000`);
-    const unflatten = value => value.replace(/\u0000(\d+)\u0000/g, (_, n) => placeholders[Number(n)]);
+    const flat = markup.replace(PHP_BLOCK, block => `${PHP_SENTINEL}${placeholders.push(block) - 1}@@`);
+    const unflatten = value => value.replace(/@@oe-php-block-(\d+)@@/g, (_, n) => placeholders[Number(n)]);
     return [...flat.matchAll(/<(form|input|select|textarea|button)\b([^>]*)>/g)].map(([, tag, attrs]) => {
         const control = { tag };
         for (const [, key, double, single] of attrs.matchAll(/([\w-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'))?/g)) {

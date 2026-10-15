@@ -3,13 +3,29 @@
 Route: `library/custom_template/add_custombutton.php` (opened as a workbench
 popup from the custom template editor).
 
-Status: **production implementation written; GREEN not yet observed.** The
-tests-only commit (`6ed81a60`, on master `18647270`) was observed RED in hosted
-CI run `38759627706`: 13 failed, 1279 passed across 62 suites, the failures
-being the absent route additions, stylesheet and helper registration. The
-original fixture was verified at 9831 bytes, unchanged. The implementation that
-follows was written without running any tests locally; the hosted GREEN run,
-coverage, review and native/browser acceptance are all pending.
+Status: **implementation hosted-GREEN at `74ea1a9a` for the JS suite; lint
+repair pending, so that head is invalidated.** The tests-only commit
+(`6ed81a60`, on master `18647270`) was observed RED in hosted CI run
+`38759627706`: 13 failed, 1279 passed across 62 suites, the failures being the
+absent route additions, stylesheet and helper registration. The original
+fixture was verified at 9831 bytes, unchanged.
+
+Hosted evidence at `74ea1a9a` (reported by the controller, not run locally):
+the JS suite was GREEN, 62 suites and 1294 tests. The Styling JS job failed
+with `no-control-regex` at `tests/clinical-ui/custom-button-support.js:311`,
+caused by the literal U+0000 placeholder regex in `controls()`. Because lint
+fails, `74ea1a9a` is not an acceptable head.
+
+Lint repair (written without running anything locally; hosted lint and JS
+re-run pending): `controls()` now flattens PHP blocks to the printable sentinel
+`@@oe-php-block-<n>@@` instead of U+0000. It throws if the markup already
+contains `@@oe-php-block-`, so a collision fails closed rather than
+mis-restoring a value. No lint suppression is used and the regex is a plain
+literal. Control extraction and byte comparison are otherwise unchanged. New
+tests in `tests/js/custom-button-popup.test.js` cover PHP-in-attribute values,
+multiple blocks, change detection, literal NUL characters in values, and
+sentinel collision (in an attribute and inside a PHP block). Coverage, review
+and native/browser acceptance remain pending.
 
 ## Files
 
@@ -143,7 +159,7 @@ remain and are out of scope for TECH-62:
 
 - No real save, delete, GET or POST was exercised; no native browser or
   Selenium run; no local test run.
-- Hosted GREEN, coverage and review are pending.
+- Hosted lint/JS re-run after the lint repair, coverage and review are pending.
 - Open for native acceptance: popup fit and narrow widths, long translated
   labels, focus-ring clipping, compiled-theme behaviour, user roles, the opener
   (custom template editor) round trip, print and the standalone legacy page.

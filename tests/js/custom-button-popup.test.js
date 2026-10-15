@@ -161,6 +161,63 @@ describe('TECH-62 negative controls', () => {
     });
 });
 
+describe('TECH-62 controls() PHP placeholder handling', () => {
+    const page = body => `<?php // header ?>\n<html>\n${body}\n</html>`;
+
+    test('PHP blocks inside attribute values are returned verbatim', () => {
+        const found = controls(page(
+            '<input type="text" name="<?php echo attr($n); ?>" value=\'<?php echo attr($v ?? "a"); ?>\' ' +
+            'title="<?php echo xla(\'Save\'); ?>" readonly>'
+        ));
+        expect(found).toEqual([{
+            tag: 'input',
+            type: 'text',
+            name: '<?php echo attr($n); ?>',
+            value: '<?php echo attr($v ?? "a"); ?>',
+            title: '<?php echo xla(\'Save\'); ?>',
+            readonly: '',
+        }]);
+    });
+
+    test('several PHP blocks in one value and across controls stay distinct and ordered', () => {
+        const found = controls(page(
+            '<form name="f" action="<?php echo a(); ?>?x=<?php echo b(); ?>" onsubmit="<?php echo c(); ?>">' +
+            '<input name="<?php echo d(); ?>"></form>'
+        ));
+        expect(found.map(control => control.action ?? control.name)).toEqual([
+            '<?php echo a(); ?>?x=<?php echo b(); ?>',
+            '<?php echo d(); ?>',
+        ]);
+        expect(found[0].onsubmit).toBe('<?php echo c(); ?>');
+    });
+
+    test('a changed PHP block changes the extracted control', () => {
+        const before = controls(page('<input name="<?php echo attr($a); ?>">'));
+        const after = controls(page('<input name="<?php echo $a; ?>">'));
+        expect(after).not.toEqual(before);
+    });
+
+    test('literal control characters in a value are preserved byte for byte', () => {
+        const nul = String.fromCharCode(0);
+        const found = controls(page(`<input name="a${nul}1${nul}b" value="<?php echo x(); ?>">`));
+        expect(found[0].name).toBe(`a${nul}1${nul}b`);
+        expect(found[0].value).toBe('<?php echo x(); ?>');
+    });
+
+    test('a source that already contains the placeholder sentinel is rejected', () => {
+        const colliding = page('<input name="@@oe-php-block-0@@" value="<?php echo x(); ?>">');
+        expect(() => controls(colliding)).toThrow(/sentinel/);
+    });
+
+    test('a sentinel inside a PHP block is also rejected', () => {
+        expect(() => controls(page('<input name="<?php echo \'@@oe-php-block-0@@\'; ?>">'))).toThrow(/sentinel/);
+    });
+
+    test('a sentinel before the html element does not reject the source', () => {
+        expect(() => controls('@@oe-php-block-0@@\n<html><input name="n"></html>')).not.toThrow();
+    });
+});
+
 describe('TECH-62 asset helper allowlist', () => {
     test('ClinicalWorkspaceAssets registers custom-button-popup.css in sorted order', () => {
         const helper = readOrNull(HELPER) ?? '';
