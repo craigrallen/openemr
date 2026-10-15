@@ -23,11 +23,12 @@ function read(file) {
 }
 
 const HEAD_ADDITION = "        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>\n"
-  + '        <link rel="stylesheet" media="screen" href="<?php echo attr($webroot); ?>/interface/clinical-workspace/template-question-popup.css?v=<?php echo attr_url($clinicalAssets->version(\'template-question-popup.css\')); ?>">\n';
+  + '        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/template-question-popup.css?v=<?php echo attr_url($clinicalAssets->version(\'template-question-popup.css\')); ?>">\n';
 
 // Every allowed presentation edit as [original, presented]. Nothing else may differ.
 const CHANGES = [
   ['use OpenEMR\\Core\\Header;', 'use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;\nuse OpenEMR\\Core\\Header;'],
+  ['use OpenEMR\\Core\\Header;', 'use OpenEMR\\Core\\Header;\nuse OpenEMR\\Core\\OEGlobalsBag;'],
   ["        <?php Header::setupHeader('opener'); ?>\n", "        <?php Header::setupHeader('opener'); ?>\n" + HEAD_ADDITION],
   ['<body class="body_top" onload=', '<body class="body_top oe-template-question" onload='],
   ['<table>', '<table class="oe-template-question-sheet">'],

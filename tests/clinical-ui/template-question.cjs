@@ -61,6 +61,9 @@ test('route links the screen-only sheet once, versioned, after the Header setup'
   const header = php.indexOf("<?php Header::setupHeader('opener'); ?>\n");
   assert.equal(php.indexOf(HEAD_ADDITION), header + "<?php Header::setupHeader('opener'); ?>\n".length);
   assert.ok(php.indexOf(HEAD_ADDITION) < php.indexOf('<script>'));
+  assert.ok(HEAD_ADDITION.includes('attr(OEGlobalsBag::getInstance()->getWebRoot())'));
+  assert.ok(!HEAD_ADDITION.includes('$webroot'));
+  assert.equal(count(php, 'use OpenEMR\\Core\\OEGlobalsBag;'), 1);
 });
 
 test('route keeps its inline script, handlers, SQL, escaping, request and controls', () => {

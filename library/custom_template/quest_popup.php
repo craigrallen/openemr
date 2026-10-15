@@ -32,6 +32,7 @@ require_once("../../interface/globals.php");
 
 use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 $content = $_REQUEST['content'];
 ?>
@@ -40,7 +41,7 @@ $content = $_REQUEST['content'];
     <head>
         <?php Header::setupHeader('opener'); ?>
         <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
-        <link rel="stylesheet" media="screen" href="<?php echo attr($webroot); ?>/interface/clinical-workspace/template-question-popup.css?v=<?php echo attr_url($clinicalAssets->version('template-question-popup.css')); ?>">
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/template-question-popup.css?v=<?php echo attr_url($clinicalAssets->version('template-question-popup.css')); ?>">
         <script>
             function showWhereInTextarea() {
                 opener.restoreSession();

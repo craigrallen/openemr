@@ -10,9 +10,12 @@ question popup).
 
 Changed files:
 
-- `library/custom_template/quest_popup.php` — one `use` import, one
-  `ClinicalWorkspaceAssets` instance and one versioned `media="screen"` `<link>`
-  directly after `Header::setupHeader('opener')`, and identifying classes on the
+- `library/custom_template/quest_popup.php` — two `use` imports
+  (`ClinicalWorkspaceAssets` and `OEGlobalsBag`), one `ClinicalWorkspaceAssets`
+  instance and one versioned `media="screen"` `<link>` directly after
+  `Header::setupHeader('opener')` whose href base is the typed webroot
+  (`OEGlobalsBag::getInstance()->getWebRoot()`) rather than the legacy
+  `$webroot` global, and identifying classes on the
   existing `<body>`, `<table>` and three `<td>` elements. Nothing else.
 - `src/Common/Assets/ClinicalWorkspaceAssets.php` — the single basename
   `template-question-popup.css` added to the sorted allowlist.
