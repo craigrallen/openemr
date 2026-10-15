@@ -16,8 +16,10 @@
 require_once("../../interface/globals.php");
 
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 $filter_context =  $_REQUEST['filter_context'] ?? '';
 $filter_users = $_REQUEST['filter_users'] ?? '';
@@ -79,6 +81,8 @@ if (isset($_REQUEST['submitform']) && $_REQUEST['submitform'] == 'save') {
 <head>
 
     <?php Header::setupHeader(['common', 'opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/personalize-popup.css?v=<?php echo attr_url($clinicalAssets->version('personalize-popup.css')); ?>">
 
     <script>
 
@@ -292,8 +296,8 @@ if (isset($_REQUEST['submitform']) && $_REQUEST['submitform'] == 'save') {
         }
     </script>
 </head>
-<body class="body_top">
-    <form name="myform" method="post" onsubmit="top.restoreSession();">
+<body class="body_top oe-personalize">
+    <form name="myform" method="post" onsubmit="top.restoreSession();" class="oe-personalize-document">
         <div class="container-fluid">
             <h3><?php echo xlt('Filter'); ?></h3>
             <div class="row">
@@ -327,7 +331,7 @@ if (isset($_REQUEST['submitform']) && $_REQUEST['submitform'] == 'save') {
                         ?>
                     </select>
                 </div>
-                <div class="col-12 my-2 text-center">
+                <div class="col-12 my-2 text-center oe-personalize-actions">
                     <a href="#" class="btn btn-primary" onclick="top.restoreSession();personalize_save()"><?php echo xlt('Save'); ?></a>
                     <?php
                     if (AclMain::aclCheckCore('nationnotes', 'nn_configure')) {
