@@ -20,6 +20,7 @@ require_once("$srcdir/options.inc.php");
 require_once("$srcdir/encounter_events.inc.php");
 require_once("$srcdir/patient_tracker.inc.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -50,6 +51,8 @@ $theroom = '';
 <html>
     <head>
         <?php Header::setupHeader(['common','opener']); ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/tracker-status-popup.css?v=<?php echo attr_url($clinicalAssets->version('tracker-status-popup.css')); ?>">
     </head>
 
 <?php
@@ -95,11 +98,11 @@ $row = sqlQuery("select fname, lname " .
 "from patient_data where pid =? limit 1", [$tkpid]);
 ?>
 
-<body>
-    <div class="container mt-3">
+<body class="oe-tracker-status-popup">
+    <div class="container mt-3 oe-tracker-status-popup__document">
         <div class="row">
             <div class="col-12">
-                <h2><?php echo xlt('Change Status for') . " " . text($row['fname']) . " " . text($row['lname']); ?></h2>
+                <h2 class="oe-tracker-status-popup__title"><?php echo xlt('Change Status for') . " " . text($row['fname']) . " " . text($row['lname']); ?></h2>
             </div>
         </div>
         <form id="form_note" method="post" action="patient_tracker_status.php?tracker_id=<?php echo attr_url($tracker_id) ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" enctype="multipart/form-data" >
@@ -113,7 +116,7 @@ $row = sqlQuery("select fname, lname " .
                 <?php echo generate_select_list('roomnum', 'patient_flow_board_rooms', $trow['lastroom'], xl('Exam Room Number')); ?>
             </div>
             <div class="position-override">
-                <div class="btn-group" role="group">
+                <div class="btn-group oe-tracker-status-popup__actions" role="group">
                     <button type="button" class='btn btn-primary btn-save btn-sm' onclick='document.getElementById("form_note").submit();'><?php echo xlt('Save')?></button>
                     <button type="button" class='btn btn-secondary btn-cancel btn-sm' onclick="dlgclose();" ><?php echo xlt('Cancel'); ?></button>
                 </div>
