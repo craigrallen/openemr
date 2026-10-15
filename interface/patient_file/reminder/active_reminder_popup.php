@@ -15,6 +15,7 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
 $pid = $session->get('pid', 0);
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/clinical_rules.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -23,11 +24,14 @@ use OpenEMR\Core\OEGlobalsBag;
 <html>
 <head>
 <?php Header::setupHeader('opener'); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/active-reminders-popup.css?v=<?php echo attr_url($clinicalAssets->version('active-reminders-popup.css')); ?>">
 </head>
 
-<body class="body_top">
+<body class="body_top oe-active-reminders">
+<div class="oe-reminders-sheet">
 
-<table class="table border-0">
+<table class="table border-0 oe-reminders-heading">
 <tr>
 
 <?php
@@ -68,5 +72,6 @@ if (!empty($all_allergy_alerts)) {
 
 echo $active_alerts;
 ?>
+</div>
 </body>
 </html>
