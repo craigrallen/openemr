@@ -75,8 +75,9 @@ guard now allows the original text to appear only as often as it does inside
 one presented form (`count(php, before) === count(after, before)`). The exact
 single-occurrence check on each presented form, the `restore()` inverse, the
 business anchors and the mandatory whole-route baseline are unchanged. No
-production change was needed for this. The portable suite now has 21 tests. No
-PHP helper tests were run locally; the controller runs all gates.
+production change was needed for this. The two Node suites now total 21 tests
+(16 portable plus 5 baseline; the portable suite alone is not 21). Helper PHP
+tests were not executed locally; see "Final controller evidence" below.
 
 `tests/Tests/Isolated/Common/Assets/ClinicalWorkspaceAssetsTest.php` gains
 the following, all written **after** production:
@@ -102,7 +103,8 @@ The two fixtures (an added `<style>` block and an added `workspace.css`
 anchor is also asserted to occur exactly once in the route, and the
 replacement is asserted to change the source, before the guard is evaluated.
 No negative fixture or guard was removed or weakened. No production file
-changed. This correction has not been run locally; the controller runs all gates.
+changed. The controller later exercised the corrected negative fixtures and they
+passed (see "Final controller evidence" below).
 
 ## What the source tests prove, and what they do not
 
@@ -130,8 +132,19 @@ following gates remain open:
 
 ## Run allocation
 
-- **Run 1 (this allocation):** test-first guards, controller RED, minimal production and this document. GREEN, static checks and an independent review are for the controller to run; they have not been run here.
+- **Run 1 (this allocation):** test-first guards, controller RED, minimal production and this document, followed by the controller GREEN, static checks and independent review recorded below.
 - **Run 2 (if needed):** fixes from that review or GREEN failures only. After that the budget is spent: the slice is parked behind its remaining native and acceptance gates, and the next independent selection follows `SELECTION.md`.
 
-Nothing here is committed, pushed, merged or deployed. Shared status and
+## Final controller evidence
+
+- `node --test tests/clinical-ui/code-search.test.cjs tests/clinical-ui/code-search-baseline.test.cjs`: **21 tests total, all PASS** (16 portable plus 5 baseline). The corrected negative fixtures were actually exercised and passed.
+- PHP syntax checks: three, all PASS.
+- Stylelint on the actual CSS: PASS.
+- `git diff --check`: PASS.
+- Not run locally: the helper PHP tests (`ClinicalWorkspaceAssetsTest.php`), and the full Jest and PHPUnit suites. No native visual claim is made.
+- Independent review: Codex GPT-6 Astra reviewed the complete nine-file captured diff and source. It found no confirmed introduced P1/P2 issues.
+- Historical RED, unchanged: 20 tests, 15 failed, 5 passed, with the invalid-test corrections described above.
+- Publication: draft PR #68 published at initial head `e1f8a170`. CI is pending on the final head and ordinary approval is open.
+
+Every native acceptance gate listed above remains open. Shared status and
 acceptance documents are deliberately not edited.
