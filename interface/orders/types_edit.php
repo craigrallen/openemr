@@ -20,6 +20,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -112,6 +113,8 @@ function recursiveDelete($typeid): void
             }
         }
     </style>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/procedure-editor-popup.css?v=<?php echo attr_url($clinicalAssets->version('procedure-editor-popup.css')); ?>">
 
     <script>
 
@@ -238,8 +241,8 @@ function recursiveDelete($typeid): void
     </script>
 
 </head>
-<body>
-    <div class="container mt-3">
+<body class="oe-procedure-editor">
+    <div class="container mt-3 oe-procedure-sheet">
         <?php
         // If we are saving, then save and close the window.
         //
@@ -320,11 +323,11 @@ function recursiveDelete($typeid): void
         ?>
         <div class="row">
             <div class="col-sm-12">
-                <form method='post' name='theform' class="form-horizontal"
+                <form method='post' name='theform' class="form-horizontal oe-procedure-form"
                     action='types_edit.php?typeid=<?php echo attr_url($typeid); ?>&parent=<?php echo attr_url($parent); ?>'
                     onsubmit='return top.restoreSession()'>
                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
-                    <fieldset>
+                    <fieldset class="oe-procedure-document">
                         <legend name="form_legend" id="form_legend"><?php echo xlt('Enter Details'); ?> <i id='enter_details' class='fa fa-info-circle oe-text-black oe-superscript enter-details-tooltip' aria-hidden='true'></i></legend>
                         <div class="row">
                             <div class="col-sm-12">
@@ -729,9 +732,9 @@ function recursiveDelete($typeid): void
                         </div>
                     </fieldset>
                     <?php //can change position of buttons by creating a class 'position-override' and adding rule text-alig:center or right as the case may be in individual stylesheets ?>
-                    <div class="form-group" id="button-container">
-                        <div class="col-sm-12 text-left position-override">
-                            <div class="btn-group" role="group">
+                    <div class="form-group oe-procedure-actions-row" id="button-container">
+                        <div class="col-sm-12 text-left position-override oe-procedure-actions">
+                            <div class="btn-group oe-procedure-commit" role="group">
                                 <button type='submit' name='form_save' class="btn btn-primary btn-save" value='<?php echo xla('Save'); ?>'><?php echo xlt('Save'); ?></button>
                                 <button type="button" class="btn btn-secondary btn-cancel" onclick='window.close()' ;><?php echo xlt('Cancel'); ?></button>
                                 <?php if ($typeid) { ?>
