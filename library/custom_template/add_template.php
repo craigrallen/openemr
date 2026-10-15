@@ -30,13 +30,17 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 $list_id = $_REQUEST['list_id'];
 ?>
 <html>
     <head>
         <?php Header::setupHeader('opener'); ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/add-category-popup.css?v=<?php echo attr_url($clinicalAssets->version('add-category-popup.css')); ?>">
         <script>
         function add_template(){
             top.restoreSession();
@@ -91,8 +95,8 @@ $list_id = $_REQUEST['list_id'];
         }
         </script>
     </head>
-    <body class="body_top">
-        <form >
+    <body class="body_top oe-add-category">
+        <form class="oe-add-category-form">
             <table>
                 <tr class="text">
                     <td>
