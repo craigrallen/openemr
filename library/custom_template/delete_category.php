@@ -30,6 +30,7 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -39,6 +40,8 @@ $res = sqlStatement("SELECT * FROM customlists as cl left outer join users as u 
     <head>
         <title><!-- Insert your title here --></title>
         <?php Header::setupHeader('opener'); ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/delete-category-popup.css?v=<?php echo attr_url($clinicalAssets->version('delete-category-popup.css')); ?>">
         <script src="<?php echo OEGlobalsBag::getInstance()->getWebRoot() ?>/library/js/ajax_functions_writer.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>"></script>
 
         <script>
@@ -89,8 +92,8 @@ $res = sqlStatement("SELECT * FROM customlists as cl left outer join users as u 
         }
         </script>
     </head>
-    <body class="body_top">
-    <form name="myform">
+    <body class="body_top oe-delete-category">
+    <form name="myform" class="oe-delete-category-form">
         <table align="center">
             <tr class="text reportTableHeadRow">
                 <th><?php echo htmlspecialchars('Sl.No', ENT_QUOTES);?></th>
