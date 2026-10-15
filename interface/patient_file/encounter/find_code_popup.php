@@ -16,6 +16,7 @@ require_once('../../globals.php');
 $srcdir = \OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir();
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getProjectDir() . '/custom/code_types.inc.php');
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -59,6 +60,8 @@ $target_element = $_GET['target_element'] ?? null;
 <head>
     <title><?php echo xlt('Code Finder'); ?></title>
     <?php Header::setupHeader('opener'); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/code-picker-popup.css?v=<?php echo attr_url($clinicalAssets->version('code-picker-popup.css')); ?>">
     <script>
         // Standard function
         function selcode(codetype, code, selector, codedesc) {
@@ -95,8 +98,8 @@ $target_element = $_GET['target_element'] ?? null;
 <?php
 $focus = "document.theform.search_term.select();";
 ?>
-<body onload="<?php echo $focus; ?>">
-    <div class="container-fluid">
+<body class="oe-code-picker-popup" onload="<?php echo $focus; ?>">
+    <div class="container-fluid oe-code-picker-popup__document">
         <?php
         $string_target_element = "";
         $string_target_element = !empty($target_element) ? "?target_element=" . attr_url($target_element) . "&" : "?";
