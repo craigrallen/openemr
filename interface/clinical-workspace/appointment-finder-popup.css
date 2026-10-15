@@ -1,0 +1,82 @@
+/*
+ * Appointment Finder popup (find_appt_popup.php) inside an active workbench popup.
+ * Source-only, narrow provision: quiets the existing sheet and pairs ink with paper on
+ * the criteria strip, result table, header and body, and on typeable text fields.
+ * Inert outside html.oe-workbench-popup and on print; legacy rendering is unchanged.
+ * AM/PM semantic colours, the .highlight/.blue_highlight hover classes and buttons
+ * keep their inherited theme and route colours; the one exception is that non-hovered
+ * AM links inherit the route's #am colour (see the last rule). Rendered contrast and
+ * native fit are not proven by this sheet.
+ */
+@media screen {
+  /* Colour themes set .body_top { background-color: ... !important } (color_base.scss). */
+  html.oe-workbench-popup body.oe-appointment-finder-popup {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    border: 1px solid var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchCriteria {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    border-bottom: 1px solid var(--oe-wb-line, #d9e4e2);
+  }
+
+  /* Wrapping provision only for the narrow dialog; no fit is claimed. */
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchCriteria > .form-inline {
+    flex-wrap: wrap;
+  }
+
+  /* Containers only: cells inherit neutral ink; #am/#pm and hover classes keep theirs. */
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document .table-responsive > .table,
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchResultsHeader,
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchResults {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  /* Typeable text fields; readonly, disabled, native and validation states keep theirs. */
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchCriteria > form.form-inline:not(.was-validated) > input.form-control[type='text']:not([readonly], :disabled, .is-invalid, .is-valid) {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchCriteria > form.form-inline:not(.was-validated) > input.form-control[type='text']:not([readonly], :disabled, .is-invalid, .is-valid):focus {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchCriteria > form.form-inline:not(.was-validated) > input.form-control[type='text']:not([readonly], :disabled, .is-invalid, .is-valid):focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+
+  /* Inset ring: result links sit inside .table-responsive, which would clip an outset ring. */
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchResults a:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: -2px;
+  }
+
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #searchResults a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: -2px;
+  }
+
+  /*
+   * Intentional corrective inheritance: the dark theme's near-white link colour would
+   * sit on the new paper, so AM time links inherit the route's own #am var(--primary).
+   * PM links (#pm a) and hovered links (.blue_highlight) are excluded; the transparent
+   * background keeps row highlights visible. Effective primary contrast is unverified.
+   */
+  html.oe-workbench-popup body.oe-appointment-finder-popup .oe-appointment-finder-popup__document #am a:not(.blue_highlight) {
+    color: inherit;
+    background-color: transparent;
+  }
+}
