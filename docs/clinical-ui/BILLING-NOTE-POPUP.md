@@ -1,8 +1,17 @@
 # OPEMR-3 — Billing Note popup as a document sheet
 
-Status: **tests written, not executed. Production not yet edited.** Branch
-`OPEMR-3-billing-note-document`, base `master` 18647270. Nothing in this file
-is acceptance evidence.
+Status: **source implemented; tests-first hosted RED verified; current GREEN
+pending.** Branch `OPEMR-3-billing-note-document`, base fork `master`
+18647270, target fork `master`. Future commits and the PR title carry the
+uppercase `OPEMR-3` key. Nothing in this file is runtime or clinical
+acceptance evidence.
+
+- Tests-only commit 10ec42be (draft PR77): hosted JS run 38813819166 was
+  genuinely RED — 12 intended missing-presentation/CSS failures, 1287 passed,
+  62 suites, and no baseline or negative-control failures.
+- The production edits below have been made in source after that run. They
+  have not been executed by Jest, PHP or a browser here; the controller owns
+  the hosted GREEN run and an independent review.
 
 ## Surface
 
@@ -15,9 +24,10 @@ is acceptance evidence.
   (`config/config.yaml`), which set `oe-workbench-context` and
   `oe-workbench-popup` on `<html>` only inside an active same-origin workbench.
 
-## Planned production edits (the only permitted changes)
+## Production edits (implemented in source; the only permitted changes)
 
-Recorded as `[original, presented]` pairs in `tests/js/billing-note-popup.test.js`:
+Recorded as `[original, presented]` pairs in `tests/js/billing-note-popup.test.js`
+and applied to the route as exactly those seven replacements:
 
 1. Imports `OpenEMR\Common\Assets\ClinicalWorkspaceAssets` and
    `OpenEMR\Core\OEGlobalsBag`.
@@ -27,22 +37,35 @@ Recorded as `[original, presented]` pairs in `tests/js/billing-note-popup.test.j
 3. Classes: `body.oe-billing-note`, `.container.oe-billing-note-sheet`,
    `form.oe-billing-note-form`, and `.btn-group.oe-billing-note-actions`.
 4. `'billing-note-popup.css'` added in alphabetical order to
-   `ClinicalWorkspaceAssets::SUPPORTED`.
+   `ClinicalWorkspaceAssets::SUPPORTED` (between `appointment.css` and
+   `calendar-sidebar.js`).
+5. New `interface/clinical-workspace/billing-note-popup.css`: one
+   `@media screen` block, two-space indentation, every selector under
+   `html.oe-workbench-context.oe-workbench-popup body.oe-billing-note`. Body
+   canvas/ink; sheet paper/ink with a 1px line border, 6px radius and 12px
+   block padding (inline gutters left to `.container`); `#form_note` ink/paper
+   at rest and on `:focus` (2px petrol outline), disabled-ink/disabled-paper
+   when `:disabled`, muted placeholder at `opacity: 1`; actions
+   `flex-wrap: wrap`; separate `:focus` and `:focus-visible` outline-only
+   rules for the action buttons. No media range queries, `!important`,
+   typography, control geometry, button palettes or validation selectors.
 
-The shared `workspace.css` is not linked, and typography is unchanged.
+The shared `workspace.css` is not linked, and typography is unchanged. SQL,
+ACL, CSRF, the autosize script, Save/Cancel, `restoreSession()`, `dlgclose()`
+and the caller are untouched. The new sheet's border and block padding do
+change the popup's content geometry slightly; the wrap provision is not a
+claim that the actions fit natively.
 
 ## Test design
 
-`tests/clinical-ui/fixtures/billing-note-original.txt` should hold the route's
-exact bytes at 18647270. It was written with Read/Write only, so its byte
-identity has **not** been checked by a tool. Hermes should check it with
-`git show 18647270:interface/patient_file/history/edit_billnote.php` and a
-byte comparison before relying on it. If the fixture is wrong, the full-inverse
-test also fails once the route is implemented.
+`tests/clinical-ui/fixtures/billing-note-original.txt` holds the route's
+exact bytes at 18647270. The controller verified it byte-identical (`cmp`)
+with both the route as it stood and
+`git show origin/master:interface/patient_file/history/edit_billnote.php`.
 
-**Baseline and negative controls** (should pass before and after
-implementation; they depend only on the fixture, the caller and the shared
-Header assets):
+**Baseline and negative controls** (pass before and after implementation;
+they depend only on the fixture, the caller and the shared Header assets —
+none failed in the hosted RED run):
 
 - The fixture is untouched and has unique anchors.
 - The declared edit list is self-inverse on the fixture.
@@ -56,8 +79,9 @@ Header assets):
   `workspace.css` link and an inline body style.
 - Caller block (modal-sm, 350, `onClosed: 'reload'`) with mutation controls.
 
-**Intended RED assertions** (should fail now because the presentation
-additions and the CSS are missing):
+**Intended RED assertions** (failed in hosted run 38813819166 at 10ec42be
+because the presentation additions and the CSS were missing; expected to pass
+against the implemented source, GREEN pending):
 
 - Production equals `present(fixture)` exactly, `restore(production)` equals
   the fixture, and every edit and mutation anchor occurs exactly once.
@@ -96,14 +120,17 @@ additions and the CSS are missing):
 
 ## Explicitly NOT executed or established
 
-- None of these tests has been run. Hermes owns the hosted RED run.
+- The hosted GREEN run against the implemented source, and the independent
+  review. No local Jest, PHPUnit, PHPStan or lint was run for this slice.
 - Actual PHP rendering, the runtime, the ACL denial path and the CSRF failure
   path.
 - Contrast in the compiled themes (light, dark, solar, manila and compact),
-  native rendering and forced colours.
+  native rendering and forced colours. The 4.5:1 test checks source tokens
+  only, not effective compiled contrast.
 - Keyboard order and visible focus in a real browser.
 - Fit in a narrow `modal-sm` frame, opened directly or after resizing. The
   wrap provision is not a claim that the actions fit natively.
+- RTL, the `printlegacy` path and print output.
 - Real Save and Cancel round trips: the stored note, `dlgclose()` and the
   opener reload.
 - Restricted roles, a full fidelity comparison against the research, and

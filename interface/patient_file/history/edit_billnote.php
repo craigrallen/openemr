@@ -16,9 +16,11 @@ require_once("../../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
 
@@ -33,9 +35,11 @@ if (!AclMain::aclCheckCore('acct', 'bill', '', 'write')) {
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/billing-note-popup.css?v=<?php echo attr_url($clinicalAssets->version('billing-note-popup.css')); ?>">
 </head>
 
-<body>
+<body class="oe-billing-note">
     <?php
     if (!empty($_POST['form_submit']) || !empty($_POST['form_cancel'])) {
         CsrfUtils::checkCsrfInput(INPUT_POST, dieOnFail: true);
@@ -66,9 +70,9 @@ if (!AclMain::aclCheckCore('acct', 'bill', '', 'write')) {
     $fenote = $tmp['billing_note'];
     ?>
 
-    <div class="container">
+    <div class="container oe-billing-note-sheet">
         <h2><?php echo xlt('Billing Note'); ?></h2>
-        <form method='post' action='edit_billnote.php?feid=<?php echo attr_url($feid); ?>' onsubmit='return top.restoreSession()'>
+        <form method='post' action='edit_billnote.php?feid=<?php echo attr_url($feid); ?>' onsubmit='return top.restoreSession()' class='oe-billing-note-form'>
             <div class="form-group">
                 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                 <textarea class='form-control' name='form_note' id='form_note' rows='4'><?php echo text($fenote); ?></textarea>
@@ -79,7 +83,7 @@ if (!AclMain::aclCheckCore('acct', 'bill', '', 'write')) {
                 </script>
             </div>
             <div class="form-group">
-                <div class="btn-group btn-group-sm mt-3">
+                <div class="btn-group btn-group-sm mt-3 oe-billing-note-actions">
                     <button type='submit' class='btn btn-primary btn-save btn-sm' name='form_submit' value='<?php echo xla('Save'); ?>'>
                         <?php echo xlt('Save'); ?>
                     </button>
