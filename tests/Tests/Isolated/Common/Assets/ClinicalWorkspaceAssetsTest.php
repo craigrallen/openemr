@@ -153,6 +153,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss tracker status stylesheet' => ['tracker_status_popup.css'],
+            'tracker status stylesheet traversal' => ['../clinical-workspace/tracker-status-popup.css'],
+            'tracker status route outside the workspace' => ['../patient_tracker/patient_tracker_status.php'],
         ];
     }
 
@@ -450,6 +453,34 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function trackerStatusStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('tracker-status-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('tracker-status-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('tracker-status-popup.css'));
+
+        $this->writeAsset('tracker-status-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('tracker-status-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/tracker-status-popup.css');
+        self::assertSame('0', $assets->version('tracker-status-popup.css'));
+    }
+
+    #[Test]
+    public function shippedTrackerStatusStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/tracker-status-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('tracker-status-popup.css'));
     }
 
     #[Test]

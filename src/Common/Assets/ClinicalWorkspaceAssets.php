@@ -47,6 +47,7 @@ final readonly class ClinicalWorkspaceAssets
         'soap-document.js',
         'soap-reference.css',
         'soap-reference.js',
+        'tracker-status-popup.css',
         'visit-history.css',
         'visit-history.js',
         'workspace.css',

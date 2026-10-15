@@ -1,0 +1,79 @@
+/*
+ * Patient tracker status popup (interface/patient_tracker/patient_tracker_status.php).
+ * Inert unless popup.js marks <html> as a genuine workbench popup. Screen only:
+ * print keeps the legacy rendering. Fonts, container gutters, labels, controls
+ * and button palettes stay as the route and theme render them.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-tracker-status-popup {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* The original Bootstrap container becomes the paper sheet; its padding is untouched. */
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__title {
+    color: var(--oe-wb-petrol);
+    background: var(--oe-wb-paper);
+  }
+
+  /* Both selects come from generate_select_list() as .form-control; paint is paired so Dark and Solar inputs stay legible. */
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .form-control {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .form-control:focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .form-control:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  /* The original btn-group wraps instead of overflowing a narrow dialog. */
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+
+  /* Separated buttons get back the corners and margin Bootstrap joins away. */
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__actions > .btn {
+    margin-left: 0;
+    border-radius: 3px;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__actions > .btn:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__actions > .btn:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  /*
+   * Colour themes square the first button's right corners with !important. The
+   * route has exactly two plain buttons, so :first-child alone is enough, and
+   * this longer scoped selector outranks the theme's.
+   */
+  html.oe-workbench-popup body.oe-tracker-status-popup .oe-tracker-status-popup__document .oe-tracker-status-popup__actions > .btn:first-child {
+    border-top-right-radius: 3px !important;
+    border-bottom-right-radius: 3px !important;
+  }
+}
