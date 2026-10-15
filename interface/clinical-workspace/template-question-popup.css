@@ -1,0 +1,80 @@
+/*
+ * Template question popup (library/custom_template/quest_popup.php) as a document
+ * inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-context.oe-workbench-popup (set by popup.js
+ * only inside an active workbench) plus the route's body class, and the sheet is linked
+ * with media="screen", so the standalone page and print keep the legacy rendering.
+ * Tokens come from popup.css. Font sizes, the button palette and every control stay
+ * the route's own; no rule sets display, visibility or position.
+ */
+@media screen {
+  /* The theme paints .body_top with !important, so the canvas must match it here only. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas) !important;
+  }
+
+  /* The original table is the paper sheet. Width is a provision, not a measured fit. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-sheet {
+    width: 100%;
+    min-width: 0;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-collapse: separate;
+    border-radius: 8px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-sheet > tbody > tr > td {
+    padding: 8px 12px;
+  }
+
+  /* Option buttons and Save / Cancel wrapping provision; native fit remains unmeasured. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-options,
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-actions {
+    white-space: normal;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-options .btn {
+    margin: 0 4px 4px 0;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-actions input[type='button'] {
+    margin: 4px 2px 0;
+    white-space: normal;
+  }
+
+  /* The textarea keeps its rows/cols; readonly, disabled and validation states stay the theme's. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-field #quest:not(:disabled, .is-invalid, .is-valid, [readonly]) {
+    box-sizing: border-box;
+    max-width: 100%;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-field #quest:not(:disabled, .is-invalid, .is-valid, [readonly]):focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Focus fallback for browsers without :focus-visible ... */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-options .btn:focus,
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-actions input[type='button']:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* ... kept separate so an unsupported selector cannot drop the fallback. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-options .btn:focus-visible,
+  html.oe-workbench-context.oe-workbench-popup body.oe-template-question .oe-template-question-actions input[type='button']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}
