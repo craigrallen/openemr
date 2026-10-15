@@ -26,6 +26,12 @@
     padding: 8px 4px 12px;
   }
 
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:disabled {
+    background-color: var(--oe-wb-disabled-paper);
+    border-color: var(--oe-wb-line);
+    color: var(--oe-wb-disabled-ink);
+  }
+
   /* Controls: paired ink and paper. Disabled and validation states are excluded so their cues stay. */
   html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:not(:disabled, .is-invalid, .is-valid, .was-validated *) {
     background-color: var(--oe-wb-paper);
@@ -46,12 +52,6 @@
   html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:not(:disabled, .is-invalid, .is-valid, .was-validated *):focus-visible {
     outline: 2px solid var(--oe-wb-petrol);
     outline-offset: 1px;
-  }
-
-  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:disabled {
-    background-color: var(--oe-wb-disabled-paper);
-    border-color: var(--oe-wb-line);
-    color: var(--oe-wb-disabled-ink);
   }
 
   /* Save and the ACL-gated management links keep their natural wrap; only a quiet rule above them. */
