@@ -1,0 +1,72 @@
+/* Procedure provider editor (orders/procedure_provider_edit.php) inside an active workbench popup only. */
+@media screen {
+  html.oe-workbench-popup body.oe-procedure-provider-popup {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__canvas {
+    margin: 0 auto;
+    max-width: 960px;
+    padding: 16px 20px 24px;
+  }
+
+  /* The original form becomes the paper sheet; its padding absorbs the Bootstrap row gutters. */
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    min-width: 0;
+    padding: 16px 20px 20px;
+  }
+
+  /* Fields carry their own pair so a theme .form-control palette never mixes with the sheet. */
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document .form-control {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* Help panels: paint only; .collapse keeps owning their visibility. */
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document div[id$='_info'] {
+    color: var(--oe-wb-warning-ink);
+    background-color: var(--oe-wb-warning-paper);
+    border-radius: 6px;
+  }
+
+  /* Help toggles and close links: reserve the ring so focus never shifts layout. */
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document a {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document a:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__document a:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  /* Save, Cancel and (when editing) Delete keep their theme palettes and wrap instead of overflowing. */
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__actions {
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__actions .btn {
+    border-radius: 6px;
+    margin-left: 0;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__actions .btn:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-provider-popup .oe-procedure-provider-popup__actions .btn:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+}

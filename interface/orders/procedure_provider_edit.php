@@ -17,6 +17,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -79,11 +80,13 @@ $info_msg = "";
         margin-left:10px;
     }
 </style>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/procedure-provider-popup.css?v=<?php echo attr_url($clinicalAssets->version('procedure-provider-popup.css')); ?>">
 
 </head>
 
-<body>
-<div class="container-fluid">
+<body class="oe-procedure-provider-popup">
+<div class="container-fluid oe-procedure-provider-popup__canvas">
     <?php
     // If we are saving, then save and close the window.
     // lab_director is the id of the organization in the users table
@@ -177,7 +180,7 @@ $info_msg = "";
     </div>
     <div class="row">
         <div class="col-sm-12">
-            <form method='post' name='theform' action="procedure_provider_edit.php?ppid=<?php echo attr_url($ppid); ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>">
+            <form method='post' name='theform' class='oe-procedure-provider-popup__document' action="procedure_provider_edit.php?ppid=<?php echo attr_url($ppid); ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>">
                 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                 <div class="form-check-inline">
                     <label class='form-check-label mr-2' for="form_active"><?php echo xlt('Active'); ?></label>
@@ -477,7 +480,7 @@ $info_msg = "";
                 <div class="row mt-3">
                     <div class="form-group clearfix" id="button-container">
                         <div class="col-sm-12 text-left position-override">
-                            <div class="btn-group" role="group">
+                            <div class="btn-group oe-procedure-provider-popup__actions" role="group">
                                 <button type='submit' name='form_save' class="btn btn-primary btn-save" value='<?php echo xla('Save'); ?>'><?php echo xlt('Save'); ?></button>
                                 <button type="button" class="btn btn-secondary btn-cancel" onclick='window.close()' ;><?php echo xlt('Cancel'); ?></button>
                                 <?php if ($ppid) { ?>

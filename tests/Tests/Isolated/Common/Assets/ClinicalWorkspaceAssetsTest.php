@@ -453,6 +453,51 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     }
 
     #[Test]
+    public function procedureProviderStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('procedure-provider-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('procedure-provider-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('procedure-provider-popup.css'));
+
+        $this->writeAsset('procedure-provider-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('procedure-provider-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/procedure-provider-popup.css');
+        self::assertSame('0', $assets->version('procedure-provider-popup.css'));
+
+        foreach (
+            [
+                'procedure_provider_popup.css',
+                'procedure-provider-popup.CSS',
+                '../clinical-workspace/procedure-provider-popup.css',
+                'x/../procedure-provider-popup.css',
+                'procedure-provider-popup.css?v=1',
+            ] as $unsupported
+        ) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedProcedureProviderStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/procedure-provider-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('procedure-provider-popup.css'));
+    }
+
+    #[Test]
     public function shippedSoapDocumentAssetsExist(): void
     {
         $assets = new ClinicalWorkspaceAssets();
