@@ -1,9 +1,13 @@
 # OPEMR-4: active reminder popup as a document sheet
 
-Status: **tests-first phase. No production code changed and nothing executed.**
-The test file, fixture and this document are written. Hermes owns running the tests,
-Git and the hosted RED. This slice makes no claim about results until Hermes records
-them in this document.
+Status: **implemented; GREEN and review pending.**
+Hermes recorded the tests-first commit `137ec909`, a passing controller `cmp` of the
+fixture against the unmodified route, and a genuine hosted RED in run `38824154830`.
+That run failed on the intended missing route additions, helper entry and stylesheet.
+Before the RED, the baseline, mutation and caller checks passed and production code was
+unchanged. The three production files are now written. Nothing has been run against
+them yet. Hermes owns the tests, Git and hosted CI. This document claims no GREEN
+result, count, runtime behaviour or clinical fidelity until Hermes records one here.
 
 | Role | Owner |
 |---|---|
@@ -31,11 +35,12 @@ else stays as it is:
 - typography, the Bootstrap button, and the warning and due-status semantic colours
 - legacy (direct) and print rendering
 
-Six files are reserved. In this phase only the last three are written:
+Six files are reserved. The tests-first commit wrote the last three. The implementation
+phase wrote the first three:
 
-1. `interface/patient_file/reminder/active_reminder_popup.php` (planned, not edited)
-2. `src/Common/Assets/ClinicalWorkspaceAssets.php`: register one basename, in alphabetical order (planned, not edited)
-3. `interface/clinical-workspace/active-reminders-popup.css` (planned, not created)
+1. `interface/patient_file/reminder/active_reminder_popup.php` (edited: the five planned additions)
+2. `src/Common/Assets/ClinicalWorkspaceAssets.php`: registers `active-reminders-popup.css` first in the sorted list (edited)
+3. `interface/clinical-workspace/active-reminders-popup.css` (created)
 4. `tests/js/active-reminders-popup.test.js`
 5. `tests/clinical-ui/fixtures/active-reminders-original.txt`, which must be byte-identical to the original route
 6. `docs/clinical-ui/ACTIVE-REMINDERS-POPUP.md`
@@ -52,20 +57,30 @@ The shared `workspace.css` is **not** linked. Neither is `mode.js`. `demographic
 | 4 | `<table class="table border-0">` | `<table class="table border-0 oe-reminders-heading">` |
 | 5 | `echo $active_alerts;` `?>` `</body>` | closes the wrapper with `</div>` before `</body>` |
 
-No original node is moved and no PHP logic changes. The test file declares these
-five additions and their exact inverse. Restoring the presented route must reproduce the
-fixture byte for byte.
+No PHP logic changes, and no original node, whitespace, script or clinical call is
+reordered or removed. The test file declares these five additions and their exact
+inverse. Restoring the presented route must reproduce the fixture byte for byte.
 
-## Planned stylesheet (sketch the tests describe)
+Two caveats:
+
+- The wrapper `<div class="oe-reminders-sheet">` adds a new ancestor around every original
+  body child. The nodes keep their order, but their parent changes. A theme or script
+  selector that depends on direct `body >` children would no longer match them.
+  This slice found no such selector in the route itself; theme stylesheets were not audited.
+- The wrapper is a block container on every page, including legacy and print, even though
+  its styling is screen-and-popup only. Containment can change geometry: margin collapsing,
+  floats and the width the original table resolves against. No layout equivalence is claimed.
+
+## Stylesheet (as implemented; tests not yet run against it)
 
 Everything sits in one top-level `@media screen` block. Every selector starts with
 `html.oe-workbench-context.oe-workbench-popup body.oe-active-reminders`.
 
 - body: `color` ink, `background-color` canvas
-- `.oe-reminders-sheet`: ink on paper, `1px solid` line border, modest padding and radius, `overflow-wrap: anywhere`
+- `.oe-reminders-sheet`: ink on paper, `1px solid` line border, `12px 14px` padding, `6px` radius, `overflow-wrap: anywhere`
 - `.oe-reminders-heading` and `.oe-reminders-heading td`: ink on paper
 - `.oe-reminders-heading .title`: ink, `background-color: transparent`, because a theme may give `.title` its own explicit ink
-- `#close:focus` and, as a separate rule, `#close:focus-visible`: petrol `outline` and `outline-offset` only
+- `#close:focus` and, as a separate rule, `#close:focus-visible`: `2px` petrol `outline` and `2px` `outline-offset` only. The `:focus` rule is the fallback; keeping it separate means an engine that rejects `:focus-visible` cannot drop it. In engines with `:focus-visible`, the fallback also shows on pointer focus.
 
 The colour tokens are the existing `--oe-wb-*` palette. Every use takes a literal fallback
 equal to the `popup.css` value: ink `#17343b`, canvas `#f3f7f5`, paper `#fff`, line
@@ -80,6 +95,13 @@ equal to the `popup.css` value: ink `#17343b`, canvas `#f3f7f5`, paper `#fff`, l
 - width queries, print rules or `@import`
 
 The padding and border are new geometry. They do not show the content fits a 500×250 frame.
+
+**Why there is no `!important`.** Source reading only: the theme's `.body_top` rule sets
+`background: var(--light)` at normal priority. The tab-container rule that does use
+`!important` is scoped to `#mainBox > .body_top`, which does not match this document's own
+`<body>` inside the dialog iframe. On that reading the scoped selector outranks the theme
+without `!important`. The actual runtime cascade and the compiled themes have not been
+checked, so this is not established.
 
 ## Test design (`tests/js/active-reminders-popup.test.js`)
 
@@ -117,6 +139,15 @@ These run through the normal hosted Jest config with existing dependencies
 
 The cascade resolves values. It does not render them, so it is not a native contrast test.
 
+Limits of the test design:
+
+- While the stylesheet is missing, every stylesheet and cascade test fails on the same
+  missing-file message. The hosted RED therefore shows the file was absent. It does not
+  show that each test separately detects its own defect.
+- The negative controls are source mutations. They prove the inverse catches each change.
+  They do not exercise native behaviour, such as whether `dlgclose()` closes the dialog,
+  whether the alert log is written, or how a real theme renders.
+
 ## Security preflight (source-verified, not re-proved here)
 
 Read from `library/clinical_rules.php`:
@@ -125,7 +156,9 @@ Read from `library/clinical_rules.php`:
 - `allergy_conflict` (lines 365–366) does the same.
 
 Opening this route can therefore **write alert-log rows**. This slice authorises no runtime GET or POST
-and makes no `test=true` change. The dashboard probe already uses `test=true`.
+and makes no `test=true` change. The implementation leaves both calls byte-identical, so
+they keep their default `test=false`. The dashboard probe already uses `test=true`. No live
+endpoint GET or POST, and no database QA, was done for this slice.
 
 Authentication comes from `globals.php` and the session. The route has no explicit patient
 ACL check of its own. This slice does not claim any authorisation property is newly proved.
@@ -136,11 +169,11 @@ States: **Not started**, **Written (unexecuted)**, **RED recorded**, **GREEN rec
 
 | Item | State |
 |---|---|
-| Fixture byte-identity to route at `18647270` | Written (unexecuted). Hermes to verify with `cmp` or a hash |
-| Jest file through hosted config | Written (unexecuted) |
-| Intended RED (route, helper, CSS, cascade) | Not started (Hermes) |
-| Implementation of route, helper and CSS | Not started |
-| GREEN, lint (`lint:js`, stylelint), `php -l`, PHPStan, phpcs | Not started |
+| Fixture byte-identity to route at `18647270` | Controller `cmp` PASS (Hermes) |
+| Jest file through hosted config | RED recorded at `137ec909` |
+| Intended RED (route, helper, CSS, cascade) | RED recorded: hosted run `38824154830` at `137ec909`, failing on the missing route additions, helper entry and stylesheet. Baseline, mutation and caller checks passed beforehand, with production unchanged |
+| Implementation of route, helper and CSS | Written (unexecuted) |
+| GREEN, lint (`lint:js`, stylelint), `php -l`, PHPStan, phpcs | Not started (Hermes) |
 | Independent review (Codex) | Not started |
 
 **Pending. Not claimed by any test in this slice:**
