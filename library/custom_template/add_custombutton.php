@@ -29,8 +29,10 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
 $authUserID = $session->get('authUserID');
@@ -71,6 +73,8 @@ if ((isset($_POST['form_save']) && $_POST['form_save'] == 'Save') || (isset($_PO
 <html>
 <head>
     <?php Header::setupHeader('opener'); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/custom-button-popup.css?v=<?php echo attr_url($clinicalAssets->version('custom-button-popup.css')); ?>">
     <style>
         .bottom {
             border-bottom: 1px solid var(--black);
@@ -97,8 +101,8 @@ if ((isset($_POST['form_save']) && $_POST['form_save'] == 'Save') || (isset($_PO
         }
     </style>
 </head>
-<body class="body_top">
-<form name="designation_managment" action="" method="post" onsubmit="top.restoreSession();">
+<body class="body_top oe-custom-button">
+<form name="designation_managment" action="" method="post" onsubmit="top.restoreSession();" class="oe-custom-button-document">
   <h3 class="text-center"><?php echo htmlspecialchars(xl('Add Custom Button'), ENT_QUOTES); ?></h3>
   <div class="table-responsive">
     <table class="table table-borderless">
@@ -159,7 +163,7 @@ if ((isset($_POST['form_save']) && $_POST['form_save'] == 'Save') || (isset($_PO
         </tr>
         <input type="hidden" name="count" value="<?php echo htmlspecialchars(($i + 2), ENT_QUOTES); ?>" />
         <tr class="text">
-            <td class="text-center" colspan="5">
+            <td class="text-center oe-custom-button-actions" colspan="5">
                 <input type='submit' class="btn btn-primary" name='form_save' id='form_save'
                        value="<?php echo htmlspecialchars(xl('Save'), ENT_QUOTES); ?>"/>
                 <input type='submit' class="btn btn-secondary" name='form_delete' id='form_delete'
