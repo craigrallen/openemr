@@ -153,6 +153,8 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss procedure editor stylesheet' => ['procedure_editor_popup.css'],
+            'procedure editor stylesheet traversal' => ['../clinical-workspace/procedure-editor-popup.css'],
         ];
     }
 
@@ -450,6 +452,44 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function procedureEditorStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('procedure-editor-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('procedure-editor-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('procedure-editor-popup.css'));
+
+        $this->writeAsset('procedure-editor-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('procedure-editor-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/procedure-editor-popup.css');
+        self::assertSame('0', $assets->version('procedure-editor-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        foreach (['procedure_editor_popup.css', 'procedure-editor-popup.CSS', 'procedure-editor.css', '../clinical-workspace/procedure-editor-popup.css', 'procedure-editor-popup.css?v=1'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedProcedureEditorStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/procedure-editor-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('procedure-editor-popup.css'));
     }
 
     #[Test]
