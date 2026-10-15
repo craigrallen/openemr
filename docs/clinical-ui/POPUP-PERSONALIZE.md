@@ -41,7 +41,7 @@ Source-level evidence comes only from the committed Jest contract. These states 
 ## Known limitations
 
 - **Theme `.text` cells.** The two `.col-sm-5 text` label cells keep the theme `.text` sizing, and under some themes (for example manila) a `.text` color set with `!important`. The sheet deliberately does not target `.text`, so those labels may not take the workbench ink.
-- **Width reduction.** The sheet adds decoration to the form on top of the existing `container-fluid` padding: 12px margin on each side, a 1px border on each side and 4px padding on each side (and, vertically, 8px top and 12px bottom margin). The sheet makes no claim that this equals or fits any fixed caller frame width. Wrapping of the two `col-sm-5` selects and the `col-sm-2` arrow column under this added decoration has not been measured.
+- **Width reduction.** The sheet adds decoration to the form on top of the existing `container-fluid` padding: 12px margin on each side, a 1px border on each side and 4px padding on each side (and, vertically, 8px top and 12px bottom padding). The sheet makes no claim that this equals or fits any fixed caller frame width. Wrapping of the two `col-sm-5` selects and the `col-sm-2` arrow column under this added decoration has not been measured.
 - **Native select rendering.** The multi-selects (`size="6"`) and their options use native OS rendering. Whether paper background and ink carry through to options on every engine and OS is unknown and has not been tested.
 - **No live, demo or locale verification.** No live GET or POST and no save were performed, and no database, demo-data or deploy step was run. The original 22 requested features (theme acceptance is tracked separately), demo data and the Swedish locale remain open acceptance items.
 
