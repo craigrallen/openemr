@@ -21,6 +21,7 @@ require_once('../../globals.php');
 $srcdir = \OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir();
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getProjectDir() . '/custom/code_types.inc.php');
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -61,6 +62,8 @@ $singleCodeSelection = $_GET['singleCodeSelection'] ?? null;
     <title><?php echo xlt('Code Finder'); ?></title>
 
     <?php Header::setupHeader(['opener', 'datatables', 'datatables-bs', 'datatables-colreorder']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/code-search-popup.css?v=<?php echo attr_url($clinicalAssets->version('code-search-popup.css')); ?>">
 
     <script>
         var singleCodeSelection = <?php echo (isset($_GET['singleCodeSelection'])) ? js_escape($_GET['singleCodeSelection']) : 0 ?>;
@@ -309,13 +312,13 @@ $singleCodeSelection = $_GET['singleCodeSelection'] ?? null;
 
 </head>
 
-<body id="codes_search">
+<body id="codes_search" class="oe-code-search-popup">
     <div class="container-fluid">
         <?php
         $string_target_element = empty($target_element) ? '?' : "?target_element=" . attr_url($target_element) . "&";
         ?>
 
-        <form method='post' name='theform'>
+        <form method='post' name='theform' class='oe-code-search-popup__document'>
             <?php
             echo "<div class='form-group row mb-3'>\n";
             if ($what == 'codes') {

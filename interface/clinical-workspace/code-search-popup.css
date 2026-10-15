@@ -1,0 +1,89 @@
+/*
+ * Dynamic code finder (find_code_dynamic.php) inside a genuine workbench popup.
+ * The existing theform becomes a quiet paper sheet on the canvas; nothing else moves.
+ * Screen only and inert unless popup.js marks <html> with oe-workbench-popup.
+ *
+ * Deliberately untouched: typography (the shared popup.css owns it), control
+ * borders, box-shadows and background images (so .is-valid/.is-invalid and
+ * .was-validated cues, select carets and button palettes stay Bootstrap's),
+ * DataTables wrappers, striping, hover and the more-results alert, and the
+ * table's width (the route warns that table-responsive breaks DataTables).
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-code-search-popup {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document {
+    padding: 0.75rem 1rem;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  /* Theme-neutral field pair; a transparent ring is reserved so focus never shifts layout. */
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .form-control,
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document select {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .btn {
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document #my_data_table {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  /* :focus is the fallback for browsers without :focus-visible; both draw the petrol ring. */
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .form-control:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document select:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .btn:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .form-control:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document select:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .btn:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  /* The field rules above outrank popup.css, so its readonly/disabled pair is restated last. */
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .form-control[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document .form-control:disabled {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup body.oe-code-search-popup .oe-code-search-popup__document select:disabled {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+}
