@@ -1,0 +1,62 @@
+/*
+ * Personalize (library/custom_template/personalize.php) as a quiet document inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-context.oe-workbench-popup plus the route's body class,
+ * and the sheet is linked with media="screen", so the standalone page and printed output keep the
+ * legacy rendering. Tokens come from popup.css.
+ *
+ * Paint and modest box spacing only. Typography, the Bootstrap grid, the theme .text label cells,
+ * the inline-sized item preview, buttons and options are left to their owners. The category
+ * scripts and ajax_code.php previews keep running against unchanged markup.
+ */
+@media screen {
+  /* The theme paints .body_top with a forced canvas, so the scoped canvas answers it in kind. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize {
+    background-color: var(--oe-wb-canvas) !important;
+    color: var(--oe-wb-ink);
+  }
+
+  /* The form becomes one paper sheet. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document {
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    color: var(--oe-wb-ink);
+    margin: 12px;
+    padding: 8px 4px 12px;
+  }
+
+  /* Controls: paired ink and paper. Disabled and validation states are excluded so their cues stay. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:not(:disabled, .is-invalid, .is-valid, .was-validated *) {
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+    color: var(--oe-wb-ink);
+  }
+
+  /* Pointer and keyboard focus fallback, kept apart so an unknown :focus-visible cannot drop it. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:not(:disabled, .is-invalid, .is-valid, .was-validated *):focus {
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    box-shadow: none;
+    color: var(--oe-wb-ink);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:not(:disabled, .is-invalid, .is-valid, .was-validated *):focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-document .form-control:disabled {
+    background-color: var(--oe-wb-disabled-paper);
+    border-color: var(--oe-wb-line);
+    color: var(--oe-wb-disabled-ink);
+  }
+
+  /* Save and the ACL-gated management links keep their natural wrap; only a quiet rule above them. */
+  html.oe-workbench-context.oe-workbench-popup body.oe-personalize .oe-personalize-actions {
+    border-top: 1px solid var(--oe-wb-line);
+    padding-top: 12px;
+  }
+}
