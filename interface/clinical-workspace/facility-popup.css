@@ -4,8 +4,10 @@
  * Paint only. Every rule is scoped to html.oe-workbench-context or html.oe-workbench-popup
  * (set by popup.js only inside an active workbench) plus the route's body class, and the sheet
  * is linked with media="screen", so the standalone page and print keep the legacy rendering.
- * Geometry, typography, display, Bootstrap tabs/switches/active states, the bg-light and
- * text-muted panels, button and nav palettes and validation states all stay theme-owned.
+ * Geometry, typography, display, Bootstrap tabs/switches/active states, the text-muted hints,
+ * button and nav palettes and validation states all stay theme-owned. The one exception is the
+ * .bg-light panels: the document now sets workbench ink, so each panel gets an explicit
+ * ink/paper pair (background !important to answer Bootstrap's bg-light utility).
  *
  * workspace.css is not linked here, so every token resolves from popup.css when present and
  * otherwise falls back to the same workbench values.
@@ -33,6 +35,13 @@
   html.oe-workbench-popup body.oe-facility-popup .oe-facility-document {
     color: var(--oe-facility-ink);
     background-color: var(--oe-facility-paper);
+  }
+
+  /* Existing panels: explicit ink and paper, since the document ancestor now sets ink. */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .bg-light,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .bg-light {
+    color: var(--oe-facility-ink);
+    background-color: var(--oe-facility-paper) !important;
   }
 
   /* Ordinary controls. Validation states keep the theme's semantic borders, icons and rings. */
