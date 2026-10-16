@@ -23,11 +23,14 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 ?>
 <?php Header::setupHeader(); ?>
-<div class='container'>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/cqm-valueset-howto-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('cqm-valueset-howto-popup.css')); ?>">
+<div class='container oe-cqm-valueset-howto-document'>
     <p>
         <?php echo xlt("Steps to install the VALUSET database"); ?>:
         <ol>
