@@ -4,10 +4,10 @@
 
 `interface/code_systems/rxnorm_howto.php` is the instruction fragment shown
 when an administrator opens "RXNORM Installation Details" from the external
-data loads page. Inside the clinical workbench it rendered with the default
-theme surface. This change gives the fragment the workbench paper surface,
-ink text and petrol links, scoped to the workbench context only, without
-touching its content.
+data loads page. The new screen stylesheet requests a workbench paper
+surface, ink text and petrol links when the workbench context class is
+active, without touching its content. Actual activation and computed styles
+remain unverified.
 
 This is a source-only paper adaptation. It does not claim complete
 researched fidelity, a native fit inside the dialog, or effective contrast
@@ -39,7 +39,9 @@ Unchanged by design:
 - All original fragment content: the translated steps, both NLM links
   (`target="_blank" rel="noopener"`), the `contrib/rxnorm` step, and both
   `h5.text-danger` translated warnings with their original semantic warning
-  utility. No CSS targets or repaints the warnings.
+  utility. No new selector directly targets the warning foreground; the
+  paper container does change its backdrop, so unchanged warning declarations
+  do not establish adequate contrast.
 - No PHP variables, wrapper elements, `html`/`head`/`body`, inline styles or
   scripts, fonts, geometry or new warning styles.
 - No caller, dialog, shared workbench engine, JS, dependency, config or
