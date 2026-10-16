@@ -31,6 +31,7 @@ final readonly class ClinicalWorkspaceAssets
         'calendar-sidebar.js',
         'calendar-workday.css',
         'calendar-workday.js',
+        'document-finder-popup.css',
         'encounter-document.css',
         'finder.css',
         'global-messages.css',

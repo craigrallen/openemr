@@ -179,7 +179,7 @@ function verifyHelper(php) {
 // The complete sheet, rule by rule and in cascade order. One selector per rule, so an
 // unsupported pseudo-class (:focus-visible) cannot drop the :focus fallback with it.
 const P = 'html.oe-workbench-popup body.document-finder-popup';
-const FIELD = `${P} #theform:not(.was-validated) #searchparm:not(.is-invalid):not(.is-valid)`;
+const FIELD = `${P} #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid)`;
 const ink = 'var(--oe-wb-ink, #17343b)';
 const muted = 'var(--oe-wb-muted, #526a70)';
 const paper = 'var(--oe-wb-paper, #fff)';
@@ -198,13 +198,14 @@ const SPEC = [
     [`${P} #searchResultsHeader th`, { color: muted, 'background-color': canvas }],
     // Hovered rows keep the original #336699 highlight painted on the row.
     [`${P} #searchResults .oneresult:not(:hover) > td`, { color: ink, 'background-color': paper }],
+    // Lower-specificity rings come before the higher-specificity field paint (no-descending-specificity).
+    [`${P} #searchparm:focus`, ring],
+    [`${P} #searchparm:focus-visible`, ring],
     [FIELD, { color: ink, 'background-color': paper }],
     [`${FIELD}:focus`, { color: ink, 'background-color': paper }],
     [`${FIELD}:disabled`, { color: disabledInk, 'background-color': disabledPaper }],
     [`${FIELD}[readonly]`, { color: disabledInk, 'background-color': disabledPaper }],
     [`${FIELD}::placeholder`, { color: muted, opacity: '1' }],
-    [`${P} #searchparm:focus`, ring],
-    [`${P} #searchparm:focus-visible`, ring],
     [`${P} #submitbtn:focus`, ring],
     [`${P} #submitbtn:focus-visible`, ring],
 ];
@@ -381,4 +382,14 @@ test('the sheet invariant rejects extra selectors, properties, importants and ge
     for (const [before, after] of mutations) {
         expect(() => verifySheet(replaceUnique(sheet, before, after))).toThrow();
     }
+});
+
+test('the sheet invariant rejects the chained :not form and a dropped was-validated guard', () => {
+    const sheet = renderSheet(SPEC);
+    const chained = ':not(.is-invalid, .is-valid)';
+    const guard = '#theform:not(.was-validated) ';
+    expect(count(sheet, chained)).toBe(5);
+    expect(count(sheet, guard)).toBe(5);
+    expect(() => verifySheet(sheet.split(chained).join(':not(.is-invalid):not(.is-valid)'))).toThrow();
+    expect(() => verifySheet(sheet.split(guard).join(''))).toThrow();
 });
