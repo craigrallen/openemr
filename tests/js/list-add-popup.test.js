@@ -4,7 +4,7 @@
  * Add-to-list inline popup (library/options_listadd.inc.php) inside an active workbench.
  *
  * The fragment is shared: options.inc.php renders data type 26 selects and their Add buttons
- * for many screens, and the fragment's script posts to library/ajax/addlistitem.php. This
+ * for many screens, and the fragment's script sends GET to library/ajax/addlistitem.php. This
  * phase only adapts the palette of the existing #newlistitem box. Its geometry, inline
  * visibility, classes, fonts, IDs, script, CSRF token and option propagation stay byte for
  * byte, which the frozen-original inverse below enforces. These are source-level checks with a
@@ -283,13 +283,23 @@ const OUTLINE = { outline: '2px solid var(--oe-wb-petrol)', 'outline-offset': '2
 const expectedRules = [
     // The only !important: the box keeps .bg-light, whose Bootstrap rule is itself !important.
     { selectors: [SCOPE], decls: { 'background-color': 'var(--oe-wb-paper) !important', color: 'var(--oe-wb-ink)' } },
-    { selectors: [FIELD, `${FIELD}:focus`], decls: { 'background-color': 'var(--oe-wb-paper)', color: 'var(--oe-wb-ink)' } },
-    { selectors: [`${FIELD}:disabled`, `${FIELD}[readonly]`], decls: { 'background-color': 'var(--oe-wb-disabled-paper)', color: 'var(--oe-wb-disabled-ink)' } },
-    { selectors: [`${FIELD}::placeholder`], decls: { color: 'var(--oe-wb-ink)', opacity: '1' } },
+    // The focus rings come before the field palette so the sheet avoids descending specificity.
     // :focus and :focus-visible stay separate rules so an engine without :focus-visible keeps the :focus ring.
     { selectors: FOCUSABLE.map(selector => `${selector}:focus`), decls: OUTLINE },
     { selectors: FOCUSABLE.map(selector => `${selector}:focus-visible`), decls: OUTLINE },
+    { selectors: [FIELD, `${FIELD}:focus`], decls: { 'background-color': 'var(--oe-wb-paper)', color: 'var(--oe-wb-ink)' } },
+    // Disabled and readOnly follow the normal/focus rule so they win a focused disabled field.
+    { selectors: [`${FIELD}:disabled`, `${FIELD}[readonly]`], decls: { 'background-color': 'var(--oe-wb-disabled-paper)', color: 'var(--oe-wb-disabled-ink)' } },
+    { selectors: [`${FIELD}::placeholder`], decls: { color: 'var(--oe-wb-ink)', opacity: '1' } },
 ];
+
+// Indexes into expectedRules, so the mutations below keep their semantic targets.
+const BOX = 0;
+const RING_FOCUS = 1;
+const RING_VISIBLE = 2;
+const FIELD_PAPER = 3;
+const FIELD_LOCKED = 4;
+const FIELD_PLACEHOLDER = 5;
 
 const renderSheet = rules => `@media screen {\n${rules.map(({ selectors, decls }) => `  ${selectors.join(',\n  ')} {\n${Object.entries(decls).map(([prop, value]) => `    ${prop}: ${value};`).join('\n')}\n  }`).join('\n\n')}\n}\n`;
 
@@ -344,24 +354,26 @@ const withRules = edit => {
     return renderSheet(rules);
 };
 const sheetMutations = [
-    ['extra !important', withRules(r => { r[1].decls.color = 'var(--oe-wb-ink) !important'; })],
-    ['missing !important on the paper', withRules(r => { r[0].decls['background-color'] = 'var(--oe-wb-paper)'; })],
-    ['padding', withRules(r => { r[0].decls.padding = '8px'; })],
-    ['width', withRules(r => { r[0].decls.width = 'auto'; })],
-    ['border', withRules(r => { r[1].decls.border = '1px solid var(--oe-wb-line)'; })],
-    ['font', withRules(r => { r[0].decls['font-family'] = 'inherit'; })],
-    ['visibility', withRules(r => { r[0].decls.display = 'block'; })],
-    ['stacking', withRules(r => { r[0].decls['z-index'] = '1050'; })],
+    ['extra !important', withRules(r => { r[FIELD_PAPER].decls.color = 'var(--oe-wb-ink) !important'; })],
+    ['missing !important on the paper', withRules(r => { r[BOX].decls['background-color'] = 'var(--oe-wb-paper)'; })],
+    ['padding', withRules(r => { r[BOX].decls.padding = '8px'; })],
+    ['width', withRules(r => { r[BOX].decls.width = 'auto'; })],
+    ['border', withRules(r => { r[FIELD_PAPER].decls.border = '1px solid var(--oe-wb-line)'; })],
+    ['font', withRules(r => { r[BOX].decls['font-family'] = 'inherit'; })],
+    ['visibility', withRules(r => { r[BOX].decls.display = 'block'; })],
+    ['stacking', withRules(r => { r[BOX].decls['z-index'] = '1050'; })],
     ['button paint', withRules(r => { r.push({ selectors: [`${SCOPE} .btn-primary`], decls: { 'background-color': 'var(--oe-wb-petrol)' } }); })],
-    ['custom property on the box', withRules(r => { r[0].decls['--oe-wb-paper'] = '#fff'; })],
-    ['unscoped selector', withRules(r => { r[1].selectors[0] = '#newlistitem .form-control'; })],
-    ['popup-only scope', withRules(r => { r[0].selectors[0] = 'html.oe-workbench-popup #newlistitem.oe-list-add-popup'; })],
-    ['validation descendants restyled', withRules(r => { r[1].selectors[0] = `${SCOPE} .form-control:not(.is-invalid, .is-valid)`; })],
-    ['unpaired field focus', withRules(r => { r[1].selectors = [FIELD]; })],
-    ['unpaired readOnly', withRules(r => { r[2].selectors = [`${FIELD}:disabled`]; })],
-    ['faded placeholder', withRules(r => { r[3].decls.opacity = '0.5'; })],
-    ['merged focus fallback', withRules(r => { r[4].selectors.push(...r[5].selectors); r.splice(5, 1); })],
-    ['thicker ring', withRules(r => { r[5].decls.outline = '3px solid var(--oe-wb-petrol)'; })],
+    ['custom property on the box', withRules(r => { r[BOX].decls['--oe-wb-paper'] = '#fff'; })],
+    ['unscoped selector', withRules(r => { r[FIELD_PAPER].selectors[0] = '#newlistitem .form-control'; })],
+    ['popup-only scope', withRules(r => { r[BOX].selectors[0] = 'html.oe-workbench-popup #newlistitem.oe-list-add-popup'; })],
+    ['validation descendants restyled', withRules(r => { r[FIELD_PAPER].selectors[0] = `${SCOPE} .form-control:not(.is-invalid, .is-valid)`; })],
+    ['unpaired field focus', withRules(r => { r[FIELD_PAPER].selectors = [FIELD]; })],
+    ['unpaired readOnly', withRules(r => { r[FIELD_LOCKED].selectors = [`${FIELD}:disabled`]; })],
+    ['faded placeholder', withRules(r => { r[FIELD_PLACEHOLDER].decls.opacity = '0.5'; })],
+    ['merged focus fallback', withRules(r => { r[RING_FOCUS].selectors.push(...r[RING_VISIBLE].selectors); r.splice(RING_VISIBLE, 1); })],
+    ['thicker ring', withRules(r => { r[RING_VISIBLE].decls.outline = '3px solid var(--oe-wb-petrol)'; })],
+    ['focus rings after the field palette', withRules(r => { r.push(...r.splice(RING_FOCUS, 2)); })],
+    ['locked palette before the normal/focus palette', withRules(r => { r.splice(FIELD_PAPER, 2, r[FIELD_LOCKED], r[FIELD_PAPER]); })],
     ['print media', renderSheet(expectedRules).replace('@media screen {', '@media print {')],
     ['tokens declared on a shared ancestor', `:root { --oe-wb-paper: #fff; }\n${renderSheet(expectedRules)}`],
 ];
@@ -468,6 +480,15 @@ const cascadeContract = sheet => {
         expect(computed(field, 'background-color', sheet)).toBe(background);
         expect(computed(field, 'color', sheet)).toBe(ink);
     }
+
+    // A disabled field that matches :focus (jsdom cannot focus a disabled element, so :focus is
+    // forced to match) must keep the locked palette: the disabled rule follows the :focus rule.
+    const { field: lockedField } = mount({ disabled: true });
+    const focusedLocked = { matches: selector => lockedField.matches(selector.replace(/:focus(?![-\w])/g, ':not(.oe-never)')) };
+    expect(lockedField.matches(':disabled')).toBe(true);
+    expect(focusedLocked.matches(`${FIELD}:focus`)).toBe(true);
+    expect(computed(focusedLocked, 'background-color', sheet)).toBe('var(--oe-wb-disabled-paper)');
+    expect(computed(focusedLocked, 'color', sheet)).toBe('var(--oe-wb-disabled-ink)');
 
     // Validation states keep the theme's field paint and semantic borders.
     for (const [state, border] of [[{ cls: 'is-invalid' }, '#dc3545'], [{ cls: 'is-valid' }, '#28a745'], [{ wasValidated: true }, '#dc3545']]) {
