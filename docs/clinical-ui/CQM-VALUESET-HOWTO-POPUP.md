@@ -15,7 +15,8 @@ visual fidelity or a native fit with the workbench, and it makes no claim to.
 
 ## Exact scope
 
-Production files changed (and nothing else):
+Production phase changes exactly three production files (items 1-3) plus this
+document (item 4). This document is documentation, not a production file.
 
 1. `interface/code_systems/cqm_valueset_howto.php`: exactly the three additions
    frozen as `ROUTE_EDITS` in `tests/js/cqm-valueset-howto-popup.test.js`:
@@ -37,7 +38,7 @@ Production files changed (and nothing else):
 3. `src/Common/Assets/ClinicalWorkspaceAssets.php`: one supported basename,
    `cqm-valueset-howto-popup.css`, inserted in sorted order between
    `calendar-workday.js` and `encounter-document.css`.
-4. This document.
+4. This document (documentation only; not a production file).
 
 These are kept as they were in the original fragment: all five `xlt()`
 translations; the PHP-concatenated, untranslated official VSAC link
@@ -48,8 +49,13 @@ inherited `VALUSET` typo; the single-quoted container; the inherited malformed
 Header call.
 
 Not changed: JavaScript, backend, `dataloads_ajax.php` or any other caller,
-`library/dialog.js`, shared workbench `workspace.css`/`popup.css`/`popup.js`, the
-tests and the fixture.
+`library/dialog.js`, shared workbench `workspace.css`/`popup.css`/`popup.js`.
+
+The tests and the fixture are unchanged by this production phase: they are
+byte-identical to the tests-only commit `320e6fe6`. They are nevertheless ADDED
+across the whole PR, by that earlier tests-only commit, so the PR as a whole
+contains the test file and the fixture in addition to the three production files
+and this document.
 
 ## Test history
 
@@ -63,9 +69,34 @@ tests and the fixture.
   tests across 62 suites.
 - This production phase does not modify the tests: they are byte-identical to
   the tests-only commit.
-- GREEN and review: still to come. The controller will supply them; none are
-  claimed here. No tests, PHP, linters or builds were run while writing this
-  change.
+
+### Controller-supplied evidence (executed by the controller, not by the writing agent)
+
+All results below were run and reported by the controller. The agent that wrote
+this change did not run, reproduce or independently verify any of them.
+
+- RED at `320e6fe6`: JS job 38968256945, 5 intended missing-production failures,
+  1273 tests passing across 62 suites.
+- GREEN at production commit `f3bef416`: JS job 38968903763, 62 suites, 1278
+  tests, PASS.
+- Controller local checks: two PHP syntax checks, non-ignored CSS lint and diff
+  check all PASS. The first stylelint attempt failed on missing config
+  resolution. It was recovered by running with the sibling config basedir, which
+  gave an actual one-non-ignored-file, warning-free result. No config files were
+  changed.
+- Independent Codex Astra review: complete, captured, covering the 6 changed
+  files plus a caller review. It reported no introduced P1/P2 findings and used no
+  tools. Native QA and security clearance are NOT accepted on the strength of this
+  review.
+- Hosted Styling job 38968903884: all PHP, JS and CSS checks succeeded.
+- Still pending: the full hosted matrix, the isolated suite and the Codecov final
+  gate. No all-green claim is made.
+
+### Agent writing phase
+
+Only Read, Edit and Write were used. No shell, network, git or test runs, and no
+tests, PHP, linters or builds, were run while writing this document. Production
+code, tests and fixture were left unchanged by this edit.
 
 ## Source-only limitations and known risks
 
@@ -96,6 +127,10 @@ Ordinary review and approval apply, with no standing bypass. Writing this change
 involved no application GET/POST, link visits, downloads, installs, account, DB,
 deployment, merge, master, cron, national or vendor changes. Local
 Node/Jest/history-GATE/hash/cache/PHPUnit/bootstrap runs and Swedish-clone
-publication were out of bounds and not attempted. Every later branch, commit and
-PR keeps the exact uppercase `OPEMR-17` key; syncing fork master is the only
-exception.
+publication were out of bounds and not attempted. All denied boundaries were
+respected and none was retried: no merge, deploy, DB, application HTTP or cron.
+
+Every later branch, commit and PR keeps the exact uppercase `OPEMR-17` key. The
+one exception is naming the canonical base branch `master` rather than generic
+`main`. There are no direct writes to `master`, and no authorization is given to
+sync `master`.
