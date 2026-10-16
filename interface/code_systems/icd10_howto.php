@@ -24,12 +24,15 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 ?>
 <?php Header::setupHeader(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/icd10-howto-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('icd10-howto-popup.css')); ?>">
 
-<div class="container">
+<div class="container oe-icd10-howto-document">
     <p>
         <?php echo xlt("Steps to install the ICD 10 database"); ?>:
         <ol>
