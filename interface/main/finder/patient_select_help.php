@@ -2,17 +2,21 @@
 
 require_once("../../globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Core\Header;
 
 ?>
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-search-help.css?v=<?php echo attr_url($clinicalAssets->version('patient-search-help.css')); ?>">
 <title>
 Help Searching for Patients
 </title>
 </head>
-<body>
+<body class="patient-search-help">
 <h1>
 Help Searching for Patients
 </h1>

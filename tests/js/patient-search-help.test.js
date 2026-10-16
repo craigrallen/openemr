@@ -369,7 +369,7 @@ test('the sheet invariant rejects unscreened rules, leaks, geometry, typography 
     }
 });
 
-test('the plain help body needs no !important: it never carried a themed body class', () => {
+test('the original and candidate help bodies omit the body_top theme class', () => {
     expect(original()).toContain('\n<body>\n<h1>');
     expect(original()).not.toContain('body_top');
     // The colour themes force .body_top's background; the help page is not .body_top before or after.

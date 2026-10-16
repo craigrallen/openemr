@@ -1,0 +1,17 @@
+/* Patient search help inside an active workbench context: palette only. */
+@media screen {
+  html.oe-workbench-context body.patient-search-help {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.patient-search-help h1 {
+    color: var(--oe-wb-petrol, #086878);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.patient-search-help h2 {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
