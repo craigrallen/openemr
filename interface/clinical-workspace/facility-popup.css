@@ -1,0 +1,99 @@
+/*
+ * Add/Edit Facility (templates/super/facilities/form.html.twig) inside a workbench popup.
+ *
+ * Paint only. Every rule is scoped to html.oe-workbench-context or html.oe-workbench-popup
+ * (set by popup.js only inside an active workbench) plus the route's body class, and the sheet
+ * is linked with media="screen", so the standalone page and print keep the legacy rendering.
+ * Geometry, typography, display, Bootstrap tabs/switches/active states, the text-muted hints,
+ * button and nav palettes and validation states all stay theme-owned. The one exception is the
+ * .bg-light panels: the document now sets workbench ink, so each panel gets an explicit
+ * ink/paper pair (background !important to answer Bootstrap's bg-light utility).
+ *
+ * workspace.css is not linked here, so every token resolves from popup.css when present and
+ * otherwise falls back to the same workbench values.
+ */
+@media screen {
+  /* Canvas: color_base.scss paints .body_top with $paler !important, so the route answers it. */
+  html.oe-workbench-context body.oe-facility-popup,
+  html.oe-workbench-popup body.oe-facility-popup {
+    --oe-facility-ink: var(--oe-wb-ink, #17343b);
+    --oe-facility-muted: var(--oe-wb-muted, #526a70);
+    --oe-facility-line: var(--oe-wb-line, #d9e4e2);
+    --oe-facility-paper: var(--oe-wb-paper, #fff);
+    --oe-facility-canvas: var(--oe-wb-canvas, #f3f7f5);
+    --oe-facility-petrol: var(--oe-wb-petrol, #086878);
+    --oe-facility-disabled-ink: var(--oe-wb-disabled-ink, #4a5f64);
+    --oe-facility-disabled-paper: var(--oe-wb-disabled-paper, #eef2f1);
+    --oe-facility-focus-ring: rgb(8 104 120 / 25%);
+
+    color: var(--oe-facility-ink) !important;
+    background-color: var(--oe-facility-canvas) !important;
+  }
+
+  /* The existing outer container (header with Save/Cancel, then the form) as paper. */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document {
+    color: var(--oe-facility-ink);
+    background-color: var(--oe-facility-paper);
+  }
+
+  /* Existing panels: explicit ink and paper, since the document ancestor now sets ink. */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .bg-light,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .bg-light {
+    color: var(--oe-facility-ink);
+    background-color: var(--oe-facility-paper) !important;
+  }
+
+  /* Ordinary controls. Validation states keep the theme's semantic borders, icons and rings. */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *),
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    color: var(--oe-facility-ink);
+    background-color: var(--oe-facility-paper);
+    border-color: var(--oe-facility-line);
+  }
+
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder {
+    color: var(--oe-facility-muted);
+    opacity: 1;
+  }
+
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: var(--oe-facility-ink);
+    background-color: var(--oe-facility-paper);
+    border-color: var(--oe-facility-petrol);
+    box-shadow: 0 0 0 0.2rem var(--oe-facility-focus-ring);
+  }
+
+  /* After focus, so a focused read-only control keeps its locked paper (the ring still shows). */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *):disabled,
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *)[readonly],
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *):disabled,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .form-control:not(.is-invalid, .is-valid, .was-validated *)[readonly] {
+    color: var(--oe-facility-disabled-ink);
+    background-color: var(--oe-facility-disabled-paper);
+    border-color: var(--oe-facility-line);
+  }
+
+  /*
+   * Focus rings for Save/Cancel, copy/colour buttons and address tabs: outline only, so the
+   * theme's button and pill palettes stay. :focus and :focus-visible are separate lists so a
+   * browser that rejects one selector does not drop the other.
+   */
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .btn:focus,
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .nav-link:focus,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .btn:focus,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .nav-link:focus {
+    outline: 2px solid var(--oe-facility-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .btn:focus-visible,
+  html.oe-workbench-context body.oe-facility-popup .oe-facility-document .nav-link:focus-visible,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .btn:focus-visible,
+  html.oe-workbench-popup body.oe-facility-popup .oe-facility-document .nav-link:focus-visible {
+    outline: 2px solid var(--oe-facility-petrol);
+    outline-offset: 2px;
+  }
+}
