@@ -45,11 +45,12 @@ messages, hidden controls, session handling, the code-picker functions, the open
 `interface/clinical-workspace/layout-properties-popup.css` is one `@media screen` block. Every
 selector starts `body.oe-workbench-context.oe-layout-properties-popup`, and every selector is on
 the fixed list in the test. The only properties are `color`, `background-color`, `outline`,
-`outline-offset` and placeholder `opacity`. Nothing uses `!important`.
+`outline-offset` and placeholder `opacity`. The canvas background is the only `!important`
+declaration; nothing else uses it.
 
 | Target | Ink | Background |
 |---|---|---|
-| Canvas (body) | `#182c36` | `#edf2f3` |
+| Canvas (body) | `#182c36` | `#edf2f3 !important` |
 | Document paper (`.oe-layout-properties-document`) and its `td` | `#182c36` | `#fff` |
 | Field, normal and focused | `#182c36` | `#fff` |
 | Field placeholder (opacity 1) | `#536773` | inherits field paper |
@@ -64,11 +65,28 @@ the fixed list in the test. The only properties are `color`, `background-color`,
   separate rule, so a browser that rejects that selector still keeps the `:focus` fallback.
 - Button palettes and checkbox appearance are left alone. Only the focus outline is added.
 
+### Why the canvas background is `!important`
+
+`interface/themes/color_base.scss` declares
+`.body_top, .bgcolor2, .body_nav { background-color: $paler !important; }`, and the route's body
+keeps `body_top`. Any normal canvas declaration would lose to that. When both declarations are
+`!important`, specificity decides: the scope selector
+`body.oe-workbench-context.oe-layout-properties-popup` is (0,2,1) and `.body_top` is (0,1,0), so the
+scope wins. The test checks that the theme source contains that `.body_top` rule, that the route
+keeps `body_top`, and that the sheet has exactly one `!important`: `background-color: #edf2f3` in a
+rule whose only selector is the scope. The canvas `color` stays a normal declaration.
+
+This is a source-level argument. The browser's computed cascade has not been checked, including in
+compiled themes that may add other `!important` backgrounds with higher specificity.
+
 ## Evidence
 
-- RED (tests only, commit `8b8b87a9`): hosted run with 7 intended failures, 1268 tests passing
-  across 62 suites. Before this phase the controller also confirmed that the full original route
-  fixture and the full helper baseline compare exactly equal.
+- First RED (tests only, commit `8b8b87a9`): hosted run with 7 intended failures, 1268 tests
+  passing across 62 suites. Before this phase the controller also confirmed that the full original
+  route fixture and the full helper baseline compare exactly equal.
+- Second RED (commit `de0d4d88`, hosted run `JS38870582850`): 4 intended failures, all on the
+  canvas `!important` contract, with 1272 tests passing across 62 suites. That run checked the sheet
+  as it stood before this change, which had no `!important` on the canvas.
 - GREEN: waiting on the controller's run. No result is recorded here yet.
 
 The test (`tests/js/layout-properties-popup.test.js`) checks source code only. It shows that the
@@ -78,14 +96,17 @@ contrast rules. It does not show what a browser actually renders.
 ## Known limits and still open
 
 - The sheet only applies when `oe-workbench-context` is on the body. This route does not set that
-  class itself. This phase did not check what sets it at runtime.
-- `body_top` may set a theme background with `!important`. In that case the canvas colour will
-  not show. This change does not claim the colours win in the browser's real cascade.
+  class itself. According to the controller's source review, it comes from the shared `Header`
+  popup controller. This phase did not check that in a browser, so whether the class is present at
+  runtime in this popup is unverified.
+- The canvas `!important` is argued from source specificity only (see above). This change does not
+  claim the colours win in the browser's real cascade.
 - Not verified: compiled themes, narrow screens, the popup opened directly and resized to
   775×550, keyboard focus clipping, RTL, legacy print, accessibility roles, and a real save
   followed by the opener refresh.
-- Bugs inherited from the original, left unchanged on purpose. The new-layout duplicate check
-  stores its query result in `$tmp` but tests `empty($row)`, so it never finds a duplicate. The
+- Bugs inherited from the original, left unchanged on purpose. In the new-layout duplicate check,
+  `$tmp` holds the query result but the branch tests `$row`, so duplicate detection is not
+  established (`$row` may be set elsewhere, for example by inherited globals). The
   layout ID check `preg_match('/(LBF|LBT|HIS)[0-9A-Za-z_]+/', …)` has no anchors, so it accepts
   IDs that only contain a valid prefix somewhere inside them.
 - This work did not audit the application over HTTP or for security. Design references were

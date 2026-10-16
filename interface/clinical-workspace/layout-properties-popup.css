@@ -12,13 +12,16 @@
  * browser that rejects it still keeps the :focus fallback. Disabled and readonly come after
  * :focus so the locked look wins while focused.
  *
- * body_top may carry a theme background with !important; this sheet does not override it, so
- * the canvas colour below is not guaranteed to show through in every compiled theme.
+ * The canvas background is the sheet's one !important. In source, interface/themes/color_base.scss
+ * declares `.body_top { background-color: $paler !important }` and this route's body keeps
+ * body_top, so a normal declaration would lose. With both important, the scope selector
+ * (specificity 0,2,1) outranks .body_top (0,1,0). That is a source-level argument only; the
+ * computed cascade in a browser and in every compiled theme has not been checked.
  */
 @media screen {
   body.oe-workbench-context.oe-layout-properties-popup {
     color: #182c36;
-    background-color: #edf2f3;
+    background-color: #edf2f3 !important;
   }
 
   body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document {
