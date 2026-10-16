@@ -24,12 +24,15 @@
 
 require_once("../../interface/globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 ?>
 <?php Header::setupHeader(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/snomed-howto-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('snomed-howto-popup.css')); ?>">
 
-<div class="container">
+<div class="container oe-snomed-howto-document">
     <p>
         <?php echo xlt("Steps to install the Snomed database"); ?>:
         <ol>
