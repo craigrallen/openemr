@@ -1,0 +1,52 @@
+/*
+ * Add-to-list inline box (#newlistitem from library/options_listadd.inc.php) inside an active
+ * workbench. Palette only: the box's geometry, inline visibility, stacking, fonts and button
+ * paint stay with the original markup and theme.
+ *
+ * Every rule is scoped to html.oe-workbench-context (set by popup.js only inside an active
+ * same-origin workbench) plus the fragment's oe-list-add-popup marker, and the sheet is linked
+ * with media="screen", so contexts lacking the marker, and print, keep the legacy rendering.
+ * Tokens come from popup.css; this sheet declares none.
+ */
+@media screen {
+  /* The box keeps Bootstrap's .bg-light, whose rule is itself !important. */
+  html.oe-workbench-context #newlistitem.oe-list-add-popup {
+    background-color: var(--oe-wb-paper) !important;
+    color: var(--oe-wb-ink);
+  }
+
+  /*
+   * Focus ring on the field and both input buttons. :focus and :focus-visible stay separate
+   * rules so an engine without :focus-visible keeps the :focus ring. These rules set only
+   * outline and sit before the field palette rules so the sheet avoids descending specificity.
+   */
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:focus,
+  html.oe-workbench-context #newlistitem.oe-list-add-popup input[type='button']:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:focus-visible,
+  html.oe-workbench-context #newlistitem.oe-list-add-popup input[type='button']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Text fields the script inserts into #specificForm; validation states keep the theme's. */
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:not(.is-invalid, .is-valid, .was-validated *),
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    background-color: var(--oe-wb-paper);
+    color: var(--oe-wb-ink);
+  }
+
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:not(.is-invalid, .is-valid, .was-validated *):disabled,
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:not(.is-invalid, .is-valid, .was-validated *)[readonly] {
+    background-color: var(--oe-wb-disabled-paper);
+    color: var(--oe-wb-disabled-ink);
+  }
+
+  html.oe-workbench-context #newlistitem.oe-list-add-popup .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder {
+    color: var(--oe-wb-ink);
+    opacity: 1;
+  }
+}

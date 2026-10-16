@@ -22,16 +22,18 @@
 
 // TODO: Convert this to a modal or a dialog
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\OEGlobalsBag;
 
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
 ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/list-add-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('list-add-popup.css')); ?>">
 
 
 <!-- hidden DIV used for creating new list items -->
-<div id="newlistitem" class="position-absolute bg-light border border-dark" style="display: none; padding: 5px; z-index: 5000;">
+<div id="newlistitem" class="position-absolute bg-light border border-dark oe-list-add-popup" style="display: none; padding: 5px; z-index: 5000;">
  <input type="hidden" name="newlistitem_listid" id="newlistitem_listid" value="" />
  <input type="hidden" name="newlistitem_fieldid" id="newlistitem_fieldid" value="" />
  <div id="specificForm">
