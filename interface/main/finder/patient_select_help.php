@@ -3,8 +3,8 @@
 require_once("../../globals.php");
 
 use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
-use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 ?>
 <html>

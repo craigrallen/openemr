@@ -4,7 +4,7 @@
  * Patient search help (interface/main/finder/patient_select_help.php) inside the workbench.
  *
  * The route may change by exactly three presentation additions: the asset helper and
- * OEGlobalsBag imports before the Header import, one escaped, versioned, screen-only
+ * OEGlobalsBag imports around the original Header import, one escaped, versioned, screen-only
  * stylesheet link after Header::setupHeader, and a class on the bare <body>. Undoing them
  * must give back tests/clinical-ui/fixtures/patient-search-help-original.txt byte for byte,
  * so the bootstrap, Header, title, headings, the untranslated instruction text and the
@@ -44,7 +44,7 @@ function replaceUnique(text, before, after) {
 const ADDITIONS = [
     [
         'use OpenEMR\\Core\\Header;',
-        'use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;\nuse OpenEMR\\Core\\OEGlobalsBag;\nuse OpenEMR\\Core\\Header;',
+        'use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;\nuse OpenEMR\\Core\\Header;\nuse OpenEMR\\Core\\OEGlobalsBag;',
     ],
     [
         '<?php Header::setupHeader(); ?>',

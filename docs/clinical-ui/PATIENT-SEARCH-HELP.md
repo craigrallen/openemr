@@ -10,21 +10,34 @@ exactly what changed, what is kept, and what has not been verified.
 - Contract: `tests/js/patient-search-help.test.js`, with the original route
   recorded byte for byte in
   `tests/clinical-ui/fixtures/patient-search-help-original.txt`.
-- The hosted run before this change was RED (tests-only commit `a328a37b`,
-  four intended missing-production failures). This source change has **not**
-  been run here; it is not GREEN until the controller's hosted run says so.
+- Hosted evidence so far:
+  - Tests-only commit `a328a37b`, run JS `38892358555`: genuinely RED, four
+    intended missing-production failures.
+  - Initial implementation `d7cf70b9`: JS `38893289277` GREEN (62 suites,
+    1271 tests), but PHPCS Styling `38893289263` genuinely RED with exactly one
+    error: route line 7, `use` statements must be sorted alphabetically
+    (`Header` before `OEGlobalsBag`). The original brief had prescribed the
+    wrong import order; this was a real failing regression gate, not a
+    product-requirement change.
+- This repair (import order only, in the test's expected text, the route and
+  this page) is **pending final hosted exact-head verification**. It is not
+  full CI green.
+- Independent Astra review: no introduced P1/P2 findings, source-only; narrow
+  cascade test-title and documentation claims were corrected.
 - This is a partial palette adaptation. It is not acceptance against the
-  research reference, and it does not complete layout, hierarchy, or
-  persistent patient context.
+  research reference, does not claim full fidelity, and does not complete
+  layout, hierarchy, or persistent patient context.
 
 ## Exact changes
 
 Route, `interface/main/finder/patient_select_help.php` — three additions and
 nothing else:
 
-1. Two imports placed before the existing `Header` import, in the order the
-   contract fixes (the original order is not normalised):
-   `ClinicalWorkspaceAssets`, then `OEGlobalsBag`, then `Header`.
+1. Two imports added around the unchanged original `Header` import, ordered
+   alphabetically as PHPCS requires (`use` statements must be sorted):
+   `ClinicalWorkspaceAssets`, then `Header`, then `OEGlobalsBag`. The original
+   `Header` import line itself is untouched; `ClinicalWorkspaceAssets` sorts
+   before it and `OEGlobalsBag` after it.
 2. After `Header::setupHeader()`, one stylesheet link for
    `interface/clinical-workspace/patient-search-help.css`, with
    `media="screen"`, the web root escaped with `attr()`, and a `?v=` cache
