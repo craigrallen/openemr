@@ -116,6 +116,9 @@ const restoreRoute = text => {
 
 const routeViolations = php => {
     const violations = [];
+    // Complete source preservation: undoing the four permitted additions must give back the
+    // original byte for byte, which also catches wrappers and any other change to the original.
+    if (restoreRoute(php) !== original()) violations.push('only the four permitted additions may differ from the original route byte for byte');
     if (count(php, LINK) !== 1) violations.push('escaped versioned screen link must appear exactly once');
     if (count(php, BASENAME) !== 2) violations.push('basename must appear only in the link href and version()');
     if (count(php, '<link') !== 1) violations.push('exactly one <link> may be added');
