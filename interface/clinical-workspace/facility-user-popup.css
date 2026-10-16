@@ -1,0 +1,76 @@
+/*
+ * Edit Facility Specific User Information (facility_user_admin.php) inside a workbench popup.
+ *
+ * Palette only: canvas, ink, paper and muted from the workbench reference. Every rule is scoped
+ * to body.oe-workbench-context plus the route's body class and the existing outer container, and
+ * the sheet is linked with media="screen", so the standalone page and print keep the legacy
+ * rendering. No geometry, typography, layout or display is set here. Buttons, Select2 and the
+ * date picker keep their own palette; Save and Cancel only gain a visible focus outline.
+ *
+ * The theme gives .table an explicit colour, so the table and its cells are painted with ink and
+ * paper together. Field rules exclude Bootstrap validation states so their styling survives.
+ */
+@media screen {
+  body.oe-workbench-context.oe-facility-user-popup {
+    color: #182c36;
+    background-color: #edf2f3;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .table,
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .table td {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  /* Generated FACUSR fields: native input, select and textarea. */
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder {
+    color: #536773;
+    opacity: 1;
+  }
+
+  /* Focus: a :focus fallback, then :focus-visible. */
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: #182c36;
+    background-color: #fff;
+    outline: 2px solid #182c36;
+    outline-offset: 1px;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus-visible {
+    outline: 2px solid #182c36;
+    outline-offset: 1px;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .btn-save:focus,
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .btn-cancel:focus {
+    outline: 2px solid #182c36;
+    outline-offset: 2px;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .btn-save:focus-visible,
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .btn-cancel:focus-visible {
+    outline: 2px solid #182c36;
+    outline-offset: 2px;
+  }
+
+  /* States after the focus paint so a focused readonly or disabled field keeps its state paint. */
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control[readonly]:not(.is-invalid, .is-valid, .was-validated *) {
+    color: #182c36;
+    background-color: #edf2f3;
+  }
+
+  body.oe-workbench-context.oe-facility-user-popup .oe-facility-user-document .form-control:disabled:not(.is-invalid, .is-valid, .was-validated *) {
+    color: #536773;
+    background-color: #edf2f3;
+  }
+}

@@ -17,6 +17,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -42,6 +43,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     <title><?php echo xlt("Edit Facility Specific User Information"); ?></title>
 
     <?php Header::setupHeader(['common', 'datetime-picker', 'opener', 'select2']); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/facility-user-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('facility-user-popup.css')); ?>">
 
     <script>
         $(function() {
@@ -139,7 +141,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 
 </head>
 
-<body>
+<body class="oe-facility-user-popup">
     <?php
     // Collect user information
     $user_info = sqlQuery("select * from `users` WHERE `id` = ?", [$_GET["user_id"]]);
@@ -157,7 +159,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     }
     ?>
 
-    <div class="container">
+    <div class="container oe-facility-user-document">
         <div class="row">
             <div class="col-12">
                 <div class="page-title">
