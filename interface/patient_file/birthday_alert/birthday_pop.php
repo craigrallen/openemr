@@ -17,6 +17,7 @@ require_once("../../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Http\CurrentRequest;
 use OpenEMR\Common\Http\RequestTerminator;
@@ -48,10 +49,11 @@ if ($pid <= 0) {
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/birthday-alert-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('birthday-alert-popup.css')); ?>">
     <title><?php echo xlt("Happy Birthday"); ?></title>
 </head>
-<body>
-    <div style="padding: 15px; text-align: center">
+<body class="oe-birthday-alert-popup">
+    <div class="oe-birthday-alert-document" style="padding: 15px; text-align: center">
         <p class="h2"><?php echo xlt('Happy Birthday');?>&ensp;<img src="<?php echo OEGlobalsBag::getInstance()->getKernel()->getImagesRelative()?>/balloons-154949_960_720.png" height="42" width="42"></p>
 
         <?php if (OEGlobalsBag::getInstance()->getBoolean('patient_birthday_alert_manual_off')) { ?>

@@ -1,0 +1,30 @@
+/*
+ * OPEMR-13 Birthday Alert popup: partial workbench palette adaptation, screen only.
+ * Scoped to html.oe-workbench-context, which popup.js sets on the root element;
+ * the --oe-wb-* tokens are defined in popup.css. Colour and focus outline only.
+ */
+
+html.oe-workbench-context body.oe-birthday-alert-popup {
+  background: var(--oe-wb-canvas);
+  color: var(--oe-wb-ink);
+}
+
+html.oe-workbench-context body.oe-birthday-alert-popup .oe-birthday-alert-document {
+  background: var(--oe-wb-paper);
+  color: var(--oe-wb-ink);
+}
+
+html.oe-workbench-context body.oe-birthday-alert-popup .oe-birthday-alert-document .h2 {
+  background: var(--oe-wb-paper);
+  color: var(--oe-wb-petrol);
+}
+
+html.oe-workbench-context body.oe-birthday-alert-popup .oe-birthday-alert-document input[type='checkbox']:focus {
+  outline: 2px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
+
+html.oe-workbench-context body.oe-birthday-alert-popup .oe-birthday-alert-document input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--oe-wb-petrol);
+  outline-offset: 2px;
+}
