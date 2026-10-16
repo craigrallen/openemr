@@ -1,8 +1,9 @@
 # Document Finder popup (OPEMR-10)
 
 Status: **source-only partial palette adaptation.** This is not a finished design
-match, and nothing here has been accepted as complete. The final hosted GREEN run is
-**pending the controller run**. No result is claimed until that run is recorded.
+match, and nothing here has been accepted as complete. The initial implementation
+(`e9369494`) has a recorded hosted GREEN run. The final review-strengthening commit's
+hosted run is **pending**, and no result is claimed for it until it is recorded.
 
 ## Rationale
 
@@ -40,12 +41,15 @@ inside that popup context. It does not touch geometry, fonts, padding, borders,
    - `:focus` and `:focus-visible` rings are separate rules for `#searchparm` and
      `#submitbtn`. That way, a browser that doesn't support one pseudo-class can't
      discard the fallback along with it.
-   - The neutral status uses `#searchstatus:not(.alert)`. This leaves
-     `.alert-success` and `.alert-danger` with their semantic palettes.
-   - Result cells use `.oneresult:not(:hover) > td`. A hovered row's cells are left
-     unpainted, so the original inline `.oneresult:hover { background-color: #336699 }`
-     row highlight still shows. That inline rule has lower specificity and is not
-     touched.
+   - The neutral status uses `#searchstatus:not(.alert)`. This only excludes elements
+     that carry `.alert`; it does not by itself guarantee semantic colours. The inherited
+     `#searchstatus` foreground colour remains in place, so the semantic contrast of the
+     status text is **unverified**.
+   - Result cells use `.oneresult:not(:hover) > td`. This stops the new paint being
+     applied to a hovered row's cells, so the original inline
+     `.oneresult:hover { background-color: #336699 }` row highlight is intended to
+     show. That inline rule has lower specificity and is not touched. The computed
+     transparency of the hovered cells across themes is **unverified**.
    - Field state rules (`:focus`, `:disabled`, `[readonly]`, `::placeholder`) sit
      behind `#theform:not(.was-validated)` and `#searchparm:not(.is-invalid, .is-valid)`
      (complex `:not()`, as `selector-not-notation` requires). This keeps them from
@@ -55,7 +59,13 @@ inside that popup context. It does not touch geometry, fonts, padding, borders,
      set only `outline`, so the order does not change any rendered value.
 4. This document.
 
-No test files were changed, and no test-design error was found.
+Test changes: `tests/js/document-finder-popup.test.js` was changed. The SPEC was
+adapted for the complex `:not()` selectors and the rule-order change, and the
+mutations were strengthened so they no longer rely only on `toThrow`. The inverse
+baselines and the strict allowlist are unchanged.
+
+The source guards in that test are string/structure checks on the source. They are not
+native browser proof of the rendered result.
 
 ## Evidence
 
@@ -64,8 +74,19 @@ No test files were changed, and no test-design error was found.
   assertions only. All source, mutation and theme guards passed. The frozen fixture
   and the embedded helper baseline were byte-compared separately against
   `origin/master` and matched exactly.
-- Final GREEN: **pending the controller run.** No local Node, Jest, stylelint,
-  PHPStan or browser run was performed in this slice.
+- Hosted JS GREEN for the initial implementation, commit `e9369494`, run
+  `38882202895`: 62 suites, 1271 tests, all passing.
+- Final review-strengthening commit: hosted run **pending**. No result is claimed
+  until it is recorded.
+- Controller PHP syntax checks passed on both PHP files.
+- Controller CSS lint on the non-ignored CSS passed, after 7 lint errors were
+  repaired (the complex-`:not()` notation, rule order, and controller whitespace /
+  trailing newline).
+- Not performed: local Node, Jest, history, hash, cache or bootstrap checks, and any
+  browser run. No PHPStan run was performed in this slice.
+- Review: an independent Astra review of all six files found no introduced P1 or P2
+  issue. It identified a test-maintenance weakness, which was corrected (see the test
+  changes above).
 
 ## Inherited issues, documented and not changed
 
@@ -106,7 +127,11 @@ all-22, demo, or Swedish completion.
   whole field rule is dropped and the field keeps the theme palette; this is not tested.
 - The palette under each native compiled theme, and confirmation that the
   `oe-workbench-popup` class actually activates in a live popup.
-- Contrast measurement of every token pair and fallback.
+- Contrast measurement of every token pair and fallback, including the inherited
+  `#searchstatus` foreground on `:not(.alert)` status text.
+- Computed transparency of hovered result cells under each theme, and confirmation
+  that the inline hover highlight shows.
+- Native browser proof of the rendered result; the source guards are not a substitute.
 - Keyboard focus visibility and focus-ring clipping inside the dialog.
 - Direct (non-popup) loading, plus the narrow 700×400 dialog and resized viewports.
 - RTL and translated strings.

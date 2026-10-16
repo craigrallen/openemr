@@ -17,7 +17,8 @@
  * session-only pid fills the hidden field but leaves the search unscoped).
  *
  * The sheet only paints paired ink/background, the opaque placeholder and focus rings.
- * Source tests cannot prove rendered geometry, so none is claimed.
+ * Source tests cannot prove rendered geometry, so none is claimed. They also cannot prove computed
+ * hover-cell transparency under every theme or semantic alert contrast; both await actual-theme QA.
  */
 
 const fs = require('fs');
@@ -193,10 +194,11 @@ const SPEC = [
     [`${P} .document-finder-document`, { color: ink, 'background-color': paper }],
     // Bootstrap's .bg-light is background-color !important.
     [`${P} #searchCriteria.bg-light`, { color: ink, 'background-color': `${canvas} !important` }],
-    // Only the neutral status; .alert-success/.alert-danger keep their semantic palettes.
+    // Excludes .alert from the new status paint; the inherited #searchstatus foreground still takes part,
+    // so semantic contrast for .alert-success/.alert-danger is not guaranteed by this sheet.
     [`${P} #searchstatus:not(.alert)`, { color: ink, 'background-color': paper }],
     [`${P} #searchResultsHeader th`, { color: muted, 'background-color': canvas }],
-    // Hovered rows keep the original #336699 highlight painted on the row.
+    // Hovered cells are no longer painted by this sheet; the original #336699 row highlight is unchanged.
     [`${P} #searchResults .oneresult:not(:hover) > td`, { color: ink, 'background-color': paper }],
     // Lower-specificity rings come before the higher-specificity field paint (no-descending-specificity).
     [`${P} #searchparm:focus`, ring],
@@ -293,7 +295,10 @@ test('the route invariant rejects backend, security, callback, control and hover
     ];
     expect(() => verifyRoute(production)).not.toThrow();
     for (const [before, after] of mutations) {
-        expect(() => verifyRoute(replaceUnique(production, before, after))).toThrow();
+        // Build the mutant outside toThrow so a missing or duplicate anchor fails here, not as a false pass.
+        const mutated = replaceUnique(production, before, after);
+        expect(mutated).not.toBe(production);
+        expect(() => verifyRoute(mutated)).toThrow();
     }
 });
 
@@ -322,7 +327,9 @@ test('the helper invariant rejects unlisted, misplaced or duplicate assets', () 
     ];
     expect(supportedAssets(production)).toHaveLength(supportedAssets(ORIGINAL_HELPER).length + 1);
     for (const [before, after] of mutations) {
-        expect(() => verifyHelper(replaceUnique(production, before, after))).toThrow();
+        const mutated = replaceUnique(production, before, after);
+        expect(mutated).not.toBe(production);
+        expect(() => verifyHelper(mutated)).toThrow();
     }
 });
 
@@ -358,7 +365,8 @@ test('both !important allowances answer an actual !important in the theme cascad
     expect(read('node_modules/bootstrap/dist/css/bootstrap.css')).toMatch(/\.bg-light \{\n {2}background-color: #f8f9fa !important;\n\}/);
     expect(original()).toContain('<body class="body_top">');
     expect(original()).toContain('<div id="searchCriteria" class="bg-light p-2 pt-3">');
-    // The original hover paints the row; the cell rule must leave hovered cells transparent.
+    // The original hover paints the row. The new sheet stops painting hovered cells, but whether the
+    // computed cell background is transparent under every theme is not verified by source tests.
     expect(original()).toContain('.oneresult:hover {\n            background-color: #336699;\n            color: var(--white);\n        }');
 });
 
@@ -380,7 +388,9 @@ test('the sheet invariant rejects extra selectors, properties, importants and ge
     ];
     expect(() => verifySheet(sheet)).not.toThrow();
     for (const [before, after] of mutations) {
-        expect(() => verifySheet(replaceUnique(sheet, before, after))).toThrow();
+        const mutated = replaceUnique(sheet, before, after);
+        expect(mutated).not.toBe(sheet);
+        expect(() => verifySheet(mutated)).toThrow();
     }
 });
 

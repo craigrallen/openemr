@@ -17,7 +17,8 @@
     background-color: var(--oe-wb-canvas, #f3f7f5) !important;
   }
 
-  /* Only the neutral status; .alert-success/.alert-danger keep their semantic palettes. */
+  /* Excludes .alert from the new status paint. The inherited #searchstatus foreground still takes
+     part there, so semantic contrast for .alert-success/.alert-danger is not guaranteed by this sheet. */
   html.oe-workbench-popup body.document-finder-popup #searchstatus:not(.alert) {
     color: var(--oe-wb-ink, #17343b);
     background-color: var(--oe-wb-paper, #fff);
@@ -28,7 +29,8 @@
     background-color: var(--oe-wb-canvas, #f3f7f5);
   }
 
-  /* Hovered rows keep the original #336699 highlight painted on the row. */
+  /* This sheet stops painting hovered cells; the original #336699 row highlight is unchanged.
+     Computed cell background transparency under every theme is unverified. */
   html.oe-workbench-popup body.document-finder-popup #searchResults .oneresult:not(:hover) > td {
     color: var(--oe-wb-ink, #17343b);
     background-color: var(--oe-wb-paper, #fff);
