@@ -356,7 +356,7 @@ const cssViolations = text => {
                 violations.push(`unexpected ${node.type} inside ${selector}`);
                 continue;
             }
-            if (Boolean(node.important)) violations.push(`!important on ${selector} ${node.prop}`);
+            if (node.important) violations.push(`!important on ${selector} ${node.prop}`);
             if (!has(expected, node.prop)) {
                 violations.push(`unexpected declaration ${selector} { ${node.prop} }`);
                 continue;

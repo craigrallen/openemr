@@ -75,15 +75,28 @@ documentation-only edit.
 - RED, before any production change: tests-only commit `310a74b8`, hosted JS
   job `38930808000`. A genuine RED with 4 intended failures, 1271 passing and
   62 suites.
-- Baseline: the source fixture, the full helper baseline and the controller
-  were byte-compared against actual master `18647270`.
-- GREEN: final CI is **pending**. No native PHP execution claim is made.
+- Baseline: the controller independently byte-compared the source fixture and
+  the full embedded helper baseline against actual master `18647270`.
+- GREEN, source-only, at `505c4dea`: hosted JS job `38931717754` PASS, 62
+  suites and 1275 tests.
+- Styling job `38931717693` at `505c4dea` **failed** ESLint
+  `no-extra-boolean-cast` at `tests/js/icd10-howto-popup.test.js:359:17`
+  (`if (Boolean(node.important))`).
+- Repair: that one conditional is now `if (node.important)`. The truthiness
+  is identical, the `!important` rejection and the negative controls are
+  preserved, and no lint suppression was added and no test was dropped. This
+  is a semantic-equivalent repair, not a behaviour change.
+- Final CI on the repaired head is **pending**. No native PHP execution claim
+  is made.
 
 ## Review and process status
 
-- Independent review rotation: run 1 of a maximum of 2, continuing the
-  rotation from PR #87.
-- Owner: Hermes / Claude Opus 5.5 / Codex. Independent review is **pending**.
+- Independent review rotation: run 1 of a maximum of 2. It is a rotation
+  starting from PR #87, not a continuation of PR #87.
+- Roles: owner Hermes; implementer Claude Opus 5.5; reviewer Codex Astra.
+- Independent review by Codex Astra is complete over the 6 files and found no
+  introduced P1 or P2. This is not browser-runtime or native UI acceptance.
+- All gates are kept; the lint repair does not waive or reduce any of them.
 - Jira OPEMR-14: In Progress.
 - PR #88: draft. No merge bypass.
 
@@ -105,5 +118,6 @@ documentation-only edit.
   application GET/POST or database was visited or exercised.
 - No new body paint: only the existing fragment container is painted.
 - The other original 22 requested features, demo, exhaustive-popup and
-  Swedish work remain open; previously denied actions stay denied.
+  Swedish work remain open; they are requested features, not audit items.
+  Previously denied actions stay denied.
 - No merge, merge bypass, deploy or cron change.
