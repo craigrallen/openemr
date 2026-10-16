@@ -12,7 +12,8 @@ The caller is unchanged.
 
 ## Source scope
 
-Exactly four files change.
+Exactly six files change: four production/documentation files (items 1–4)
+plus two test artifacts (items 5–6).
 
 1. `interface/usergroup/user_admin.php` — four additions, nothing else:
    - `use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;` in sorted import order
@@ -45,6 +46,10 @@ Exactly four files change.
    Fallbacks match the `popup.css` workbench context tokens: canvas `#f3f7f5`,
    paper `#fff`, ink `#17343b`, petrol `#086878`.
 4. This document.
+5. `tests/js/edit-user-popup.test.js` — test artifact: the Edit User popup
+   presentation contracts.
+6. `tests/clinical-ui/fixtures/edit-user-popup-original.txt` — test artifact:
+   the original 719-line route fixture used for the byte-for-byte inverse check.
 
 ## Explicitly unchanged
 
@@ -62,7 +67,17 @@ User rules.
 - RED: hosted tests-only run 38979489046 on `5254e896` failed with only the four
   intended missing-production failures (1273 passing, 62 suites); positive
   synthetic contracts and negative controls passed.
-- Controller GREEN: **pending**. Not run in this phase.
+- RED is unchanged.
+- Hosted GREEN: run 38979963101 on
+  `6eb72f959a561a0aaef34482055af64163de3323` passed, 62 suites and 1277 tests.
+- Controller checks: `php -l` passed on both PHP files; stylelint (actual,
+  non-ignored, JSON output) covered one file with zero warnings; diff-check
+  passed.
+- Complete final exact-head CI is still pending, and this documentation change
+  creates a new head that will need fresh CI.
+- Independent Codex Astra review of the six files and the caller found no
+  introduced P1/P2.
+- Native acceptance and ordinary approval remain open.
 
 ## Known caveats
 
@@ -87,7 +102,17 @@ not claimed to leave them visually untouched.
 
 ## Boundaries
 
-No application HTTP requests, submissions, database writes, installs, network
-access or secrets were used. No merge, deploy, policy, cron or master writes;
-those require ordinary approval. Prior boundaries (Original22, demo data,
-Swedish locale and all other denied areas) are retained.
+The coding phase used no application HTTP requests, submissions, database
+writes, installs, links or secrets. GitHub network access was used by the
+controller for the PR and CI, so this is not a claim of no network access at
+all.
+
+The Original22, demo and Swedish programme remain open; they are not denied
+areas. The specifically denied local Node, Jest, history, cache, hash,
+bootstrap, PHPUnit and Swedish fresh-clone publication actions are preserved
+and were not retried.
+
+No merge, master, deploy, policy, cron, clinical, national or vendor changes
+were made, and there is no standing review bypass. This adds no new
+restrictions on ordinary authorized future UI work. All caveats above are
+retained.
