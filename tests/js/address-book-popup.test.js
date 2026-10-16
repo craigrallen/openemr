@@ -359,6 +359,10 @@ const rules = text => {
     });
     return out;
 };
+// The one permitted reference to Bootstrap validation: the shared field exclusion also used by
+// issue-popup.css. Fields carrying a validity class, or inside a .was-validated container, are
+// left to Bootstrap.
+const VALIDITY_EXCLUSION = ':not(.is-invalid, .is-valid, .was-validated *)';
 const scopeOf = selector => SCOPES.find(scope => selector === scope || selector.startsWith(`${scope} `));
 const restOf = selector => selector.slice(scopeOf(selector).length);
 const token = (map, name) => `var(${name}, ${map[name]})`;
@@ -452,7 +456,8 @@ describe('address-book-popup.css (intended RED until the sheet exists)', () => {
                 const rest = restOf(selector);
                 const kind = kindOf(rest);
                 expect([selector, kind]).not.toEqual([selector, 'other']);
-                expect(rest).not.toMatch(/npi|\[style|\.is-(in)?valid(?!\))|was-validated|-feedback|\.input-group|nameRow|specialtyRow|nameDirectorRow|cpoe|\.btn-(primary|secondary|danger|info|sm)|\.alert|\.text-|\.bg-|label|\*|\bh6\b|:not\(:focus-visible\)/);
+                // Strip only the exact exclusion; any other validity reference is still rejected.
+                expect(rest.split(VALIDITY_EXCLUSION).join('')).not.toMatch(/npi|\[style|\.is-(in)?valid|was-validated|-feedback|\.input-group|nameRow|specialtyRow|nameDirectorRow|cpoe|\.btn-(primary|secondary|danger|info|sm)|\.alert|\.text-|\.bg-|label|\*|\bh6\b|:not\(:focus-visible\)/);
                 for (const prop of Object.keys(decls)) expect([selector, prop, ALLOWED_PROPS[kind].includes(prop)]).toEqual([selector, prop, true]);
             }
         }

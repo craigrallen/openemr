@@ -19,9 +19,11 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 
 if (!AclMain::aclCheckCore('admin', 'practice')) {
     AccessDeniedHelper::denyWithTemplate("ACL check failed for admin/practice: Address Book", xl("Address Book"));
@@ -98,6 +100,7 @@ function addrbook_invalue(string $name): string
     color: #dc3545;
 }
 </style>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/address-book-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('address-book-popup.css')); ?>">
 
 <script>
 
@@ -408,7 +411,7 @@ function addrbook_invalue(string $name): string
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-address-book-popup">
 <?php
  // If we are saving, then save and close the window.
  //
@@ -573,7 +576,7 @@ if ($type) { // note this only happens when its new
  });
 </script>
 
-<form method='post' name='theform' id="theform" action='addrbook_edit.php?userid=<?php echo attr_url($userid) ?>'>
+<form method='post' name='theform' id="theform" class="oe-address-book-document" action='addrbook_edit.php?userid=<?php echo attr_url($userid) ?>'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
 <!-- NPI Lookup Results Container -->
