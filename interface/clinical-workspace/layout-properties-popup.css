@@ -1,0 +1,72 @@
+/*
+ * Edit Layout Properties (interface/super/edit_layout_props.php) as a workbench document (OPEMR-9).
+ *
+ * A partial, screen-only colour and focus palette, not a redesign. Every rule is scoped to
+ * body.oe-workbench-context plus the route's body class and the sheet is linked with
+ * media="screen", so the standalone page and print keep the legacy rendering. Only colour,
+ * background, outline and placeholder opacity are set: no geometry, typography, display or
+ * button palettes. The route's td { font-size: 10pt } and <center>/<table> wrapper stay as-is.
+ *
+ * Field rules skip Bootstrap validation states so .is-invalid/.is-valid/.was-validated keep the
+ * theme's feedback colours. :focus-visible repeats the :focus outline in its own rule so a
+ * browser that rejects it still keeps the :focus fallback. Disabled and readonly come after
+ * :focus so the locked look wins while focused.
+ *
+ * body_top may carry a theme background with !important; this sheet does not override it, so
+ * the canvas colour below is not guaranteed to show through in every compiled theme.
+ */
+@media screen {
+  body.oe-workbench-context.oe-layout-properties-popup {
+    color: #182c36;
+    background-color: #edf2f3;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document td {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *) {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *)::placeholder {
+    color: #536773;
+    opacity: 1;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: #182c36;
+    background-color: #fff;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus,
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document input[type='checkbox']:focus,
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document input.btn:focus {
+    outline: 2px solid #0b5cad;
+    outline-offset: 2px;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *):focus-visible,
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document input[type='checkbox']:focus-visible,
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document input.btn:focus-visible {
+    outline: 2px solid #0b5cad;
+    outline-offset: 2px;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *):disabled {
+    color: #536773;
+    background-color: #edf2f3;
+  }
+
+  body.oe-workbench-context.oe-layout-properties-popup .oe-layout-properties-document .form-control:not(.is-invalid, .is-valid, .was-validated *)[readonly] {
+    color: #182c36;
+    background-color: #edf2f3;
+  }
+}

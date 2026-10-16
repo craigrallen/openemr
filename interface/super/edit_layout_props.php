@@ -16,6 +16,7 @@ require_once("../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -37,6 +38,7 @@ $group_id  = empty($_GET['group_id' ]) ? '' : $_GET['group_id' ];
 <head>
 <title><?php echo xlt("Edit Layout Properties"); ?></title>
     <?php Header::setupHeader('opener'); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/layout-properties-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('layout-properties-popup.css')); ?>">
 
 <style>
 td { font-size:10pt; }
@@ -97,7 +99,7 @@ function get_related() {
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-layout-properties-popup">
 
 <?php
 $session = SessionWrapperFactory::getInstance()->getActiveSession();
@@ -244,7 +246,7 @@ if ($layout_id) {
 }
 ?>
 
-<form method='post' action='edit_layout_props.php?<?php echo "layout_id=" . attr_url($layout_id) . "&group_id=" . attr_url($group_id); ?>'>
+<form method='post' class='oe-layout-properties-document' action='edit_layout_props.php?<?php echo "layout_id=" . attr_url($layout_id) . "&group_id=" . attr_url($group_id); ?>'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 <center>
 

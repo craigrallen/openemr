@@ -297,7 +297,20 @@ const neutral = '.form-control:not(.is-invalid, .is-valid, .was-validated *)';
 const field = `${doc} ${neutral}`;
 const checkbox = `${doc} input[type='checkbox']`;
 const button = `${doc} input.btn`;
-const canvas = { 'background-color': '#edf2f3', color: '#182c36' };
+// The theme's `.body_top { background-color: $paler !important }` beats any normal canvas
+// declaration, so the canvas background is the one permitted !important (declsFor keeps the flag).
+const canvas = { 'background-color': '#edf2f3 !important', color: '#182c36' };
+const themeBodyTop = '.body_top,\n.bgcolor2,\n.body_nav {\n  background-color: $paler !important;\n}\n';
+// The sole permitted !important: exactly `background-color: #edf2f3 !important` in a rule whose
+// only selector is the scope.
+const isCanvasImportant = (rule, d) => d.important && d.raws.important === undefined
+    && rule.type === 'rule' && rule.selectors.length === 1 && rule.selectors[0] === scope
+    && d.prop === 'background-color' && d.value === '#edf2f3';
+const withoutComments = text => {
+    const tree = postcss.parse(text);
+    tree.walkComments(c => c.remove());
+    return tree.toString();
+};
 const paper = { 'background-color': '#fff', color: '#182c36' };
 
 const rules = () => {
@@ -335,7 +348,12 @@ test('the sheet is one screen-only block of scoped colour, outline and placehold
     expect(top[0].params).toBe('screen');
     tree.walkAtRules(at => expect(at).toBe(top[0]));
     expect(rules().length).toBeGreaterThan(8);
-    expect(css()).not.toMatch(/!important|@import|workspace\.css/i);
+    expect(css()).not.toMatch(/@import|workspace\.css/i);
+    // Comments may mention !important; production may carry it only on the canvas background.
+    const importants = [];
+    tree.walkDecls(d => { if (d.important) importants.push({ selectors: d.parent.selectors, prop: d.prop, value: d.value, canvas: isCanvasImportant(d.parent, d) }); });
+    expect(importants).toEqual([{ selectors: [scope], prop: 'background-color', value: '#edf2f3', canvas: true }]);
+    expect((withoutComments(css()).match(/!\s*important/gi) || []).length).toBe(1);
     const allowed = ['color', 'background-color', 'outline', 'outline-offset', 'opacity'];
     for (const { selectors: list, decls } of rules()) {
         for (const selector of list) {
@@ -374,13 +392,19 @@ const contractProblems = text => {
     const media = top.length === 1 && top[0].type === 'atrule' && top[0].name === 'media' && top[0].params === 'screen' ? top[0] : null;
     if (!media) problems.push('not exactly one @media screen block');
     tree.walkAtRules(at => { if (at !== media) problems.push(`extra at-rule @${at.name}`); });
-    if (/!important|@import|workspace\.css/i.test(text)) problems.push('forbidden token');
+    if (/@import|workspace\.css/i.test(text)) problems.push('forbidden token');
+    let importants = 0;
+    let canvasImportant = false;
     tree.walkRules(rule => {
         if (!media || rule.parent !== media) problems.push(`rule outside @media screen: ${rule.selector}`);
         const decls = {};
         rule.walkDecls(d => {
             const prop = d.prop.toLowerCase();
-            if (d.important) problems.push(`!important on ${prop}`);
+            if (d.important) {
+                importants += 1;
+                if (isCanvasImportant(rule, d)) canvasImportant = true;
+                else rule.selectors.forEach(s => problems.push(`!important on ${prop}: ${s}`));
+            }
             if (!allowedProps.includes(prop)) problems.push(`property ${prop}`);
             decls[prop] = d.value.toLowerCase();
         });
@@ -397,11 +421,13 @@ const contractProblems = text => {
             problems.push(`unpaired colour: ${rule.selector}`);
         }
     });
+    if (importants > 1) problems.push('more than one !important');
+    if (!canvasImportant) problems.push('canvas background-color not !important');
     return problems;
 };
 
 const goodRules = [
-    `${scope} { color: #182c36; background-color: #edf2f3; }`,
+    `${scope} { color: #182c36; background-color: #edf2f3 !important; }`,
     `${doc} { color: #182c36; background-color: #fff; }`,
     `${doc} td { color: #182c36; background-color: #fff; }`,
     `${field} { color: #182c36; background-color: #fff; }`,
@@ -418,7 +444,10 @@ test('the actual sheet satisfies the closed structural contract', () => {
 
 test('negative oracles: out-of-scope, unlisted repaint, geometry, !important and mixed focus rules are rejected', () => {
     expect(contractProblems(goodSheet)).toEqual([]);
+    // A comment that mentions !important is not production.
+    expect(contractProblems(`/* the theme's .body_top background is !important */\n${goodSheet}`)).toEqual([]);
     const swap = (index, rule) => wrap(goodRules.map((r, i) => (i === index ? rule : r)));
+    const canvasRule = goodRules[0];
     const bad = [
         ['unscoped selector', wrap([...goodRules, '.oe-layout-properties-document td { color: #182c36; background-color: #fff; }']), /^selector \.oe-layout/],
         ['other page scope', wrap([...goodRules, `body.oe-layout-properties-popup .oe-layout-properties-document td { color: #182c36; background-color: #fff; }`]), /^selector body\.oe-layout/],
@@ -426,7 +455,15 @@ test('negative oracles: out-of-scope, unlisted repaint, geometry, !important and
         ['deeper descendant of an allowed target', wrap([...goodRules, `${doc} td span { color: #182c36; background-color: #fff; }`]), /^selector .* td span$/],
         ['geometry on the document', swap(1, `${doc} { color: #182c36; background-color: #fff; width: 100%; }`), /^property width$/],
         ['geometry on a cell', swap(2, `${doc} td { color: #182c36; background-color: #fff; padding: 4px; }`), /^property padding$/],
-        ['!important', swap(2, `${doc} td { color: #182c36 !important; background-color: #fff; }`), /^!important on color$/],
+        ['!important on a cell', swap(2, `${doc} td { color: #182c36 !important; background-color: #fff; }`), /^!important on color: .* td$/],
+        ['canvas colour !important', swap(0, `${scope} { color: #182c36 !important; background-color: #edf2f3 !important; }`), /^!important on color: body\.oe-workbench-context\.oe-layout-properties-popup$/],
+        ['another property !important', swap(5, `${field}:focus, ${checkbox}:focus, ${button}:focus { outline: 2px solid #0b5cad !important; outline-offset: 2px; }`), /^!important on outline: /],
+        ['second !important', wrap([...goodRules, canvasRule]), /^more than one !important$/],
+        ['other selector !important', swap(1, `${doc} { color: #182c36; background-color: #fff !important; }`), /^!important on background-color: .*\.oe-layout-properties-document$/],
+        ['canvas !important shared with another selector', swap(0, `${scope}, ${doc} { color: #182c36; background-color: #edf2f3 !important; }`), /^!important on background-color: .*\.oe-layout-properties-document$/],
+        ['canvas background not !important', swap(0, `${scope} { color: #182c36; background-color: #edf2f3; }`), /^canvas background-color not !important$/],
+        ['canvas !important with another colour', swap(0, `${scope} { color: #182c36; background-color: #edf2f4 !important; }`), /^!important on background-color: body\.oe-workbench-context\.oe-layout-properties-popup$/],
+        ['canvas !important in a non-canonical spelling', swap(0, `${scope} { color: #182c36; background-color: #edf2f3 ! IMPORTANT; }`), /^!important on background-color: body\.oe-workbench-context\.oe-layout-properties-popup$/],
         ['mixed :focus and :focus-visible', wrap([...goodRules.slice(0, 5), `${field}:focus, ${field}:focus-visible { outline: 2px solid #0b5cad; }`]), /^mixed :focus-visible rule/],
         ['rule outside @media screen', `${wrap(goodRules)}${doc} td { color: #182c36; background-color: #fff; }\n`, /^rule outside @media screen/],
         ['print media instead of screen', goodSheet.replace('@media screen', '@media print'), /^not exactly one @media screen block$/],
@@ -435,6 +472,27 @@ test('negative oracles: out-of-scope, unlisted repaint, geometry, !important and
         const problems = contractProblems(text);
         expect({ name, matched: problems.some(p => expected.test(p)) }).toEqual({ name, matched: true });
     }
+});
+
+test('canvas: the scope rule outranks the theme .body_top !important background with exactly #edf2f3 !important', () => {
+    // The theme source really declares the competing important background, and the route's body
+    // keeps body_top, so a normal canvas declaration would lose the cascade.
+    expect(count(read('interface/themes/color_base.scss'), themeBodyTop)).toBe(1);
+    expect(count(planned, '<body class="body_top oe-layout-properties-popup">')).toBe(1);
+    // Both declarations are !important, so specificity decides: the scope must outrank .body_top.
+    const specificity = s => [(s.match(/#[\w-]+/g) || []).length, (s.match(/\.[\w-]+/g) || []).length, (s.match(/^[a-z]+/) || []).length];
+    expect(scope).not.toMatch(/\s/);
+    expect(specificity(scope)).toEqual([0, 2, 1]);
+    expect(specificity('.body_top')).toEqual([0, 1, 0]);
+    const canvasBackgrounds = [];
+    postcss.parse(css()).walkDecls(/^background-color$/i, d => {
+        if ((d.parent.selectors || []).includes(scope)) {
+            canvasBackgrounds.push({ selectors: d.parent.selectors, value: d.value, important: d.important, raw: d.raws.important });
+        }
+    });
+    expect(canvasBackgrounds).toEqual([{ selectors: [scope], value: '#edf2f3', important: true, raw: undefined }]);
+    // The canvas foreground stays a normal declaration.
+    expect(declsFor(scope).color).toBe('#182c36');
 });
 
 test('canvas and document paper use the workbench palette; table cells and fields pair legibly', () => {
