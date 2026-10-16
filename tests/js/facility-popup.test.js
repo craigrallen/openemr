@@ -295,6 +295,36 @@ const tailOf = selector => {
 const isPlaceholder = selector => selector.endsWith('::placeholder');
 const isFocusRing = tail => /^ \.oe-facility-document \.(btn|nav-link):focus(-visible)?$/.test(tail);
 
+// The one theme-owned utility the sheet may target. The dark workbench ink is inherited by labels in the
+// existing bg-light panels, so the panel itself must be painted with the matching paper. Bootstrap's
+// .bg-light utility is background-color !important, so only this one background answers it with !important.
+const PANEL = ' .oe-facility-document .bg-light';
+const PANEL_SELECTORS = PREFIXES.map(prefix => `${prefix}${PANEL}`).sort();
+const PANEL_DECLS = [
+    { prop: 'color', value: 'var(--oe-facility-ink)', important: false },
+    { prop: 'background-color', value: 'var(--oe-facility-paper)', important: true },
+];
+// Returns the reasons the panel rule is wrong; an empty list is a pass.
+const panelOffenders = rules => {
+    const owners = rules.filter(r => r.selectors.some(s => tailOf(s) === PANEL));
+    if (owners.length !== 1) return [['panel rule count', owners.length]];
+    const [owner] = owners;
+    const offenders = [];
+    if (JSON.stringify([...owner.selectors].sort()) !== JSON.stringify(PANEL_SELECTORS)) offenders.push(['panel selectors', owner.selectors]);
+    if (JSON.stringify(owner.decls) !== JSON.stringify(PANEL_DECLS)) offenders.push(['panel declarations', owner.decls]);
+    return offenders;
+};
+// Every !important in the sheet, as `tail|property`.
+const importantOf = rules => {
+    const important = new Set();
+    for (const { selectors, decls } of rules) {
+        for (const d of decls.filter(decl => decl.important)) {
+            for (const selector of selectors) important.add(`${tailOf(selector)}|${d.prop}`);
+        }
+    }
+    return [...important].sort();
+};
+
 describe('facility-popup.css structure', () => {
     test('one screen-only block: no imports, breakpoints or nested at-rules', () => {
         const tree = sheet();
@@ -319,7 +349,7 @@ describe('facility-popup.css structure', () => {
                 if (tail !== '' && !/^ \.oe-facility-document(?![\w-])/.test(tail)) offenders.push(['outside container', tail]);
                 const bare = tail.replace(/:not\([^()]*\)/g, '');
                 // Bootstrap tab/switch/active state, validation state and theme utilities stay theme-owned.
-                if (/\.(active|show|fade|collapse|tab-pane|tab-content|custom-[\w-]+|is-invalid|is-valid|was-validated|bg-[\w-]+|text-[\w-]+|btn-[\w-]+)(?![\w-])/.test(bare)) {
+                if (tail !== PANEL && /\.(active|show|fade|collapse|tab-pane|tab-content|custom-[\w-]+|is-invalid|is-valid|was-validated|bg-[\w-]+|text-[\w-]+|btn-[\w-]+)(?![\w-])/.test(bare)) {
                     offenders.push(['theme-owned target', tail]);
                 }
                 if (/::(?!placeholder$)/.test(tail)) offenders.push(['pseudo-element', tail]);
@@ -350,13 +380,43 @@ describe('facility-popup.css structure', () => {
     test('!important is limited to the route canvas, answering color_base .body_top', () => {
         // The real theme rule that the canvas has to answer.
         expect(count(read('interface/themes/color_base.scss'), '.body_top,\n.bgcolor2,\n.body_nav {\n  background-color: $paler !important;\n}')).toBe(1);
-        const important = new Set();
-        for (const { selectors, decls } of rulesOf(sheet())) {
-            for (const d of decls.filter(decl => decl.important)) {
-                for (const selector of selectors) important.add(`${tailOf(selector)}|${d.prop}`);
-            }
-        }
-        expect([...important].sort()).toEqual(['|background-color', '|color']);
+        // Plus the single bg-light panel background, which has to beat Bootstrap's own !important utility.
+        expect(importantOf(rulesOf(sheet()))).toEqual(['|background-color', '|color', `${PANEL}|background-color`].sort());
+    });
+
+    test('bg-light panels get the paired ink and paper (the only theme-utility target, in both contexts)', () => {
+        expect(panelOffenders(rulesOf(sheet()))).toEqual([]);
+    });
+
+    describe('panel rule check rejects mutations', () => {
+        const rule = ({ selectors = PANEL_SELECTORS, color = 'color: var(--oe-facility-ink);', bg = 'background-color: var(--oe-facility-paper) !important;', extra = '' } = {}) =>
+            rulesOf(postcss.parse(`@media screen { ${selectors.join(', ')} { ${color} ${bg} ${extra} } }`));
+        const wrongTarget = PREFIXES.map(prefix => `${prefix} .oe-facility-document .bg-white`);
+        const broadTarget = PREFIXES.map(prefix => `${prefix} .bg-light`);
+
+        test('the exact rule passes', () => {
+            expect(panelOffenders(rule())).toEqual([]);
+            expect(importantOf(rule())).toEqual([`${PANEL}|background-color`]);
+        });
+
+        test.each([
+            ['wrong target', { selectors: wrongTarget }],
+            ['target outside the container', { selectors: broadTarget }],
+            ['one context only', { selectors: [PANEL_SELECTORS[0]] }],
+            ['background without !important', { bg: 'background-color: var(--oe-facility-paper);' }],
+            ['foreground removed', { color: '' }],
+            ['foreground !important', { color: 'color: var(--oe-facility-ink) !important;' }],
+            ['wrong background value', { bg: 'background-color: #fff !important;' }],
+            ['extra !important property', { extra: 'border-color: var(--oe-facility-line) !important;' }],
+            ['extra plain property', { extra: 'border-color: var(--oe-facility-line);' }],
+        ])('%s', (name, options) => {
+            expect([name, panelOffenders(rule(options)).length > 0]).toEqual([name, true]);
+        });
+
+        test('an extra !important property is also caught by the sheet-wide allowlist', () => {
+            const extra = importantOf(rule({ extra: 'border-color: var(--oe-facility-line) !important;' }));
+            expect(extra).not.toEqual([`${PANEL}|background-color`]);
+        });
     });
 
     test('declarations are paired: surfaces ink+background, controls ink+background+border, placeholder ink+opacity', () => {
@@ -429,7 +489,7 @@ const mount = ({ context = CONTEXTS[1], bodyClass = 'body_top oe-facility-popup'
             <a class="btn btn-primary" name="form_save" id="form_save" href="#">Save</a>
         </div></div></div>
         <form name="facility-form" id="facility-form" class="${formClass}">
-            <div class="bg-light border"><ul class="nav nav-pills mt-2" id="addressTab" role="tablist">
+            <div class="bg-light border"><label class="mb-0" id="panel-label" for="probe">Street</label><ul class="nav nav-pills mt-2" id="addressTab" role="tablist">
                 <li class="nav-item py-1 px-2"><button type="button" class="nav-link py-1 px-2 active" id="physical-address-tab">Physical</button></li>
                 <li class="nav-item py-1 px-2"><button type="button" class="nav-link py-1 px-2" id="mailing-address-tab">Mailing</button></li>
             </ul><div class="input-group"><div class="input-group-prepend"><button type="button" id="btnCopyMailing" class="btn btn-outline-secondary">Copy</button></div>
@@ -441,6 +501,8 @@ const mount = ({ context = CONTEXTS[1], bodyClass = 'body_top oe-facility-popup'
         body: document.body,
         container: document.querySelector('.oe-facility-document'),
         input: byId('probe'),
+        panel: document.querySelector('.bg-light'),
+        panelLabel: byId('panel-label'),
         buttons: [byId('cancel'), byId('form_save'), byId('btnCopyMailing'), byId('physical-address-tab'), byId('mailing-address-tab')],
     };
 };
@@ -479,6 +541,30 @@ describe('facility-popup.css in a jsdom model of the popup', () => {
         const { input } = mount({ context });
         const placeholder = matches(rules, input, { placeholder: true });
         expect(placeholder.some(({ rule }) => rule.props.has('color') && rule.props.has('opacity'))).toBe(true);
+    });
+
+    test.each(CONTEXTS)('html.%s: a focused read-only control keeps its locked ink and paper; placeholder ink is opaque', context => {
+        const rules = rulesOf(sheet());
+        const { input } = mount({ context, attrs: 'readonly' });
+        input.focus();
+        expect(input.matches(':focus')).toBe(true);
+        // Equal specificity, so the last matching rule in source order wins per property (a source-order model only).
+        const winner = prop => matches(rules, input).filter(({ rule }) => rule.props.has(prop)).map(({ rule }) => rule.decls.find(d => d.prop === prop).value).pop();
+        expect([winner('color'), winner('background-color')]).toEqual(['var(--oe-facility-disabled-ink)', 'var(--oe-facility-disabled-paper)']);
+        const placeholder = matches(rules, input, { placeholder: true }).map(({ rule }) => rule.decls);
+        expect(placeholder.flat().map(d => `${d.prop}:${d.value}`).sort()).toEqual(['color:var(--oe-facility-muted)', 'opacity:1']);
+    });
+
+    test.each(CONTEXTS)('html.%s: the bg-light panel holding a label gets the paired rule (rule application only, not computed contrast)', context => {
+        const rules = rulesOf(sheet());
+        const { panel, panelLabel } = mount({ context });
+        expect(panel.contains(panelLabel)).toBe(true);
+        const found = matches(rules, panel).filter(({ rule }) => rule.selectors.some(s => tailOf(s) === PANEL));
+        expect(found.length).toBe(1);
+        expect(found[0].rule.decls).toEqual(PANEL_DECLS);
+        // Only the panel is matched directly. The label has no rule of its own (zero matches), but it still
+        // inherits the panel's ink through normal color inheritance; other controls and pills keep their own palette.
+        expect(matches(rules, panelLabel).length).toBe(0);
     });
 
     test.each(CONTEXTS)('html.%s: validation states keep the theme palette (no facility paint reaches them)', context => {
@@ -521,8 +607,8 @@ describe('facility-popup.css in a jsdom model of the popup', () => {
             { bodyClass: 'body_top' },
             { bodyClass: '' },
         ]) {
-            const { body, container, input, buttons } = mount(options);
-            for (const element of [document.documentElement, body, container, input, ...buttons]) {
+            const { body, container, input, buttons, panel, panelLabel } = mount(options);
+            for (const element of [document.documentElement, body, container, input, panel, panelLabel, ...buttons]) {
                 const found = [...matches(rules, element), ...matches(rules, element, { placeholder: true })];
                 expect([options, element.id || element.tagName, found.length]).toEqual([options, element.id || element.tagName, 0]);
             }
