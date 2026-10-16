@@ -43,6 +43,7 @@ final readonly class ClinicalWorkspaceAssets
         'patient-picker-popup.css',
         'patient-results-popup.css',
         'patient-search.css',
+        'rxnorm-howto-popup.css',
         'soap-document.css',
         'soap-document.js',
         'soap-reference.css',
