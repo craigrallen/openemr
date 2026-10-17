@@ -1,0 +1,28 @@
+html.oe-workbench-context body.oe-patient-xml-export-screen {
+  background: var(--oe-wb-canvas, #edf2f3) !important;
+  color: var(--oe-wb-ink, #172b32);
+}
+
+html.oe-workbench-context .oe-patient-xml-export-document {
+  background: var(--oe-wb-paper, #fff);
+  color: var(--oe-wb-ink, #172b32);
+}
+
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly],
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus,
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus-visible {
+  background: var(--oe-wb-paper, #fff);
+  color: var(--oe-wb-ink, #172b32);
+}
+
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus,
+html.oe-workbench-context .oe-patient-xml-export-document button:focus {
+  outline: 2px solid var(--oe-wb-petrol, #1d5961);
+  outline-offset: 2px;
+}
+
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus-visible,
+html.oe-workbench-context .oe-patient-xml-export-document button:focus-visible {
+  outline: 2px solid var(--oe-wb-petrol, #1d5961);
+  outline-offset: 2px;
+}
