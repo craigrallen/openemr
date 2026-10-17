@@ -16,6 +16,7 @@
 
  use OpenEMR\Common\Acl\AccessDeniedHelper;
  use OpenEMR\Common\Acl\AclMain;
+ use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
  use OpenEMR\Core\Header;
 
 if (!AclMain::aclCheckCore('patients', 'demo')) {
@@ -237,10 +238,11 @@ if (!empty($rowed['id'])) {
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-xml-export-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('patient-xml-export-popup.css')); ?>">
 <title><?php echo xlt('Export Patient Demographics XML'); ?></title>
 </head>
-<body class="body_top">
-  <div class="container">
+<body class="body_top oe-patient-xml-export-screen">
+  <div class="container oe-patient-xml-export-document">
      <div class="row">
         <div class="col-12">
            <div class="form-group"></div>
