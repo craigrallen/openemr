@@ -33,6 +33,7 @@ final readonly class ClinicalWorkspaceAssets
         'calendar-workday.js',
         'encounter-document.css',
         'finder.css',
+        'front-payment-receipt-popup.css',
         'global-messages.css',
         'history-document.css',
         'history-editor.css',

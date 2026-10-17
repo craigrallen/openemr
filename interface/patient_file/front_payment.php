@@ -30,6 +30,7 @@ use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Crypto\CryptoGen;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Utils\FormatMoney;
@@ -374,6 +375,7 @@ if ($alertmsg === '' && (!empty($_POST['form_save']) || !empty($_REQUEST['receip
 
 <title><?php echo xlt('Receipt for Payment'); ?></title>
     <?php Header::setupHeader(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/front-payment-receipt-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('front-payment-receipt-popup.css')); ?>">
 <script>
 
     <?php require($srcdir . "/restoreSession.php"); ?>
@@ -515,7 +517,7 @@ function toencounter(enc, datestr, topframe) {
 </style>
 </head>
 <body>
-    <div class="container mt-3">
+    <div class="container mt-3 oe-front-payment-receipt">
         <div class="row">
             <!-- Omega -->
             <div class="col-12 justify-content-center">
