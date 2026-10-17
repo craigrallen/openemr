@@ -96,7 +96,6 @@ final readonly class ClinicalWorkspaceAssets
         if (!is_file($path)) {
             return '0';
         }
-
         $mtime = filemtime($path);
 
         return $mtime === false ? '0' : sprintf('%d', $mtime);
