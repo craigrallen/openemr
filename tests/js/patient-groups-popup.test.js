@@ -268,7 +268,7 @@ test('caller, context activation, theme source, and existing security boundary s
         'function fetchDefaultGroups(', 'function fetchDefaultProfiles(',
         'function savePatientGroupsByProfile(', 'function updateGroupsInPatients(',
         'function getPatientsByAllGroups(', 'function fetchPatientListByIssuesSearch(',
-        'DELETE From \`document_template_profiles\`', 'UPDATE \`patient_data\` SET \`patient_groups\`',
+        'DELETE From `document_template_profiles`', 'UPDATE `patient_data` SET `patient_groups`',
     ]) expect(service).toContain(anchor);
     expect(ORIGINAL).not.toMatch(/AclMain|CsrfUtils|checkCsrfInput/);
     expect(ORIGINAL).toContain("if ($_POST['mode'] === 'save_groups')");
