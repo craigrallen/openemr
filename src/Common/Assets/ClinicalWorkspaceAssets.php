@@ -38,6 +38,7 @@ final readonly class ClinicalWorkspaceAssets
         'history-editor.css',
         'issue-popup.css',
         'lbf-document.css',
+        'letter-editor-popup.css',
         'mode.js',
         'patient-messages.css',
         'patient-picker-popup.css',
