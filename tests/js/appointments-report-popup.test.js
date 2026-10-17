@@ -141,7 +141,7 @@ const decl = (prop, value, important = false) => ({ prop, value, important });
 const OUTLINE = [decl('outline', '2px solid ' + PETROL), decl('outline-offset', '2px')];
 const controls = suffix => [
     SCOPE + ' .form-control' + suffix,
-    SCOPE + ' input[type=checkbox]' + suffix,
+    SCOPE + " input[type='checkbox']" + suffix,
     SCOPE + ' a.btn' + suffix,
 ];
 const RULES = [
