@@ -16,6 +16,7 @@
 
     {% block head %}
         {{ setupHeader(['opener']) }}
+        <link rel="stylesheet" media="screen" href="{{ webroot|attr }}/interface/clinical-workspace/portal-credentials-popup.css?v={{ clinicalWorkspaceAssetVersion('portal-credentials-popup.css')|attr_url }}">
     {% endblock %}
     <style>
         @media print {
@@ -76,7 +77,7 @@
         <p>{{ credPlainMessage|text|nl2br }}</p>
     </div>
     {% else %}
-    <form name="portallogin" action="" method="post">
+    <form name="portallogin" action="" method="post" class="oe-portal-credentials-entry">
         <input type="hidden" id = "csrf_token_form" name="csrf_token_form" value="{{ csrfToken|attr }}" />
 
         <p class="text-center font-weight-bold">{{ "Generate Username And Password For"|xlt }} {{ fname|text }}</p>
