@@ -1,0 +1,11 @@
+@media screen {
+  html.oe-workbench-context table.oe-eye-rx-history-heading {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context table.oe-eye-rx-history-heading h4.underline {
+    color: var(--oe-wb-petrol, #086878);
+    background: transparent;
+  }
+}

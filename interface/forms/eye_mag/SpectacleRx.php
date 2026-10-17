@@ -18,6 +18,7 @@ require_once(__DIR__ . "/../../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Http\CurrentRequest;
@@ -374,6 +375,7 @@ if ($_REQUEST['dispensed'] ?? '') {
     <head>
 
         <?php Header::setupHeader(['opener', 'pure', 'jscolor']); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/eye-rx-history-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('eye-rx-history-popup.css')); ?>">
 
         <link rel="stylesheet" href="../../forms/<?php echo $form_folder; ?>/css/style.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" type="text/css">
 
@@ -486,7 +488,7 @@ if ($_REQUEST['dispensed'] ?? '') {
     <?php echo report_header((string) $pid, "web"); ?>
     <div class="row">
         <div class="col-sm-8 offset-sm-2 text-center m-3">
-            <table>
+            <table class="oe-eye-rx-history-heading">
                 <tr>
                     <td colspan="2"><h4 class="underline"><?php echo xlt('Rx History'); ?></h4></td>
                 </tr>
