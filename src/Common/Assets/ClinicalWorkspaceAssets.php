@@ -26,6 +26,7 @@ final readonly class ClinicalWorkspaceAssets
      * workspace; a legacy tooltip caller supplies library/js explicitly.
      */
     private const SUPPORTED = [
+        'add-user-popup.css',
         'ajtooltip.js',
         'appointment.css',
         'calendar-sidebar.js',
