@@ -140,7 +140,7 @@ const PAPER = 'var(--oe-wb-paper, #fff)';
 const PETROL = 'var(--oe-wb-petrol, #086878)';
 const decl = (prop, value) => ({ prop, value, important: false });
 const FOCUS = [decl('outline', '2px solid ' + PETROL), decl('outline-offset', '2px')];
-const focusSelector = pseudo => SCOPE + ' button:' + pseudo + ',\n' + SCOPE + " input[type='button']:" + pseudo;
+const focusSelector = pseudo => SCOPE + ' button:' + pseudo + ',\n  ' + SCOPE + " input[type='button']:" + pseudo;
 const RULES = [
     [SCOPE + ' .section-2', [decl('color', INK), decl('background', PAPER)]],
     [focusSelector('focus'), FOCUS],
