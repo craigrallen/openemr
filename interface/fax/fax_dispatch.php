@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/../globals.php';
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Http\CurrentRequest;
@@ -590,6 +591,7 @@ $userRows = QueryUtils::fetchRecords(
 <head>
 
     <?php Header::setupHeader(['opener', 'datetime-picker']);?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/fax-dispatch-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('fax-dispatch-popup.css')); ?>">
     <title><?php echo xlt('Dispatch Received Document'); ?></title>
 
 <script>
@@ -722,7 +724,7 @@ $userRows = QueryUtils::fetchRecords(
 <body class="body_top">
 <h2 class="text-center"><?php echo xlt('Dispatch Received Document'); ?></h2>
 
-<form method='post' name='theform'
+<form method='post' name='theform' class='oe-fax-dispatch-sheet'
  action='fax_dispatch.php?<?php echo ($mode == 'fax') ? 'file' : 'scan'; ?>=<?php echo attr_url($filename); ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>' onsubmit='return validate()'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
