@@ -1,0 +1,31 @@
+@media screen {
+  html.oe-workbench-context body.oe-patient-xml-import-popup {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet textarea.form-control,
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet textarea.form-control:focus {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet textarea.form-control:focus,
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet button.btn-save:focus,
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet button.btn-cancel:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet textarea.form-control:focus-visible,
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet button.btn-save:focus-visible,
+  html.oe-workbench-context body.oe-patient-xml-import-popup .oe-patient-xml-import-sheet button.btn-cancel:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+}

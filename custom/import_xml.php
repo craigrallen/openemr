@@ -18,6 +18,7 @@ require_once("../interface/globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -205,12 +206,13 @@ if (!empty($_POST['form_import'])) {
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-xml-import-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('patient-xml-import-popup.css')); ?>">
     <title><?php echo xlt('Import Patient Demographics XML'); ?></title>
 </head>
-<body class="body_top" onload="javascript:document.forms[0].form_import_data.focus()">
+<body class="body_top oe-patient-xml-import-popup" onload="javascript:document.forms[0].form_import_data.focus()">
 <form method='post' action="import_xml.php" onsubmit="return top.restoreSession()">
     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
-    <div class="container">
+    <div class="container oe-patient-xml-import-sheet">
         <div class="row">
             <div class="col-12">
                 <div class="form-group"></div>
