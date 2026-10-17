@@ -1,0 +1,11 @@
+/* Address Verification popup: canvas, paper and ink only. */
+
+html.oe-workbench-context body.oe-address-verification-screen {
+  background-color: var(--oe-wb-canvas, #f3f7f5);
+  color: var(--oe-wb-ink, #17343b);
+}
+
+html.oe-workbench-context .oe-address-verification-document {
+  background-color: var(--oe-wb-paper, #fff);
+  color: var(--oe-wb-ink, #17343b);
+}

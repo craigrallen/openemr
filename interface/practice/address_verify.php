@@ -14,15 +14,18 @@
 
 require_once("../globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\USPS\USPSAddressVerifyV3;
 
 $verify = new USPSAddressVerifyV3();
 
 $output = '<!DOCTYPE html><html>';
 $output .= Header::setupHeader([], false);
-$output .= "<body class='text-left'>
-   <div class='container'>
+$output .= '<link rel="stylesheet" href="' . attr(OEGlobalsBag::getInstance()->getWebRoot()) . '/interface/clinical-workspace/address-verification-popup.css?v=' . attr_url((new ClinicalWorkspaceAssets())->version('address-verification-popup.css')) . '" media="screen">';
+$output .= "<body class='text-left oe-address-verification-screen'>
+   <div class='container oe-address-verification-document'>
        <p>";
 
 if (!$verify->isConfigured()) {
