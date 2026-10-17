@@ -17,6 +17,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclExtended;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -41,6 +42,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <head>
 
 <?php Header::setupHeader(['common','opener', 'erx']); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/add-user-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('add-user-popup.css')); ?>">
 
 <script src="checkpwd_validation.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>"></script>
 
@@ -207,9 +209,9 @@ function authorized_clicked() {
   }
 </style>
 </head>
-<body class="body_top">
+<body class="body_top oe-add-user-screen">
 
-<div class="container">
+<div class="container oe-add-user-document">
 
 <table><tr><td>
 <span class="title"><?php echo xlt('Add User'); ?></span>&nbsp;</td>
