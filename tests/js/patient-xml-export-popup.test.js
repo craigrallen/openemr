@@ -55,7 +55,7 @@ const FIELD = DOCUMENT_SCOPE + ' textarea.form-control[readonly]';
 const PAPER = 'var(--oe-wb-paper, #fff)';
 const INK = 'var(--oe-wb-ink, #172b32)';
 const PETROL = 'var(--oe-wb-petrol, #1d5961)';
-const PALETTE_SELECTORS = [FIELD, FIELD + ':focus', FIELD + ':focus-visible'];
+const PALETTE_SELECTORS = [FIELD, FIELD + ':focus'];
 const FOCUS_SELECTORS = [FIELD + ':focus', DOCUMENT_SCOPE + ' button:focus'];
 const VISIBLE_SELECTORS = [FIELD + ':focus-visible', DOCUMENT_SCOPE + ' button:focus-visible'];
 const decl = (prop, value, important = false) => ({ prop, value, important });
@@ -251,7 +251,7 @@ describe('negative route and helper controls', () => {
 });
 
 describe('negative CSS AST controls', () => {
-    test('scope leaks, missing focused color, extra paint, at-rules and importance changes are rejected', () => {
+    test('scope leaks, unsafe palette selectors, missing focused color, extra paint, at-rules and importance changes are rejected', () => {
         const bodyBlock = block(RULES[0]);
         const paletteBlock = block(RULES[2]);
         const focusBlock = block(RULES[3]);
@@ -263,7 +263,8 @@ describe('negative CSS AST controls', () => {
             [FOCUS_SELECTORS.join(',\n') + ' {', FIELD + ':focus,\nbutton:focus {'],
             [VISIBLE_SELECTORS.join(',\n') + ' {', FIELD + ':focus-visible,\nbutton:focus-visible {'],
             [PALETTE_SELECTORS.join(',\n'), [FIELD, FIELD + ':focus-visible'].join(',\n')],
-            [PALETTE_SELECTORS.join(',\n'), [FIELD, FIELD + ':focus'].join(',\n')],
+            [PALETTE_SELECTORS.join(',\n'), [FIELD].join(',\n')],
+            [PALETTE_SELECTORS.join(',\n'), [FIELD, FIELD + ':focus', FIELD + ':focus-visible'].join(',\n')],
             ['background: var(--oe-wb-canvas, #edf2f3) !important;', 'background: var(--oe-wb-canvas, #edf2f3);'],
             ['background: var(--oe-wb-canvas, #edf2f3) !important;', 'background: var(--oe-wb-canvas, #edf2f3) !important;\n    padding: 1rem;'],
             [paletteBlock, paletteBlock.replace('    color: ' + INK + ';', '    color: ' + INK + ' !important;')],
