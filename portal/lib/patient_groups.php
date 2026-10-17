@@ -8,6 +8,7 @@
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Services\DocumentTemplates\DocumentTemplateService;
@@ -103,6 +104,7 @@ if (!isset($_GET['render_group_assignments'])) {
         Header::setupHeader(['opener','datetime-picker']); ?>
         <script src="<?php echo $globalsBag->getString('web_root'); ?>/portal/public/assets/sortablejs/Sortable.min.js?v=<?php echo $globalsBag->get('v_js_includes'); ?>"></script>
     <?php } ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr($globalsBag->getWebRoot()); ?>/interface/clinical-workspace/patient-groups-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('patient-groups-popup.css')); ?>">
 </head>
 <style>
   body {
@@ -253,7 +255,7 @@ if (!isset($_GET['render_group_assignments'])) {
     <div class='container-fluid'>
         <div class='row'>
             <div class='col-6 col-height p-0 pb-1'>
-                <nav id='searchCriteria' class='navbar navbar-light bg-light sticky-top'>
+                <nav id='searchCriteria' class='navbar navbar-light bg-light sticky-top oe-patient-groups-heading'>
                     <form class="form-inline" method='post' name='theform' id='theform' action=''>
                         <div class='form-row'>
                             <select name='searchby' id='searchby' class="form-control form-control-sm ml-1">
@@ -304,7 +306,7 @@ if (!isset($_GET['render_group_assignments'])) {
                 </div>
             </div>
             <div class='col-6 col-height p-0 pb-1'>
-                <nav id='dispose' class='navbar navbar-light bg-light sticky-top'>
+                <nav id='dispose' class='navbar navbar-light bg-light sticky-top oe-patient-groups-heading'>
                     <div class='btn-group ml-auto'>
                         <button type='button' class='btn btn-primary btn-save btn-sm' onclick='return submitGroups();'><?php echo xlt('Save'); ?></button>
                         <button type='button' class='btn btn-secondary btn-cancel btn-sm' onclick='dlgclose();'><?php /*echo xlt('Quit'); */?></button>
@@ -355,6 +357,7 @@ if (!isset($_GET['render_group_assignments'])) {
         Header::setupHeader(['opener','datetime-picker']); ?>
         <script src="<?php echo $globalsBag->getString('web_root'); ?>/portal/public/assets/sortablejs/Sortable.min.js?v=<?php echo $globalsBag->get('v_js_includes'); ?>"></script>
     <?php } ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr($globalsBag->getWebRoot()); ?>/interface/clinical-workspace/patient-groups-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('patient-groups-popup.css')); ?>">
 </head>
 <style>
   body {
@@ -489,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class='container-fluid'>
     <div class='row'>
         <div class='col-6 col-height p-0 pb-1'>
-            <nav id='dispose' class='navbar navbar-light bg-light sticky-top'>
+            <nav id='dispose' class='navbar navbar-light bg-light sticky-top oe-patient-groups-heading'>
                 <div class='navbar-brand'><?php echo xlt('Patient Groups'); ?></div>
                 <form class='form-inline'id='groupsForm'>
                 <div class='btn-group'>
@@ -525,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         </div>
         <div class='col-6 col-height p-0 pb-1'>
-            <nav id='dispose' class='navbar navbar-light bg-light sticky-top'>
+            <nav id='dispose' class='navbar navbar-light bg-light sticky-top oe-patient-groups-heading'>
                 <div class="navbar-brand"><?php echo xlt('Profiles');  ?></div>
                 <form class='form-inline' id='profileForm'>
                     <div class='btn-group'>
