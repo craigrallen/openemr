@@ -9,8 +9,7 @@ html.oe-workbench-context .oe-patient-xml-export-document {
 }
 
 html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly],
-html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus,
-html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus-visible {
+html.oe-workbench-context .oe-patient-xml-export-document textarea.form-control[readonly]:focus {
   background: var(--oe-wb-paper, #fff);
   color: var(--oe-wb-ink, #172b32);
 }
