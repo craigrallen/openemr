@@ -13,13 +13,20 @@ require_once __DIR__ . '/PortalMessageRecipientTest.php';
 
 final class PortalMessageThreadTest extends TestCase
 {
-    /** @param array<string, mixed> $scenario */
+    /**
+     * @param array<string, mixed> $scenario
+     * @return array{output: string, writes: list<array{string, array<mixed>}>, lookups: list<array{string, array<mixed>}>, csrf: array{int, string, bool}|null}
+     */
     private function send(array $scenario): array
     {
         return PortalMessageRecipientTest::dispatch($scenario);
     }
 
-    /** The selected patient mailbox chain is 100; the incoming staff peer chain is 80. */
+    /**
+     * The selected patient mailbox chain is 100; the incoming staff peer chain is 80.
+     * @param array<string, mixed> $changes
+     * @return array<string, mixed>
+     */
     private static function incomingRow(array $changes = []): array
     {
         return array_replace([
@@ -74,6 +81,10 @@ final class PortalMessageThreadTest extends TestCase
             'threads' => [self::incomingRow(['mail_chain' => 0])],
         ]);
         self::assertCount(2, $result['writes']);
+        self::assertGreaterThanOrEqual(2, count($result['lookups']));
+        self::assertMatchesRegularExpression('/`?mail_chain`?\s*=\s*(?:0|\?)/i', $result['lookups'][1][0]);
+        self::assertMatchesRegularExpression('/`?id`?\s*=\s*\?/i', $result['lookups'][1][0]);
+        self::assertContains(137, $result['lookups'][1][1]);
         self::assertSame(137, $result['writes'][0][1][10]);
         self::assertSame(80, $result['writes'][1][1][10]);
     }
@@ -81,8 +92,8 @@ final class PortalMessageThreadTest extends TestCase
     /** @return iterable<string, array{mixed}> */
     public static function invalidThreadIds(): iterable
     {
-        foreach ([null, '', '0', 0, -1, '-1', '01', '+100', '100.0', '1e2', '100abc', [], [100], '9223372036854775808'] as $id) {
-            yield json_encode($id) => [$id];
+        foreach ([null, '', '0', 0, -1, '-1', '01', '+100', '100.0', '1e2', '100abc', ' 100', '100 ', "100\n", true, false, 100.0, [], [100], '9223372036854775808'] as $id) {
+            yield json_encode($id, JSON_THROW_ON_ERROR) => [$id];
         }
     }
 
@@ -104,6 +115,7 @@ final class PortalMessageThreadTest extends TestCase
         yield 'other chain' => [['threads' => [self::incomingRow(['mail_chain' => 900, 'reply_mail_chain' => 901])]]];
         yield 'lookup exception' => [['threadLookup' => 'exception']];
         yield 'missing chain' => [['threads' => [self::incomingRow(['mail_chain' => null])]]];
+        yield 'zero chain wrong row id' => [['threads' => [self::incomingRow(['id' => 138, 'mail_chain' => 0])]]];
         yield 'malformed peer chain' => [['threads' => [self::incomingRow(['reply_mail_chain' => '900abc'])]]];
         yield 'missing peer chain' => [['threads' => [self::incomingRow(['reply_mail_chain' => null])]]];
         yield 'malformed owner' => [['threads' => [self::incomingRow(['owner' => ['patient-42']])]]];
@@ -113,7 +125,17 @@ final class PortalMessageThreadTest extends TestCase
     #[DataProvider('unauthorizedThreads')]
     public function testUnauthorizedOrMalformedThreadNeverWritesEitherCopy(array $scenario): void
     {
-        $result = $this->send(array_replace_recursive(['post' => ['task' => 'reply', 'noteid' => 100]], $scenario));
+        $scenario['post'] = ['task' => 'reply', 'noteid' => 100];
+        $result = $this->send($scenario);
+        self::assertSame([], $result['writes']);
+    }
+
+    public function testRowIdCannotReplaceItsNonzeroMailChain(): void
+    {
+        $result = $this->send([
+            'post' => ['task' => 'reply', 'noteid' => 137],
+            'threads' => [self::incomingRow()],
+        ]);
         self::assertSame([], $result['writes']);
     }
 

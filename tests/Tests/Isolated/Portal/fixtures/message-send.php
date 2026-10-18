@@ -45,7 +45,11 @@ final class CsrfDouble
 
 final class QueryDouble
 {
-    /** Find the bind belonging to a column predicate, regardless of clause order. */
+    /**
+     * Find the bind belonging to a column predicate, regardless of clause order.
+     * @param array<mixed> $params
+     * @return list<mixed>
+     */
     private static function boundColumns(string $sql, array $params, string $column): array
     {
         $pattern = '/(?:`?[a-z_]+`?\.)?`?' . preg_quote($column, '/') . '`?\s*=\s*\?/i';
@@ -58,7 +62,19 @@ final class QueryDouble
         return $values;
     }
 
-    /** Simulate onsite_mail predicate scoping; omitted predicates intentionally match wider rows. */
+    private static function sameSqlScalar(mixed $actual, mixed $expected): bool
+    {
+        if ((!is_int($actual) && !is_string($actual)) || (!is_int($expected) && !is_string($expected))) {
+            return false;
+        }
+        return (string) $actual === (string) $expected;
+    }
+
+    /**
+     * Simulate onsite_mail predicate scoping; omitted predicates intentionally match wider rows.
+     * @param array<mixed> $params
+     * @return array<mixed>|false
+     */
     private static function threadRow(string $sql, array $params): array|false
     {
         $rows = MessageScenario::$input['threads'] ?? [[
@@ -71,7 +87,8 @@ final class QueryDouble
         $owner = self::boundColumns($sql, $params, 'owner')[0] ?? null;
         $senders = self::boundColumns($sql, $params, 'sender_id');
         $recipients = self::boundColumns($sql, $params, 'recipient_id');
-        $chain = self::boundColumns($sql, $params, 'mail_chain')[0] ?? null;
+        $chains = self::boundColumns($sql, $params, 'mail_chain');
+        $chain = $chains[0] ?? null;
         $id = self::boundColumns($sql, $params, 'id')[0] ?? null;
         foreach ($rows as $row) {
             if (!is_array($row)) {
@@ -93,16 +110,19 @@ final class QueryDouble
                     continue;
                 }
             }
-            if ($chain !== null && (string) ($row['mail_chain'] ?? '') !== (string) $chain &&
-                ($id === null || (string) ($row['id'] ?? '') !== (string) $id)) {
-                continue;
-            }
-            if ($chain === null && $id !== null && (string) ($row['id'] ?? '') !== (string) $id) {
+            $rowChain = $row['mail_chain'] ?? null;
+            $chainMatches = $chain !== null && self::sameSqlScalar($rowChain, $chain) &&
+                !self::sameSqlScalar($rowChain, 0);
+            $idMatches = $id !== null && self::sameSqlScalar($row['id'] ?? null, $id);
+            $zeroGuard = preg_match('/`?mail_chain`?\s*=\s*0\b/i', $sql) === 1 ||
+                (count($chains) > 1 && self::sameSqlScalar($chains[1], 0));
+            $fallbackMatches = $idMatches && (!$zeroGuard || self::sameSqlScalar($rowChain, 0));
+            if (($chain !== null || $id !== null) && !$chainMatches && !$fallbackMatches) {
                 continue;
             }
             $deletedBind = self::boundColumns($sql, $params, 'deleted')[0] ?? null;
             $deletedIsScoped = preg_match('/`?deleted`?\s*(?:!=|<>)\s*1\b|`?deleted`?\s*=\s*0\b/i', $sql) ||
-                ($deletedBind !== null && (string) $deletedBind === '0');
+                self::sameSqlScalar($deletedBind, 0);
             if ($deletedIsScoped && ($row['deleted'] ?? null) !== 0) {
                 continue;
             }

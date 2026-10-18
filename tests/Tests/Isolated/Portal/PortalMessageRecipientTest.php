@@ -128,7 +128,7 @@ final class PortalMessageRecipientTest extends TestCase
 
     /**
      * @param array<string, mixed> $scenario
-     * @return array{output: mixed, writes: list<array{string, array<mixed>}>, lookups: mixed, csrf: mixed}
+     * @return array{output: string, writes: list<array{string, array<mixed>}>, lookups: list<array{string, array<mixed>}>, csrf: array{int, string, bool}|null}
      */
     public static function dispatch(array $scenario): array
     {
@@ -138,15 +138,39 @@ final class PortalMessageRecipientTest extends TestCase
         self::assertSame('', $process->getErrorOutput());
         $result = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($result);
+        self::assertArrayHasKey('output', $result);
+        self::assertIsString($result['output']);
+        self::assertArrayHasKey('csrf', $result);
+        $csrf = $result['csrf'];
+        if ($csrf !== null) {
+            self::assertIsArray($csrf);
+            self::assertCount(3, $csrf);
+            self::assertIsInt($csrf[0]);
+            self::assertIsString($csrf[1]);
+            self::assertIsBool($csrf[2]);
+            $csrf = [$csrf[0], $csrf[1], $csrf[2]];
+        }
+        self::assertArrayHasKey('lookups', $result);
+        self::assertIsArray($result['lookups']);
+        $lookups = [];
+        foreach ($result['lookups'] as $lookup) {
+            self::assertIsArray($lookup);
+            self::assertCount(2, $lookup);
+            self::assertIsString($lookup[0]);
+            self::assertIsArray($lookup[1]);
+            $lookups[] = [$lookup[0], $lookup[1]];
+        }
+        self::assertArrayHasKey('writes', $result);
         self::assertIsArray($result['writes']);
         $writes = [];
         foreach ($result['writes'] as $write) {
             self::assertIsArray($write);
+            self::assertCount(2, $write);
             self::assertIsString($write[0]);
             self::assertIsArray($write[1]);
             $writes[] = [$write[0], $write[1]];
         }
-        return ['output' => $result['output'], 'writes' => $writes, 'lookups' => $result['lookups'], 'csrf' => $result['csrf']];
+        return ['output' => $result['output'], 'writes' => $writes, 'lookups' => $lookups, 'csrf' => $csrf];
     }
 
     /** @return iterable<string, array{array<string, mixed>}> */
@@ -154,7 +178,7 @@ final class PortalMessageRecipientTest extends TestCase
     {
         foreach (['add', 'reply'] as $task) {
             foreach (['inactive', 'nonportal', 'missing', 'patient-99', '', null, ['eligible']] as $id) {
-                yield $task . ':' . json_encode($id) => [['post' => ['task' => $task, 'recipient_id' => $id]]];
+                yield $task . ':' . json_encode($id, JSON_THROW_ON_ERROR) => [['post' => ['task' => $task, 'recipient_id' => $id]]];
             }
             yield $task . ':lookup exception' => [['post' => ['task' => $task], 'lookup' => 'exception']];
         }
