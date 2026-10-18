@@ -527,7 +527,7 @@ function renderProfileHtml(): void
             Header::setupHeader(['opener']); ?>
             <script src="<?php echo $globalsBag->getString('web_root'); ?>/portal/public/assets/sortablejs/Sortable.min.js?v=<?php echo $globalsBag->get('v_js_includes'); ?>"></script>
         <?php } ?>
-        <link rel="stylesheet" media="screen" href="<?php echo attr($globalsBag->getWebRoot()); ?>/interface/clinical-workspace/template-profile-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('template-profile-popup.css')); ?>">
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/template-profile-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('template-profile-popup.css')); ?>">
     </head>
     <style>
       body {
