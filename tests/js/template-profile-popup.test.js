@@ -15,7 +15,7 @@ const ASSET = 'template-profile-popup.css';
 const IMPORT = 'use OpenEMR\\Common\\Assets\\ClinicalWorkspaceAssets;\n';
 const IMPORT_ANCHOR = 'use OpenEMR\\Common\\Acl\\AclMain;\nuse OpenEMR\\Common\\Csrf\\CsrfUtils;\n';
 const HEAD_END = '        <?php } ?>\n    </head>';
-const LINK = '        <link rel="stylesheet" media="screen" href="<?php echo attr($globalsBag->getWebRoot()); ?>'
+const LINK = '        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>'
     + '/interface/clinical-workspace/' + ASSET + '?v='
     + "<?php echo attr_url((new ClinicalWorkspaceAssets())->version('" + ASSET + "')); ?>\">\n";
 const NAV = "<nav id='disposeProfile' class='navbar navbar-light bg-light sticky-top'>";
@@ -131,7 +131,8 @@ test('synthetic route touches only the profile head and original action nav', ()
     expect(profile.indexOf(LINK)).toBeLessThan(profile.indexOf('</head>'));
     expect(count(FUTURE_ROUTE, IMPORT)).toBe(1);
     expect(count(FUTURE_ROUTE, 'oe-template-profile-actions')).toBe(1);
-    expect(count(FUTURE_ROUTE, '<?php echo attr($globalsBag->getWebRoot()); ?>')).toBe(1);
+    expect(count(FUTURE_ROUTE, '<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>')).toBe(1);
+    expect(LINK).not.toContain('$globalsBag->getWebRoot()');
     expect(count(FUTURE_ROUTE, "attr_url((new ClinicalWorkspaceAssets())->version('" + ASSET + "'))")).toBe(1);
     const entries = [...FUTURE_HELPER.matchAll(/^ {8}'([^']+)',$/gm)].map(match => match[1]);
     expect(entries).toEqual([...entries].sort());
@@ -150,7 +151,8 @@ test('route and helper reject missing, duplicated, misplaced, unsafe, and origin
         ["class='navbar navbar-light bg-light sticky-top oe-template-profile-actions'",
             "class='navbar navbar-light oe-template-profile-actions'"],
         ['media="screen"', 'media="print"'],
-        ['<?php echo attr($globalsBag->getWebRoot()); ?>', '<?php echo $globalsBag->getWebRoot(); ?>'],
+        ['<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>', '<?php echo OEGlobalsBag::getInstance()->getWebRoot(); ?>'],
+        ['<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>', '<?php echo attr($globalsBag->getWebRoot()); ?>'],
         ["attr_url((new ClinicalWorkspaceAssets())->version('" + ASSET + "'))",
             "(new ClinicalWorkspaceAssets())->version('" + ASSET + "')"],
         ["use OpenEMR\\Common\\Acl\\AclMain;\n" + IMPORT,
