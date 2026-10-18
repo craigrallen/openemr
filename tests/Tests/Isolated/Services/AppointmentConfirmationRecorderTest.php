@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenEMR\Tests\Isolated\Services;
 
 use OpenEMR\Services\AppointmentConfirmationRecorder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -15,11 +16,10 @@ use PHPUnit\Framework\TestCase;
 final class AppointmentConfirmationRecorderTest extends TestCase
 {
     /**
-     * @dataProvider requestedChannels
-     *
      * @param array{sms: string, email: string} $expected
      * @param list<array{booking_id: string, patient_id: string, event_date: string, start_time: string, channel: string}> $receipts
      */
+    #[DataProvider('requestedChannels')]
     public function testRecordsOnlyRequestedEligibleChannels(string $channel, array $expected, array $receipts): void
     {
         $recorder = new AppointmentConfirmationRecorder();
@@ -355,9 +355,6 @@ final class AppointmentConfirmationRecorderTest extends TestCase
         $domainPrefix = str_repeat('b', 63) . '.' . str_repeat('c', 63) . '.';
         $email254 = $localPart . '@' . $domainPrefix . str_repeat('d', 61);
         $email255 = $localPart . '@' . $domainPrefix . str_repeat('d', 62);
-        self::assertSame(254, strlen($email254));
-        self::assertSame(255, strlen($email255));
-
         $recorder = new AppointmentConfirmationRecorder();
         $booking = self::booking();
         $patient = array_replace(self::patient(), ['email' => $email254]);
