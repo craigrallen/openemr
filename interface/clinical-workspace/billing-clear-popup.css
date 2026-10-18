@@ -1,0 +1,19 @@
+@media screen {
+  html.oe-workbench-context body.oe-billing-clear {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-canvas, #edf3f4);
+  }
+
+  html.oe-workbench-context body.oe-billing-clear main.oe-billing-clear-sheet {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+    margin: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--oe-wb-border, #c9d7da);
+    border-radius: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-billing-clear .oe-billing-clear-content {
+    overflow-wrap: anywhere;
+  }
+}
