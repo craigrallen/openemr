@@ -1,0 +1,16 @@
+@media screen {
+  html.oe-workbench-context .oe-eob-invoice-actions {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+  }
+
+  html.oe-workbench-context .oe-eob-invoice-actions > legend {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+  }
+
+  html.oe-workbench-context .oe-eob-invoice-actions .card.bg-light {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+  }
+}
