@@ -293,9 +293,28 @@ if ($providerid) {
       }
     </style>
 
+    <style>
+      @media screen {
+        body.oe-portal-openings #searchCriteria {
+          background-color: #fff;
+          color: #17343b;
+          box-shadow: inset 0 -1px 0 #c9d7da;
+        }
+
+        body.oe-portal-openings #searchResults a:focus {
+          outline: 2px solid #175f66;
+          outline-offset: -2px;
+        }
+
+        body.oe-portal-openings #searchResults a:focus-visible {
+          outline: 2px solid #175f66;
+          outline-offset: -2px;
+        }
+      }
+    </style>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-portal-openings">
 
     <div class="table-primary" id="searchCriteria">
         <form method='post' name='theform' action='./find_appt_popup_user.php?providerid=<?php echo attr_url($providerid); ?>&catid=<?php echo attr_url($input_catid); ?>'>
