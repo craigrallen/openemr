@@ -212,7 +212,7 @@ test('route mutations reject moved, unsafe, duplicated, and workflow-changing ed
         ['echo $s;', 'echo "";'],
     ].map(([from, to]) => mutate(FUTURE_ROUTE, from, to));
     const removed = mutate(FUTURE_ROUTE, REPLACEMENT, '');
-    edits.push(mutate(removed, '$s = str_replace("{header2}"', REPLACEMENT + '$s = str_replace("{header2}"')));
+    edits.push(mutate(removed, '$s = str_replace("{header2}"', REPLACEMENT + '$s = str_replace("{header2}"'));
     edits.push(FUTURE_ROUTE + ' ');
     reject(FUTURE_ROUTE, edits, verifyRoute);
 });
