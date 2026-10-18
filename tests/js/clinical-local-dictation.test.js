@@ -215,10 +215,11 @@ describe('local dictation privacy gate', () => {
     test('cancellation during construction cannot cross the final start gate', async () => {
         const { Recognition, instances } = fakeRecognition();
         let adapter;
+        let cancellation;
         class CancellingRecognition extends Recognition {
             constructor() {
                 super();
-                adapter.cancel();
+                cancellation = adapter.cancel();
             }
         }
         adapter = createLocalDictation({
@@ -228,9 +229,12 @@ describe('local dictation privacy gate', () => {
             onDraft: jest.fn(),
             onState: jest.fn()
         });
-        await Promise.resolve(adapter.start()).catch(() => {});
+        await expect(adapter.start()).resolves.toBe(false);
+        expect(cancellation).toBe(true);
         expect(instances).toHaveLength(1);
         expect(instances[0].start).not.toHaveBeenCalled();
+        expect(instances[0].abort).toHaveBeenCalledTimes(1);
+        expect(adapter.cancel()).toBe(false);
     });
 
     test('synchronous constructor and start exceptions are contained and sanitized', async () => {
@@ -241,7 +245,7 @@ describe('local dictation privacy gate', () => {
         badConstructor.available = jest.fn().mockResolvedValue('available');
         const onState = jest.fn();
         const options = { Recognition: badConstructor, secureContext: true, lang: 'sv-SE', onDraft: jest.fn(), onState };
-        await expect(createLocalDictation(options).start()).rejects.toThrow();
+        await expect(createLocalDictation(options).start()).rejects.toThrow(/^Local dictation failed\.$/);
         expect(JSON.stringify(onState.mock.calls)).not.toContain('private constructor detail');
 
         const { Recognition, instances } = harness();
@@ -254,12 +258,56 @@ describe('local dictation privacy gate', () => {
             }
         }
         ThrowsOnStart.available = Recognition.available;
+        const startState = jest.fn();
         const failing = createLocalDictation({
-            Recognition: ThrowsOnStart, secureContext: true, lang: 'sv-SE', onDraft: jest.fn(), onState: jest.fn()
+            Recognition: ThrowsOnStart, secureContext: true, lang: 'sv-SE', onDraft: jest.fn(), onState: startState
         });
-        await expect(failing.start()).rejects.toThrow();
+        await expect(failing.start()).rejects.toThrow(/^Local dictation failed\.$/);
         expect(instances).toHaveLength(1);
         expect(instances[0].abort).toHaveBeenCalled();
+        expect(JSON.stringify(startState.mock.calls)).not.toContain('private start detail');
+    });
+
+    test.each(['cancel', 'dispose'])('onState checking can %s before availability', async (action) => {
+        let adapter;
+        const onState = jest.fn((status) => {
+            if (status === 'checking') adapter[action]();
+        });
+        const setup = harness({ onState });
+        adapter = setup.adapter;
+        await expect(adapter.start()).resolves.toBe(false);
+        expect(setup.Recognition.available).not.toHaveBeenCalled();
+        expect(setup.instances).toHaveLength(0);
+        if (action === 'cancel') expect(adapter.cancel()).toBe(false);
+        else await expect(adapter.start()).rejects.toThrow('Local dictation has been disposed.');
+    });
+
+    test.each(['cancel', 'dispose'])('onState listening can %s before native start', async (action) => {
+        let adapter;
+        const onState = jest.fn((status) => {
+            if (status === 'listening') adapter[action]();
+        });
+        const setup = harness({ onState });
+        adapter = setup.adapter;
+        await expect(adapter.start()).resolves.toBe(false);
+        expect(setup.instances).toHaveLength(1);
+        expect(setup.instances[0].abort).toHaveBeenCalledTimes(1);
+        expect(setup.instances[0].start).not.toHaveBeenCalled();
+        if (action === 'cancel') expect(adapter.cancel()).toBe(false);
+        else await expect(adapter.start()).rejects.toThrow('Local dictation has been disposed.');
+    });
+
+    test('onState listening cannot disable instance local mode before native start', async () => {
+        let instances;
+        const onState = jest.fn((status) => {
+            if (status === 'listening') instances[0].processLocally = false;
+        });
+        const setup = harness({ onState });
+        instances = setup.instances;
+        await expect(setup.adapter.start()).rejects.toThrow('Local dictation is unavailable.');
+        expect(instances).toHaveLength(1);
+        expect(instances[0].start).not.toHaveBeenCalled();
+        expect(instances[0].abort).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -296,6 +344,60 @@ describe('local dictation session lifecycle and drafts', () => {
         adapter.dispose();
     });
 
+    test('malformed events, indexes and lengths are ignored without losing later valid drafts', async () => {
+        const { instances, onDraft, adapter } = harness();
+        await adapter.start();
+        const listener = instances[0];
+        const throwingResults = Object.defineProperty({}, 'results', {
+            get() { throw new Error('private results detail'); }
+        });
+        const throwingIndex = Object.defineProperty({ results: [result('hidden')] }, 'resultIndex', {
+            get() { throw new Error('private index detail'); }
+        });
+        const throwingLength = Object.defineProperty({}, 'length', {
+            get() { throw new Error('private length detail'); }
+        });
+        const invalid = [
+            null, throwingResults, throwingIndex,
+            { results: throwingLength, resultIndex: 0 },
+            { results: [result('hidden')], resultIndex: -1 },
+            { results: [result('hidden')], resultIndex: 1.5 },
+            { results: [result('hidden')], resultIndex: NaN },
+            { results: [result('hidden')], resultIndex: 2 },
+            { results: { length: -1 }, resultIndex: 0 },
+            { results: { length: 1.5 }, resultIndex: 0 },
+            { results: { length: 10001 }, resultIndex: 0 }
+        ];
+        for (const event of invalid) expect(() => listener.onresult(event)).not.toThrow();
+        expect(onDraft).not.toHaveBeenCalled();
+        emitResults(listener, [result('valid')]);
+        expect(onDraft.mock.calls).toEqual([['valid']]);
+        adapter.dispose();
+    });
+
+    test('throwing result entry getters are skipped and later final indexes still deliver', async () => {
+        const { instances, onDraft, adapter } = harness();
+        await adapter.start();
+        const listener = instances[0];
+        const entries = [result('hidden'), result('hidden'), result('hidden'), result('hidden'), result('hidden'), result('valid')];
+        Object.defineProperty(entries, 0, { get() { throw new Error('private entry detail'); } });
+        entries[1] = Object.defineProperty({}, 'isFinal', {
+            get() { throw new Error('private final detail'); }
+        });
+        entries[2] = Object.defineProperty({ isFinal: true }, 'length', {
+            get() { throw new Error('private entry length detail'); }
+        });
+        entries[3] = Object.defineProperty({ isFinal: true, length: 1 }, 0, {
+            get() { throw new Error('private alternative detail'); }
+        });
+        entries[4] = { isFinal: true, length: 1, 0: Object.defineProperty({}, 'transcript', {
+            get() { throw new Error('private transcript detail'); }
+        }) };
+        expect(() => emitResults(listener, entries)).not.toThrow();
+        expect(onDraft.mock.calls).toEqual([['valid']]);
+        adapter.dispose();
+    });
+
     test('a second explicit start while availability is pending or listening never opens a second listener', async () => {
         const pending = deferred();
         const { Recognition, instances, adapter } = harness();
@@ -305,8 +407,8 @@ describe('local dictation session lifecycle and drafts', () => {
         expect(Recognition.available).toHaveBeenCalledTimes(1);
         pending.resolve('available');
         await first;
-        await Promise.resolve(second).catch(() => {});
-        await Promise.resolve(adapter.start()).catch(() => {});
+        await expect(second).resolves.toBe(false);
+        await expect(adapter.start()).resolves.toBe(false);
         expect(instances).toHaveLength(1);
         expect(instances[0].start).toHaveBeenCalledTimes(1);
         adapter.dispose();
@@ -320,7 +422,7 @@ describe('local dictation session lifecycle and drafts', () => {
         adapter.cancel();
         const second = adapter.start();
         pending.resolve('available');
-        await Promise.resolve(first).catch(() => {});
+        await expect(first).resolves.toBe(false);
         await second;
         expect(instances).toHaveLength(1);
         expect(instances[0].start).toHaveBeenCalledTimes(1);
@@ -341,6 +443,67 @@ describe('local dictation session lifecycle and drafts', () => {
         oldCallbacks.end();
         expect(onDraft).not.toHaveBeenCalled();
         expect(onState.mock.calls).toHaveLength(stateCount);
+    });
+
+    test.each(['cancel', 'dispose', 'restart'])('onDraft %s stops the old result loop', async (action) => {
+        let adapter;
+        let nextStart;
+        const onDraft = jest.fn(() => {
+            if (onDraft.mock.calls.length !== 1) return;
+            if (action === 'restart') {
+                expect(adapter.cancel()).toBe(true);
+                nextStart = adapter.start();
+            } else {
+                adapter[action]();
+            }
+        });
+        const setup = harness({ onDraft });
+        adapter = setup.adapter;
+        await adapter.start();
+        const old = setup.instances[0];
+        const callbacks = { result: old.onresult, error: old.onerror, end: old.onend };
+        expect(() => emitResults(old, [result('first'), result('stale second')])).not.toThrow();
+        expect(onDraft.mock.calls).toEqual([['first']]);
+        expect(old.abort).toHaveBeenCalledTimes(1);
+        if (action === 'restart') {
+            await expect(nextStart).resolves.toBe(true);
+            expect(setup.instances).toHaveLength(2);
+        }
+        const stateCount = setup.onState.mock.calls.length;
+        callbacks.result({ results: [result('stale callback')], resultIndex: 0 });
+        callbacks.error({ error: 'private stale detail' });
+        callbacks.end();
+        expect(onDraft.mock.calls).toEqual([['first']]);
+        expect(setup.onState.mock.calls).toHaveLength(stateCount);
+        if (action === 'restart') {
+            expect(setup.instances[1].abort).not.toHaveBeenCalled();
+            emitResults(setup.instances[1], [result('current')]);
+            expect(onDraft.mock.calls).toEqual([['first'], ['current']]);
+            adapter.dispose();
+        }
+    });
+
+    test.each(['cancel', 'dispose'])('throwing abort during %s still invalidates callbacks', async (action) => {
+        const { instances, onDraft, onState, adapter } = harness();
+        await adapter.start();
+        const listener = instances[0];
+        const callbacks = { result: listener.onresult, error: listener.onerror, end: listener.onend };
+        listener.abort.mockImplementation(() => { throw new Error('private abort detail'); });
+        if (action === 'cancel') {
+            expect(() => adapter.cancel()).not.toThrow();
+            expect(adapter.cancel()).toBe(false);
+        } else {
+            expect(() => adapter.dispose()).not.toThrow();
+            await expect(adapter.start()).rejects.toThrow('Local dictation has been disposed.');
+        }
+        expect(listener.abort).toHaveBeenCalledTimes(1);
+        const stateCount = onState.mock.calls.length;
+        callbacks.result({ results: [result('stale')], resultIndex: 0 });
+        callbacks.error({ error: 'private native detail' });
+        callbacks.end();
+        expect(onDraft).not.toHaveBeenCalled();
+        expect(onState.mock.calls).toHaveLength(stateCount);
+        expect(JSON.stringify(onState.mock.calls)).not.toContain('private abort detail');
     });
 
     test('late callbacks from an old recognition cannot affect a newer session', async () => {
@@ -422,7 +585,7 @@ describe('local dictation session lifecycle and drafts', () => {
         const starting = other.adapter.start();
         other.adapter.dispose();
         pending.resolve('available');
-        await Promise.resolve(starting).catch(() => {});
+        await expect(starting).resolves.toBe(false);
         expect(other.instances).toHaveLength(0);
         await expect(other.adapter.start()).rejects.toThrow();
     });

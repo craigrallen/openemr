@@ -22,4 +22,4 @@ Only an already available local language pack is eligible. A downloadable, downl
 
 Before clinical use, a protected editor integration must enforce patient and encounter context, ACL and encounter permissions, draft review eligibility, and explicit clinician review before insertion or save. It also needs native browser transport proof, microphone consent and disclosure, locale support decisions, and clinical acceptance testing. No consumer or clinical UI is included here.
 
-The existing synthetic Jest suite in `tests/js/clinical-local-dictation.test.js` defines the expected behavior. Verification and independent review remain pending with the controller; neither was run in this workspace session.
+The synthetic Jest suite in `tests/js/clinical-local-dictation.test.js` defines the expected behavior. An independent Gemini4ArgonHigh review of the bounded three-file contract returned substantive feedback with no denied actions or P1/P2 findings; its P3 test gaps are addressed in the suite. The added assertions have not been executed in this workspace session. Hosted GREEN verification and native browser acceptance remain pending.
