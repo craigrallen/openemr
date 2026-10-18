@@ -82,6 +82,18 @@ final class AppointmentPaymentAttributionTest extends TestCase
         );
     }
 
+    public function testAdditionalLedgerColumnsAreAccepted(): void
+    {
+        $row = self::activity('7', '501', '1', '12.00');
+        $row['account_code'] = 'PAY';
+        $row['post_time'] = '2026-01-01 12:00:00';
+
+        self::assertSame(
+            self::attributed('12.00'),
+            $this->assess([self::allocation('101', '7', '501', '1')], [$row])
+        );
+    }
+
     public function testDistinctBookingsInOneEncounterGetOnlyTheirOwnAllocatedRows(): void
     {
         $rows = [
@@ -271,6 +283,42 @@ final class AppointmentPaymentAttributionTest extends TestCase
         ));
     }
 
+    public function testCanonicalIdsAtTheSafeIntegerMaximumAreAccepted(): void
+    {
+        $maximum = (string) PHP_INT_MAX;
+        $booking = self::booking();
+        $booking['pc_eid'] = $maximum;
+        $booking['pc_pid'] = $maximum;
+        $allocation = self::allocation($maximum, $maximum, $maximum, $maximum);
+        $row = self::activity($maximum, $maximum, $maximum, '12.00');
+
+        self::assertSame(self::attributed('12.00'), $this->assess([$allocation], [$row], $booking));
+    }
+
+    public function testIdsAboveTheSafeIntegerMaximumFailClosed(): void
+    {
+        // Literal boundary avoids overflowing PHP integer arithmetic in the test.
+        $aboveMaximum = '9223372036854775808';
+        $allocation = self::allocation('101', '7', '501', '1');
+        $row = self::activity('7', '501', '1', '12.00');
+
+        foreach (['pc_eid', 'pc_pid'] as $field) {
+            $booking = self::booking();
+            $booking[$field] = $aboveMaximum;
+            self::assertSame(self::unavailable(), $this->assess([$allocation], [$row], $booking), $field);
+        }
+        foreach (array_keys($allocation) as $field) {
+            $invalidAllocation = $allocation;
+            $invalidAllocation[$field] = $aboveMaximum;
+            self::assertSame(self::unavailable(), $this->assess([$invalidAllocation], [$row]), $field);
+        }
+        foreach (['pid', 'encounter', 'sequence_no'] as $field) {
+            $invalidRow = $row;
+            $invalidRow[$field] = $aboveMaximum;
+            self::assertSame(self::unavailable(), $this->assess([$allocation], [$invalidRow]), $field);
+        }
+    }
+
     public function testNoncanonicalIdsFailClosedInEveryIdentityField(): void
     {
         $baseAllocation = self::allocation('101', '7', '501', '1');
@@ -344,7 +392,7 @@ final class AppointmentPaymentAttributionTest extends TestCase
             self::allocation('101', '7', '501', '1'),
             self::allocation('101', '7', '502', '2'),
         ];
-        foreach (['1', '1.2', '.20', '01.20', '+1.20', ' 1.20', '1.20 ', "1.20\n", '1e2', 'NaN', '10000000000.00', '-10000000000.00', 1.2, null] as $badAmount) {
+        foreach (['1', '1.2', '.20', '01.20', '+1.20', ' 1.20', '1.20 ', "1.20\n", '1e2', 'NaN', '-0.00', '10000000000.00', '-10000000000.00', 1.2, null] as $badAmount) {
             $row = self::activity('7', '502', '2', '2.00');
             $row['pay_amount'] = $badAmount;
             self::assertSame(
@@ -397,6 +445,46 @@ final class AppointmentPaymentAttributionTest extends TestCase
         ];
         self::assertSame(self::attributed('-9999999999.99'), $this->assess($allocations, $negative));
         self::assertSame(self::attributed('-9999999999.99'), $this->assess(array_reverse($allocations), array_reverse($negative)));
+    }
+
+    public function testTenThousandUniqueAllocationsAndLedgerRowsAreAccepted(): void
+    {
+        $allocations = [];
+        $rows = [];
+        for ($sequenceNo = 1; $sequenceNo <= 10000; $sequenceNo++) {
+            $sequence = (string) $sequenceNo;
+            $allocations[] = self::allocation('101', '7', '501', $sequence);
+            $rows[] = self::activity('7', '501', $sequence, '0.01');
+        }
+
+        self::assertSame(self::attributed('100.00'), $this->assess($allocations, $rows));
+    }
+
+    public function testTenThousandAndOneLedgerRowsAreRejectedWithOneValidAllocation(): void
+    {
+        $rows = [];
+        for ($sequenceNo = 1; $sequenceNo <= 10001; $sequenceNo++) {
+            $rows[] = self::activity('7', '501', (string) $sequenceNo, '0.01');
+        }
+
+        self::assertSame(
+            self::unavailable(),
+            $this->assess([self::allocation('101', '7', '501', '1')], $rows)
+        );
+    }
+
+    public function testTenThousandAndOneUniqueAllocationsAndMatchingRowsAreRejected(): void
+    {
+        $allocations = [];
+        $rows = [];
+        for ($sequenceNo = 1; $sequenceNo <= 10001; $sequenceNo++) {
+            $sequence = (string) $sequenceNo;
+            $allocations[] = self::allocation('101', '7', '501', $sequence);
+            $rows[] = self::activity('7', '501', $sequence, '0.01');
+        }
+
+        // Both input caps are exceeded; this cannot isolate the allocation guard.
+        self::assertSame(self::unavailable(), $this->assess($allocations, $rows));
     }
 
     public function testCurrencyContextIsMandatoryAndExplicit(): void
