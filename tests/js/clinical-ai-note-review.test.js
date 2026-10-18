@@ -87,7 +87,13 @@ describe('AI note review boundary', () => {
     });
 
     test('invalid propose clears the previous candidate, including malformed and throwing snapshots', () => {
-        const invalid = [null, undefined, [], new Date(), {}, context({ patientId: '0' })];
+        const throwingProxy = new Proxy(context(), {
+            get() { throw new Error('synthetic get trap'); },
+            getPrototypeOf() { throw new Error('synthetic prototype trap'); },
+            ownKeys() { throw new Error('synthetic keys trap'); },
+            getOwnPropertyDescriptor() { throw new Error('synthetic descriptor trap'); },
+        });
+        const invalid = [null, undefined, [], new Date(), {}, context({ patientId: '0' }), throwingProxy];
         for (const badContext of invalid) {
             const review = createAiNoteReview();
             const old = review.propose(context(), 'Old synthetic draft');
@@ -108,7 +114,9 @@ describe('AI note review boundary', () => {
         for (const value of invalidText) {
             const review = createAiNoteReview();
             const old = review.propose(context(), 'Old synthetic draft');
-            expect(() => review.propose(context(), value)).not.toThrow();
+            let proposed;
+            expect(() => { proposed = review.propose(context(), value); }).not.toThrow();
+            expect(proposed).toBeNull();
             expect(approved(review, old)).toBeNull();
             const ticket = review.propose(context(), 'New synthetic draft');
             let result;
@@ -173,7 +181,13 @@ describe('AI note review boundary', () => {
             expect(approved(review, ticket, context(change))).toBeNull();
             expect(approved(review, ticket, context())).toBeNull();
         }
-        for (const bad of [null, {}, [], { ...context(), get draftRevision() { throw Error('synthetic'); } }]) {
+        const throwingProxy = new Proxy(context(), {
+            get() { throw new Error('synthetic get trap'); },
+            getPrototypeOf() { throw new Error('synthetic prototype trap'); },
+            ownKeys() { throw new Error('synthetic keys trap'); },
+            getOwnPropertyDescriptor() { throw new Error('synthetic descriptor trap'); },
+        });
+        for (const bad of [null, {}, [], { ...context(), get draftRevision() { throw Error('synthetic'); } }, throwingProxy]) {
             const review = createAiNoteReview();
             const ticket = review.propose(context(), 'Synthetic draft');
             expect(() => approved(review, ticket, bad)).not.toThrow();
@@ -206,9 +220,58 @@ describe('AI note review boundary', () => {
                 if (action === 'dispose') review.dispose();
                 return '123';
             } };
-            expect(() => approved(review, ticket, reentrant)).not.toThrow();
+            let outerResult;
+            expect(() => { outerResult = approved(review, ticket, reentrant); }).not.toThrow();
+            expect(outerResult).toBeNull();
             expect(reads).toBeGreaterThan(0);
             expect(approved(review, ticket)).toBeNull();
+        }
+    });
+
+    test('nested approval during a context getter releases once and leaves the outer approval stale', () => {
+        const review = createAiNoteReview();
+        const ticket = review.propose(context(), 'Synthetic draft');
+        const releases = [];
+        const reentrant = { ...context(), get patientId() {
+            releases.push(approved(review, ticket, context()));
+            return '123';
+        } };
+        let outerResult;
+        expect(() => { outerResult = approved(review, ticket, reentrant); }).not.toThrow();
+        expect(releases).toHaveLength(1);
+        expect(releases[0].text).toBe('Synthetic draft');
+        expect(outerResult).toBeNull();
+        expect(approved(review, ticket)).toBeNull();
+    });
+
+    test('getter-reentrant proposal disposal or replacement cannot be overwritten by the outer proposal', () => {
+        for (const action of ['dispose', 'replace']) {
+            const review = createAiNoteReview();
+            const old = review.propose(context(), 'Old synthetic draft');
+            let firstReentrantApproval;
+            let nestedTicket;
+            let reads = 0;
+            const reentrant = { ...context(), get patientId() {
+                reads += 1;
+                if (reads === 1) {
+                    firstReentrantApproval = approved(review, old);
+                    if (action === 'dispose') review.dispose();
+                    if (action === 'replace') nestedTicket = review.propose(context(), 'Nested synthetic draft');
+                }
+                return '123';
+            } };
+            let outerTicket;
+            expect(() => { outerTicket = review.propose(reentrant, 'Outer synthetic draft'); }).not.toThrow();
+            expect(reads).toBeGreaterThan(0);
+            expect(firstReentrantApproval).toBeNull();
+            expect(outerTicket).toBeNull();
+            expect(approved(review, old)).toBeNull();
+            if (action === 'replace') {
+                expect(nestedTicket).not.toBeNull();
+                expect(approved(review, nestedTicket).text).toBe('Nested synthetic draft');
+            } else {
+                expect(review.propose(context(), 'After disposal')).toBeNull();
+            }
         }
     });
 
