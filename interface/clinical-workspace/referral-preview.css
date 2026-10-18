@@ -1,0 +1,17 @@
+@media screen {
+  html.oe-workbench-context body.oe-referral-preview {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context .oe-referral-preview .borderdiv {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    border-color: var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context .oe-referral-preview td {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
