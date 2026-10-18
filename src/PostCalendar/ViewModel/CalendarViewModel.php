@@ -163,6 +163,34 @@ final readonly class CalendarViewModel
         return $base;
     }
 
+    /** @param array<string, mixed> $event */
+    private function noShowStatusBadge(array $event): string
+    {
+        if (($event['apptstatus'] ?? null) !== '?') {
+            return '';
+        }
+
+        $pid = $event['pid'] ?? null;
+        if (!(is_int($pid) && $pid > 0)
+            && !(is_string($pid) && preg_match('/^[1-9][0-9]*$/D', $pid) === 1)
+        ) {
+            return '';
+        }
+
+        $gid = $event['gid'] ?? null;
+        if ($gid !== null && $gid !== '' && $gid !== 0) {
+            return '';
+        }
+
+        $catidRaw = $event['catid'] ?? 0;
+        $catid = is_int($catidRaw) || is_string($catidRaw) ? (int) $catidRaw : 0;
+        if (in_array($catid, [2, 3, 4, 6, 7, 8, 11, 99], true)) {
+            return '';
+        }
+
+        return ' <span class="badge badge-danger oe-calendar-no-show">' . xlt('No show') . '</span>';
+    }
+
     /**
      * Returns the localized category name for the special-category IDs
      * (IN/OUT/VACATION/LUNCH/RESERVED), or the raw catname unchanged
@@ -1231,6 +1259,7 @@ final readonly class CalendarViewModel
                 $content .= '</s>';
             }
             $content .= '</a>';
+            $content .= $this->noShowStatusBadge($event);
         } elseif ($hasGroup) {
             $groupName = is_string($event['group_name'] ?? null) ? $event['group_name'] : '';
             $groupTypeName = is_string($event['group_type_name'] ?? null) ? $event['group_type_name'] : '';
@@ -1475,6 +1504,7 @@ final readonly class CalendarViewModel
                 $content .= '</s>';
             }
             $content .= '</a>';
+            $content .= $this->noShowStatusBadge($event);
         } elseif ($hasGroup) {
             $groupName = is_string($event['group_name'] ?? null) ? $event['group_name'] : '';
             $groupTypeName = is_string($event['group_type_name'] ?? null) ? $event['group_type_name'] : '';
@@ -1709,6 +1739,7 @@ final readonly class CalendarViewModel
                 $content .= '</s>';
             }
             $content .= '</a>';
+            $content .= $this->noShowStatusBadge($event);
         } elseif ($hasGroup) {
             $groupName = is_string($event['group_name'] ?? null) ? $event['group_name'] : '';
             $groupTypeName = is_string($event['group_type_name'] ?? null) ? $event['group_type_name'] : '';

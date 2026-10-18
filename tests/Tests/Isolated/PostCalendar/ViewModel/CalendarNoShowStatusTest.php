@@ -27,7 +27,7 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 #[PreserveGlobalState(false)]
 final class CalendarNoShowStatusTest extends TestCase
 {
-    private const BADGE = '~\s*<span\s+class=[\'\"]badge badge-danger oe-calendar-no-show[\'\"]\s*>No show</span>~';
+    private const BADGE = '~ <span\s+class=[\'\"]badge badge-danger oe-calendar-no-show[\'\"]\s*>No show</span>~';
 
     protected function setUp(): void
     {
@@ -35,7 +35,7 @@ final class CalendarNoShowStatusTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function patientEvent(int $catid = 5): array
+    private function patientEvent(int|string $catid = 5): array
     {
         return [
             'eid' => 73,
@@ -117,6 +117,7 @@ final class CalendarNoShowStatusTest extends TestCase
         self::assertSame(1, self::badgeCount($actual['content']));
         self::assertStringContainsString('badge-danger', $actual['content']);
         self::assertStringContainsString('>No show</span>', $actual['content']);
+        self::assertStringContainsString('</a> <span class="badge badge-danger oe-calendar-no-show"', $actual['content']);
         self::assertStringContainsString("data-pid='42'", $actual['content']);
         self::assertStringContainsString("href='javascript:goPid(", $actual['content']);
         self::assertStringContainsString("class='event_time'", $actual['content']);
@@ -126,6 +127,8 @@ final class CalendarNoShowStatusTest extends TestCase
         self::assertSame($ordinary['tooltip'], $actual['tooltip']);
         if ($view !== ViewType::Month) {
             self::assertStringContainsString('&nbsp;?', $actual['content']);
+            self::assertArrayHasKey('extraClass', $ordinary);
+            self::assertArrayHasKey('extraClass', $actual);
             self::assertSame($ordinary['extraClass'], $actual['extraClass']);
             $expected = str_replace('&nbsp;-', '&nbsp;?', $ordinary['content']);
         } else {
@@ -213,6 +216,7 @@ final class CalendarNoShowStatusTest extends TestCase
         yield 'signed positive string' => ['+42'];
         yield 'decimal string' => ['42.0'];
         yield 'spaced string' => [' 42'];
+        yield 'trailing newline string' => ["42\n"];
         yield 'boolean false' => [false];
         yield 'boolean true' => [true];
         yield 'array' => [[42]];
@@ -237,16 +241,16 @@ final class CalendarNoShowStatusTest extends TestCase
         self::assertStringContainsString("data-pid='42'", $actual['content']);
     }
 
-    /** @return iterable<string, array{int}> */
+    /** @return iterable<string, array{int|string}> */
     public static function excludedCategories(): iterable
     {
-        foreach ([2, 3, 4, 6, 7, 8, 11, 99] as $catid) {
-            yield 'category ' . $catid => [$catid];
+        foreach ([2, '2', 3, '3', 4, '4', 6, '6', 7, '7', 8, '8', 11, '11', 99, '99'] as $catid) {
+            yield (is_string($catid) ? 'string category ' : 'category ') . $catid => [$catid];
         }
     }
 
     #[DataProvider('excludedCategories')]
-    public function testOperationalAndHolidayCategoriesNeverGetPatientBadge(int $catid): void
+    public function testOperationalAndHolidayCategoriesNeverGetPatientBadge(int|string $catid): void
     {
         foreach ([ViewType::Day, ViewType::Week, ViewType::Month] as $view) {
             self::assertSame(0, self::badgeCount($this->screenContent($view, $this->patientEvent($catid))['content']));
@@ -260,6 +264,16 @@ final class CalendarNoShowStatusTest extends TestCase
         $actual = $this->screenContent($view, $event);
         self::assertSame(0, self::badgeCount($actual['content']));
         self::assertStringContainsString('<s>Doe', $actual['content']);
+    }
+
+    #[DataProvider('screenViews')]
+    public function testLegacyNoShowCategoryKeepsStrikethroughWithQuestionMarkBadge(ViewType $view): void
+    {
+        $event = $this->patientEvent(1);
+        $actual = $this->screenContent($view, $event);
+        self::assertSame(1, self::badgeCount($actual['content']));
+        self::assertStringContainsString('<s>Doe', $actual['content']);
+        self::assertStringContainsString('</s></a> <span class="badge badge-danger oe-calendar-no-show"', $actual['content']);
     }
 
     /**
@@ -308,25 +322,72 @@ final class CalendarNoShowStatusTest extends TestCase
 
     /**
      * @param array<string, mixed> $data
-     * @return array<string, mixed>
+     * @return array{eid: mixed, eventDate: string, evtClass: string, displayBgColor: string, displayContentHtml: string, tooltip: string}
      */
     private static function firstRenderedEvent(ViewType $view, array $data): array
     {
-        $providers = $data[$view === ViewType::Month ? 'providersGrid' : 'providers'];
+        $providersKey = $view === ViewType::Month ? 'providersGrid' : 'providers';
+        self::assertArrayHasKey($providersKey, $data);
+        $providers = $data[$providersKey];
         self::assertIsArray($providers);
         self::assertCount(1, $providers);
+        self::assertArrayHasKey(0, $providers);
         $provider = $providers[0];
         self::assertIsArray($provider);
         $events = match ($view) {
-            ViewType::Day => $provider['events'],
-            ViewType::Week => $provider['dayColumns'][0]['events'],
-            ViewType::Month => $provider['days'][0]['events'],
+            ViewType::Day => self::eventsInContainer($provider),
+            ViewType::Week => self::eventsInFirstContainer($provider, 'dayColumns'),
+            ViewType::Month => self::eventsInFirstContainer($provider, 'days'),
             default => self::fail('A screen view is required'),
         };
-        self::assertIsArray($events);
         self::assertCount(1, $events);
-        self::assertIsArray($events[0]);
-        return $events[0];
+        self::assertArrayHasKey(0, $events);
+        $rendered = $events[0];
+        self::assertIsArray($rendered);
+        self::assertArrayHasKey('eid', $rendered);
+
+        return [
+            'eid' => $rendered['eid'],
+            'eventDate' => self::stringField($rendered, 'eventDate'),
+            'evtClass' => self::stringField($rendered, 'evtClass'),
+            'displayBgColor' => self::stringField($rendered, 'displayBgColor'),
+            'displayContentHtml' => self::stringField($rendered, 'displayContentHtml'),
+            'tooltip' => self::stringField($rendered, 'tooltip'),
+        ];
+    }
+
+    /** @param array<array-key, mixed> $container
+     *  @return array<array-key, mixed>
+     */
+    private static function eventsInContainer(array $container): array
+    {
+        self::assertArrayHasKey('events', $container);
+        $events = $container['events'];
+        self::assertIsArray($events);
+        return $events;
+    }
+
+    /** @param array<array-key, mixed> $provider
+     *  @return array<array-key, mixed>
+     */
+    private static function eventsInFirstContainer(array $provider, string $key): array
+    {
+        self::assertArrayHasKey($key, $provider);
+        $containers = $provider[$key];
+        self::assertIsArray($containers);
+        self::assertArrayHasKey(0, $containers);
+        $container = $containers[0];
+        self::assertIsArray($container);
+        return self::eventsInContainer($container);
+    }
+
+    /** @param array<array-key, mixed> $event */
+    private static function stringField(array $event, string $key): string
+    {
+        self::assertArrayHasKey($key, $event);
+        $value = $event[$key];
+        self::assertIsString($value);
+        return $value;
     }
 
     #[DataProvider('screenViews')]
