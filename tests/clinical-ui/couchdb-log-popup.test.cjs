@@ -66,7 +66,7 @@ const proposedEmptyExit = `    echo xlt("CouchDB error log is empty");
 </main>
 </body>
 </html>
-<?php
+    <?php
     exit;`;
 const proposedRouteFooter = `?>
 </div>
@@ -177,7 +177,7 @@ test('anchored mutations reject ACL, output, assets, scope, palette and caller d
         [{ ...expected, route: replaceOnce(expected.route, "if (!AclMain::aclCheckCore('admin', 'users')) {\n    AccessDeniedHelper::denyWithTemplate('ACL check failed for admin/users: CouchDB log', xl('Logs Viewer'));\n}\n\n", '') }, 'route transformation'],
         [{ ...expected, route: replaceOnce(replaceOnce(expected.route, "$filename = OEGlobalsBag::getInstance()->get('OE_SITE_DIR') . '/documents/couchdb/log.txt';\n\n", ''), "if (!AclMain::aclCheckCore('admin', 'users')) {", "$filename = OEGlobalsBag::getInstance()->get('OE_SITE_DIR') . '/documents/couchdb/log.txt';\n\nif (!AclMain::aclCheckCore('admin', 'users')) {") }, 'route transformation'],
         [{ ...expected, route: replaceOnce(expected.route, "    exit;\n}", "    return;\n}") }, 'route transformation'],
-        [{ ...expected, route: replaceOnce(expected.route, "</html>\n<?php\n    exit;", "<?php\n    exit;") }, 'route transformation'],
+        [{ ...expected, route: replaceOnce(expected.route, "</html>\n    <?php\n    exit;", "    <?php\n    exit;") }, 'route transformation'],
         [{ ...expected, route: replaceOnce(expected.route, 'echo nl2br(text($fh));', 'echo nl2br($fh);') }, 'route transformation'],
         [{ ...expected, route: replaceOnce(expected.route, "version('popup.js')", "version('mode.js')") }, 'route transformation'],
         [{ ...expected, assets: replaceOnce(expected.assets, "        'popup.js',\n", '') }, 'asset allowlist'],

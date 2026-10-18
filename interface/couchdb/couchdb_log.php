@@ -46,7 +46,7 @@ if (!file_exists($filename)) {
 </main>
 </body>
 </html>
-<?php
+    <?php
     exit;
 }
 
