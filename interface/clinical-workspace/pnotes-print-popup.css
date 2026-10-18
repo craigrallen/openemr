@@ -1,0 +1,25 @@
+/*
+ * OPEMR-46 patient note print popup, screen only. Paints the window opened
+ * by the note print launchers when the workbench context class is present.
+ * Screen rules do not apply to print, but the route's added body class and
+ * wrapper div are in the DOM, so the legacy/print markup and the body the
+ * print log captures change; wrapper/output/audit compatibility remains
+ * native QA.
+ */
+
+@media screen {
+  html.oe-workbench-context body.oe-pnotes-print {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context .oe-pnotes-print-sheet {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    margin: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--oe-wb-line, #d9e4e2);
+    border-radius: 0.5rem;
+    overflow-wrap: anywhere;
+  }
+}

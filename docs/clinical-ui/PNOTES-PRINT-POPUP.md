@@ -1,6 +1,7 @@
 # OPEMR-46 patient note print popup
 
-Status: tests and documentation only. No production file has been edited yet.
+Status: source-implemented; native QA open. Hosted GREEN and independent
+review are pending (controller).
 Owner: Hermes, run 1 of max 2. Independent rotation: PR119.
 
 ## Scope
@@ -16,7 +17,7 @@ explicit `window.open(..., '_blank', 'resizable=1,scrollbars=1,width=600,height=
 
 The callers are not changed.
 
-## Planned additions (exact, and nothing else)
+## Implemented additions (exact, and nothing else)
 
 Route `pnotes_print.php`:
 
@@ -36,9 +37,12 @@ that position keeps the list sorted.
 
 New sheet `interface/clinical-workspace/pnotes-print-popup.css`: one
 `@media screen` block with two rules scoped to `html.oe-workbench-context`
-(page canvas and paper sheet: colour tokens with fallbacks, margin, padding,
-border, radius, `overflow-wrap: anywhere`). No fonts, geometry, `display`,
-`!important`, print media or nested at-rules.
+(page canvas and paper sheet: paired colour tokens with fallbacks, plus
+`margin`, `padding`, `border`, `border-radius` and `overflow-wrap: anywhere`
+on the sheet). Margin, padding and border are real on-screen geometry deltas
+in workbench context. The sheet sets no fonts, no width or height, no
+`display`, no `!important`, no print media and no nested at-rules, and adds no
+controls or JS. Callers, `Header`, shared assets and themes are unchanged.
 
 All other original PHP, escaping, ACL checks, session PID handling, note lookup,
 output paragraphs and the `opener.top.printLogPrint(window);` script stay
@@ -64,18 +68,21 @@ authorised or performed.
 ## Open (native QA, not proven by any source contract)
 
 No source contract proves security or native fidelity. Open items:
-native print output and print-log audit compatibility with the wrapper,
-authoritative ACL / identity / note-owner / patient-context behaviour,
-default, dark and solar themes, keyboard use, the narrow 600x500 window, RTL,
-legacy (non-workbench) context, OS print dialogs, and role coverage.
+native PHP-rendered output, native print output and print-log audit
+compatibility with the wrapper, workbench vs legacy (non-workbench) context,
+compiled default, dark and solar themes, keyboard use, the 600x500 window and
+narrower widths, RTL, OS print dialogs, role coverage, and authoritative
+ACL / identity / note-to-patient ownership security.
 
 ## Evidence
 
 | Gate | State |
 | --- | --- |
-| Local portable RED (controller, node) | 11 pass, 1 expected missing-production FAIL, 3 optional history SKIP; every synthetic candidate and mutant check passes |
-| Hosted RED | pending (controller) |
+| Local portable RED (controller, node) | 11 pass, 1 expected missing-production FAIL, 3 optional history SKIP; with `PNOTES_PRINT_HISTORY=1`, 14 pass, 1 expected missing-production FAIL |
+| Hosted RED | completed on `661c4a254ed28d0ada94b9200b2f5f766f015896`, run 39176472610: JS job 1 expected missing-production FAIL, 61 other suites / 1259 tests pass, before any production edit |
+| Production source | implemented (route, helper, new sheet) |
 | Production GREEN | pending (controller) |
+| Independent review | pending (controller) |
 
 Contract: `tests/clinical-ui/pnotes-print-popup.test.cjs` (Jest wrapper
 `tests/js/pnotes-print-popup.test.js`). `PNOTES_PRINT_HISTORY=1` enables the

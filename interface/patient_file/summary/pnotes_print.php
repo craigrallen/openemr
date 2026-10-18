@@ -18,6 +18,7 @@ require_once($srcdir . "/options.inc.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 
 $prow = getPatientData($pid, "squad, title, fname, mname, lname");
@@ -52,10 +53,12 @@ if ($noteid) {
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/pnotes-print-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('pnotes-print-popup.css')); ?>">
 </head>
 
-<body class="body_top">
+<body class="body_top oe-pnotes-print">
 
+<div class="oe-pnotes-print-sheet">
 <p><?php echo "<b>" .
   generate_display_field(['data_type' => '1','list_id' => 'note_type'], $title) .
   "</b>" . ' ' . xlt('for') . ' ' .
@@ -66,6 +69,7 @@ if ($noteid) {
 <p><?php echo xlt('Active{{Note}}'); ?>: <?php echo ($activity ? xlt('Yes') : xlt('No')); ?></p>
 
 <p><?php echo nl2br(text($body)); ?></p>
+</div>
 
 <script>
 opener.top.printLogPrint(window);
