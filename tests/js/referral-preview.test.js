@@ -129,7 +129,12 @@ test('complete frozen originals support exact forward and inverse contracts', ()
     expect(count(originalTemplate, TEMPLATE_HEAD)).toBe(1);
     expect(count(originalTemplate, BODY)).toBe(1);
     expect(count(originalHelper, HELPER_ANCHOR)).toBe(1);
-    expect(count(originalTemplate, "<div class='borderdiv'>")).toBe(3);
+    expect(count(originalTemplate, "<div class='borderdiv'>")).toBe(2);
+    expect(count(originalTemplate, '{label_subhead_clinic}')).toBe(1);
+    expect(count(originalTemplate, '{label_subhead_patient}')).toBe(1);
+    expect(count(originalTemplate, '{label_subhead_referred}')).toBe(1);
+    expect(count(originalTemplate, '{header1}')).toBe(2);
+    expect(count(originalTemplate, '{header2}')).toBe(1);
     expect(count(originalTemplate, "<p style='page-break-after: always'></p>")).toBe(1);
     expect(inverseRoute(FUTURE_ROUTE)).toBe(originalRoute);
     expect(inverseTemplate(FUTURE_TEMPLATE)).toBe(originalTemplate);
@@ -165,10 +170,15 @@ test('synthetic route links escaped versioned assets; substitution is placeholde
     expect(custom).not.toContain('{referral_preview_assets}');
 });
 
-test('synthetic template keeps all three copies and existing inline print behavior', () => {
+test('synthetic template keeps all three labeled portions and existing inline print behavior', () => {
     expect(count(FUTURE_TEMPLATE, '{referral_preview_assets}')).toBe(1);
     expect(count(FUTURE_TEMPLATE, BODY_FUTURE)).toBe(1);
-    expect(count(FUTURE_TEMPLATE, "<div class='borderdiv'>")).toBe(3);
+    expect(count(FUTURE_TEMPLATE, "<div class='borderdiv'>")).toBe(2);
+    expect(count(FUTURE_TEMPLATE, '{label_subhead_clinic}')).toBe(1);
+    expect(count(FUTURE_TEMPLATE, '{label_subhead_patient}')).toBe(1);
+    expect(count(FUTURE_TEMPLATE, '{label_subhead_referred}')).toBe(1);
+    expect(count(FUTURE_TEMPLATE, '{header1}')).toBe(2);
+    expect(count(FUTURE_TEMPLATE, '{header2}')).toBe(1);
     expect(count(FUTURE_TEMPLATE, "<p style='page-break-after: always'></p>")).toBe(1);
     for (const token of ['{header1}', '{header2}', '{ref_body}', '{label_ref_reason}',
         'win.printLogPrint(window);', 'font-family: sans-serif;', 'width: 524pt;', 'height: 668pt;']) {
