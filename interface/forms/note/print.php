@@ -47,8 +47,29 @@ if ($formId > 0) {
 
 <?php Header::setupHeader(); ?>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-work-school-note-print {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-print > form {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-print > form .title,
+  html.oe-workbench-context body.oe-work-school-note-print > form .text {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+}
+</style>
+
 </head>
-<body class="body_top">
+<body class="body_top oe-work-school-note-print">
 
 <form method=post action="">
 <span class="title"><?php echo xlt('Work/School Note'); ?></span><br /><br />
