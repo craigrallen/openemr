@@ -177,7 +177,7 @@ function checkStyleBlock(block) {
         });
         const declarations = body.split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
             const match = /^([a-z-]+): (.+)$/.exec(part);
-            if (!match) fail('style', `unparseable declaration: ${part}`);
+            if (!match) fail('style', `unparsable declaration: ${part}`);
             const [, property, value] = match;
             if (property === 'box-shadow') {
                 if (value !== SHADOW_VALUE) fail('style', `box-shadow must be ${SHADOW_VALUE}`);
