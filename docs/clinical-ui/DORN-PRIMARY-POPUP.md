@@ -10,9 +10,24 @@ maximum of 2, rotated from OPEMR-49.
 
 ## Status
 
-**Tests-only phase.** The source contract, Jest wrapper and frozen original are
-in place. The production route has **not** been edited. The approved
-presentation below is a specification, not shipped code.
+**Production candidate.** The approved presentation below has been applied to
+the production route: the second screen-only `<style>` block and the
+`<body class="oe-dorn-primary-popup">` marker, and nothing else. The source
+contract, Jest wrapper and frozen original are unchanged from the tests-only
+phase.
+
+Final GREEN is **pending**: controller-owned verification and independent
+review of this candidate have not yet been run or claimed. No local test run is
+asserted by this change.
+
+### Historical RED (tests-only phase)
+
+Hosted RED was verified by the controller on the tests-only commit
+`581bf99aeded8f1afe88f752c3c1239ccbb4ce65` (job `39208543143`, completed
+FAILURE): exactly two missing-production failures, 1390 passing, 6 optional
+history checks skipped, and the 61 other suites passing. The synthetic positive
+candidate and every mutant passed; the historical baseline fixture, caller and
+context equality checks passed; only the missing-production inverse failed.
 
 ## Approved change (exact additions, nothing else)
 
@@ -90,7 +105,7 @@ validation lines and counts, the approved block shape, token availability, the
 shared normalizer, a synthetic adapted candidate, the caller's 600x750 opens,
 and a mutation corpus of unapproved edits.
 
-Controller-run portable result (local, not hosted CI): the synthetic positive
+Tests-only phase, controller-run portable result (local): the synthetic positive
 checks and all mutation guards pass; **exactly two** checks fail, both the
 intended missing-production failures:
 
@@ -116,6 +131,6 @@ called done:
 
 ## Governance
 
-Ordinary approval is required before any production edit. No merge, deploy,
-policy or cron change is part of this phase. Hosted CI has not been run or
-claimed.
+The production edit was made on controller instruction after the verified
+hosted RED above. No merge, deploy, policy or cron change is part of this
+phase. Hosted GREEN for the production candidate has not been run or claimed.
