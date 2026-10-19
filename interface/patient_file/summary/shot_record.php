@@ -215,8 +215,19 @@ function printHTML($res, $res2, $data, $title): void
   </style>
   <title><?php echo xl('Shot Record'); ?></title>
     <?php echo Header::setupAssets(['workbench-popup']); ?>
+  <style media="screen">
+    html.oe-workbench-context body.oe-shot-record-popup {
+      color: var(--oe-wb-ink, #17343b);
+      background-color: var(--oe-wb-canvas, #f3f7f5);
+    }
+    html.oe-workbench-context body.oe-shot-record-popup div.paddingdiv {
+      color: var(--oe-wb-ink, #17343b);
+      background-color: var(--oe-wb-paper, #fff);
+      box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+    }
+  </style>
   </head>
-  <body>
+  <body class="oe-shot-record-popup">
 
     <?php
   //plan 15 lines per page

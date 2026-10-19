@@ -7,7 +7,7 @@ native/clinical acceptance, and not a PDF or backend change.
 
 ## What changes
 
-Exactly one source addition, verified by tests (no wrappers, no JS, no shared asset edits):
+Two presentation edits, checked by source tests (no wrappers, no JS, no shared asset edits):
 
 1. Directly after the existing `Header::setupAssets(['workbench-popup'])` opt-in,
    an inline `<style media="screen">` block with two rules:
@@ -24,7 +24,9 @@ Exactly one source addition, verified by tests (no wrappers, no JS, no shared as
    }
    ```
 
-2. The body marker `<body class="oe-shot-record-popup">` (was `<body>`).
+2. The body marker `<body class="oe-shot-record-popup">` (was `<body>`). This edit
+   is not screen-only: the class is part of the generated HTML in every context,
+   including printed output and whatever the print/audit callback captures.
 
 The scope is `html.oe-workbench-context …`, not `body.oe-workbench-context`:
 `interface/clinical-workspace/popup.js` toggles its classes on `<html>` only and
@@ -33,16 +35,28 @@ Fallbacks equal the established `popup.css` token values, so foreground and
 background stay paired even if the token block is absent. The quiet edge is an
 inset `box-shadow`, so the 524pt × 668pt sheet geometry is unchanged.
 
-Outside an active workbench (no `oe-workbench-context` on `<html>`), the page
-renders exactly as before. Print and print preview use the legacy rendering
-because the block and `popup.css` are both `screen`-only.
+Outside an active workbench (no `oe-workbench-context` on `<html>`), the two new
+rules do not match. That is a selector argument, not an observed rendering.
+
+The new block carries `media="screen"`. In the `popup.css` source, every rule sits
+inside one `@media screen { … }` block; the `<link>` that `Header::setupAssets`
+emits for it (and any `media` attribute on that tag) has not been checked here.
+Note that `popup.css` already applies screen-only styles to this page, including
+`html.oe-workbench-popup body { font-family: Arial, sans-serif; }`, which predates
+this change. Source preservation and screen-scoped CSS do **not** prove that
+native legacy or print computed output is identical: the body class is present
+in print, and no browser, print preview or OS print output has been compared.
 
 ## What does not change
 
-- All original PHP and generated HTML: legacy inline `<style>`, table borders,
-  `td.odd` stripes, typography, 15-rows-per-page pagination, `page-break-after`,
-  signature line, page numbers, escaping (`text()`/`xlt()`).
-- The PDF branch (`printPDF`, Cezpdf margins/fonts/stream) and every PDF byte.
+Source-level only (the tests compare source, not executed output): with the two
+edits removed, the file is byte-identical to the frozen master source.
+
+- All other original PHP and markup: legacy inline `<style>`, table borders,
+  `td.odd` stripes, legacy typography rules, 15-rows-per-page pagination,
+  `page-break-after`, signature line, page numbers, escaping (`text()`/`xlt()`).
+- The PDF branch source (`printPDF`, Cezpdf margins/fonts/stream) is byte-preserved.
+  Runtime PDF output has not been generated or compared.
 - The `opener.top.printLogPrint(window)` print/audit callback.
 - The caller (`immunizations.php` `PrintForm`), which still opens
   `shot_record.php?output=…&sortby=…` in a resizable 600×450 window.
@@ -64,8 +78,15 @@ because the block and `popup.css` are both `screen`-only.
 
 ## Limitations (not verified, no claims)
 
+- **Evidence scope:** the frozen source tests check source bytes and CSS text. They
+  are not proof of native output, and no application requests were made.
+- **Still open (not verified):** the actual PHP-generated HTML; real workbench
+  context detection (`oe-workbench-context` on `<html>`); native default/dark/solar
+  theme rendering; keyboard use; window resize; RTL; roles/ACL behaviour; OS print
+  and print preview; and whether the print/audit capture behaves the same with the
+  new body class present.
 - **Native/OS rendering:** not verified in real browsers, OS print dialogs, or
-  print preview; OS print output is expected to be unchanged but is unproven here.
+  print preview. Unchanged print output is not claimed.
 - **Themes:** colours are fixed light palette values; the default, dark and solar
   themes are not adapted (dark/solar shells will show a light sheet). No theme matrix
   has been run.
@@ -75,8 +96,9 @@ because the block and `popup.css` are both `screen`-only.
 - **Keyboard/accessibility:** no focus, landmark or keyboard changes; contrast of
   ink on canvas/paper is ≥ 4.5:1 by calculation only.
 - **Audit:** the page calls `opener.top.printLogPrint(window)`, which can print and
-  write the print audit entry from the opener on load. That behaviour is preserved,
-  not reviewed; the page fails if the opener is gone or cross-origin.
+  write the print audit entry from the opener on load. The callback source is
+  preserved; its behaviour is not reviewed, and the HTML it captures now includes
+  the body class. The page fails if the opener is gone or cross-origin.
 - **ACL:** `shot_record.php` has no route-local ACL check. `getImmunizationList()`
   binds the query to the session `pid` (`where i1.patient_id = ?`), which scopes rows
   to the current patient but is not authorization proof. The caller's
