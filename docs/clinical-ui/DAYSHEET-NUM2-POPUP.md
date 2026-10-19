@@ -8,9 +8,28 @@
 - **Contract:** `tests/clinical/daysheet-num2-popup.test.cjs` (node:test, no dependencies) and the
   Jest wrapper `tests/js/clinical-daysheet-num2-popup.test.js`.
 
-This phase is tests only. The production route is not changed here; the "production route carries
-the screen-only presentation seam" test is expected to fail before the production change, with
-exactly the missing-presentation codes and nothing else.
+## Status
+
+- **Tests phase (published):** tests-only commit `d0fd95ac`, draft PR131.
+- **Local RED before production (recorded by the controller):** with the route untouched,
+  `REQUIRE_GIT_BASELINE=1 node --test tests/clinical/daysheet-num2-popup.test.cjs` gave 13 passes,
+  1 intended failure ("production route carries the screen-only presentation seam", exactly the
+  missing-presentation codes) and zero skips; the frozen Git bytes, synthetic candidate, inverse and
+  all mutants passed. Evidence:
+  `/Users/craig/.hermes/projects/openemr/verification/daysheet-num2-20261019/local-red.txt`.
+- **Production phase (this change):** the route now carries exactly the approved candidate from
+  the contract (`EXPECTED_RULES` / `buildCandidate`): the screen style after the Header line and the
+  body class ahead of the unchanged margin attributes. No test, fixture or wrapper was changed.
+- **Controller GREEN:** unchanged contracts passed mandatory Git baseline 14/14 and portable
+  13/13, zero skips. Full Jest passed 62 suites / 1,260 tests; PHP syntax, actual extracted
+  nonignored CSS lint and diff checks passed. Temporary individual sibling dependency links were
+  removed. Independent Codex `gpt-6-astra` reviewed all five files and actual caller/theme/Header
+  context, found no introduced P1/P2 defects and independently passed both source modes and PHP
+  syntax. Claude's production phase reached its turn limit after both intended edits; the
+  controller recovered the complete patch by inspecting and executing it.
+- **Hosted gates remain pending:** tests-only JS run `39295727332` failed its unit-test step;
+  assertion logs were not read, so this is not counted as verified hosted RED. Local RED above
+  establishes chronology. Final exact-head CI and native acceptance are separate, unclaimed gates.
 
 ## Scope
 
@@ -78,4 +97,6 @@ vendor or national requests were made. No merge or deploy.
 ## Boundaries preserved
 
 PR112 denied review and its unpublished files, the Swedish denied clone and publication, and all
-other denied boundaries remain in force. Nothing outside these four files was touched in this phase.
+other denied boundaries remain in force. The tests phase touched only these four files; the
+production phase touched only the route and this document. No caller, shared asset, helper, wrapper
+or num1/num3 route was changed.
