@@ -44,6 +44,7 @@ const STYLE_BLOCK = [
     '      color: var(--oe-wb-ink, #17343b);',
     '      background-color: var(--oe-wb-canvas, #f3f7f5);',
     '    }',
+    '',
     '    ' + SCOPE + ' div.paddingdiv {',
     '      color: var(--oe-wb-ink, #17343b);',
     '      background-color: var(--oe-wb-paper, #fff);',

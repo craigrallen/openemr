@@ -220,6 +220,7 @@ function printHTML($res, $res2, $data, $title): void
       color: var(--oe-wb-ink, #17343b);
       background-color: var(--oe-wb-canvas, #f3f7f5);
     }
+
     html.oe-workbench-context body.oe-shot-record-popup div.paddingdiv {
       color: var(--oe-wb-ink, #17343b);
       background-color: var(--oe-wb-paper, #fff);

@@ -45,6 +45,7 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
         . "      color: var(--oe-wb-ink, #17343b);\n"
         . "      background-color: var(--oe-wb-canvas, #f3f7f5);\n"
         . "    }\n"
+        . "\n"
         . "    html.oe-workbench-context body.oe-shot-record-popup div.paddingdiv {\n"
         . "      color: var(--oe-wb-ink, #17343b);\n"
         . "      background-color: var(--oe-wb-paper, #fff);\n"
