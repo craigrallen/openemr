@@ -9,9 +9,25 @@ SHA-256 `c9b26b97a16f48751e51f562f7e7ed499604849eddd6d0a3616194fc29ec15bf`.
 
 ## Status
 
-The tests and this document were written first, before any production change. The final test,
-`production route carries the screen-only presentation seam`, is meant to fail until the bounded
-production change below lands. Every other portable test is meant to pass now.
+The tests and this document were written first, in tests-only commit
+`ca50d127520ddab5a4f14ce798078604e7f27f14`, before any production change. Before production,
+the controller ran `REQUIRE_GIT_BASELINE=1 node --test tests/clinical/daysheet-num1-popup.test.cjs`
+locally: 11 passed, 1 failed, 0 skipped. The one failure was the intended missing-production
+test, `production route carries the screen-only presentation seam`. The frozen digest, the real
+Git-base full inverse and the synthetic and mutation positives passed. The evidence is
+`/Users/craig/.hermes/projects/openemr/verification/daysheet-num1-20261019/local-red.txt`.
+
+The hosted run JS39283049292 was queued and had not run at that point. This document makes no
+claim that it passed or failed. The genuine local RED is the prerequisite for the production
+change, not the hosted run.
+
+The bounded production change below has now been applied to the route. The same test file and
+fixture are used, unchanged. Controller verification passed: mandatory Git baseline 12/12,
+portable 11/11, full Jest 62 suites/1,260 tests, PHP syntax, actual extracted nonignored inline
+CSS lint and `git diff --check`. Temporary individual sibling dependency links were removed.
+Independent Codex `gpt-6-astra` reviewed all five files and actual caller/theme/helper context,
+found no introduced P1/P2 defects and independently passed both source suites and PHP syntax.
+Hosted exact-head gates remain pending; local evidence is not hosted CI or native acceptance.
 
 ## How the route is launched (unchanged)
 
@@ -20,16 +36,20 @@ production change below lands. Every other portable test is meant to pass now.
   use their own branches.
 - The route reads its criteria and `mode` from `$_GET`. Only `end_of_day_provider_only` and
   `end_of_day_totals_only` come from POST, through `filter_input(INPUT_POST, …)`. This mismatch
-  between GET criteria and the POST caller stays as it is. Because the caller posts
-  `mode=change`, `$_GET["mode"]` is unset on this launch, so the route uses its GET defaults.
-- `$list` stays empty when `mode` is not `bill`, so `BillingReport::billCodesList()` returns
-  early. This route therefore proves nothing about billing updates. Passing the bootstrap,
-  ACL check and helpers is not the same as being safe for live use.
+  between GET criteria and the POST caller stays as it is. `SubmitTheEndDayPrint()` does not
+  set `mode`. It posts whatever value the form's existing hidden `mode` field already holds, so
+  the posted `mode` is not always `change`. Because the form is posted with no query string,
+  `$_GET["mode"]` is unset on this launch, and the route uses its GET defaults.
+- `$list` starts empty whatever the mode is. `BillingReport::billCodesList($list)` is called
+  only when `$_GET["mode"] === 'bill'`. When it is called, it returns early because `$list` is
+  empty, not because the mode is something other than `bill`. This route therefore proves
+  nothing about billing updates. Passing the bootstrap, ACL check and helpers does not make
+  the route read-only or safe for live use.
 - The route has no auto print and no `printLogPrint`.
 
 ## Bounded production change
 
-The change is applied after the controller confirms the red test. It has two parts:
+The change was applied after the controller confirmed the local red test. It has two parts:
 
 1. Insert one `<style media="screen">` immediately after the exact
    `<?php Header::setupHeader(); ?>` line. The original blank line before `</head>` stays.

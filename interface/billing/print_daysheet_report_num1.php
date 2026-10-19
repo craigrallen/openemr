@@ -56,9 +56,32 @@ if (!isset($_GET["mode"])) {
 <head>
 
 <?php Header::setupHeader(); ?>
+<style media="screen">
+  html.oe-workbench-context body.oe-daysheet-num1-document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context body.oe-daysheet-num1-document > .container {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.oe-daysheet-num1-document .table {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.oe-daysheet-num1-document > .container > .row > a,
+  html.oe-workbench-context body.oe-daysheet-num1-document > .container > .row > a > .title {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+</style>
 
 </head>
-<body>
+<body class="oe-daysheet-num1-document">
     <div class="container">
         <div class="row">
             <a href="javascript:window.close();" target="Main"><p class="title"><?php echo xlt('Day Sheet Report')?></p></a>
