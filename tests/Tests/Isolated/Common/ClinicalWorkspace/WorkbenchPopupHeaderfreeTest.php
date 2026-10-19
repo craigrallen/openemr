@@ -9,7 +9,8 @@
  * own <head> (no Bootstrap/jQuery); non-HTML or pixel-registered outputs are
  * deliberately left untouched. The source guard hashes each page with only
  * the opt-in lines removed, so any other drift (ACL, CSRF, POST/delete,
- * PDF branches, inline styles, script order) fails here.
+ * PDF branches, inline styles, script order) fails here. The shot record also
+ * normalizes its one approved screen presentation (OPEMR-47) before hashing.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -36,6 +37,22 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
 {
     private const OPT_IN = "<?php echo Header::setupAssets(['workbench-popup']); ?>";
     private const USE_HEADER = 'use OpenEMR\Core\Header;';
+    private const SHOT = 'interface/patient_file/summary/shot_record.php';
+    private const SHOT_OPT_IN_LINE = '    ' . self::OPT_IN . "\n";
+    // OPEMR-47: the only approved shot record addition besides the opt-in.
+    private const SHOT_SCREEN_STYLE = "  <style media=\"screen\">\n"
+        . "    html.oe-workbench-context body.oe-shot-record-popup {\n"
+        . "      color: var(--oe-wb-ink, #17343b);\n"
+        . "      background-color: var(--oe-wb-canvas, #f3f7f5);\n"
+        . "    }\n"
+        . "    html.oe-workbench-context body.oe-shot-record-popup div.paddingdiv {\n"
+        . "      color: var(--oe-wb-ink, #17343b);\n"
+        . "      background-color: var(--oe-wb-paper, #fff);\n"
+        . "      box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n"
+        . "    }\n"
+        . "  </style>\n";
+    private const SHOT_ORIGINAL_BODY = "  </head>\n  <body>\n";
+    private const SHOT_MARKED_BODY = "  </head>\n  <body class=\"oe-shot-record-popup\">\n";
 
     private static function root(): string
     {
@@ -62,6 +79,52 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
             static fn (string $line): bool => !in_array(trim($line), [self::OPT_IN, self::USE_HEADER], true),
         );
         return implode('', $kept);
+    }
+
+    /**
+     * Exact inverse of the approved shot record screen presentation: the style
+     * block directly after the opt-in plus the body marker, both present once.
+     * Any other shape, or any other page, is returned untouched so it drifts.
+     */
+    private static function withoutShotPresentation(string $path, string $source): string
+    {
+        $styled = self::SHOT_OPT_IN_LINE . self::SHOT_SCREEN_STYLE;
+        if (
+            $path !== self::SHOT
+            || substr_count($source, $styled) !== 1
+            || substr_count($source, self::SHOT_SCREEN_STYLE) !== 1
+            || substr_count($source, self::SHOT_MARKED_BODY) !== 1
+            || substr_count($source, 'oe-shot-record-popup') !== 3
+        ) {
+            return $source;
+        }
+        return str_replace([$styled, self::SHOT_MARKED_BODY], [self::SHOT_OPT_IN_LINE, self::SHOT_ORIGINAL_BODY], $source);
+    }
+
+    private static function withShotPresentation(string $source): string
+    {
+        self::assertSame(1, substr_count($source, self::SHOT_OPT_IN_LINE));
+        self::assertSame(1, substr_count($source, self::SHOT_ORIGINAL_BODY));
+        return str_replace(
+            [self::SHOT_OPT_IN_LINE, self::SHOT_ORIGINAL_BODY],
+            [self::SHOT_OPT_IN_LINE . self::SHOT_SCREEN_STYLE, self::SHOT_MARKED_BODY],
+            $source,
+        );
+    }
+
+    private static function shotBaseline(): string
+    {
+        foreach (self::migratedPages() as [$page, $baseline]) {
+            if ($page === self::SHOT) {
+                return $baseline;
+            }
+        }
+        self::fail('shot record pin missing');
+    }
+
+    private static function shotDigest(string $source): string
+    {
+        return hash('sha256', self::withoutOptIn(self::withoutShotPresentation(self::SHOT, $source)));
     }
 
     /**
@@ -162,7 +225,8 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     #[DataProvider('migratedPages')]
     public function testNothingButTheOptInChanged(string $path, string $baseline, array $before): void
     {
-        $this->assertSame($baseline, hash('sha256', self::withoutOptIn(self::source($path))), "$path drifted beyond the opt-in");
+        $source = self::withoutShotPresentation($path, self::source($path));
+        $this->assertSame($baseline, hash('sha256', self::withoutOptIn($source)), "$path drifted beyond the opt-in");
     }
 
     #[DataProvider('excludedPages')]
@@ -212,13 +276,74 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
         $this->assertArrayHasKey($path, $pins);
         [$baseline, $optIn] = $pins[$path];
 
-        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn($source) : $source);
+        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn(self::withoutShotPresentation($path, $source)) : $source);
         $source = self::source($path);
         $this->assertSame($baseline, $digest($source), "$path must match its pin before the edit");
         $this->assertSame(1, substr_count($source, $search), "$path: edit anchor must be unique");
 
         $edited = str_replace($search, $replace, $source);
         $this->assertNotSame($baseline, $digest($edited), "$path: unapproved edit must break the pin");
+    }
+
+    public function testShotPresentationIsTheOnlyNormalizedAddition(): void
+    {
+        $baseline = self::shotBaseline();
+        $original = self::withoutShotPresentation(self::SHOT, self::source(self::SHOT));
+        $this->assertSame($baseline, hash('sha256', self::withoutOptIn($original)));
+        $this->assertSame(0, substr_count($original, 'oe-shot-record-popup'));
+
+        $candidate = self::withShotPresentation($original);
+        $this->assertNotSame($original, $candidate);
+        $this->assertSame($original, self::withoutShotPresentation(self::SHOT, $candidate));
+        $this->assertSame($baseline, self::shotDigest($candidate));
+        $this->assertNotSame($baseline, hash('sha256', self::withoutOptIn($candidate)), 'the raw pin still sees the addition');
+
+        foreach (self::migratedPages() as [$page]) {
+            if ($page !== self::SHOT) {
+                $other = self::source($page);
+                $this->assertSame($other, self::withoutShotPresentation($page, $other), "$page is never normalized");
+            }
+        }
+        $this->assertSame($candidate, self::withoutShotPresentation('interface/drugs/dispense_drug.php', $candidate));
+    }
+
+    /**
+     * Malformed or extra shot record additions, applied to the approved candidate.
+     *
+     * @return array<string, array{string, string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function malformedShotPresentations(): array
+    {
+        $styled = self::SHOT_OPT_IN_LINE . self::SHOT_SCREEN_STYLE;
+        $scope = 'html.oe-workbench-context body.oe-shot-record-popup';
+        return [
+            'style block without body marker' => [self::SHOT_MARKED_BODY, self::SHOT_ORIGINAL_BODY],
+            'body marker without style block' => [$styled, self::SHOT_OPT_IN_LINE],
+            'style block duplicated' => [self::SHOT_SCREEN_STYLE, self::SHOT_SCREEN_STYLE . self::SHOT_SCREEN_STYLE],
+            'style block before the opt-in' => [$styled, self::SHOT_SCREEN_STYLE . self::SHOT_OPT_IN_LINE],
+            'media all' => ['<style media="screen">', '<style media="all">'],
+            'media dropped' => ['<style media="screen">', '<style>'],
+            'generic body scope' => ["    $scope {\n", "    body {\n"],
+            'extra declaration' => ["      box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n", "      box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n      padding: 12pt;\n"],
+            'extra rule' => ["    }\n  </style>\n  </head>\n", "    }\n    $scope td.odd {\n      background-color: inherit;\n    }\n  </style>\n  </head>\n"],
+            'extra body class' => ['<body class="oe-shot-record-popup">', '<body class="oe-shot-record-popup oe-extra">'],
+            'print callback dropped' => ["    opener.top.printLogPrint(window);\n", ''],
+            'patient filter dropped' => [' where p.pid = ?", [$pid]);', ' where 1 = 1", []);'],
+            'pagination changed' => ['$linesPerPage = 15;', '$linesPerPage = 20;'],
+        ];
+    }
+
+    #[DataProvider('malformedShotPresentations')]
+    public function testMalformedShotPresentationsBreakThePin(string $search, string $replace): void
+    {
+        $candidate = self::withShotPresentation(self::withoutShotPresentation(self::SHOT, self::source(self::SHOT)));
+        $this->assertSame(self::shotBaseline(), self::shotDigest($candidate));
+        $this->assertSame(1, substr_count($candidate, $search), 'edit anchor must be unique');
+
+        $edited = str_replace($search, $replace, $candidate);
+        $this->assertNotSame(self::shotBaseline(), self::shotDigest($edited), 'malformed presentation must break the pin');
     }
 
     #[RunInSeparateProcess]
