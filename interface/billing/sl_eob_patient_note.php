@@ -32,8 +32,20 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <head>
     <?php Header::setupHeader(['opener']); ?>
     <title><?php echo xlt('EOB Posting - Patient Note'); ?></title>
+    <style media="screen">
+      html.oe-workbench-context body.oe-eob-patient-note-popup {
+        color: var(--oe-wb-ink);
+        background-color: var(--oe-wb-canvas);
+      }
+
+      html.oe-workbench-context body.oe-eob-patient-note-popup > .container {
+        color: var(--oe-wb-ink);
+        background-color: var(--oe-wb-paper);
+        box-shadow: inset 0 0 0 1px var(--oe-wb-line);
+      }
+    </style>
 </head>
-<body>
+<body class="oe-eob-patient-note-popup">
     <?php
 
     $patient_id = $_GET['patient_id'];

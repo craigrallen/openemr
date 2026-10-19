@@ -1,9 +1,9 @@
 # EOB patient billing-note popup: partial canvas/sheet presentation (OPEMR-52)
 
-Status: **tests only; production not yet changed.** The route is still the
-original. This is a partial, source-only presentation change, not full
-researched design acceptance and not native acceptance. No test run, CI result
-or security clearance is claimed here.
+Status: **partial source implementation; local source gates and independent
+review complete, final hosted CI and native acceptance pending.** The route
+carries only the two approved additions below. This is not full researched
+design acceptance, native acceptance or security clearance.
 
 - Route: `interface/billing/sl_eob_patient_note.php`
 - Caller: `interface/billing/sl_eob_search.php` (`npopup`)
@@ -12,10 +12,10 @@ or security clearance is claimed here.
 - Contract: `tests/fixtures/clinical-workspace/eob-patient-note-popup.contract.cjs`,
   Jest wrapper `tests/js/clinical-eob-patient-note-popup.test.js`
 
-This is distinct from the encounter billing-note editor `edit_billnote.php`
+This is distinct from the general billing-note editor `edit_billnote.php`
 (PR77); that route is not touched.
 
-## Intended exact changes (future production step)
+## Exact changes (implemented in source)
 
 Two additions only; every other byte of the route stays the original.
 
@@ -55,8 +55,8 @@ autoloaded as `workbench-popup` (`config/config.yaml`) via
 
 - Both rules apply only under `html.oe-workbench-context`, on screen. Elements
   without their own colour rule (heading, label) inherit the new ink; the
-  textarea and buttons keep their theme colours but sit on a new backdrop with
-  different contrast, which is unverified.
+  textarea and buttons keep their existing cascade (including the shared popup
+  overrides), but sit on a new backdrop with unverified effective contrast.
 - **The body class is a markup change in all media,** including print, even
   though the CSS is screen-only. Theme or third-party CSS matching body classes
   has not been checked.
@@ -88,20 +88,38 @@ pins caller, `Header`, asset config, popup CSS/JS, `dialog.js`,
 no other `interface/billing` change, and restricts changed and untracked files
 to the five-file scope (route, fixture, contract, Jest wrapper, this doc).
 
-## Expected RED (before production)
+## Recorded RED (tests-only commit, before production)
 
-Not executed by the author of these files. Expected: portable fails exactly
-"live route has no violations" and "live route equals the approved presentation
-candidate"; history additionally fails "complete restored live route equals the
-base route". All other checks are expected to pass, including the synthetic
-adaptation.
+Reported by the controller, not re-run by the author of this production step:
+
+- Hosted: tests-only commit `2110a057df056fe8d09ac94e89836a6794297a80`, run
+  `39230827824`. Two intended portable failures caused by the missing
+  presentation; the other 61 suites (1259 tests) passed.
+- Local portable: 21 passed, 2 intended failures ("live route has no
+  violations", "live route equals the approved presentation candidate").
+- Local history: 27 passed, 3 intended failures (the two above plus "complete
+  restored live route equals the base route"), including the frozen original
+  matching the exact Git base.
+
+## Controller verification
+
+After production, controller executed portable 23/23 and mandatory Git-base
+history 30/30 checks, PHP syntax and `git diff --check`: PASS. Extracted actual
+inline CSS passed nonignored stylelint with no warnings or parse errors.
+Controller-owned Codex `gpt-6-astra` independently reviewed the complete five-file
+diff and relevant caller/cascade context: no introduced P1/P2 findings. Its
+nonblocking documentation corrections are incorporated here. Full hosted CI
+is pending at publication; final evidence supersedes this checkpoint in
+`verification/eob-patient-note-20261019/DELIVERY.md` in the project coordination
+workspace. None of these source checks executes the route or proves native QA.
 
 ## Native gates still OPEN
 
 PHP execution and bootstrap; session; per-patient authority and ACL pass/deny;
 security and error paths; compiled default, dark and solar themes with and
 without workbench context; textarea focus, placeholder and validation
-contrast; keyboard order and roles; the `modal-sm` height-275 frame as opened,
+contrast; keyboard order and roles; the `modal-sm` frame (caller height argument
+275; `dialog.js` clamps iframe height arguments ≤300 to 300) as opened,
 and desktop then resized narrow and short; RTL; Save and opener behaviour;
 legacy print.
 
