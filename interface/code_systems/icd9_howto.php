@@ -28,8 +28,20 @@ use OpenEMR\Core\Header;
 
 ?>
 <?php Header::setupHeader(); ?>
+<style media="screen">
+  html.oe-workbench-context .container.oe-icd9-howto-document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
 
-<div class="container">
+  html.oe-workbench-context .container.oe-icd9-howto-document a {
+    color: var(--oe-wb-petrol, #086878);
+    background-color: transparent;
+  }
+</style>
+
+<div class="container oe-icd9-howto-document">
     <p>
         <?php echo xlt("Steps to install the ICD 9 database"); ?>:
         <ol>

@@ -12,6 +12,10 @@
  * Header::setupHeader() and an extra class on the existing .container. Removing exactly
  * that delta must give back the frozen original byte for byte, so every PHP call,
  * string, link attribute, list and the browser-repaired p/ol nesting stays untouched.
+ *
+ * The style block uses a canonical layout: selectors indented 2 spaces, declarations 4.
+ * Stylelint dedents extracted inline CSS by its common indentation, so this leaves
+ * 2-space declarations, which the repository's stylelint configuration requires.
  */
 
 const test = require('node:test');
@@ -54,14 +58,24 @@ const count = (haystack, needle) => haystack.split(needle).length - 1;
 
 function renderStyle(rules) {
     const body = Object.entries(rules)
-        .map(([selector, decls]) => `    ${selector} {\n`
-            + Object.entries(decls).map(([prop, value]) => `        ${prop}: ${value};\n`).join('')
-            + '    }\n')
+        .map(([selector, decls]) => `  ${selector} {\n`
+            + Object.entries(decls).map(([prop, value]) => `    ${prop}: ${value};\n`).join('')
+            + '  }\n')
         .join('\n');
     return STYLE_OPEN + body + STYLE_CLOSE;
 }
 
 const STYLE_BLOCK = renderStyle(EXPECTED_RULES);
+
+// Every line inside <style> is blank, a 2-space selector line, a 4-space declaration or a
+// 2-space closing brace; no other indentation and no trailing whitespace.
+const CANONICAL_CSS_LINE = /^(?:| {2}[^\s{}][^{}]*\{| {4}[a-z-]+: [^;]+;| {2}\})$/;
+const FORMAT_PROBLEM = 'style block must use 2-space selectors and 4-space declarations';
+
+function formatProblems(css) {
+    const bad = css.split('\n').filter((line) => !CANONICAL_CSS_LINE.test(line));
+    return bad.length === 0 ? [] : [`${FORMAT_PROBLEM}; non-canonical lines: ${JSON.stringify(bad)}`];
+}
 
 // The one synthetic candidate: generated from exactly one verified original anchor.
 function buildCandidate(original) {
@@ -128,6 +142,7 @@ function validate(source, original) {
         problems.push('missing screen presentation: no style block after the Header anchor');
     } else {
         if (count(source, `${STYLE_CLOSE}\n${CONTAINER}\n`) !== 1) problems.push('style block must sit directly before the existing container');
+        problems.push(...formatProblems(css));
         const parsed = parseCss(css);
         problems.push(...parsed.problems);
         try {
@@ -209,7 +224,9 @@ test('mutations of the candidate are rejected', () => {
         assert.equal(count(c, from), 1, `mutation anchor must be unique: ${JSON.stringify(from)}`);
         return c.replace(from, () => to);
     };
-    const linkRule = `\n    ${SCOPE} a {\n        color: var(--oe-wb-petrol, #086878);\n        background-color: transparent;\n    }\n`;
+    const linkRule = `\n  ${SCOPE} a {\n    color: var(--oe-wb-petrol, #086878);\n    background-color: transparent;\n  }\n`;
+    // Same rules and values in the old 4-space selector / 8-space declaration layout.
+    const doubledIndent = STYLE_BLOCK.replace(/^ +/gm, (spaces) => spaces + spaces);
     const mutants = {
         'translated text': swap('xlt("this location")', 'xlt("that location")'),
         'php escaping': swap('<?php echo xlt("Steps to install the ICD 9 database"); ?>', '<?php echo text("Steps to install the ICD 9 database"); ?>'),
@@ -220,9 +237,9 @@ test('mutations of the candidate are rejected', () => {
         'list item removed': swap('            </li>\n        </ol>', '        </ol>'),
         'repaired p/ol nesting': swap(':\n        <ol>', ':\n    </p>\n        <ol>'),
         'unrelated edit': swap(' * Instructions for loading ICD9 Database', ' * Instructions for loading the ICD9 Database'),
-        'geometry declaration': swap('        box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n', '        box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n        padding: 0;\n'),
-        'extra unscoped selector': swap(STYLE_CLOSE, `    a {\n        color: #086878;\n    }\n${STYLE_CLOSE}`),
-        'context scope dropped': swap(`    ${SCOPE} a {`, `    .container.${MARKER} a {`),
+        'geometry declaration': swap('    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n', '    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);\n    padding: 0;\n'),
+        'extra unscoped selector': swap(STYLE_CLOSE, `  a {\n    color: #086878;\n  }\n${STYLE_CLOSE}`),
+        'context scope dropped': swap(`  ${SCOPE} a {`, `  .container.${MARKER} a {`),
         'important': swap('background-color: transparent;', 'background-color: transparent !important;'),
         'wrong media': swap(STYLE_OPEN, '<style media="all">\n'),
         'media missing': swap(STYLE_OPEN, '<style>\n'),
@@ -233,13 +250,18 @@ test('mutations of the candidate are rejected', () => {
         'body wrapper': swap(`\n${CONTAINER}`, `\n<body>\n${CONTAINER}`),
         'shared asset link': swap(HEADER_LINE + STYLE_OPEN, `${HEADER_LINE}<link rel="stylesheet" href="../clinical-workspace/popup.css">\n${STYLE_OPEN}`),
         'link colours missing': swap(linkRule, ''),
-        'link colours unpaired': swap('        background-color: transparent;\n', ''),
+        'link colours unpaired': swap('    background-color: transparent;\n', ''),
+        'four-space selector / eight-space declaration indentation': swap(STYLE_BLOCK, doubledIndent),
     };
     for (const [name, mutate] of Object.entries(mutants)) {
         const mutant = mutate(candidate);
         assert.notEqual(mutant, candidate, name);
         assert.notDeepEqual(validate(mutant, original), [], `mutant accepted: ${name}`);
     }
+    // Same rules, values, placement and inverse: only the canonical-format guard may reject it.
+    const doubledProblems = validate(mutants['four-space selector / eight-space declaration indentation'](candidate), original);
+    assert.equal(doubledProblems.length, 1, JSON.stringify(doubledProblems));
+    assert.ok(doubledProblems[0].startsWith(FORMAT_PROBLEM), doubledProblems[0]);
 });
 
 test('production route preserves the frozen original under the inverse', () => {
