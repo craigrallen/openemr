@@ -11,6 +11,15 @@
  * the opt-in lines removed, so any other drift (ACL, CSRF, POST/delete,
  * PDF branches, inline styles, script order) fails here.
  *
+ * OPEMR-49: the prior-auth deleter (a mutating GET) may additionally carry one
+ * exact, screen-only presentation seam: a <style media="screen"> block right
+ * after its opt-in and a body class marker. That seam alone is removed, once,
+ * for that route only, before the opt-in removal; the result must equal the
+ * frozen master-18647270 fixture byte for byte. Any other route is returned
+ * unchanged. This shared test is also changed on parked PR121/PR122; those
+ * changes are deliberately not imported here and need combined-train
+ * reconciliation when the branches meet.
+ *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
  * @author    Craig Allen <craig@interconnected.au>
@@ -37,6 +46,26 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     private const OPT_IN = "<?php echo Header::setupAssets(['workbench-popup']); ?>";
     private const USE_HEADER = 'use OpenEMR\Core\Header;';
 
+    private const PRIOR_AUTH_DELETER = 'interface/modules/custom_modules/oe-module-prior-authorizations/public/deleter.php';
+    private const PRIOR_AUTH_FIXTURE = 'tests/fixtures/clinical-workspace/prior-auth-deleter.master-18647270.txt';
+    private const PRIOR_AUTH_MARKER = 'oe-prior-auth-delete-popup';
+    private const PRIOR_AUTH_OPT_IN_LINE = '    ' . self::OPT_IN . "\n";
+    private const PRIOR_AUTH_BODY_ORIGINAL = "<body>\n";
+    private const PRIOR_AUTH_BODY_APPROVED = '<body class="oe-prior-auth-delete-popup">' . "\n";
+    private const PRIOR_AUTH_STYLE = '    <style media="screen">' . "\n"
+        . '        html.oe-workbench-context body.oe-prior-auth-delete-popup {' . "\n"
+        . '          background-color: var(--oe-wb-canvas, #f3f7f5);' . "\n"
+        . '        }' . "\n"
+        . "\n"
+        . '        html.oe-workbench-context body.oe-prior-auth-delete-popup > p {' . "\n"
+        . '          color: var(--oe-wb-ink, #17343b);' . "\n"
+        . '          background-color: var(--oe-wb-paper, #fff);' . "\n"
+        . '          box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);' . "\n"
+        . '        }' . "\n"
+        . '    </style>' . "\n";
+    private const PRIOR_AUTH_ORIGINAL_SEAM = self::PRIOR_AUTH_OPT_IN_LINE . "</head>\n" . self::PRIOR_AUTH_BODY_ORIGINAL;
+    private const PRIOR_AUTH_APPROVED_SEAM = self::PRIOR_AUTH_OPT_IN_LINE . self::PRIOR_AUTH_STYLE . "</head>\n" . self::PRIOR_AUTH_BODY_APPROVED;
+
     private static function root(): string
     {
         return dirname(__DIR__, 5);
@@ -62,6 +91,86 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
             static fn (string $line): bool => !in_array(trim($line), [self::OPT_IN, self::USE_HEADER], true),
         );
         return implode('', $kept);
+    }
+
+    /**
+     * Strict inverse of the OPEMR-49 presentation: removes the approved seam
+     * exactly once. Null for a missing, relocated, duplicated or malformed
+     * block or body marker, or for any leftover marker/style residue.
+     */
+    private static function priorAuthRestored(string $source): ?string
+    {
+        if (
+            substr_count($source, self::PRIOR_AUTH_APPROVED_SEAM) !== 1
+            || substr_count($source, self::PRIOR_AUTH_STYLE) !== 1
+        ) {
+            return null;
+        }
+        $restored = str_replace(self::PRIOR_AUTH_APPROVED_SEAM, self::PRIOR_AUTH_ORIGINAL_SEAM, $source);
+        foreach ([self::PRIOR_AUTH_MARKER, '<style', '</style', 'media='] as $residue) {
+            if (str_contains($restored, $residue)) {
+                return null;
+            }
+        }
+        return $restored;
+    }
+
+    /**
+     * Route-specific presentation normalization, applied once before the
+     * opt-in removal. Other routes are returned unchanged; the deleter is
+     * returned unchanged only when it carries no trace of the presentation.
+     */
+    private static function normalizedPresentation(string $path, string $source): ?string
+    {
+        if ($path !== self::PRIOR_AUTH_DELETER) {
+            return $source;
+        }
+        foreach ([self::PRIOR_AUTH_MARKER, '<style', '</style'] as $trace) {
+            if (str_contains($source, $trace)) {
+                return self::priorAuthRestored($source);
+            }
+        }
+        return $source;
+    }
+
+    private static function withoutApprovedPresentation(string $path, string $source): string
+    {
+        $normalized = self::normalizedPresentation($path, $source);
+        self::assertIsString($normalized, "$path carries a malformed or unapproved presentation");
+        return $normalized;
+    }
+
+    private static function priorAuthBaseline(): string
+    {
+        foreach (self::migratedPages() as [$page, $baseline]) {
+            if ($page === self::PRIOR_AUTH_DELETER) {
+                return $baseline;
+            }
+        }
+        self::fail('prior auth deleter pin missing');
+    }
+
+    /**
+     * The exact approved future route, built from the frozen original.
+     */
+    private static function priorAuthCandidate(): string
+    {
+        $fixture = self::source(self::PRIOR_AUTH_FIXTURE);
+        self::assertSame(1, substr_count($fixture, self::PRIOR_AUTH_ORIGINAL_SEAM), 'fixture seam must be unique');
+        return str_replace(self::PRIOR_AUTH_ORIGINAL_SEAM, self::PRIOR_AUTH_APPROVED_SEAM, $fixture);
+    }
+
+    /**
+     * Production acceptance: full restored-route equality with the frozen
+     * fixture, the existing pin, and the exact approved candidate.
+     */
+    private static function priorAuthAccepted(string $candidate): bool
+    {
+        $restored = self::priorAuthRestored($candidate);
+        return $restored !== null
+            && $restored === self::source(self::PRIOR_AUTH_FIXTURE)
+            && hash('sha256', self::withoutOptIn($restored)) === self::priorAuthBaseline()
+            && $candidate === self::priorAuthCandidate();
     }
 
     /**
@@ -162,7 +271,8 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     #[DataProvider('migratedPages')]
     public function testNothingButTheOptInChanged(string $path, string $baseline, array $before): void
     {
-        $this->assertSame($baseline, hash('sha256', self::withoutOptIn(self::source($path))), "$path drifted beyond the opt-in");
+        $normalized = self::withoutApprovedPresentation($path, self::source($path));
+        $this->assertSame($baseline, hash('sha256', self::withoutOptIn($normalized)), "$path drifted beyond the opt-in");
     }
 
     #[DataProvider('excludedPages')]
@@ -185,7 +295,12 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     {
         $shot = 'interface/patient_file/summary/shot_record.php';
         $chart = 'interface/forms/vitals/growthchart/chart.php';
+        $deleter = self::PRIOR_AUTH_DELETER;
         return [
+            'deleter: acl permission changed' => [$deleter, "aclCheckCore('admin', 'practice')", "aclCheckCore('admin', 'super')"],
+            'deleter: csrf source changed' => [$deleter, 'checkCsrfInput(INPUT_GET', 'checkCsrfInput(INPUT_POST'],
+            'deleter: delete id source changed' => [$deleter, '[$_GET[\'id\']]', '[$_REQUEST[\'id\']]'],
+            'deleter: extra script in head' => [$deleter, "</head>\n", "    <script src=\"extra.js\"></script>\n</head>\n"],
             'shot: patient scope dropped' => [$shot, ' where p.pid = ?", [$pid]);', ' where 1 = 1", []);'],
             'shot: pre-upstream signature restored' => [$shot, 'function convertToDataArray($data_array): array', 'function convertToDataArray($data_array)'],
             'shot: extra asset in head' => [$shot, "  </head>\n", "<?php echo Header::setupAssets(['no-bootstrap']); ?>\n  </head>\n"],
@@ -212,13 +327,171 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
         $this->assertArrayHasKey($path, $pins);
         [$baseline, $optIn] = $pins[$path];
 
-        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn($source) : $source);
+        $digest = static function (string $source) use ($path, $optIn): string {
+            if (!$optIn) {
+                return hash('sha256', $source);
+            }
+            $normalized = self::normalizedPresentation($path, $source);
+            return $normalized === null ? 'malformed presentation' : hash('sha256', self::withoutOptIn($normalized));
+        };
         $source = self::source($path);
         $this->assertSame($baseline, $digest($source), "$path must match its pin before the edit");
         $this->assertSame(1, substr_count($source, $search), "$path: edit anchor must be unique");
 
         $edited = str_replace($search, $replace, $source);
         $this->assertNotSame($baseline, $digest($edited), "$path: unapproved edit must break the pin");
+    }
+
+    public function testPriorAuthFixtureMatchesTheExistingPin(): void
+    {
+        $fixture = self::source(self::PRIOR_AUTH_FIXTURE);
+        $this->assertSame(self::priorAuthBaseline(), hash('sha256', self::withoutOptIn($fixture)));
+        $this->assertSame(1, substr_count($fixture, self::PRIOR_AUTH_ORIGINAL_SEAM));
+        foreach ([self::PRIOR_AUTH_MARKER, '<style', '</style', '<script', '<link'] as $residue) {
+            $this->assertStringNotContainsString($residue, $fixture);
+        }
+    }
+
+    public function testPriorAuthDeleterCarriesExactlyTheApprovedPresentation(): void
+    {
+        $this->assertSame(self::priorAuthCandidate(), self::source(self::PRIOR_AUTH_DELETER));
+        $this->assertTrue(self::priorAuthAccepted(self::source(self::PRIOR_AUTH_DELETER)));
+    }
+
+    public function testPriorAuthDeleterRestoresToTheFrozenRoute(): void
+    {
+        $restored = self::withoutApprovedPresentation(self::PRIOR_AUTH_DELETER, self::source(self::PRIOR_AUTH_DELETER));
+        $this->assertSame(self::source(self::PRIOR_AUTH_FIXTURE), $restored);
+    }
+
+    public function testPriorAuthUntouchedAndCandidateNormalizeCorrectly(): void
+    {
+        $fixture = self::source(self::PRIOR_AUTH_FIXTURE);
+        $candidate = self::priorAuthCandidate();
+
+        $this->assertNotSame($fixture, $candidate);
+        $this->assertSame($fixture, self::normalizedPresentation(self::PRIOR_AUTH_DELETER, $fixture));
+        $this->assertSame($fixture, self::normalizedPresentation(self::PRIOR_AUTH_DELETER, $candidate));
+        $this->assertNull(self::priorAuthRestored($fixture));
+        $this->assertSame($fixture, self::priorAuthRestored($candidate));
+        $this->assertFalse(self::priorAuthAccepted($fixture));
+        $this->assertTrue(self::priorAuthAccepted($candidate));
+    }
+
+    public function testPriorAuthNormalizationLeavesOtherRoutesUnchanged(): void
+    {
+        $pages = [];
+        foreach (self::migratedPages() as [$page]) {
+            $pages[] = $page;
+        }
+        foreach (self::excludedPages() as [$page]) {
+            $pages[] = $page;
+        }
+        foreach ($pages as $page) {
+            if ($page === self::PRIOR_AUTH_DELETER) {
+                continue;
+            }
+            $source = self::source($page);
+            $this->assertSame($source, self::normalizedPresentation($page, $source), $page);
+        }
+
+        $shot = 'interface/patient_file/summary/shot_record.php';
+        $source = self::source($shot);
+        $this->assertSame(1, substr_count($source, "  </head>\n"), 'shot record anchor must be unique');
+        $injected = str_replace("  </head>\n", self::PRIOR_AUTH_STYLE . "  </head>\n", $source);
+        $this->assertNotSame($source, $injected);
+        $this->assertSame($injected, self::normalizedPresentation($shot, $injected), 'other routes are never stripped');
+        $baseline = '';
+        foreach (self::migratedPages() as [$page, $pin]) {
+            if ($page === $shot) {
+                $baseline = $pin;
+            }
+        }
+        $this->assertNotSame($baseline, hash('sha256', self::withoutOptIn($injected)));
+    }
+
+    /**
+     * Unapproved edits applied in memory to the synthetic approved candidate.
+     *
+     * @return array<string, array{string, string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function priorAuthMutants(): array
+    {
+        $style = self::PRIOR_AUTH_STYLE;
+        $optIn = self::PRIOR_AUTH_OPT_IN_LINE;
+        $body = self::PRIOR_AUTH_BODY_APPROVED;
+        $canvas = '          background-color: var(--oe-wb-canvas, #f3f7f5);' . "\n";
+        $ink = '          color: var(--oe-wb-ink, #17343b);' . "\n";
+        $paper = '          background-color: var(--oe-wb-paper, #fff);' . "\n";
+        $shadow = '          box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);' . "\n";
+        return [
+            'style block missing' => [$style, ''],
+            'body marker missing' => [$body, self::PRIOR_AUTH_BODY_ORIGINAL],
+            'block relocated after head' => [$style . "</head>\n", "</head>\n" . $style],
+            'block relocated before opt-in' => [$optIn . $style, $style . $optIn],
+            'block duplicated' => [$style, $style . $style],
+            'blank line between rules removed' => ["        }\n\n        html", "        }\n        html"],
+            'declaration indentation changed' => [$canvas, '        background-color: var(--oe-wb-canvas, #f3f7f5);' . "\n"],
+            'closing brace dropped' => [$shadow . "        }\n", $shadow],
+            'media widened to all' => ['<style media="screen">', '<style media="all">'],
+            'media removed' => ['<style media="screen">', '<style>'],
+            'canvas fallback changed' => ['var(--oe-wb-canvas, #f3f7f5)', 'var(--oe-wb-canvas, #fff)'],
+            'ink token changed' => [$ink, '          color: var(--oe-wb-muted, #526a70);' . "\n"],
+            'paper token swapped' => [$paper, $canvas],
+            'box shadow removed' => [$shadow, ''],
+            'important added' => ['var(--oe-wb-line, #d9e4e2);', 'var(--oe-wb-line, #d9e4e2) !important;'],
+            'padding added' => [$paper, $paper . '          padding: 1rem;' . "\n"],
+            'margin added' => [$canvas, $canvas . '          margin: 0;' . "\n"],
+            'font added' => [$ink, $ink . '          font-family: Arial, sans-serif;' . "\n"],
+            'workbench gate dropped' => ['html.oe-workbench-context body.oe-prior-auth-delete-popup {', 'body.oe-prior-auth-delete-popup {'],
+            'child combinator widened' => ['body.oe-prior-auth-delete-popup > p {', 'body.oe-prior-auth-delete-popup p {'],
+            'stylesheet link added' => ["    </style>\n", "    </style>\n" . '    <link rel="stylesheet" href="extra.css">' . "\n"],
+            'head script added' => ["    </style>\n", "    </style>\n" . '    <script src="extra.js"></script>' . "\n"],
+            'body script added' => [$body, $body . '    <script>window.close();</script>' . "\n"],
+            'second asset bundle' => ["Header::setupAssets(['workbench-popup'])", "Header::setupAssets(['workbench-popup', 'no-bootstrap'])"],
+            'setupHeader added' => [$optIn, '    <?php Header::setupHeader(); ?>' . "\n" . $optIn],
+            'body class extended' => ['<body class="oe-prior-auth-delete-popup">', '<body class="oe-prior-auth-delete-popup container">'],
+            'body attribute added' => ['<body class="oe-prior-auth-delete-popup">', '<body class="oe-prior-auth-delete-popup" onload="window.close()">'],
+            'body class single-quoted' => ['<body class="oe-prior-auth-delete-popup">', "<body class='oe-prior-auth-delete-popup'>"],
+            'marker copied onto html' => ['<html lang="en">', '<html lang="en" class="oe-prior-auth-delete-popup">'],
+            'paragraph class added' => ['    <p><?php', '    <p class="m-2"><?php'],
+            'acl permission changed' => ["aclCheckCore('admin', 'practice')", "aclCheckCore('admin', 'super')"],
+            'acl check inverted' => ['if (!AclMain::', 'if (AclMain::'],
+            'unauthorized message changed' => ["echo xlt('Unauthorized');", "echo xlt('Not allowed');"],
+            'unauthorized die removed' => ["    die;\n", ''],
+            'bootstrap depth changed' => ["dirname(__FILE__, 5) . '/globals.php'", "dirname(__FILE__, 4) . '/globals.php'"],
+            'csrf source changed' => ['checkCsrfInput(INPUT_GET', 'checkCsrfInput(INPUT_POST'],
+            'csrf no longer dies' => ['dieOnFail: true', 'dieOnFail: false'],
+            'csrf check removed' => ['CsrfUtils::checkCsrfInput(INPUT_GET, dieOnFail: true);' . "\n", ''],
+            'delete table changed' => ['`module_prior_authorizations`', '`module_prior_authorizations_archive`'],
+            'delete scope widened' => ['where `id` = ?', 'where `id` >= ?'],
+            'delete id source changed' => ['[$_GET[\'id\']]', '[$_REQUEST[\'id\']]'],
+            'session line removed' => ['$session = SessionWrapperFactory::getInstance()->getActiveSession();' . "\n", ''],
+            'message text changed' => ['Click done, pls', 'Click Done'],
+            'message spacing removed' => ['"<br> <br>" .  ', ''],
+            'title changed' => ["xlt('Delete Record')", "xlt('Delete Prior Authorization')"],
+            'viewport scaling changed' => ['user-scalable=no', 'user-scalable=yes'],
+            'document language changed' => ['<html lang="en">', '<html lang="sv">'],
+        ];
+    }
+
+    #[DataProvider('priorAuthMutants')]
+    public function testPriorAuthUnapprovedEditsAreRejected(string $search, string $replace): void
+    {
+        $candidate = self::priorAuthCandidate();
+        $this->assertTrue(self::priorAuthAccepted($candidate), 'approved candidate must be accepted before the edit');
+        $this->assertSame(1, substr_count($candidate, $search), 'edit anchor must be unique');
+        $edited = str_replace($search, $replace, $candidate);
+        $this->assertNotSame($candidate, $edited, 'edit must change the candidate');
+
+        $this->assertFalse(self::priorAuthAccepted($edited), 'unapproved edit must be rejected');
+        $normalized = self::normalizedPresentation(self::PRIOR_AUTH_DELETER, $edited);
+        $this->assertTrue(
+            $normalized === null || hash('sha256', self::withoutOptIn($normalized)) !== self::priorAuthBaseline(),
+            'unapproved edit must break the shared pin',
+        );
     }
 
     #[RunInSeparateProcess]
