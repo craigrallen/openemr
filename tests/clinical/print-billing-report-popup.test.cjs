@@ -27,8 +27,10 @@
  * contract preserves rather than clears).
  *
  * Embedding format: <style> tags at column 0 (the Header line's indent), selectors at 2,
- * declarations at 4, one blank line between rules. Removing the common 2-space prefix of the
- * rule lines leaves 2-space declarations.
+ * declarations at 4, one blank line between rules. A grouped selector list puts each selector
+ * on its own line at the same 2-space indent: every line but the last ends with a comma, the
+ * last carries the opening brace (stylelint selector-list-comma-newline-after). Removing the
+ * common 2-space prefix of the rule lines leaves 2-space declarations.
  */
 
 const test = require('node:test');
@@ -78,17 +80,34 @@ const ALLOWED_PROPS = new Set(['color', 'background-color', 'box-shadow']);
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const count = (haystack, needle) => haystack.split(needle).length - 1;
 
-const ruleText = ([selector, decls]) => `  ${selector} {\n`
-    + decls.map(([prop, value]) => `    ${prop}: ${value};\n`).join('')
+// EXPECTED_RULES keeps each selector list on one normalized line; rendering puts each
+// selector of a grouped list on its own line.
+const selectorLines = (selector) => selector.split(', ');
+const declText = (decls, indent) => decls.map(([prop, value]) => `${indent}${prop}: ${value};\n`).join('');
+const ruleText = ([selector, decls]) => `  ${selectorLines(selector).join(',\n  ')} {\n`
+    + declText(decls, '    ')
     + '  }\n';
+// Non-canonical single-line rendering, kept only to build the negative mutant.
+const singleLineRuleText = ([selector, decls]) => `  ${selector} {\n` + declText(decls, '    ') + '  }\n';
 const renderStyle = (rules) => STYLE_OPEN + rules.map(ruleText).join('\n') + STYLE_CLOSE;
 
 const STYLE_BLOCK = renderStyle(EXPECTED_RULES);
 const SEAM = HEADER_LINE + STYLE_BLOCK;
 const [RULE_BODY, RULE_TABLE, RULE_ANCHOR] = EXPECTED_RULES.map(ruleText);
 
-// Inside <style>: blank, 2-space selector, 4-space declaration or 2-space closing brace.
-const CANONICAL_CSS_LINE = /^(?:| {2}[^\s{}][^{}]*\{| {4}[a-z-]+: [^;]+;| {2}\})$/;
+// Inside <style>: blank, 2-space selector continuation ending in a comma, 2-space selector
+// opening a rule (no comma), 4-space declaration or 2-space closing brace.
+const CSS_SELECTOR_CONTINUATION = /^ {2}[^\s{},][^{},]*,$/;
+const CSS_SELECTOR_OPEN = /^ {2}[^\s{},][^{},]*\{$/;
+const CSS_DECLARATION = /^ {4}[a-z-]+: [^;]+;$/;
+const isCanonicalCssLine = (line) => line === ''
+    || CSS_SELECTOR_CONTINUATION.test(line)
+    || CSS_SELECTOR_OPEN.test(line)
+    || CSS_DECLARATION.test(line)
+    || line === '  }';
+// A continuation line must be followed directly by another selector line of the same list.
+const danglingContinuations = (lines) => lines.filter((line, i) => CSS_SELECTOR_CONTINUATION.test(line)
+    && !(CSS_SELECTOR_CONTINUATION.test(lines[i + 1] ?? '') || CSS_SELECTOR_OPEN.test(lines[i + 1] ?? '')));
 
 // Problems are "[code] detail"; codes let the untouched route be classified exactly.
 const codes = (problems) => problems.map((p) => p.slice(1, p.indexOf(']')));
@@ -170,8 +189,9 @@ function validate(source, original) {
     if (css === null) {
         problems.push('[style-missing] no screen style block after the Header line');
     } else {
-        const bad = css.split('\n').filter((line) => !CANONICAL_CSS_LINE.test(line));
-        if (bad.length) problems.push(`[style-format] 2-space selectors and 4-space declarations required; non-canonical lines: ${JSON.stringify(bad)}`);
+        const lines = css.split('\n');
+        const bad = lines.filter((line) => !isCanonicalCssLine(line)).concat(danglingContinuations(lines));
+        if (bad.length) problems.push(`[style-format] 2-space selectors (one per line in a grouped list, comma-terminated except the last) and 4-space declarations required; non-canonical lines: ${JSON.stringify(bad)}`);
         const parsed = parseCss(css);
         problems.push(...parsed.problems);
         if (JSON.stringify(parsed.rules) !== JSON.stringify(EXPECTED_RULES)) {
@@ -300,7 +320,7 @@ test('activation context the seam relies on is present', () => {
     }
 });
 
-test('opener model: a named-target window keeps the context only while its opener is the live shell', () => {
+test('opener discovery model: active, closed, cross-origin and missing opener snapshots', () => {
     const { findWorkbenchHost } = require(path.join(ROOT, 'interface/clinical-workspace/popup.js'));
     const origin = 'https://emr.test';
     const shell = (closed = false, at = origin) => {
@@ -357,9 +377,17 @@ test('synthetic candidate passes, inverts to the frozen original, and the origin
     assert.ok(candidate.includes(`<head>\n\n${HEADER_LINE}${STYLE_BLOCK}${HEAD_TAIL}${BODY_MARKED}\n\n<a href=`));
     // Removing only the common 2-space prefix leaves 2-space declarations and blank separators.
     const css = extractStyle(candidate);
-    const dedented = css.split('\n').map((line) => (line === '' ? '' : line.slice(2))).join('\n');
-    assert.ok(css.split('\n').every((line) => line === '' || line.startsWith('  ')));
-    assert.equal(dedented, EXPECTED_RULES.map(([s, d]) => `${s} {\n${d.map(([p, v]) => `  ${p}: ${v};\n`).join('')}}\n`).join('\n'));
+    const cssLines = css.split('\n');
+    const dedented = cssLines.map((line) => (line === '' ? '' : line.slice(2))).join('\n');
+    assert.ok(cssLines.every((line) => line === '' || line.startsWith('  ')));
+    assert.equal(dedented, EXPECTED_RULES.map(([s, d]) => `${selectorLines(s).join(',\n')} {\n${declText(d, '  ')}}\n`).join('\n'));
+    // The grouped rule is two selector lines at the same 2-space indent: the first ends with a
+    // comma, the second carries the opening brace. No rule-opening line contains a comma.
+    assert.equal(count(css, `  ${SCOPE} > a,\n  ${SCOPE} > a .title {\n`), 1);
+    assert.deepEqual(cssLines.filter((line) => CSS_SELECTOR_CONTINUATION.test(line)), [`  ${SCOPE} > a,`]);
+    assert.ok(cssLines.filter((line) => line.endsWith('{')).every((line) => !line.includes(',')));
+    assert.deepEqual(danglingContinuations(cssLines), []);
+    assert.equal(count(css, `${SCOPE} > a, ${SCOPE}`), 0, 'no single-line grouped selector in the canonical block');
     assert.deepEqual(codes(validate(original, original)), MISSING_PRESENTATION);
 });
 
@@ -418,8 +446,8 @@ test('meaningful mutations of the candidate are rejected', () => {
         'popup scope substituted': inRule(RULE_TABLE, 'html.oe-workbench-context', 'html.oe-workbench-popup'),
         'descendant tables': inRule(RULE_TABLE, ' > table {', ' table {'),
         'anchor rule split': swap(RULE_ANCHOR, splitAnchor),
-        'anchor title descendant dropped': inRule(RULE_ANCHOR, `, ${SCOPE} > a .title`, ''),
-        'focus-visible grouped': inRule(RULE_ANCHOR, ' > a .title {', ` > a .title, ${SCOPE} > a:focus-visible {`),
+        'anchor title descendant dropped': inRule(RULE_ANCHOR, `,\n  ${SCOPE} > a .title`, ''),
+        'focus-visible grouped': inRule(RULE_ANCHOR, ' > a .title {', ` > a .title,\n  ${SCOPE} > a:focus-visible {`),
         'selector order': swap(STYLE_BLOCK, swappedRules),
         'extra unscoped selector': swap(tail, `\n  table {\n    color: #17343b;\n  }\n${tail}`),
         // properties / values / pairing
@@ -448,6 +476,9 @@ test('meaningful mutations of the candidate are rejected', () => {
         // format
         'declaration indentation': swap(STYLE_BLOCK, deeperIndent),
         'blank line between rules removed': swap(STYLE_BLOCK, STYLE_BLOCK.replace('  }\n\n  html', '  }\n  html')),
+        'grouped selector on one line': swap(RULE_ANCHOR, singleLineRuleText(EXPECTED_RULES[2])),
+        'grouped selector continuation indented': inRule(RULE_ANCHOR, `,\n  ${SCOPE} > a .title {`, `,\n    ${SCOPE} > a .title {`),
+        'blank line inside grouped selector': inRule(RULE_ANCHOR, `,\n  ${SCOPE} > a .title {`, `,\n\n  ${SCOPE} > a .title {`),
     };
     for (const [name, mutate] of Object.entries(mutants)) {
         const mutant = mutate(candidate);
@@ -456,6 +487,11 @@ test('meaningful mutations of the candidate are rejected', () => {
     }
     const formatOnly = codes(validate(mutants['declaration indentation'](candidate), original));
     assert.ok(formatOnly.includes('style-format'), JSON.stringify(formatOnly));
+    // The single-line grouped selector (the shape stylelint rejected) keeps the same normalized
+    // rules, so it fails only on format and on the exact inverse, never on rule content.
+    for (const name of ['grouped selector on one line', 'grouped selector continuation indented', 'blank line inside grouped selector']) {
+        assert.deepEqual(codes(validate(mutants[name](candidate), original)), ['style-format', 'inverse'], name);
+    }
     // Every non-presentation mutant is caught by the restored-source equality itself.
     const php = codes(validate(mutants['billing write moved to POST'](candidate), original));
     assert.deepEqual(php, ['inverse']);

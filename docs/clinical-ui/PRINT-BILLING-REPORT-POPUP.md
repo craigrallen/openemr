@@ -1,115 +1,98 @@
-# Print Billing Report popup (OPEMR-55)
+# Printable Billing Report — OPEMR-55
 
-Route: `interface/billing/print_billing_report.php`, opened from
-`interface/billing/billing_report.php` by `SubmitTheScreenPrint()`, which POSTs `the_form`
-to the named window target `'new'` with no window features (no explicit size).
+Actual route `interface/billing/print_billing_report.php`; caller
+`interface/billing/billing_report.php::SubmitTheScreenPrint()` POSTs `the_form` to
+named target `new`, without explicit window dimensions. Owner Hermes, rotation
+run1/max2 including implementation and QA. Draft PR129; not merged or deployed.
+This is partial source presentation, NOT native, full researched UI, security,
+financial, clinical or audit acceptance. Ordinary approval is required; no bypass.
 
-## Status
+## Exact implementation
 
-This is a **partial screen source presentation only**. It is not a native or complete
-researched UI, and it is not a security, financial or audit acceptance. At this stage only the
-tests, frozen fixture and this document exist; the production route is **not yet changed**.
-The controller records RED before any production edit.
+One 18-line `media="screen"` style after the existing Header line and one class
+`oe-print-billing-report-document` on the existing body, retaining every original
+body attribute. Three rules beneath `html.oe-workbench-context` and that marker:
 
-No route, bootstrap, caller, database, financial, print or audit request was made while
-writing the contract. The route is never executed by the tests: with `mode=bill` it can UPDATE
-billing rows through `BillingReport::billCodesList()`. Everything is checked as source text.
-The original-22 register and status coordination are not changed by this work.
+- Body: paired `--oe-wb-ink` / `--oe-wb-canvas`.
+- Existing direct-child raw tables: paired ink / `--oe-wb-paper`, inset quiet edge
+  using `--oe-wb-line` (no physical border or size change).
+- Existing direct-child close anchor and its `.title`: paired ink / canvas in one
+  grouped rule. Selectors are on separate lines, without focus-state overrides.
 
-## Approved production contract (for the later phase)
+Fallbacks are ink `#17343b`, canvas `#f3f7f5`, paper `#fff`, line `#d9e4e2`.
+Declared ink/background pairs meet 7:1; this is NOT effective descendant/theme
+contrast proof. Existing shared popup typography/cascade remains unchanged.
 
-Exactly two additive changes; removing them restores the frozen original byte for byte:
+Style tags sit at column0, selectors at2spaces and declarations at4spaces;
+removing only the common2space embedding prefix leaves repository2space CSS
+properties. Grouped selectors each occupy a line; rules have blank separators.
 
-1. One `<style media="screen">` immediately after the existing
-   `<?php Header::setupHeader(); ?>` line. The original blank line before `</head>` stays.
-   Three rules, in this order:
-   - `html.oe-workbench-context body.oe-print-billing-report-document`:
-     ink `var(--oe-wb-ink, #17343b)` on canvas `var(--oe-wb-canvas, #f3f7f5)`.
-   - `… body.oe-print-billing-report-document > table` (existing direct-child raw tables):
-     ink on paper `var(--oe-wb-paper, #fff)` with
-     `box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2)`.
-   - `… > a, … > a .title` (the existing direct-child close link and its `.title` font), one
-     grouped rule: ink on canvas. No `:focus-visible` or other state selectors are grouped in.
-2. `class="oe-print-billing-report-document"` added to the existing `<body>`. All original
-   body attributes (`bgcolor`, `topmargin`, `rightmargin`, `leftmargin`, `bottommargin`,
-   `marginwidth`, `marginheight`) are kept unchanged.
+Removing only the approved additions restores the COMPLETE original route
+byte-for-byte. No original PHP/JS/ACL/query/billing/escaping/translation/data/date/
+width/COLS/close-link/caller/helper/shared assets/geometry/fonts/wrapper changes.
+Original table/helper output and browser parsing remain native acceptance gates.
+The body class is an all-media DOM change, despite screen-only CSS. This target
+has no `printLogPrint`; no audit-payload change is inferred. OS print is unverified.
 
-Embedding: `<style>` tags at column 0 (the Header line's indent), selectors at 2 spaces,
-declarations at 4, one empty line between rules. Removing the common 2-space prefix leaves
-2-space declarations and the blank rule separators.
+## Actual TDD and local verification
 
-Colour only. Not allowed: geometry, typography, wrappers, `!important`, controls, scripts,
-`@media print` or other at-rules, shared-asset links or edits, and any PHP, JS, query,
-translation, escaping, backend, `$COLS`, width, date-format, close-link or caller change.
+Claude `claude-opus-5-5` implemented tests then production through the telemetry
+wrapper, Read/Edit/Write only; no nested coding agents or permission denials.
 
-## Existing behaviour preserved, not cleared
+1. Genuine local mandatory-history RED:11pass1missing-presentation failure BEFORE
+   production. Complete171line fixture authenticated against actual Git base
+   `18647270e0c799189d2dc10f801e8de2bff1a360`, SHA256
+   `41913171ab3d5990e7a537bde32600cb5b5dec5e27373393ab1e889d950b69f5`.
+2. Tests-only `f54dde3990580fde3577efdb27aba15285ad9507`; hosted JS39269661384
+   completed RED solely missing presentation:61other suites/1259tests passed.
+   Hosted completion read after production; local observed RED proves chronology.
+3. First production:12/12 mandatory-history and62Jest suites/1260tests passed;
+   actual nonignored CSS lint FAILED grouped-selector comma/newline rule.
+4. Strengthened format contract FIRST, retaining original inverse/pin/mutants and
+   adding format negatives:10pass2intended live-format failures. Then production
+   changed ONLY comma-space into comma-newline+same selector indentation.
+5. Final mandatory-history12/12 PASS; full target-root Jest62suites/1260tests PASS;
+   PHP syntax and `git diff --check` PASS. Actual extracted CSS substantive
+   nonignored stylelint result zero warnings/errors. Temporary individual sibling
+   dependency links used for config resolution were removed; no install/config or
+   dependency changes. Portable suite excludes the one opt-in Git test.
+6. Controller-owned independent Codex `gpt-6-astra` inspected all5files plus actual
+   caller/Header/config/theme/helper chain: no introduced P1/P2. Independently
+   mandatory-history12/12 and diff-check PASS. Nonblocking discovery-vs-lifecycle
+   test-label wording corrected; no assertion changes.
 
-These remain exactly as at base and are **not cleared** or **security accepted** by this
-change:
+Hosted final exact-head PHP/JS/matrix/coverage and metadata gates remain pending
+at publication. Authoritative final results, including any later failures, live in
+mission `verification/print-billing-report-20261019/DELIVERY.md` and
+`ci-current.json`; local/source success is not hosted/native acceptance.
 
-- The route reads `$_GET` only, while the caller POSTs `the_form`. In practice the POSTed
-  criteria do not appear to reach the route's variables (defaults would apply); this is from
-  source reading only and is unverified at runtime. The mismatch is recorded, not fixed.
-- A GET request with `mode=bill` reaches `BillingReport::billCodesList($list)`, a billing
-  write, from a print view. The ACL is `acct/eob` or `acct/bill` write. Unchanged.
-- The data fetch and GET parsing are duplicated in the route. Unchanged.
-- The close link is `javascript:window.close()` with `target="Main"`. Unchanged.
+## Preserved risks and separate acceptance
 
-## Activation
+- Caller POST versus route GET criteria mismatch remains unchanged, source-observed
+  and not runtime cleared. Duplicate GET parsing and fetches also remain.
+- GET `mode=bill` can call `BillingReport::billCodesList`, which UPDATEs billing;
+  existing acct/eob OR acct/bill write ACL preserved, not security cleared.
+- No application/bootstrap/caller/DB/patient/financial/print/audit request was made.
+- Controller discovery unit tests use active/closed/cross-origin/missing opener
+  snapshots. They do NOT test closing an already-active opener or lifecycle.
+  Real named-target POST opener retention, context activation/reuse/BFCache,
+  default/dark/solar compiled themes, descendants, initial+resized narrow/short,
+  RTL, keyboard/roles, original window.close link and legacy OS print remain open.
+- Source paints only existing body/tables/link; not exhaustive popup or full
+  researched-layout fidelity. Original22/demo/Swedish programmes stay unfinished.
+- Ordinary approval required. No merge/deploy/policy/cron change; preserve Swedish
+  fresh-clone denial, PR112 unpublished work/denied review and other boundaries.
 
-`popup.js` (autoloaded by `Header` through `config/config.yaml` `workbench-popup`) adds
-`oe-workbench-context` only when the opener chain reaches an **active, same-origin**
-workbench shell. A window opened as a named form target is expected to keep `window.opener`.
-With a closed, missing or cross-origin opener the page stays legacy and the rules are inert.
-The opener model is unit-checked against `findWorkbenchHost` only; the actual named-target
-POST in a real browser is unverified.
+## Contracts
 
-The shared `popup.css` popup rules (for example the popup font) still apply when the context
-is active; this contract does not change them.
+- `tests/fixtures/print-billing-report-original.php.txt`: complete nonexecuting base.
+- `tests/clinical/print-billing-report-popup.test.cjs`: dependency-free `node:test`,
+  synthetic candidate/full inverse/digest/anchored semantic+format mutation checks,
+  caller and discovery models. Live untouched production cannot falsely pass.
+- `tests/js/clinical-print-billing-report-popup.test.js`: root Jest wrapper invokes
+  portable suite, no Git by default, supported in hosted shallow checkout.
 
-## Print and audit
-
-The `<style>` is screen-only. The body class is a DOM change in **every** medium, including
-print; it is not a claim about any print audit payload. This target has no `printLogPrint`
-call and the contract forbids adding one. Legacy OS print output is unverified.
-
-## Contrast
-
-The declared pairs (ink on canvas, ink on paper) meet 7:1 as token values. Paired declarations
-on these elements do not prove native effective contrast for descendants, theme overrides,
-`bgcolor` interaction or themed `.title` styles.
-
-## Pending (separate acceptance gates, not run)
-
-- Ordinary approval with no bypass of review or policy.
-- Actual named `'new'` POST target: opener retention and context activation in a real browser.
-- Native compiled default, dark and solar themes.
-- Initial and resized narrow and short windows.
-- RTL, keyboard operation, window close via the existing link.
-- Legacy OS print output.
-- Roles: ACL allow and deny paths.
-- GET-mode billing (`mode=bill`) behaviour and the POST-vs-GET mismatch, which stay unchanged.
-- Output of the `printRecDataOne`/report helpers.
-- Hosted CI and broader PHP/code-quality suites.
-
-## Tests
-
-- Fixture: `tests/fixtures/print-billing-report-original.php.txt`, the complete 171-line base
-  route (`18647270e0c799189d2dc10f801e8de2bff1a360`), non-executable extension, SHA-256
-  `41913171ab3d5990e7a537bde32600cb5b5dec5e27373393ab1e889d950b69f5` pinned.
-- Contract: `tests/clinical/print-billing-report-popup.test.cjs` (node:test, no dependencies).
-  The default run uses no Git. `REQUIRE_GIT_BASELINE=1` adds a mandatory test that
-  authenticates the fixture against the base commit and fails, not skips, without history.
-- Jest wrapper: `tests/js/clinical-print-billing-report-popup.test.js` runs the portable
-  suite with `execFileSync` and never calls Git, so hosted shallow checkouts are supported.
-
-The contract proves a synthetic candidate before production exists, checks the exact inverse
-to the frozen original, and rejects anchored mutants (ACL, billing write path, GET reads,
-query, escaping, translation, `$COLS`, widths, dates, close action, body attributes, print
-additions, caller launch, style placement, media, scope, selectors, properties, values,
-duplicates, relocation and format). Each mutant anchor must exist exactly once and change the
-input before rejection is checked.
-
-Expected pre-production result: every test passes except
-`production route carries the screen-only presentation seam`, which fails only for the missing
-style and body marker. No result has been recorded yet.
+Run `node --test tests/clinical/print-billing-report-popup.test.cjs` for portable
+checks. Set `REQUIRE_GIT_BASELINE=1` for mandatory original authentication; missing
+history fails, not skips. Optional `PRINT_BILLING_REPORT_TARGET_ROOT` targets a
+checkout; fixture still belongs to this test tree. Source-only tests never run PHP.

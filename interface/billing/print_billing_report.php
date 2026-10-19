@@ -59,9 +59,27 @@ if (!isset($_GET["mode"])) {
 <head>
 
 <?php Header::setupHeader(); ?>
+<style media="screen">
+  html.oe-workbench-context body.oe-print-billing-report-document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context body.oe-print-billing-report-document > table {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.oe-print-billing-report-document > a,
+  html.oe-workbench-context body.oe-print-billing-report-document > a .title {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+</style>
 
 </head>
-<body bgcolor="var(--white)" topmargin="0" rightmargin="0" leftmargin="2" bottommargin="0" marginwidth="2" marginheight="0">
+<body class="oe-print-billing-report-document" bgcolor="var(--white)" topmargin="0" rightmargin="0" leftmargin="2" bottommargin="0" marginwidth="2" marginheight="0">
 
 <a href="javascript:window.close();" target="Main"><font class="title"><?php echo xlt('Billing Report')?></font></a>
 <br />
