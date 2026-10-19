@@ -100,8 +100,20 @@ $primaryInfos = ConnectorApi::getPrimaryInfos('');
         padding-bottom: 10px;
       }
     </style>
+    <style media="screen">
+      html.oe-workbench-context body.oe-dorn-route-popup {
+        color: var(--oe-wb-ink);
+        background-color: var(--oe-wb-canvas);
+      }
+
+      html.oe-workbench-context body.oe-dorn-route-popup > form > .form-section {
+        color: var(--oe-wb-ink);
+        background-color: var(--oe-wb-paper);
+        border-color: var(--oe-wb-line);
+      }
+    </style>
 </head>
-<body class="container-fluid">
+<body class="container-fluid oe-dorn-route-popup">
     <form method='post' name='theform' action="route_edit.php?labGuid=<?php echo attr_url($labGuid); ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>">
         <div class="row">
             <div class="col-sm-12">
