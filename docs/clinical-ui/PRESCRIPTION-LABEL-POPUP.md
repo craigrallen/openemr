@@ -1,9 +1,24 @@
 # Prescription label popup (OPEMR-48)
 
-Status: **TDD pending.** Tests are in place and the production change is not.
-Until `interface/drugs/dispense_drug.php` gets the addition below, the contract test
-"actual dispense_drug.php carries exactly the approved screen presentation" is
-expected to fail, and so is the Jest wrapper that runs the contract.
+Status: **production change applied; verification pending.** Not accepted.
+
+- **RED (recorded):** the tests-only commit `ed16477c82f32396cd4c01a3d86a999aa31065ad`
+  failed as intended in hosted JS run `39192180053`. The portable contract had 50
+  passes and 1 failure, the intended "actual dispense_drug.php carries exactly the
+  approved screen presentation" check. Jest had 61 other suites passing (1259 tests)
+  and 1 failing, the wrapper for that same check. Local history mode confirmed the
+  frozen fixture is byte-identical to base `18647270e0c799189d2dc10f801e8de2bff1a360`.
+- **Production:** `interface/drugs/dispense_drug.php` now carries the exact addition
+  below and nothing else.
+- **Local GREEN:** 51/51 portable contracts passed, including mandatory full historical
+  source equality, every negative mutation and the original pin. Both changed PHP
+  files passed syntax checks; `git diff --check` passed.
+- **Independent review:** controller-owned Codex `gpt-6-astra` inspected all six files
+  and caller/shared context sources read-only; no introduced P1/P2 findings. No tests
+  or application requests were run by the reviewer.
+- **Still pending:** final exact-head hosted CI. Executed final evidence is recorded
+  in the PR's final controller comment and external delivery report; native and
+  clinical acceptance remain open regardless of CI.
 
 Scope: a small, screen-only change to the bottle label (`interface/drugs/dispense_drug.php`)
 that puts the label on paper over a quiet canvas inside an active clinical workbench.
@@ -18,11 +33,11 @@ change to dispensing, inventory or audit.
 
    ```css
    html.oe-workbench-context body.oe-prescription-label-popup {
-       background-color: var(--oe-wb-canvas, #f3f7f5);
+     background-color: var(--oe-wb-canvas, #f3f7f5);
    }
 
    html.oe-workbench-context body.oe-prescription-label-popup > center > table {
-       background-color: var(--oe-wb-paper, #fff);
+     background-color: var(--oe-wb-paper, #fff);
    }
    ```
 
