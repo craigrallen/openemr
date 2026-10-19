@@ -11,14 +11,19 @@
 
 ## Status
 
-- **Tests phase (this change):** only the four test-phase files exist. The route is untouched. The
-  contract is written to be RED on exactly one test before production: "production route carries
-  the screen-only presentation seam", failing only with the missing-presentation codes
+- **Tests phase:** the four test-phase files were committed with the route untouched
+  (`82ed3baa68a08cb2cc1feac74a1a0c94e374bc13`). Before any production change the controller ran
+  `REQUIRE_GIT_BASELINE=1 node --test tests/clinical/daysheet-num3-popup.test.cjs` locally and
+  recorded RED: 13 pass, 1 fail, 0 skipped. The single failure was the intended "production route
+  carries the screen-only presentation seam", with only the missing-presentation codes
   (`style-count`, `style-after-header`, `style-before-head-tail`, `body-marker`, `marker-count`,
-  `style-missing`). The controller runs and records that RED; nothing was executed while writing
-  these files.
-- **Production phase:** not started.
-- **Hosted verification is pending.** No hosted CI, review or native run is claimed.
+  `style-missing`). The frozen fixture authenticated against the actual Git base. Evidence:
+  `/Users/craig/.hermes/projects/openemr/verification/daysheet-num3-20261019/local-red.txt`.
+- **Production phase:** the seam is now present in the route (the screen style block after the
+  Header line and the marker class token on the existing body class). Nothing was executed while
+  making this change; local GREEN, review and hosted runs belong to the controller and are not
+  claimed here.
+- **Hosted verification is pending.** No hosted RED or GREEN, CI, review or native run is claimed.
 
 ## Rationale
 
@@ -29,14 +34,16 @@ keyed on a body marker, leaving all accounting source untouched.
 
 ## Scope
 
-A partial screen palette, not a complete researched UI. The only accepted production delta is:
+A partial screen palette only: not the full researched design and not clinical acceptance. The
+only accepted production delta is:
 
 1. One `<style media="screen">` directly after the existing `<?php Header::setupHeader(); ?>` line.
    The original blank line before `</head>` stays.
 2. The marker appended to the existing body class:
    `<body class="body_top">` becomes `<body class="body_top oe-daysheet-num3-document">`.
-   `body_top` stays first. No attribute is added (this body has no legacy margin attributes and
-   none may be introduced).
+   `body_top` stays first. The `class` attribute already exists; only a class token is added to
+   it. No new attribute is introduced (this body has no legacy margin attributes and none may be
+   added).
 
 With `S = html.oe-workbench-context body.oe-daysheet-num3-document`, exactly three rules, each a
 paired colour (ink with a background):
