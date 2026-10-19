@@ -9,7 +9,9 @@
  * own <head> (no Bootstrap/jQuery); non-HTML or pixel-registered outputs are
  * deliberately left untouched. The source guard hashes each page with only
  * the opt-in lines removed, so any other drift (ACL, CSRF, POST/delete,
- * PDF branches, inline styles, script order) fails here.
+ * PDF branches, inline styles, script order) fails here. The dispense label alone
+ * first strips its exact approved OPEMR-48 screen style and body marker; any other
+ * shape of that addition is left in place and breaks the same pin.
  *
  * @package   OpenEMR
  * @link      https://www.open-emr.org
@@ -36,6 +38,20 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
 {
     private const OPT_IN = "<?php echo Header::setupAssets(['workbench-popup']); ?>";
     private const USE_HEADER = 'use OpenEMR\Core\Header;';
+    private const DISPENSE = 'interface/drugs/dispense_drug.php';
+    private const DISPENSE_OPT_IN_LINE = '   ' . self::OPT_IN . "\n";
+    // OPEMR-48: the only approved prescription label addition besides the opt-in.
+    private const DISPENSE_SCREEN_STYLE = "<style media=\"screen\">\n"
+        . "html.oe-workbench-context body.oe-prescription-label-popup {\n"
+        . "  background-color: var(--oe-wb-canvas, #f3f7f5);\n"
+        . "}\n"
+        . "\n"
+        . "html.oe-workbench-context body.oe-prescription-label-popup > center > table {\n"
+        . "  background-color: var(--oe-wb-paper, #fff);\n"
+        . "}\n"
+        . "</style>\n";
+    private const DISPENSE_ORIGINAL_BODY = "</head>\n<body leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>\n";
+    private const DISPENSE_MARKED_BODY = "</head>\n<body class=\"oe-prescription-label-popup\" leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>\n";
 
     private static function root(): string
     {
@@ -62,6 +78,56 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
             static fn (string $line): bool => !in_array(trim($line), [self::OPT_IN, self::USE_HEADER], true),
         );
         return implode('', $kept);
+    }
+
+    /**
+     * Exact inverse of the approved prescription label screen presentation: the
+     * style block directly after the opt-in plus the body marker, both present once.
+     * Any other shape, or any other page, is returned untouched so it drifts.
+     */
+    private static function withoutDispensePresentation(string $path, string $source): string
+    {
+        $styled = self::DISPENSE_OPT_IN_LINE . self::DISPENSE_SCREEN_STYLE;
+        if (
+            $path !== self::DISPENSE
+            || substr_count($source, $styled) !== 1
+            || substr_count($source, self::DISPENSE_SCREEN_STYLE) !== 1
+            || substr_count($source, self::DISPENSE_MARKED_BODY) !== 1
+            || substr_count($source, 'oe-prescription-label-popup') !== 3
+        ) {
+            return $source;
+        }
+        return str_replace(
+            [$styled, self::DISPENSE_MARKED_BODY],
+            [self::DISPENSE_OPT_IN_LINE, self::DISPENSE_ORIGINAL_BODY],
+            $source,
+        );
+    }
+
+    private static function withDispensePresentation(string $source): string
+    {
+        self::assertSame(1, substr_count($source, self::DISPENSE_OPT_IN_LINE));
+        self::assertSame(1, substr_count($source, self::DISPENSE_ORIGINAL_BODY));
+        return str_replace(
+            [self::DISPENSE_OPT_IN_LINE, self::DISPENSE_ORIGINAL_BODY],
+            [self::DISPENSE_OPT_IN_LINE . self::DISPENSE_SCREEN_STYLE, self::DISPENSE_MARKED_BODY],
+            $source,
+        );
+    }
+
+    private static function dispenseBaseline(): string
+    {
+        foreach (self::migratedPages() as [$page, $baseline]) {
+            if ($page === self::DISPENSE) {
+                return $baseline;
+            }
+        }
+        self::fail('dispense label pin missing');
+    }
+
+    private static function dispenseDigest(string $source): string
+    {
+        return hash('sha256', self::withoutOptIn(self::withoutDispensePresentation(self::DISPENSE, $source)));
     }
 
     /**
@@ -162,7 +228,8 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     #[DataProvider('migratedPages')]
     public function testNothingButTheOptInChanged(string $path, string $baseline, array $before): void
     {
-        $this->assertSame($baseline, hash('sha256', self::withoutOptIn(self::source($path))), "$path drifted beyond the opt-in");
+        $source = self::withoutDispensePresentation($path, self::source($path));
+        $this->assertSame($baseline, hash('sha256', self::withoutOptIn($source)), "$path drifted beyond the opt-in");
     }
 
     #[DataProvider('excludedPages')]
@@ -185,7 +252,13 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
     {
         $shot = 'interface/patient_file/summary/shot_record.php';
         $chart = 'interface/forms/vitals/growthchart/chart.php';
+        $dispense = 'interface/drugs/dispense_drug.php';
         return [
+            'dispense: acl guard altered' => [$dispense, "AclMain::aclCheckCore('admin', 'drugs')", "AclMain::aclCheckCore('patients', 'med')"],
+            'dispense: sale query scope altered' => [$dispense, '"s.sale_id = ? AND " .', '"s.pid = ? AND " .'],
+            'dispense: label escaping dropped' => [$dispense, 'nl2br(text($label_text))', 'nl2br($label_text)'],
+            'dispense: label width altered' => [$dispense, "style='width: 200pt'", "style='width: 100%'"],
+            'dispense: print callback dropped' => [$dispense, " win.printLogPrint(window);\n", ''],
             'shot: patient scope dropped' => [$shot, ' where p.pid = ?", [$pid]);', ' where 1 = 1", []);'],
             'shot: pre-upstream signature restored' => [$shot, 'function convertToDataArray($data_array): array', 'function convertToDataArray($data_array)'],
             'shot: extra asset in head' => [$shot, "  </head>\n", "<?php echo Header::setupAssets(['no-bootstrap']); ?>\n  </head>\n"],
@@ -212,13 +285,81 @@ final class WorkbenchPopupHeaderfreeTest extends TestCase
         $this->assertArrayHasKey($path, $pins);
         [$baseline, $optIn] = $pins[$path];
 
-        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn($source) : $source);
+        $digest = static fn (string $source): string => hash('sha256', $optIn ? self::withoutOptIn(self::withoutDispensePresentation($path, $source)) : $source);
         $source = self::source($path);
         $this->assertSame($baseline, $digest($source), "$path must match its pin before the edit");
         $this->assertSame(1, substr_count($source, $search), "$path: edit anchor must be unique");
 
         $edited = str_replace($search, $replace, $source);
         $this->assertNotSame($baseline, $digest($edited), "$path: unapproved edit must break the pin");
+    }
+
+    public function testDispensePresentationIsTheOnlyNormalizedAddition(): void
+    {
+        $baseline = self::dispenseBaseline();
+        $original = self::withoutDispensePresentation(self::DISPENSE, self::source(self::DISPENSE));
+        $this->assertSame($baseline, hash('sha256', self::withoutOptIn($original)));
+        $this->assertSame(0, substr_count($original, 'oe-prescription-label-popup'));
+        $this->assertSame($original, self::withoutDispensePresentation(self::DISPENSE, $original), 'the untouched original is left as is');
+
+        $candidate = self::withDispensePresentation($original);
+        $this->assertNotSame($original, $candidate);
+        $this->assertSame($original, self::withoutDispensePresentation(self::DISPENSE, $candidate));
+        $this->assertSame($baseline, self::dispenseDigest($candidate));
+        $this->assertNotSame($baseline, hash('sha256', self::withoutOptIn($candidate)), 'the raw pin still sees the addition');
+
+        foreach (self::migratedPages() as [$page]) {
+            if ($page !== self::DISPENSE) {
+                $other = self::source($page);
+                $this->assertSame($other, self::withoutDispensePresentation($page, $other), "$page is never normalized");
+            }
+        }
+        $this->assertSame($candidate, self::withoutDispensePresentation('interface/patient_file/summary/shot_record.php', $candidate));
+    }
+
+    /**
+     * Malformed or extra prescription label additions, applied to the approved candidate.
+     *
+     * @return array<string, array{string, string}>
+     *
+     * @codeCoverageIgnore Data providers run before coverage instrumentation starts.
+     */
+    public static function malformedDispensePresentations(): array
+    {
+        $styled = self::DISPENSE_OPT_IN_LINE . self::DISPENSE_SCREEN_STYLE;
+        $scope = 'html.oe-workbench-context body.oe-prescription-label-popup';
+        $marker = 'class="oe-prescription-label-popup"';
+        return [
+            'style block without body marker' => [self::DISPENSE_MARKED_BODY, self::DISPENSE_ORIGINAL_BODY],
+            'body marker without style block' => [$styled, self::DISPENSE_OPT_IN_LINE],
+            'style block duplicated' => [self::DISPENSE_SCREEN_STYLE, self::DISPENSE_SCREEN_STYLE . self::DISPENSE_SCREEN_STYLE],
+            'style block before the opt-in' => [$styled, self::DISPENSE_SCREEN_STYLE . self::DISPENSE_OPT_IN_LINE],
+            'marker duplicated' => [$marker, 'class="oe-prescription-label-popup oe-prescription-label-popup"'],
+            'marker drops legacy margins' => [$marker . " leftmargin='0' ", $marker . ' '],
+            'media print' => ['<style media="screen">', '<style media="print">'],
+            'media dropped' => ['<style media="screen">', '<style>'],
+            'generic body scope' => [$scope . " {\n", "body {\n"],
+            'ink override' => ["  background-color: var(--oe-wb-canvas, #f3f7f5);\n", "  color: var(--oe-wb-ink, #17343b);\n  background-color: var(--oe-wb-canvas, #f3f7f5);\n"],
+            'paper padding' => ["  background-color: var(--oe-wb-paper, #fff);\n", "  background-color: var(--oe-wb-paper, #fff);\n  padding: 4pt;\n"],
+            'extra rule reaching the separator' => ["}\n</style>\n</head>\n", "}\n\n$scope > center > table td[style] {\n  background-color: inherit;\n}\n</style>\n</head>\n"],
+            'label width altered' => ["style='width: 200pt'", "style='width: 100%'"],
+            'labtop size altered' => ["    font-size: 7pt;\n", "    font-size: 8pt;\n"],
+            'acl guard altered' => ["AclMain::aclCheckCore('admin', 'drugs')", "AclMain::aclCheckCore('patients', 'med')"],
+            'sale query scope altered' => ['"s.sale_id = ? AND " .', '"s.pid = ? AND " .'],
+            'label escaping dropped' => ['nl2br(text($label_text))', 'nl2br($label_text)'],
+            'print callback dropped' => [" win.printLogPrint(window);\n", ''],
+        ];
+    }
+
+    #[DataProvider('malformedDispensePresentations')]
+    public function testMalformedDispensePresentationsBreakThePin(string $search, string $replace): void
+    {
+        $candidate = self::withDispensePresentation(self::withoutDispensePresentation(self::DISPENSE, self::source(self::DISPENSE)));
+        $this->assertSame(self::dispenseBaseline(), self::dispenseDigest($candidate));
+        $this->assertSame(1, substr_count($candidate, $search), 'edit anchor must be unique');
+
+        $edited = str_replace($search, $replace, $candidate);
+        $this->assertNotSame(self::dispenseBaseline(), self::dispenseDigest($edited), 'malformed presentation must break the pin');
     }
 
     #[RunInSeparateProcess]
