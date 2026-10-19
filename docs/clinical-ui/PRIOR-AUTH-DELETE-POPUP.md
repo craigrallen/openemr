@@ -1,8 +1,9 @@
 # OPEMR-49: prior-authorization delete popup presentation
 
-Status: **tests only. Production is not changed.** RED and GREEN evidence are
-pending until the controller supplies real runs. Ordinary review and approval
-are required. Nothing here authorizes a merge or a deploy.
+Status: **hosted RED complete; production seam added, unverified.** GREEN,
+review and native acceptance are pending until the controller runs them.
+Ordinary review and approval are required. Nothing here authorizes a merge or
+a deploy.
 
 ## Scope
 
@@ -96,7 +97,8 @@ so the markup is **not** unchanged.
 | `tests/Tests/Isolated/Common/ClinicalWorkspace/WorkbenchPopupHeaderfreeTest.php` | Shared pin test with a route-specific strict inverse |
 | `docs/clinical-ui/PRIOR-AUTH-DELETE-POPUP.md` | This document |
 
-Production target (not edited in this slice): `deleter.php`.
+Production target: `deleter.php`, edited with exactly the approved delta above
+after hosted RED.
 
 ## Source preservation contract
 
@@ -141,17 +143,17 @@ openemr-cmd phpunit-isolated   # WorkbenchPopupHeaderfreeTest
 
 ## Current honest state
 
-- **Tests.** Written. Before the indentation correction, the controller
-  recorded portable results of 54/56 passing. The 2 failures were the expected
-  production-missing checks ("live route equals the approved presentation
-  candidate" and "live route restores byte-for-byte"). PHP syntax and
-  `git diff --check` passed. After that run, the declaration indentation
-  changed from 12 to 10 spaces, consistently across both suites. Those results
-  have **not** been re-run since.
-- **RED.** Pending. The controller must publish a real run against the
-  untouched production route.
-- **GREEN.** Pending. A production edit has not been dispatched yet.
-- **History mode.** Not run yet.
+- **RED.** Complete on hosted CI at tests-only SHA
+  `86129d531721a4dff83466128321e36edd17588e` (JS run 39200088300). Exactly the
+  2 expected production-missing assertions failed ("live route equals the
+  approved presentation candidate" and "live route restores byte-for-byte");
+  the other 54 portable checks and all 61 prior suites passed (1313 passing
+  tests, 5 history skips). Local history mode: 58/61, with 3
+  production-missing failures. No production code existed before RED.
+- **Production.** The approved style block and body marker were then added to
+  `deleter.php`; no other bytes changed. The route was not executed.
+- **GREEN.** Pending. The controller must run the suites against this edit.
+- **Review and native acceptance.** Pending.
 - **Shared test reconciliation.** Parked PR121 and PR122 also change
   `WorkbenchPopupHeaderfreeTest.php`. Their changes were deliberately left out
   here. Reconcile all three when the branches are combined into one release
