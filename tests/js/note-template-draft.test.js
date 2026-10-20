@@ -7,8 +7,6 @@
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
-/* eslint-disable no-new-wrappers -- boxed primitives are deliberate negative inputs */
-
 const fs = require('fs');
 const path = require('path');
 
@@ -515,5 +513,71 @@ describe('OPEMR-61 renameHeading', () => {
     test('revalidates oversized fields in other sections with RangeError', () => {
         const oversizedBody = section('Other', 'b'.repeat(LIMITS.maxBodyLength + 1));
         expect(() => renameHeading([section('Target', 'ok'), oversizedBody], 0, 'New')).toThrow(RangeError);
+    });
+});
+
+describe('OPEMR-61 hardening: aggregate rename boundary, NUL in draft, error text', () => {
+    // 10 sections of "H\n<body>" joined by "\n\n": 10 * 2 + 9 * 2 = 38 fixed chars.
+    function sectionsAtDraftLimit() {
+        const bodies = Array.from({ length: 10 }, () => LIMITS.maxBodyLength);
+        bodies[9] = LIMITS.maxDraftLength - 38 - (9 * LIMITS.maxBodyLength);
+        return bodies.map((len) => section('H', 'x'.repeat(len)));
+    }
+
+    function captureError(fn) {
+        try {
+            fn();
+        } catch (error) {
+            return error;
+        }
+        throw new Error('expected function to throw');
+    }
+
+    test('renameHeading aggregate boundary: same-length rename at maxDraftLength accepted, one more is RangeError', () => {
+        const atLimit = sectionsAtDraftLimit();
+        atLimit.forEach((s) => expect(s.body.length).toBeLessThanOrEqual(LIMITS.maxBodyLength));
+        expect(renderTemplate(atLimit)).toHaveLength(LIMITS.maxDraftLength);
+
+        const same = renameHeading(atLimit, 0, 'H');
+        expect(same[0].heading).toBe('H');
+        expect(renderTemplate(same)).toHaveLength(LIMITS.maxDraftLength);
+
+        expect(() => renameHeading(sectionsAtDraftLimit(), 0, 'HH')).toThrow(RangeError);
+    });
+
+    test('an existing draft containing NUL is preserved exactly when appending []', () => {
+        const existing = 'before\u0000after\u0000';
+        expect(appendTemplate(existing, [])).toBe(existing);
+    });
+
+    test('an existing draft containing NUL is preserved exactly when appending a non-empty template', () => {
+        const existing = 'before\u0000after\u0000';
+        const out = appendTemplate(existing, [section('A', 'b')]);
+        expect(out).toBe(`${existing}\n\nA\nb`);
+        expect(out.startsWith(existing)).toBe(true);
+    });
+
+    test('thrown messages never quote supplied values', () => {
+        const marker = 'ZZ_PRIVATE_MARKER_7Q3';
+        const cases = [
+            ['oversized heading', RangeError,
+                () => renderTemplate([section(`${marker}${'h'.repeat(LIMITS.maxHeadingLength)}`, 'b')])],
+            ['oversized body', RangeError,
+                () => renderTemplate([section('H', `${marker}${'b'.repeat(LIMITS.maxBodyLength)}`)])],
+            ['oversized body via appendTemplate', RangeError,
+                () => appendTemplate('Draft', [section('H', `${marker}${'b'.repeat(LIMITS.maxBodyLength)}`)])],
+            ['oversized new heading', RangeError,
+                () => renameHeading([section('A', 'b')], 0, `${marker}${'n'.repeat(LIMITS.maxHeadingLength)}`)],
+            ['unexpected extra field value', TypeError,
+                () => renderTemplate([{ heading: 'A', body: 'b', extra: marker }])],
+            ['unexpected extra field key', TypeError,
+                () => renderTemplate([{ heading: 'A', body: 'b', [marker]: marker }])],
+        ];
+        cases.forEach(([label, ErrorType, fn]) => {
+            const error = captureError(fn);
+            expect({ label, isExpectedType: error instanceof ErrorType }).toEqual({ label, isExpectedType: true });
+            expect(error.message).not.toContain(marker);
+            expect(String(error)).not.toContain(marker);
+        });
     });
 });
