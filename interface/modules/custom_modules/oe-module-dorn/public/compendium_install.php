@@ -28,7 +28,24 @@ if (!empty($_GET)) {
     $session = SessionWrapperFactory::getInstance()->getActiveSession();
     CsrfUtils::checkCsrfInput(INPUT_GET, dieOnFail: true);
     $labGuid = $_REQUEST['labGuid'];
-    echo "<div style='background-color: white; color: black; padding: 5px;'>" .
+    echo '<html class="oe-dorn-compendium"><head><script src="' .
+        attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot() . '/interface/clinical-workspace/popup.js') .
+        '?v=' .
+        attr_url(\OpenEMR\Core\OEGlobalsBag::getInstance()->getString('v_js_includes')) .
+        '"></script><style>
+@media screen {
+  html.oe-dorn-compendium.oe-workbench-context body {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-dorn-compendium.oe-workbench-context body > .oe-dorn-compendium-result {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+  }
+}
+</style></head>';
+    echo "<div class='oe-dorn-compendium-result' style='background-color: white; color: black; padding: 5px;'>" .
         "<div>" . xlt('Compendium Install') . "</div><ul>";
     ob_flush();
     flush();
