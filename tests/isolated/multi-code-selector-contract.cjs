@@ -493,7 +493,7 @@ describe('shared popup.js activation in a synthetic parent context (portable)', 
         assert.ok(htmlClasses(child).includes('oe-workbench-popup'));
     });
 
-    test('opened as a window from a prescription tab frame (general_edit onAddCode fallback)', () => {
+    test('synthetic opener-window chain from a tab frame (not the modal caller)', () => {
         const top = shell(true);
         const tab = makeWindow({ parent: top, frameElement: tabFrame });
         const child = boot(makeWindow({ opener: tab, body: selectorBody }));

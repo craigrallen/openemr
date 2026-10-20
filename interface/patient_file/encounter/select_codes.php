@@ -177,9 +177,23 @@ if (!empty($codetype)) {
 
     </script>
 
+    <style>
+        @media screen {
+          html.oe-workbench-context body#codes_search.oe-multi-code-selector {
+            color: var(--oe-wb-ink);
+            background-color: var(--oe-wb-canvas);
+          }
+
+          html.oe-workbench-context body#codes_search.oe-multi-code-selector #my_data_table {
+            color: var(--oe-wb-ink);
+            background-color: var(--oe-wb-paper);
+          }
+        }
+    </style>
+
 </head>
 
-<body id="codes_search">
+<body id="codes_search" class="oe-multi-code-selector">
     <div class="container-fluid">
         <form method='post' name='theform'>
             <?php

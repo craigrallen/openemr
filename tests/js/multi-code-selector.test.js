@@ -26,7 +26,7 @@ const CONTRACT = path.join(ROOT, 'tests', 'isolated', 'multi-code-selector-contr
 const HISTORY = process.env.MULTI_CODE_SELECTOR_HISTORY === '1';
 
 function runContract(extraArgs = []) {
-    return spawnSync(process.execPath, ['--test', CONTRACT, ...extraArgs], {
+    return spawnSync(process.execPath, ['--test', '--test-reporter=tap', CONTRACT, ...extraArgs], {
         cwd: ROOT,
         encoding: 'utf8',
         maxBuffer: 64 * 1024 * 1024,
