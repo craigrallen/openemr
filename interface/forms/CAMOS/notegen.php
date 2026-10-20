@@ -35,11 +35,26 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <?php
 if (!(filter_input(INPUT_POST, 'submit_pdf') || filter_input(INPUT_POST, 'submit_html')) && (filter_input(INPUT_GET, 'pid') && filter_input(INPUT_GET, 'encounter'))) {
     ?>
-<html>
+<html class='oe-camos-note-format'>
 <head>
 <title>
     <?php echo xlt('Print Notes'); ?>
 </title>
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot() . '/interface/clinical-workspace/popup.js?v=' . urlencode(OEGlobalsBag::getInstance()->getString('v_js_includes'))); ?>"></script>
+<style>
+@media screen {
+  html.oe-workbench-context.oe-camos-note-format body {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context.oe-camos-note-format form {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
+}
+</style>
 </head>
 <body>
     <?php echo xlt('Choose print format for this encounter report.'); ?><br /><br />

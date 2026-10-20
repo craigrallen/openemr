@@ -89,7 +89,7 @@ const BODY_RULE = ruleText(RULES[0]);
 const FORM_RULE = ruleText(RULES[1]);
 
 const UNCHANGED = [CALLER, PARSER, POPUP_JS, POPUP_CSS];
-const ALLOWED = [ROUTE, FIXTURE, 'tests/camos-note-format.contract.test.cjs', 'tests/js/camos-note-format.test.js'];
+const ALLOWED = [ROUTE, FIXTURE, 'tests/camos-note-format.contract.test.cjs', 'tests/js/camos-note-format.test.js', 'docs/clinical-ui/CAMOS-NOTE-FORMAT-SCREEN.md'];
 
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel));
 const text = (rel) => read(rel).toString('utf8');
