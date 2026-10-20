@@ -44,6 +44,19 @@ $logger = $billingProcessor->execute();
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <style>
+    @media screen {
+      html.oe-workbench-context body.oe-billing-process {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+      }
+
+      html.oe-workbench-context body.oe-billing-process > .container {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-paper, #fff);
+      }
+    }
+    </style>
     <script>
         $(function () {
             $("#close-link").click(function () {
@@ -52,7 +65,7 @@ $logger = $billingProcessor->execute();
         });
     </script>
 </head>
-<body>
+<body class="oe-billing-process">
     <div class="container mt-3">
         <div class="row">
             <div class="col-12">
