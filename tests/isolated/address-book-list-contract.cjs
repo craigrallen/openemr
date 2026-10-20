@@ -27,6 +27,7 @@ const WIDGET = 'interface/super/edit_globals.js';
 const FAX = 'interface/modules/custom_modules/oe-module-faxsms/contact.php';
 const HEADER = 'src/Core/Header.php';
 const CONFIG = 'config/config.yaml';
+const TABS_FULL = 'interface/themes/colors/utilities/tabs-full.scss';
 const BASE = '18647270e0c799189d2dc10f801e8de2bff1a360';
 const FIXTURE_SHA256 = 'b52b51e95aee3c1fd76ccca75a98c7c7245a6272da517afcd6f52c8cfb4680fa';
 const HISTORY = process.argv.includes('--history');
@@ -46,7 +47,7 @@ const CSS = [
     '',
     `  ${GATE} .body_title {`,
     '    color: #26383d;',
-    '    background-color: #fffefa;',
+    '    background-color: #fffefa !important;',
     '  }',
     '',
     `  ${GATE} .table {`,
@@ -81,8 +82,8 @@ function verify(source, fixture = original) {
     if (head < 0 || source.slice(head + STYLE.length, head + STYLE.length + 7) !== '</head>') {
         errors.push('style must immediately precede the closing head');
     }
-    if (count(CSS, '!important') !== 1 || count(source.slice(Math.max(head, 0), head + STYLE.length), '!important') !== 1) {
-        errors.push('body background is the sole important declaration');
+    if (count(CSS, '!important') !== 2 || count(source.slice(Math.max(head, 0), head + STYLE.length), '!important') !== 2) {
+        errors.push('only body and header backgrounds may be important');
     }
     if (count(CSS, GATE) !== 3 || count(CSS, '@media screen') !== 1) errors.push('screen-only scoped rules required');
     const restored = restore(source);
@@ -105,7 +106,7 @@ describe('fixture and exact presentation contract (portable)', () => {
         assert.deepEqual(verify(synthetic), []);
         assert.equal(restore(synthetic), original);
         assert.equal(count(synthetic, '@media screen'), 1);
-        assert.equal(count(synthetic, '!important'), 1);
+        assert.equal(count(synthetic, '!important'), 2);
         assert.ok(synthetic.includes('<div style="margin-top: 110px;" class="table-responsive">'));
     });
 
@@ -118,11 +119,14 @@ describe('fixture and exact presentation contract (portable)', () => {
             '    color: #26383d;',
             '    background-color: #f5f2ed !important;',
             '    color: #26383d;',
-            '    background-color: #fffefa;',
+            '    background-color: #fffefa !important;',
             '    color: #26383d;',
             '    background-color: #fffefa;',
         ]);
-        assert.equal((CSS.match(/!important/g) || []).length, 1);
+        assert.deepEqual(declarationLines.filter((line) => line.includes('!important')), [
+            '    background-color: #f5f2ed !important;',
+            '    background-color: #fffefa !important;',
+        ]);
     });
 });
 
@@ -146,9 +150,11 @@ describe('negative mutations (portable)', () => {
         ['table selector misses table', replace(`  ${GATE} .table {`, `  ${GATE} .table-responsive {`)],
         ['canvas colour drift', replace('background-color: #f5f2ed !important;', 'background-color: #f3f7f5 !important;')],
         ['ink colour drift', replace('    color: #26383d;\n    background-color: #f5f2ed', '    color: #26383c;\n    background-color: #f5f2ed')],
-        ['paper colour drift', replace('background-color: #fffefa;\n  }\n\n  ' + GATE + ' .table', 'background-color: #ffffff;\n  }\n\n  ' + GATE + ' .table')],
+        ['paper colour drift', replace('background-color: #fffefa !important;\n  }\n\n  ' + GATE + ' .table', 'background-color: #ffffff !important;\n  }\n\n  ' + GATE + ' .table')],
         ['body important removed', replace('background-color: #f5f2ed !important;', 'background-color: #f5f2ed;')],
-        ['header important added', replace(`${GATE} .body_title {\n    color: #26383d;`, `${GATE} .body_title {\n    color: #26383d !important;`)],
+        ['header important removed', replace('background-color: #fffefa !important;', 'background-color: #fffefa;')],
+        ['header foreground important added', replace(`${GATE} .body_title {\n    color: #26383d;`, `${GATE} .body_title {\n    color: #26383d !important;`)],
+        ['table important added', replace(`${GATE} .table {\n    color: #26383d;\n    background-color: #fffefa;`, `${GATE} .table {\n    color: #26383d;\n    background-color: #fffefa !important;`)],
         ['geometry changed', replace('margin-top: 110px;', 'margin-top: 120px;')],
         ['font changed', replace(`${GATE} {\n    color: #26383d;`, `${GATE} {\n    font-size: 14px;\n    color: #26383d;`)],
         ['input painted', replace(`${GATE} .table {`, `${GATE} input { color: #26383d; }\n  ${GATE} .table {`)],
@@ -177,6 +183,13 @@ describe('negative mutations (portable)', () => {
 });
 
 describe('real caller and shared asset source chain (portable)', () => {
+    test('tabs-full theme makes body_top and body_title backgrounds important', () => {
+        const theme = read(TABS_FULL);
+        assert.match(theme, /#mainBox > \.body_top,\s*\.body_top_tabs\s*\{\s*background-color: \$dark !important;/);
+        assert.match(theme, /#mainBox_vertical > \.body_top,\s*\.body_top_tabs\s*\{\s*background-color: \$midpale !important;/);
+        assert.match(theme, /\.body_title,\s*\.body_title_tabs\s*\{\s*background-color: \$midpale !important;/);
+    });
+
     test('AddressBookWidget opens the popup=2 selection dialog at modal-lg by 500', () => {
         const widget = read(WIDGET);
         const start = widget.indexOf('class AddressBookWidget');

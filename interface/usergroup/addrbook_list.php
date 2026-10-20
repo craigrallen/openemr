@@ -110,9 +110,27 @@ $res = sqlStatement($query, $sqlBindArray);
 
 <!-- style tag moved into proper CSS file -->
 
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-address-book-list {
+    color: #26383d;
+    background-color: #f5f2ed !important;
+  }
+
+  html.oe-workbench-context body.oe-address-book-list .body_title {
+    color: #26383d;
+    background-color: #fffefa !important;
+  }
+
+  html.oe-workbench-context body.oe-address-book-list .table {
+    color: #26383d;
+    background-color: #fffefa;
+  }
+}
+    </style>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-address-book-list">
 
 <div class="container-fluid">
     <div class="nav navbar-fixed-top body_title">
