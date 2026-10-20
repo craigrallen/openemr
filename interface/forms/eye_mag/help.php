@@ -26,8 +26,22 @@ $form_folder = "eye_mag";
     <meta name="description" content="Eye Exam Help" />
     <meta name="author" content="openEMR: ophthalmology help" />
     <?php Header::setupHeader(); ?>
+    <style>
+    @media screen {
+      html.oe-workbench-context body.oe-eye-shorthand-help {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+      }
+
+      html.oe-workbench-context body.oe-eye-shorthand-help .card,
+      html.oe-workbench-context body.oe-eye-shorthand-help .table {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-paper, #fff);
+      }
+    }
+    </style>
     </head>
-    <body>
+    <body class="oe-eye-shorthand-help">
         <!-- Navbar Section -->
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <div class="container">
