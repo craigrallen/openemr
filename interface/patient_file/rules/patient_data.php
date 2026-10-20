@@ -76,10 +76,23 @@ $(function () {
 });
 
 </script>
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-rule-patient-data {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-context body.oe-rule-patient-data > form {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
+    </style>
 </head>
 
 
-<body class="body_top">
+<body class="body_top oe-rule-patient-data">
 <?php
 
 // Ensure user is authorized
