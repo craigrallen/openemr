@@ -6,8 +6,8 @@
 | Run | 1 of max 2 |
 | Branch | `OPEMR-63-dorn-ack-result-screen` |
 | Base | `18647270e0c799189d2dc10f801e8de2bff1a360` |
-| Phase | Tests and documentation only; route not yet modified |
-| Status | Tests pending — production presentation test is expected to fail until the route change lands |
+| Phase | Route presentation delta written after tests-only commit `1d32dfd0`; uncommitted |
+| Status | Local controller checks pass: portable 52/52, history 56/56, PHP syntax, `git diff --check`, full local Jest (62 suites / 1260 tests), rooted adapter ESLint (zero warnings) and inline-CSS stylelint (zero warnings). Independent static dependency review found no introduced P1/P2. Hosted CI: **pending — no numerical hosted claim**. Not blanket GREEN. |
 
 This is a **partial palette/sheet** on one popup. It is **not** completion of the
 researched UI. `/Users/craig/artifacts/OpenEMR-Research/researched/index.html` was
@@ -16,10 +16,11 @@ used as design reference only.
 ## Actual scope
 
 Route: `interface/modules/custom_modules/oe-module-dorn/public/ack_lab_results.php`
-(66 lines). Frozen copy: `tests/fixtures/dorn-ack-original.php.txt`,
+(original 66 lines; current 80 lines with the presentation delta). Frozen copy:
+`tests/fixtures/dorn-ack-original.php.txt`,
 SHA-256 `7ec2c52b05b9822d6af41d842bf5d2e78cd2551899c43bd6fa0747972bc222fb`.
 
-Planned production delta, and nothing else:
+Production delta (now written in the route), and nothing else:
 
 1. `<body>` becomes `<body class="oe-dorn-ack-result">`.
 2. One inline `<style>` directly after the original `<title>` line, inside `<head>`:
@@ -67,6 +68,13 @@ POST CSRF checks, `admin/users` ACL and denial template, `$_REQUEST` parameters,
    `html.oe-workbench-context`. Without the context class (legacy, standalone) or in
    print, the new selectors match nothing.
 
+Media scope, stated precisely: the inline style is `@media screen` only, so its two
+rules do not apply when printing. The `class="oe-dorn-ack-result"` attribute on
+`<body>` is a markup change and is present in the DOM for all media, including
+print; it is inert only because no rule outside the screen block targets it. That
+is a source-reading conclusion — no actual print output has been produced or
+inspected.
+
 ## Mutating GET prohibition
 
 The route's GET performs `ConnectorApi::sendAck` against the external DORN
@@ -87,17 +95,59 @@ Any rendered verification needs a stubbed connector and explicit authorization.
     sendAck, popup opt-out, PHP import);
   - activation chain text checks for Header, config, popup.css tokens, caller and
     real `popup.js` controller in `vm`;
-  - `live route contains exactly the approved presentation delta` — **fails now by
-    design** (source unchanged).
+  - `live route contains exactly the approved presentation delta` — failed at RED
+    by design (source unchanged); passes in the controller's portable run against
+    the actual source.
   - `--history`: base commit ancestry, fixture and inverse-restored route equal the
     base blob, caller/Header/config/popup/dialog unchanged, and exactly the five
     files (route, fixture, contract, Jest adapter, this doc) changed including
-    untracked. Not required for the portable/shallow suite.
+    untracked. Not required for the portable/shallow suite. Adds 4 tests (56 total).
 - `tests/js/dorn-ack.test.js` — Jest adapter that runs the portable suite with
   `process.execPath`.
 
-Result: **pending**. Nothing was executed in this phase; the controller owns
-execution and independent review.
+### Exact commands
+
+```bash
+# Portable (52 tests)
+node tests/dorn-ack.contract.test.cjs
+# Mandatory Git provenance (56 tests) — run directly
+node tests/dorn-ack.contract.test.cjs --history
+# PHP syntax and whitespace
+php -l interface/modules/custom_modules/oe-module-dorn/public/ack_lab_results.php
+git diff --check
+```
+
+Do **not** use `node --test tests/dorn-ack.contract.test.cjs --history`: this Node
+test runner does not forward `--history`, so it runs only the 52 portable tests and
+gives false confidence about provenance. (Corrected in the contract header comment.)
+## Evidence
+
+| Stage | Where | Result |
+|-------|-------|--------|
+| Local RED (portable suite, run by the controller before the route change) | `/Users/craig/.hermes/projects/openemr/verification/dorn-ack-20261020/red.log` | 52 tests: 51 pass, 1 fail, exit 1. The single failure is the intended one: `live route contains exactly the approved presentation delta` → `AssertionError: route-specific body marker` (0 !== 1). The frozen fixture's actual SHA-256 matched the original digest. |
+| Local portable | `.../dorn-ack-20261020/green-history.log` | **PASS 52/52** against the actual source (controller-run). |
+| Local `--history` provenance | `.../dorn-ack-20261020/green-history-explicit.log` | **PASS 56/56** via `node tests/dorn-ack.contract.test.cjs --history` (controller-run). |
+| PHP syntax | controller-run | **PASS** (`php -l` on the route). |
+| `git diff --check` | controller-run | **PASS**. |
+| Full local Jest (includes adapter `tests/js/dorn-ack.test.js`) | `.../dorn-ack-20261020/jest.log` | **PASS — 62 suites, 1260 tests** (controller-run, local only). |
+| Jest setup failures (retained) | `.../dorn-ack-20261020/jest-initial-setup-failure.log`, `jest-second-setup-failure.log` | Initial config/ESM dependency-resolution failures, kept as evidence. Resolved by 13 temporary individual sibling installed-package links, since **removed**; no config, lockfile, dependency or gate changes. |
+| Adapter ESLint (rooted) | controller-run | **PASS — zero warnings.** |
+| Inline CSS stylelint | `.../dorn-ack-20261020/stylelint.stdout`, `stylelint.stderr` | **PASS — actual dedented inline CSS, non-ignored, zero warnings.** Supersedes the earlier "CSS lint pending" status. |
+| Independent review | `.../dorn-ack-20261020/review.md` | Codex CLI gpt-6-astra, complete five-file/static dependency review: **no introduced P1/P2**; confirmed the actual base inverse itself. `review.md` is evidence. Its P3 (stale CSS-lint status; original 66 vs current 80 lines) is corrected in this document. |
+| Hosted CI | — | **Pending.** No hosted RED or GREEN and no numerical hosted claim. Current changes will be committed and published by the controller later; no PR or SHA is stated here. |
+
+### RED chronology
+
+The RED run happened **before** the tests-only commit `1d32dfd0` was created; it
+was not run against that commit. The test bytes were captured in `1d32dfd0`, and
+the original production route was unchanged at RED. The route delta was written
+afterwards and is still uncommitted.
+
+The route change was written with file edits only. The controller ran the checks
+above (evidence directory `/Users/craig/.hermes/projects/openemr/verification/dorn-ack-20261020`)
+and owns execution, independent review, commit and publication. These are local
+results only; no native PHP output, print output or connector runtime was produced
+or inspected.
 
 ## Gates not passed
 
@@ -107,12 +157,18 @@ execution and independent review.
 - RTL
 - Keyboard and focus order
 - Roles/ACL behaviour with real users
-- Print
+- Print (no actual print evidence; see media scope above)
 - Connector success and connector error paths
 
 ## Still open
 
-- All22 popup set, demo, full researched UI, Swedish localisation: **OPEN**.
+Each of these is a separate gate; none is closed by this change:
+
+- Original 22-feature programme: **OPEN**.
+- Exhaustive popup coverage (every popup, not only this route): **OPEN**.
+- Demo: **OPEN**.
+- Full researched UI: **OPEN**.
+- Swedish acceptance: **OPEN**.
 - No ordinary approval, merge or deploy is claimed.
 - Denied-action boundaries stand: Swedish checkout/publication and PR112
   unpublished work were not inspected, retried or touched.

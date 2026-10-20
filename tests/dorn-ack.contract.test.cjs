@@ -3,7 +3,9 @@
 /**
  * OPEMR-63 DORN acknowledge-result screen source contract.
  * Portable: node --test tests/dorn-ack.contract.test.cjs
- * Local provenance: node --test tests/dorn-ack.contract.test.cjs --history
+ * Local provenance: node tests/dorn-ack.contract.test.cjs --history
+ * (run directly; `node --test ... --history` does not forward the flag and
+ * silently runs only the 52 portable tests)
  *
  * Text only. The route's GET calls ConnectorApi::sendAck against the external
  * DORN connector, so nothing here executes, bootstraps or requests PHP. No
