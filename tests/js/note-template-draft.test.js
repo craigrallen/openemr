@@ -186,7 +186,7 @@ describe('OPEMR-61 renderTemplate', () => {
 
     test('preserves CRLF, Unicode and untrimmed text byte-for-byte', () => {
         // Built from code points so editors/tools cannot silently NFC-normalise the fixture.
-        const precomposed = `caf${String.fromCharCode(0x00e9)}`;
+        const precomposed = String.fromCharCode(0x0063, 0x0061, 0x0066, 0x00e9);
         const decomposed = `cafe${String.fromCharCode(0x0301)}`;
         expect(decomposed).toHaveLength(5);
         expect(decomposed).not.toBe(precomposed);
