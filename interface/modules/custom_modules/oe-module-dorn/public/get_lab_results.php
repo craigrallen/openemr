@@ -51,8 +51,16 @@ if ($resultsGuid) {
     <head>
         <?php Header::setupHeader(['opener']); ?>
         <title><?php echo xlt("Alert"); ?></title>
+        <style>
+            @media screen {
+              html.oe-workbench-context body.oe-dorn-receive-results {
+                background-color: var(--oe-wb-canvas);
+                color: var(--oe-wb-ink);
+              }
+            }
+        </style>
     </head>
-    <body>
+    <body class="oe-dorn-receive-results">
     <?php
     if (isset($response) && is_array($response)) {
         if (count($response) > 1) {

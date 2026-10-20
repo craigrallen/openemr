@@ -6,8 +6,8 @@
 | Run | 1 of max 2 (rotated from PR137) |
 | Branch | `OPEMR-64-dorn-receive-results-screen` |
 | Base | `18647270e0c799189d2dc10f801e8de2bff1a360` |
-| Phase | Tests and documentation only; production route **not** changed |
-| Status | **Tests pending until controller evidence.** No local, hosted, review or rendering result is claimed here. Not GREEN. |
+| Phase | Pre-publication: local controller verification and independent static review complete; implementation uncommitted, not yet published |
+| Status | **Local evidence recorded; hosted CI pending; no PR and no implementation SHA yet.** RED evidence/tests-only commit remains `8dcfb0c8`. Native/rendered/runtime behaviour is unverified. Not accepted; no merge or deploy authorized. |
 
 This is a **partial canvas presentation** on one popup body. It is **not** the
 researched layout and not completion of the researched UI.
@@ -19,10 +19,11 @@ reference only.
 Route: `interface/modules/custom_modules/oe-module-dorn/public/get_lab_results.php`
 (original 76 lines). Frozen copy: `tests/fixtures/dorn-receive-original.php.txt`,
 expected SHA-256 `e0910b5fa6fce3c9f11871f35f237b0e56ab0058570b2030a034f344644fa7b7`
-(the fixture was written by file edit; its digest is checked by the suite and must
-be confirmed by the controller run).
+(the fixture was written by file edit; its digest is checked by the suite, which
+passed in the controller's local runs recorded under Evidence).
 
-Planned production delta (not yet written), and nothing else:
+Production delta (written in the route, locally verified, not yet committed or
+published), and nothing else:
 
 1. `<body>` becomes `<body class="oe-dorn-receive-results">`.
 2. One inline `<style>` directly after the original `<title>` line, inside `<head>`:
@@ -39,8 +40,11 @@ Planned production delta (not yet written), and nothing else:
 Embedded with `<style>`/`</style>` at the head's 8-space level and each CSS line a
 further 4 (12 spaces). No `!important`, no rule on `.alert`/`alert-*`/`role`, no
 geometry, typography, wrappers, print rules, JavaScript, PHP or imports, and no
-shared-file changes. Bootstrap's `alert-info`/`alert-success`/`alert-danger`/
-`alert-warning` palettes and all descendants are left untouched.
+shared-file changes. The existing `alert-info`/`alert-success`/`alert-danger`/
+`alert-warning` palettes are unchanged by this delta; this change adds no alert
+rule. The shared `popup.css` already overrides warning colors, so the alert
+palettes are not claimed to be pristine Bootstrap, and their contrast on the new
+canvas remains an open gate (see below).
 
 Preserved byte for byte (enforced by the full inverse, which removes exactly the
 declared style and body marker and compares against the whole frozen original):
@@ -101,9 +105,9 @@ authorization.
     import, title;
   - activation chain text checks (Header, config, popup.css tokens, caller) and
     the synthetic `popup.js` check;
-  - `live route contains exactly the approved presentation delta` — expected to
-    **fail** against the current unchanged production route (no presentation),
-    and to pass only once the planned delta is written.
+  - `live route contains exactly the approved presentation delta` — failed
+    against the unchanged route in the recorded RED run; passes with the delta
+    written (controller local run, see Evidence).
   - `--history` (run directly with node): base commit present (missing history is
     a failure) and a HEAD ancestor; fixture and inverse-restored route equal the
     base blob; caller/Header/config/popup.js/popup.css/dialog.js equal their base
@@ -113,9 +117,10 @@ authorization.
 - `tests/js/dorn-receive.test.js` — Jest adapter running the portable suite with
   `process.execPath`.
 
-Expected counts (to be confirmed by the controller): portable 72 tests, `--history`
-76. In this tests-only phase the live-route test fails, and in `--history` the
-five-file allowlist also fails because the route is not yet changed.
+Counts: portable 72 tests, `--history` 76. In the tests-only RED phase the
+live-route test failed, and in `--history` the presentation, inverse-restored
+route and five-file allowlist checks failed (see Evidence). With the delta
+written the controller's local runs passed 72/72 and 76/76.
 
 ### Local commands
 
@@ -131,8 +136,48 @@ test runner does not forward `--history` and would run only the portable tests.
 
 ## Evidence
 
-None yet. The controller owns execution, independent review, commit and
-publication. No PR, SHA, local run, hosted run or review is claimed.
+Recorded by the controller, before any production change:
+
+- Tests-only commit: `8dcfb0c8` ("OPEMR-64 Specify receive lab results
+  presentation contracts") on `OPEMR-64-dorn-receive-results-screen`.
+- Local portable RED: 71 pass, 1 fail — the missing route-specific body marker
+  (live-route presentation test).
+- Local `--history` RED: 73 pass, 3 fail — the expected missing presentation,
+  inverse-restored route and five-file allowlist checks.
+- Fixture digest and the positive synthetic candidate / mutant checks passed.
+
+After RED, the production delta above was written to the route by file edit only
+(no PHP execution, no route request, no bootstrap).
+
+Controller local verification (actual local runs, pre-publication):
+
+- Portable suite: 72/72 pass.
+- Direct `--history`: 76/76 pass. This covers the fixture, the full actual Git
+  inverse of the route against the base blob, caller/Header/config/popup dialog
+  files unchanged, and exactly the five expected files changed.
+- Full Jest: 62 suites, 1260 tests pass.
+- `php -l` syntax check: PASS.
+- Rooted adapter ESLint: PASS.
+- Stylelint on the actual, non-ignored, dedented inline CSS: zero warnings, PASS.
+- Diff check: PASS.
+- 13 individual existing sibling dependency links were created temporarily to
+  run these checks and have been removed. No install, no config change and no
+  gate change was made.
+
+Independent review: Codex gpt-6-astra reviewed the complete five-file change and
+the activation context, and reran the portable and `--history` suites. It found
+no introduced P1/P2. This was a static/source review; native and runtime
+behaviour were not exercised and remain unverified.
+
+Not yet done, and not claimed:
+
+- Hosted CI — pending.
+- Implementation commit, implementation SHA and PR — none exist yet.
+- Native/rendered gates (below) — open.
+
+The final controller evidence path is
+`/Users/craig/.hermes/projects/openemr/verification/dorn-receive-20261020/DELIVERY.md`.
+It supersedes any timestamped in-repo note. Not accepted.
 
 ## Gates not passed (all OPEN)
 
@@ -152,6 +197,8 @@ Each is a separate gate; none is closed by this change:
 - Exhaustive popup coverage: **OPEN**.
 - Full researched UI: **OPEN**.
 - Swedish acceptance: **OPEN**.
+- Native contrast, roles, resize, keyboard, RTL, print and connector acceptance
+  (the gates listed above): **OPEN**.
 - Needs ordinary approval; no merge or deploy is claimed or authorized.
 - Denied-action boundaries stand: Swedish checkout/publication denied; PR112
   unpublished and its review denied. None were inspected, retried or touched.
