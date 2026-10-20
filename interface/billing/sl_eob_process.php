@@ -793,6 +793,90 @@ if (!$debug) {
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<!-- OPEMR-69 EOB process presentation: begin -->
+<script>
+(function () {
+    var KEY = 'openemr.navigation.mode';
+    var OWN = 'oe-eob-process-standalone';
+    var html = document.documentElement;
+    var owned = false;
+    var listening = false;
+
+    function wanted() {
+        try {
+            if (window.opener || window.parent !== window) return false;
+            return window.localStorage.getItem(KEY) !== 'legacy';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function drop() {
+        if (!owned) return;
+        html.classList.remove(OWN);
+        owned = false;
+    }
+
+    function sync() {
+        if (!wanted()) {
+            drop();
+        } else if (!html.classList.contains(OWN)) {
+            html.classList.add(OWN);
+            owned = true;
+        }
+    }
+
+    function onStorage(event) {
+        try {
+            if (event.storageArea !== window.localStorage) return;
+        } catch (e) {
+            drop();
+            return;
+        }
+        if (event.key === null || event.key === KEY) sync();
+    }
+
+    function listen(on) {
+        if (on === listening) return;
+        listening = on;
+        window[on ? 'addEventListener' : 'removeEventListener']('storage', onStorage);
+    }
+
+    window.addEventListener('pageshow', function () {
+        listen(true);
+        sync();
+    });
+    window.addEventListener('pagehide', function () {
+        listen(false);
+        drop();
+    });
+    listen(true);
+    sync();
+}());
+</script>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-eob-process,
+  html.oe-eob-process-standalone body.oe-eob-process {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-eob-process form,
+  html.oe-eob-process-standalone body.oe-eob-process form {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.oe-eob-process form > table.table,
+  html.oe-eob-process-standalone body.oe-eob-process form > table.table {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+  }
+}
+</style>
+<!-- OPEMR-69 EOB process presentation: end -->
 <style>
     body {
         font-family: sans-serif;
@@ -830,7 +914,7 @@ if (!$debug) {
 </style>
 <title><?php echo xlt('EOB Posting - Electronic Remittances'); ?></title>
 </head>
-<body class='m-0'>
+<body class='m-0 oe-eob-process'>
 <form action="sl_eob_process.php" method="get">
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 

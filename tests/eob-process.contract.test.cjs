@@ -8,8 +8,10 @@
  *
  * Text only. The route mutates ledgers even on GET/debug paths and archives its
  * output, so nothing here executes, bootstraps or requests PHP. The route is opened
- * with window.open(..., '_blank') and no feature string (implicit noopener), so the
- * inline bootstrap is only exercised in vm window doubles. They model same-origin
+ * with window.open(..., '_blank') and no noopener feature, which does not itself
+ * suppress the opener (unlike an HTML target=_blank link). Retained openers delegate
+ * to the shared popup.js; openerless/COOP contexts use the route bootstrap, which is
+ * only exercised in vm window doubles. They model same-origin
  * opener/parent discovery, storage reads, storage/pageshow/pagehide events and class
  * toggling; not native COOP/opener retention, BFCache, rendering, contrast (the
  * explicit .errdetail/.newdetail/.infdetail/.table-light/inline status colors stay a
