@@ -128,7 +128,7 @@ final class CategoryColourTemplateTest extends TestCase
     {
         $colors = [5 => '#12abEF', 42 => '#ffffff', 107 => '#000000'];
         $xpath = $this->renderCategories(array_map(
-            fn (int $id, string $color): array => $this->category($id, $color),
+            $this->category(...),
             array_keys($colors),
             array_values($colors)
         ));
