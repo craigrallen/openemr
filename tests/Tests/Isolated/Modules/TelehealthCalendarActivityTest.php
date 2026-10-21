@@ -74,6 +74,7 @@ final class TelehealthCalendarActivityTest extends TestCase
             'timezone suffix' => [['provider_last_update' => '2024-06-01 12:00:00Z']],
             'fractional seconds' => [['provider_last_update' => '2024-06-01 12:00:00.000000']],
             'zero date' => [['provider_last_update' => '0000-00-00 00:00:00']],
+            'year zero' => [['provider_last_update' => '0000-06-01 12:00:00']],
             'zero month' => [['provider_last_update' => '2024-00-01 12:00:00']],
             'zero day' => [['provider_last_update' => '2024-06-00 12:00:00']],
             'normalized non-leap day' => [['provider_last_update' => '2023-02-29 12:00:00']],
@@ -86,6 +87,7 @@ final class TelehealthCalendarActivityTest extends TestCase
         ];
     }
 
+    /** @param array<string, mixed> $session */
     #[DataProvider('invalidSessionProvider')]
     public function testInvalidSessionReturnsFalseWithoutLogging(array $session): void
     {
