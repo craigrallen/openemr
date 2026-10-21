@@ -40,7 +40,7 @@ const style = `<?php if ($isAuthorized !== 1) { ?>
 <?php } ?>
 `;
 const bodyBefore = '<body onload="adjustForm();">';
-const bodyAfter = '<body<?php if ($isAuthorized !== 1) { ?> class="ub04-workbench-route"<?php } ?> onload="adjustForm();">';
+const bodyAfter = `<body<?php echo $isAuthorized !== 1 ? ' class="ub04-workbench-route"' : ''; ?> onload="adjustForm();">`;
 const styleAnchor = '</script>\n\n<style>\n.container {';
 
 function once(source, needle, label) {
@@ -96,7 +96,9 @@ test('independent unique-anchor mutants reject protected route behavior', () => 
     const good = candidate();
     for (const [before, after] of protectedAnchors) {
         once(good, before, `mutant anchor ${before}`);
-        assert.throws(() => verify(good.replace(before, after)), /changes beyond/, before);
+        const mutant = good.replace(before, after);
+        assert.notEqual(mutant, good, `mutant must change the candidate: ${before}`);
+        assert.throws(() => verify(mutant), /changes beyond/, before);
     }
 });
 
@@ -107,7 +109,7 @@ test('independent presentation mutants reject scope, guard, media, and selector 
         good.replace(style, style.replace('html.oe-workbench-context body.ub04-workbench-route #menu', 'body #menu')),
         good.replace(style, style.replace('background-color: var(--oe-wb-canvas, #f3f7f5);', 'background-color: var(--oe-wb-canvas, #f3f7f5) !important;')),
         good.replace(style, style.replace('<?php if ($isAuthorized !== 1) { ?>\n', '')),
-        good.replace(bodyAfter, '<body class="ub04-workbench-route" onload="adjustForm();">'),
+        good.replace(bodyAfter, `<body<?php echo ''; ?> onload="adjustForm();">`),
         good.replace(style, style.replace('body.ub04-workbench-route #formhelp', 'body.ub04-workbench-route #p1')),
         good.replace(bodyAfter, bodyBefore),
     ];
