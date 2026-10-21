@@ -39,7 +39,16 @@ final class CategoryColourTemplateTest extends TestCase
     private function renderCategories(array $categories): DOMXPath
     {
         $twig = new Environment(new FilesystemLoader(dirname(__DIR__, 4) . '/templates'), ['autoescape' => false]);
-        $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escape = static function (mixed $value): string {
+            if ($value === null) {
+                $value = '';
+            } elseif (is_int($value)) {
+                $value = (string) $value;
+            } elseif (!is_string($value)) {
+                throw new \UnexpectedValueException('Unsupported category fixture value for Twig escaping');
+            }
+            return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        };
         foreach (['text', 'attr', 'attr_url', 'safe_href'] as $name) {
             $twig->addFilter(new TwigFilter($name, $escape, ['is_safe' => ['html']]));
         }
@@ -84,6 +93,13 @@ final class CategoryColourTemplateTest extends TestCase
         return $nodes->item(0);
     }
 
+    private function queryCount(DOMXPath $xpath, string $expression): int
+    {
+        $nodes = $xpath->query($expression);
+        self::assertNotFalse($nodes);
+        return $nodes->length;
+    }
+
     /** @return array<string, mixed> */
     private function category(int $id, string $color): array
     {
@@ -105,7 +121,7 @@ final class CategoryColourTemplateTest extends TestCase
         self::assertSame('#ffffff', $input->getAttribute('value'));
         $label = $this->one($xpath, '//label[@for="newcolor"]');
         self::assertSame('Colour & shade:', trim($label->textContent));
-        self::assertSame(0, $xpath->query('//input[@name="color[]"]')->length);
+        self::assertSame(0, $this->queryCount($xpath, '//input[@name="color[]"]'));
     }
 
     public function testSparseExistingColoursAndCategoryFieldsKeepTheirValuesAndLabels(): void
@@ -132,7 +148,7 @@ final class CategoryColourTemplateTest extends TestCase
         $constant = $this->one($xpath, '(//input[@name="constantid[]"])[1]');
         self::assertSame('constant" onfocus="alert(1)', $constant->getAttribute('value'));
         self::assertFalse($constant->hasAttribute('onfocus'));
-        self::assertSame(0, $xpath->query('//script[contains(text(), "alert(1)")]')->length);
+        self::assertSame(0, $this->queryCount($xpath, '//script[contains(text(), "alert(1)")]'));
     }
 
     public function testFormSubmissionAndPickerTargetsRemainCompatible(): void
@@ -143,7 +159,7 @@ final class CategoryColourTemplateTest extends TestCase
         self::assertSame('/calendar/categories?mode=save&scope=all', $form->getAttribute('action'));
         self::assertSame('application/x-www-form-urlencoded', $form->getAttribute('enctype'));
         foreach (['newid', 'newname', 'newconstantid', 'newcolor', 'newdesc', 'id[]', 'name[]', 'constantid[]', 'color[]', 'pc_html_or_text'] as $name) {
-            self::assertGreaterThan(0, $xpath->query('//*[@name="' . $name . '"]')->length, $name);
+            self::assertGreaterThan(0, $this->queryCount($xpath, '//*[@name="' . $name . '"]'), $name);
         }
         foreach (['newcolor', 'color[5]', 'color[42]'] as $target) {
             $link = $this->one($xpath, '//a[@onclick="pick(\'pick\',\'' . $target . '\');return false;"]');
