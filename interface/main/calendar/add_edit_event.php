@@ -355,7 +355,9 @@ if (!empty($_POST['form_action']) && ($_POST['form_action'] == "duplicate" || $_
     } else {
         $tmph = (int) $_POST['form_hour'] + 0;
         $tmpm = (int) $_POST['form_minute'] + 0;
-        $tmph = AppointmentTime::to24Hour($tmph, (int) ($_POST['form_ampm'] ?? 0));
+        $meridiemValue = $_POST['form_ampm'] ?? null;
+        $meridiem = is_string($meridiemValue) || is_int($meridiemValue) ? (int) $meridiemValue : 0;
+        $tmph = AppointmentTime::to24Hour($tmph, $meridiem);
 
         $duration = abs($_POST['form_duration']); // fixes #395
     }

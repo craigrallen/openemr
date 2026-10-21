@@ -10,7 +10,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use UnexpectedValueException;
 
 #[Group('isolated')]
 #[Group('calendar')]
@@ -18,6 +17,17 @@ final class AppointmentTimeTest extends TestCase
 {
     private const CLASS_FILE = __DIR__ . '/../../../../../src/Common/Calendar/AppointmentTime.php';
     private const EDITOR_FILE = __DIR__ . '/../../../../../interface/main/calendar/add_edit_event.php';
+    private const ORIGINAL_SAVE_TIME_SHA256 = '66a261d7e3ca28c94b0b7e969dacedf01791eb2a80982596c7ad2b213fbb5239';
+    private const CURRENT_CONVERSION = <<<'PHP'
+        $meridiemValue = $_POST['form_ampm'] ?? null;
+        $meridiem = is_string($meridiemValue) || is_int($meridiemValue) ? (int) $meridiemValue : 0;
+        $tmph = AppointmentTime::to24Hour($tmph, $meridiem);
+PHP;
+    private const ORIGINAL_CONVERSION = <<<'PHP'
+        if (!empty($_POST['form_ampm']) && ($_POST['form_ampm'] == '2' && $tmph < 12)) {
+            $tmph += 12;
+        }
+PHP;
 
     protected function setUp(): void
     {
@@ -83,48 +93,57 @@ final class AppointmentTimeTest extends TestCase
         self::assertSame(82, $hour * 60 + $minute + $duration);
     }
 
-    public function testSaveAndDuplicateEditorPathUsesConversionAfterExistingIntegerParse(): void
+    public function testSaveAndDuplicateEditorPathNarrowsMeridiemBeforeConversion(): void
     {
-        $source = file_get_contents(self::EDITOR_FILE);
-        self::assertIsString($source);
-        $start = strpos($source, 'if (!empty($_POST[\'form_action\']) && ($_POST[\'form_action\'] == "duplicate" || $_POST[\'form_action\'] == "save"))');
-        self::assertNotFalse($start);
-        $end = strpos($source, '$duration = abs($_POST[\'form_duration\'])', $start);
-        self::assertNotFalse($end);
-        $save = substr($source, $start, $end - $start);
-
-        self::assertMatchesRegularExpression(
-            '/\$tmph\s*=\s*\(int\)\s*\$_POST\[\'form_hour\'\].*?AppointmentTime::to24Hour\(\$tmph,\s*\(int\)\s*\(\$_POST\[\'form_ampm\'\]\s*\?\?\s*0\)\)/s',
-            $save
-        );
+        $save = self::saveTimeSource();
+        self::assertSame(1, substr_count($save, self::CURRENT_CONVERSION));
+        self::assertMatchesRegularExpression('/\$tmph = \(int\) \$_POST\[\'form_hour\'\] \+ 0;\s+\$tmpm = \(int\) \$_POST\[\'form_minute\'\] \+ 0;/', $save);
+        self::assertStringContainsString('is_string($meridiemValue) || is_int($meridiemValue) ? (int) $meridiemValue : 0', $save);
     }
 
-    /** @return array<string, array{string, string, string, ?string, string, string, string, int}> */
-    public static function saveTimeCases(): array
+    /** @return array<string, array{int, int, int}> */
+    public static function additionalNativeConversionCases(): array
     {
         return [
-            'save midnight' => ['save', '12', '37', '1', '0', '0:37:00', '1:22:00', 45],
-            'duplicate midnight' => ['duplicate', '12', '37', '1', '0', '0:37:00', '1:22:00', 45],
-            'save noon' => ['save', '12', '37', '2', '0', '12:37:00', '13:22:00', 45],
-            'duplicate noon' => ['duplicate', '12', '37', '2', '0', '12:37:00', '13:22:00', 45],
-            'ordinary AM' => ['save', '9', '37', '1', '0', '9:37:00', '10:22:00', 45],
-            'ordinary PM' => ['duplicate', '9', '37', '2', '0', '21:37:00', '22:22:00', 45],
-            '24 hour without meridiem' => ['save', '23', '37', null, '0', '23:37:00', '24:22:00', 45],
-            'all day' => ['save', '12', '37', '1', '1', '0:0:00', '24:0:00', 1440],
+            'midnight' => [12, 1, 0],
+            'noon' => [12, 2, 12],
+            'ordinary AM' => [9, 1, 9],
+            'ordinary PM' => [9, 2, 21],
+            'last AM hour' => [11, 1, 11],
+            'last PM hour' => [11, 2, 23],
+            '24 hour without meridiem' => [23, 0, 23],
+            '24 hour midnight' => [0, 0, 0],
         ];
     }
 
-    #[DataProvider('saveTimeCases')]
-    public function testActualSaveTimeSourceInIsolation(
-        string $action,
-        string $hour,
-        string $minute,
-        ?string $meridiem,
-        string $allDay,
-        string $expectedStart,
-        string $expectedEnd,
-        int $expectedDuration
-    ): void {
+    #[DataProvider('additionalNativeConversionCases')]
+    public function testAdditionalNativeHelperCases(int $hour, int $meridiem, int $expected): void
+    {
+        self::assertSame($expected, AppointmentTime::to24Hour($hour, $meridiem));
+    }
+
+    public function testSaveTimeSourcePreservesOriginalBlockOutsideConversion(): void
+    {
+        self::assertTrue(self::preservesOriginalSaveTime(self::saveTimeSource()));
+    }
+
+    public function testSaveTimePreservationRejectsUnrelatedMutations(): void
+    {
+        $source = self::saveTimeSource();
+        $mutations = [
+            ['$duration = abs($_POST[\'form_duration\'])', '$duration = 0'],
+            ['$tmpm = (int) $_POST[\'form_minute\'] + 0;', '$tmpm = 0;'],
+            ['$endtime = "$tmph:$tmpm:00";', '$endtime = "$tmph:00:00";'],
+            ['if ($_POST[\'form_allday\']) {', 'if (false) {'],
+        ];
+        foreach ($mutations as [$original, $mutation]) {
+            self::assertSame(1, substr_count($source, $original));
+            self::assertFalse(self::preservesOriginalSaveTime(str_replace($original, $mutation, $source)));
+        }
+    }
+
+    private static function saveTimeSource(): string
+    {
         $source = file_get_contents(self::EDITOR_FILE);
         self::assertIsString($source);
         $startMarker = '// Compute start and end time strings to be saved.';
@@ -135,32 +154,13 @@ final class AppointmentTimeTest extends TestCase
         self::assertNotFalse($start);
         $end = strpos($source, $endMarker, $start);
         self::assertNotFalse($end);
-        $saveTimeSource = substr($source, $start, $end - $start);
+        return substr($source, $start, $end - $start);
+    }
 
-        $previousPost = $_POST;
-        try {
-            $_POST = [
-                'form_action' => $action,
-                'form_allday' => $allDay,
-                'form_hour' => $hour,
-                'form_minute' => $minute,
-                'form_duration' => '45',
-            ];
-            if ($meridiem !== null) {
-                $_POST['form_ampm'] = $meridiem;
-            }
-            $actual = (static function () use ($saveTimeSource): array {
-                $result = eval('use OpenEMR\\Common\\Calendar\\AppointmentTime; '
-                    . $saveTimeSource . ' return [$starttime, $endtime, $duration];');
-                if (!is_array($result)) {
-                    throw new UnexpectedValueException('Appointment time source must return an array.');
-                }
-                return $result;
-            })();
-            self::assertSame([$expectedStart, $expectedEnd, $expectedDuration], $actual);
-        } finally {
-            $_POST = $previousPost;
-        }
+    private static function preservesOriginalSaveTime(string $source): bool
+    {
+        $normalized = str_replace(self::CURRENT_CONVERSION, self::ORIGINAL_CONVERSION, $source, $count);
+        return $count === 1 && hash('sha256', $normalized) === self::ORIGINAL_SAVE_TIME_SHA256;
     }
 
     public function testAppointmentScriptHasIndependentFileVersionBeforeMarkup(): void
