@@ -52,6 +52,7 @@ use OpenEMR\BC\Utilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+use OpenEMR\Common\Calendar\AppointmentTime;
 use OpenEMR\Common\Calendar\DayOfWeek;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -123,6 +124,8 @@ $g_view = AclMain::aclCheckCore("groups", "gcalendar", false, 'view');
 
 
 $eventDispatcher = OEGlobalsBag::getInstance()->getKernel()->getEventDispatcher();
+$appointmentScriptMtime = is_file(__DIR__ . '/add_edit_event.js') ? filemtime(__DIR__ . '/add_edit_event.js') : false;
+$appointmentScriptVersion = $appointmentScriptMtime === false ? '0' : sprintf('%d', $appointmentScriptMtime);
 
 ?>
 <!DOCTYPE html>
@@ -352,9 +355,7 @@ if (!empty($_POST['form_action']) && ($_POST['form_action'] == "duplicate" || $_
     } else {
         $tmph = (int) $_POST['form_hour'] + 0;
         $tmpm = (int) $_POST['form_minute'] + 0;
-        if (!empty($_POST['form_ampm']) && ($_POST['form_ampm'] == '2' && $tmph < 12)) {
-            $tmph += 12;
-        }
+        $tmph = AppointmentTime::to24Hour($tmph, (int) ($_POST['form_ampm'] ?? 0));
 
         $duration = abs($_POST['form_duration']); // fixes #395
     }
@@ -1117,7 +1118,7 @@ window.addEditEventConfig = <?php echo json_encode($addEditEventConfig); ?>;
 
 <!-- Extracted JS functions (Issue #8057) — loaded before event dispatch
      so that RENDER_JAVASCRIPT listeners can call these functions immediately -->
-<script src="add_edit_event.js?v=<?php echo OEGlobalsBag::getInstance()->getString('v_js_includes'); ?>"></script>
+<script src="add_edit_event.js?v=<?php echo attr($appointmentScriptVersion); ?>"></script>
 
 <!-- Event listener dispatch (must remain inline for PHP event system) -->
 <script>
@@ -1868,9 +1869,7 @@ function SubmitForm() {
     <?php if (!(OEGlobalsBag::getInstance()->getBoolean('select_multi_providers')) && empty($_GET['prov'])) { // multi providers appt is not supported by check slot avail window, so skip. && is not provider tab. ?>
     if (f.form_action.value != 'delete') {
         // Check slot availability.
-        var mins = parseInt(f.form_hour.value) * 60 + parseInt(f.form_minute.value);
-        <?php if (OEGlobalsBag::getInstance()->get('time_display_format')  == 1) :
-            ?>if (f.form_ampm.value == '2' && mins < 720) mins += 720;<?php endif ?>
+        var mins = getAppointmentStartMinutes();
         find_available('&cktime=' + mins);
     }
     else {
