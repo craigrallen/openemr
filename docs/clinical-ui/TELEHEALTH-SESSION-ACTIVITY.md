@@ -41,4 +41,7 @@ The original 22-feature map remains [ACCEPTANCE.md](ACCEPTANCE.md). This helper 
 > Hosted full and static checks and ordinary approval remain pending. The
 > optional clock seams preserve existing callers and future acceptance
 > policy. All feature 10 E2E, live, DST, and authorization gates remain open.
-
+>
+> Initial hosted checks on `1667fc5a` found the PHPStan annotation, Rector
+> prefix check, and extra EOF blank-line failures. These were repaired locally;
+> hosted retry and new-head gates remain pending.

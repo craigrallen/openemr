@@ -31,13 +31,13 @@ class CalendarUtils
     }
 
     /**
-     * @param array<string, mixed> $session
+     * @param array<mixed> $session
      * @return bool
      */
     public static function isTelehealthSessionInActiveTimeRange(array $session, ?\DateTimeImmutable $now = null): bool
     {
         $lastUpdate = $session['provider_last_update'] ?? null;
-        if (!is_string($lastUpdate) || str_contains($lastUpdate, "\0") || substr($lastUpdate, 0, 4) === '0000') {
+        if (!is_string($lastUpdate) || str_contains($lastUpdate, "\0") || str_starts_with($lastUpdate, '0000')) {
             return false;
         }
 
