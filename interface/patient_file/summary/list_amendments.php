@@ -19,6 +19,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -34,6 +35,8 @@ if (!AclMain::aclCheckCore('patients', 'amendment')) {
 <?php Header::setupHeader();
 echo "<title>" . xlt('Amendment List') . "</title>";
 ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/amendments-popup.css?v=<?php echo attr_url($clinicalAssets->version('amendments-popup.css')); ?>">
 
 <script>
     function checkForAmendments() {
@@ -67,11 +70,11 @@ echo "<title>" . xlt('Amendment List') . "</title>";
 </script>
 </head>
 
-<body>
-    <div class="container">
+<body class="oe-amendments-list">
+    <div class="container oe-amendments-sheet">
         <div class="row">
             <div class="col-12">
-                <h2><?php echo xlt('List'); ?></h2>
+                <h2 class="oe-amendments-title"><?php echo xlt('List'); ?></h2>
             </div>
             <div class="col-12">
                 <form action="list_amendments.php" name="list_amendments" id="list_amendments" method="post" onsubmit='return top.restoreSession()'>
@@ -80,24 +83,24 @@ echo "<title>" . xlt('Amendment List') . "</title>";
                 $resultSet = sqlStatement($query, [$pid]);
                 if (sqlNumRows($resultSet)) { ?>
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table oe-amendments-toolbar">
                             <tr>
-                                <td>
+                                <td class="oe-amendments-actions">
                                     <a href="javascript:AddAmendment();" class="btn btn-primary btn-add"><?php echo xlt("Add"); ?></a>
                                     <a href="javascript:checkForAmendments();" class="btn btn-primary btn-print"><?php echo xlt("Print Amendments"); ?></a>
                                     <a href="javascript:ListAmendments();" class="btn btn-primary"><?php echo xlt("List"); ?></a>
                                     <a href="demographics.php" class="btn btn-secondary"><?php echo xlt("Return Dashboard"); ?></a>
                                 </td>
-                                <td class="text-right">
+                                <td class="text-right oe-amendments-selection">
                                     <a href="#" class="small" onClick="checkUncheck(1);"><?php echo xlt('Check All');?></a> |
                                     <a href="#" class="small" onClick="checkUncheck(0);"><?php echo xlt('Clear All');?></a>
                                 </td>
                             </tr>
                         </table>
                     </div>
-                    <div id="patient_stats" class="table-responsive">
+                    <div id="patient_stats" class="table-responsive oe-amendments-register">
                         <br />
-                        <table class="table table-borderless mb-3">
+                        <table class="table table-borderless mb-3 oe-amendments-rows">
                             <thead class="table-primary">
                                 <tr>
                                     <th></th>
@@ -123,11 +126,11 @@ echo "<title>" . xlt('Amendment List') . "</title>";
                         </table>
                     </div>
                 <?php } else { ?>
-                    <div class="btn-group">
+                    <div class="btn-group oe-amendments-actions">
                         <a href="javascript:AddAmendment();" class="btn btn-primary btn-add"><?php echo xlt("Add"); ?></a>
                         <a href="javascript:ListAmendments();" class="btn btn-primary"><?php echo xlt("List"); ?></a>
                     </div>
-                    <p class="text-danger">
+                    <p class="text-danger oe-amendments-empty">
                         <?php echo xlt("No amendment requests available"); ?>
                     </p>
                 <?php } ?>
