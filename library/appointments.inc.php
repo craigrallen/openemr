@@ -495,7 +495,6 @@ function fetchXPastAppts($pid2, $pastApptsNumber, $orderOfAppts = '1'): array
 }
 
 // get the event slot size in seconds
-/** @return int|float */
 function getSlotSize()
 {
     if (OEGlobalsBag::getInstance()->has('calendar_interval')) {
@@ -508,7 +507,7 @@ function getSlotSize()
 function getAvailableSlots($from_date, $to_date, $provider_id = null, $facility_id = null): array
 {
     $slot_size = getSlotSize();
-    if ($slot_size <= 0) {
+    if ((!is_int($slot_size) && !is_float($slot_size)) || $slot_size <= 0) {
         return [];
     }
 
