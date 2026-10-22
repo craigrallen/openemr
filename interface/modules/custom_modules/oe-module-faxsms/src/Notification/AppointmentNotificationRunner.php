@@ -241,8 +241,23 @@ class AppointmentNotificationRunner
      */
     private function isInCronWindow(array $row): bool
     {
-        $eventDate = self::stringFromRow($row, 'pc_eventDate');
-        $startTime = self::stringFromRow($row, 'pc_startTime');
+        $eventDate = $row['pc_eventDate'] ?? null;
+        $startTime = $row['pc_startTime'] ?? null;
+        // Only complete calendar dates and clock times may enter strtotime().
+        // Its permissive parser otherwise supplies missing fields or rolls
+        // invalid dates/times into a different appointment instant.
+        if (
+            !is_string($eventDate)
+            || preg_match('/\A([0-9]{4})-([0-9]{2})-([0-9]{2})\z/', $eventDate, $dateParts) !== 1
+            || !checkdate((int)$dateParts[2], (int)$dateParts[3], (int)$dateParts[1])
+            || !is_string($startTime)
+            || preg_match('/\A([0-9]{2}):([0-9]{2})(?::([0-9]{2}))?\z/', $startTime, $timeParts) !== 1
+            || (int)$timeParts[1] > 23
+            || (int)$timeParts[2] > 59
+            || (isset($timeParts[3]) && (int)$timeParts[3] > 59)
+        ) {
+            return false;
+        }
         $apptTs = strtotime(sprintf('%s %s', $eventDate, $startTime));
         if ($apptTs === false) {
             return false;

@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
+use ReflectionClass;
 
 // The production runner calls global text() while rendering a row. Load the
 // real escaping helper; no notification helper, DB, or module bootstrap is run.
@@ -31,7 +32,8 @@ final class AppointmentNotificationInputTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        $loader = reset(ClassLoader::getRegisteredLoaders());
+        $loaders = ClassLoader::getRegisteredLoaders();
+        $loader = reset($loaders);
         if (!$loader instanceof ClassLoader) {
             self::fail('Composer ClassLoader is required by the isolated runner.');
         }
@@ -50,6 +52,18 @@ final class AppointmentNotificationInputTest extends TestCase
     protected function tearDown(): void
     {
         date_default_timezone_set($this->previousTimezone);
+    }
+
+    public function testRunnerUsesProductionSource(): void
+    {
+        $expected = realpath(
+            dirname(__DIR__, 6)
+            . '/interface/modules/custom_modules/oe-module-faxsms/src/Notification/AppointmentNotificationRunner.php'
+        );
+        $source = (new ReflectionClass(AppointmentNotificationRunner::class))->getFileName();
+        self::assertIsString($expected);
+        self::assertIsString($source);
+        self::assertSame($expected, realpath($source));
     }
 
     /**
@@ -76,9 +90,17 @@ final class AppointmentNotificationInputTest extends TestCase
     {
         return [
             'February 30 rolls into March' => [['pc_eventDate' => '2026-02-30']],
+            'non-leap February 29' => [['pc_eventDate' => '2026-02-29']],
+            'leap February 30' => [['pc_eventDate' => '2028-02-30']],
+            'zero month' => [['pc_eventDate' => '2026-00-02']],
+            'zero day' => [['pc_eventDate' => '2026-03-00']],
+            'zero year' => [['pc_eventDate' => '0000-03-02']],
             'whitespace around date' => [['pc_eventDate' => ' 2026-03-02 ']],
+            'date trailing newline' => [['pc_eventDate' => "2026-03-02\n"]],
             'alternate date syntax' => [['pc_eventDate' => '03/02/2026']],
+            'Unicode digits in date' => [['pc_eventDate' => '２０２６-03-02']],
             'whitespace around time' => [['pc_startTime' => ' 10:00:00 ']],
+            'time trailing newline' => [['pc_startTime' => "10:00:00\n"]],
             'missing time' => [['pc_startTime' => null]],
             'empty time' => [['pc_startTime' => '']],
             'relative time' => [['pc_startTime' => '10am']],
@@ -87,6 +109,7 @@ final class AppointmentNotificationInputTest extends TestCase
             'invalid minute' => [['pc_startTime' => '10:60:00']],
             'invalid second' => [['pc_startTime' => '10:00:60']],
             'fractional second' => [['pc_startTime' => '10:00:00.5']],
+            'Unicode digits in time' => [['pc_startTime' => '１０:00:00']],
             'numeric date' => [['pc_eventDate' => 20260302]],
             'numeric time' => [['pc_startTime' => 100000]],
             'array date' => [['pc_eventDate' => ['2026-03-02']]],
@@ -124,6 +147,19 @@ final class AppointmentNotificationInputTest extends TestCase
             'empty date' => [''],
             'relative date' => ['tomorrow'],
         ];
+    }
+
+    public function testAbsentKeysNeverEnterDelivery(): void
+    {
+        foreach (['pc_eventDate', 'pc_startTime'] as $key) {
+            $row = self::row();
+            unset($row[$key]);
+            $client = $this->emailClientExpectingChecks(0);
+            $result = $this->runner([$row], $client)->run();
+
+            self::assertSame(1, $result->scanned);
+            self::assertSame(0, $result->inWindow);
+        }
     }
 
     /**
@@ -172,6 +208,37 @@ final class AppointmentNotificationInputTest extends TestCase
         self::assertSame(0, $result->sent);
     }
 
+    public function testStockholmSpringDstNormalizationRetainsWindowPolicy(): void
+    {
+        date_default_timezone_set('Europe/Stockholm');
+        // 02:30 does not occur on this date. strtotime() historically
+        // normalizes it to 03:30, and the run-only lexical gate preserves it.
+        self::assertSame(strtotime('2026-03-29 03:30:00'), strtotime('2026-03-29 02:30:00'));
+        $client = $this->emailClientExpectingChecks(1);
+        $result = $this->runner(
+            [self::row(['pc_eventDate' => '2026-03-29', 'pc_startTime' => '02:30:00'])],
+            $client,
+            '2026-03-28 03:30:00',
+        )->run();
+
+        self::assertSame(1, $result->inWindow);
+        self::assertSame(0, $result->sent);
+    }
+
+    public function testStockholmOrdinaryDateAtSendTimeIsAccepted(): void
+    {
+        date_default_timezone_set('Europe/Stockholm');
+        $client = $this->emailClientExpectingChecks(1);
+        $result = $this->runner(
+            [self::row(['pc_eventDate' => '2026-04-15', 'pc_startTime' => '10:00:00'])],
+            $client,
+            '2026-04-14 10:00:00',
+        )->run();
+
+        self::assertSame(1, $result->inWindow);
+        self::assertSame(0, $result->sent);
+    }
+
     public function testMixedBatchScansValidRowsWhileRejectingMalformedRows(): void
     {
         $client = $this->emailClientExpectingChecks(2);
@@ -208,13 +275,16 @@ final class AppointmentNotificationInputTest extends TestCase
     ): AppointmentNotificationRunner
     {
         $clock = new class ($now) implements ClockInterface {
+            private readonly \DateTimeZone $timezone;
+
             public function __construct(private readonly string $fixedNow)
             {
+                $this->timezone = new \DateTimeZone(date_default_timezone_get());
             }
 
             public function now(): \DateTimeImmutable
             {
-                return new \DateTimeImmutable($this->fixedNow, new \DateTimeZone('UTC'));
+                return new \DateTimeImmutable($this->fixedNow, $this->timezone);
             }
         };
 
@@ -225,8 +295,7 @@ final class AppointmentNotificationInputTest extends TestCase
                 EmailClient $client,
                 ClockInterface $clock,
                 int $notificationHours,
-            )
-            {
+            ) {
                 parent::__construct(NotificationChannel::EMAIL, $client, $notificationHours, 1, true, '', 'test', clock: $clock);
             }
 
@@ -237,8 +306,9 @@ final class AppointmentNotificationInputTest extends TestCase
         };
     }
 
-    /** @param array<string, mixed> $changes
-     *  @return array<string, mixed>
+    /**
+     * @param array<string, mixed> $changes
+     * @return array<string, mixed>
      */
     private static function row(array $changes = []): array
     {
