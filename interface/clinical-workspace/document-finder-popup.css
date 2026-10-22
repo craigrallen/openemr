@@ -1,0 +1,86 @@
+/* Document Finder inside an active workbench popup: paint only. */
+@media screen {
+  /* .body_top carries the colour themes' background-color !important (color_base.scss). */
+  html.oe-workbench-popup body.document-finder-popup {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-popup body.document-finder-popup .document-finder-document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  /* Bootstrap's .bg-light is background-color !important. */
+  html.oe-workbench-popup body.document-finder-popup #searchCriteria.bg-light {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  /* Excludes .alert from the new status paint. The inherited #searchstatus foreground still takes
+     part there, so semantic contrast for .alert-success/.alert-danger is not guaranteed by this sheet. */
+  html.oe-workbench-popup body.document-finder-popup #searchstatus:not(.alert) {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #searchResultsHeader th {
+    color: var(--oe-wb-muted, #526a70);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  /* This sheet stops painting hovered cells; the original #336699 row highlight is unchanged.
+     Computed cell background transparency under every theme is unverified. */
+  html.oe-workbench-popup body.document-finder-popup #searchResults .oneresult:not(:hover) > td {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  /* Separate :focus and :focus-visible rules so an unsupported pseudo-class cannot drop the fallback. */
+
+  /* Lower-specificity rings come before the higher-specificity field paint (no-descending-specificity). */
+  html.oe-workbench-popup body.document-finder-popup #searchparm:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #searchparm:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid) {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid):focus {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid):disabled {
+    color: var(--oe-wb-disabled-ink, #4a5f64);
+    background-color: var(--oe-wb-disabled-paper, #eef2f1);
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid)[readonly] {
+    color: var(--oe-wb-disabled-ink, #4a5f64);
+    background-color: var(--oe-wb-disabled-paper, #eef2f1);
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #theform:not(.was-validated) #searchparm:not(.is-invalid, .is-valid)::placeholder {
+    color: var(--oe-wb-muted, #526a70);
+    opacity: 1;
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #submitbtn:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.document-finder-popup #submitbtn:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 1px;
+  }
+}

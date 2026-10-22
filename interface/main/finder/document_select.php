@@ -23,6 +23,7 @@
 
 require_once("../../globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -90,6 +91,8 @@ foreach ($searchResult as $docResult) {
 <html>
 <head>
     <?php Header::setupHeader(['common', 'opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/document-finder-popup.css?v=<?php echo attr_url($clinicalAssets->version('document-finder-popup.css')); ?>">
     <title><?php echo htmlspecialchars(xl('Document Finder'), ENT_NOQUOTES); ?></title>
 
     <style>
@@ -142,8 +145,8 @@ foreach ($searchResult as $docResult) {
     </style>
 </head>
 
-<body class="body_top">
-<div class="container-responsive">
+<body class="body_top document-finder-popup">
+<div class="container-responsive document-finder-document">
     <div id="searchCriteria" class="bg-light p-2 pt-3">
         <form method='post' name='theform' id="theform" action='document_select.php'>
             <div class="form-row">
