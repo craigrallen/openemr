@@ -506,6 +506,11 @@ function getSlotSize()
 
 function getAvailableSlots($from_date, $to_date, $provider_id = null, $facility_id = null): array
 {
+    $slot_size = getSlotSize();
+    if ((!is_int($slot_size) && !is_float($slot_size)) || $slot_size <= 0) {
+        return [];
+    }
+
     $appointments = fetchAllEvents($from_date, $to_date, $provider_id, $facility_id);
     $appointments = sortAppointments($appointments, "date");
     $from_datetime = strtotime($from_date . " 00:00:00");
@@ -571,8 +576,8 @@ function getAvailableSlots($from_date, $to_date, $provider_id = null, $facility_
             $start_datetime = strtotime($date . " " . $start_time);
             $next_appointment_datetime = strtotime($next_appointment_date . " " . $next_appointment_time);
             $curr_time = $start_datetime;
-            while ($curr_time < $next_appointment_datetime - (getSlotSize() / 2)) {
-                //create a new appointment ever 15 minutes
+            while ($curr_time + $slot_size <= $next_appointment_datetime) {
+                // Create a slot at each configured interval.
                 $time = date("H:i:s", $curr_time);
                 $available_slot = createAvailableSlot(
                     $appointments[$i]['pc_eventDate'],
@@ -582,7 +587,7 @@ function getAvailableSlots($from_date, $to_date, $provider_id = null, $facility_
                     $appointments[$i]['umname']
                 );
                 $availableSlots [] = $available_slot;
-                $curr_time += getSlotSize(); // add a 15-minute slot
+                $curr_time += $slot_size;
             }
         }
     }

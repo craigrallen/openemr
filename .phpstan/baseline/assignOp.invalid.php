@@ -1062,11 +1062,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../library/ajax/graph_track_anything.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Binary operation "\\+\\=" between float\\|int\\|false and mixed results in an error\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../library/appointments.inc.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Binary operation "\\.\\=" between \'\\(\\(e\\.pc_endDate \\>\\= \\?…\' and mixed results in an error\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../library/appointments.inc.php',
