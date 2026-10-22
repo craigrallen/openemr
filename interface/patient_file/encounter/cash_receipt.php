@@ -35,9 +35,22 @@ $first_issue = 1;
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-encounter-cash-receipt {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-context body.oe-encounter-cash-receipt > table {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
+</style>
 </head>
 
-<body class="bg-white ml-1">
+<body class="bg-white ml-1 oe-encounter-cash-receipt">
 <p>
 <?php
 $titleres = getPatientData($pid, "fname,lname,providerID");
