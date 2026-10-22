@@ -30,17 +30,33 @@ class CalendarUtils
         return $dateTime >= $beforeTime && $dateTime <= $afterTime;
     }
 
-    public static function isTelehealthSessionInActiveTimeRange(array $session)
+    /**
+     * @param array<mixed> $session
+     * @return bool
+     */
+    public static function isTelehealthSessionInActiveTimeRange(array $session, ?\DateTimeImmutable $now = null): bool
     {
-        $dateTime = \DateTime::createFromFormat("Y-m-d H:i:s", $session['provider_last_update']);
-        return CalendarUtils::isUserLastSeenTimeInActiveRange($dateTime);
+        $lastUpdate = $session['provider_last_update'] ?? null;
+        if (!is_string($lastUpdate) || str_contains($lastUpdate, "\0") || str_starts_with($lastUpdate, '0000')) {
+            return false;
+        }
+
+        $dateTime = \DateTime::createFromFormat('!Y-m-d H:i:s', $lastUpdate);
+        $errors = \DateTime::getLastErrors();
+        if ($dateTime === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))
+            || $dateTime->format('Y-m-d H:i:s') !== $lastUpdate
+        ) {
+            return false;
+        }
+
+        return CalendarUtils::isUserLastSeenTimeInActiveRange($dateTime, $now);
     }
 
-    public static function isUserLastSeenTimeInActiveRange(\DateTime $dateTime): bool
+    public static function isUserLastSeenTimeInActiveRange(\DateTime $dateTime, ?\DateTimeImmutable $now = null): bool
     {
-        $currentDateTime = new \DateTime();
+        $currentDateTime = $now ?? new \DateTimeImmutable();
         ServiceContainer::getLogger()->debug("checking time ", ['user_last_update_time' => $currentDateTime->format("Y-m-d H:i:s"), 'now' => $currentDateTime->format("Y-m-d H:i:s")]);
-        return $currentDateTime < $dateTime->add(new \DateInterval("PT15S"));
+        return $currentDateTime < (clone $dateTime)->add(new \DateInterval("PT15S"));
     }
 
     public static function getCalendarCategory($id)

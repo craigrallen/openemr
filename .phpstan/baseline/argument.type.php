@@ -8112,16 +8112,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../interface/modules/custom_modules/oe-module-comlink-telehealth/src/TelehealthGlobalConfig.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Parameter \\#1 \\$dateTime of static method Comlink\\\\OpenEMR\\\\Modules\\\\TeleHealthModule\\\\Util\\\\CalendarUtils\\:\\:isUserLastSeenTimeInActiveRange\\(\\) expects DateTime, DateTime\\|false given\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/custom_modules/oe-module-comlink-telehealth/src/Util/CalendarUtils.php',
-];
-$ignoreErrors[] = [
-    'message' => '#^Parameter \\#2 \\$datetime of static method DateTime\\:\\:createFromFormat\\(\\) expects string, mixed given\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../interface/modules/custom_modules/oe-module-comlink-telehealth/src/Util/CalendarUtils.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Parameter \\#1 \\$instituationId of method Comlink\\\\OpenEMR\\\\Modules\\\\TeleHealthModule\\\\Models\\\\UserVideoRegistrationRequest\\:\\:setInstituationId\\(\\) expects string, mixed given\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../interface/modules/custom_modules/oe-module-comlink-telehealth/tests/Tests/Unit/TeleHealthVideoRegistrationControllerTest.php',
