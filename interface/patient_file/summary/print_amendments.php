@@ -91,9 +91,21 @@ function printAmendment($amendmentID, $lastAmendment): void
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <style media="screen">
+      html.oe-workbench-context body.oe-print-amendments-document {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-canvas, #f3f7f5);
+      }
+
+      html.oe-workbench-context body.oe-print-amendments-document > table {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-paper, #fff);
+        box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+      }
+    </style>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-print-amendments-document">
     <span class='title'><?php echo xlt("Amendments for") . " " . text($patientName); ?></span>
     <p></p>
 
