@@ -37,6 +37,7 @@ require_once $srcDir . '/clinical_rules.php';
 use OpenEMR\Common\{
     Acl\AccessDeniedHelper,
     Acl\AclMain,
+    Assets\ClinicalWorkspaceAssets,
     Csrf\CsrfUtils,
     Logging\SystemLogger,
     Session\SessionUtil,
@@ -169,6 +170,7 @@ if (empty($_POST['form_csvexport'])) {
     <title><?php echo xlt('Appointments Report'); ?></title>
 
     <?php Header::setupHeader(["datetime-picker","report-helper"]); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/appointments-report-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('appointments-report-popup.css')); ?>">
 
     <script>
         $(function () {
@@ -238,7 +240,7 @@ if (empty($_POST['form_csvexport'])) {
 <form method='post' name='theform' id='theform' action='appointments_report.php' onsubmit='return top.restoreSession()'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
-<div id="report_parameters">
+<div id="report_parameters" class="oe-appointments-report-sheet">
 
 <table>
     <tr>

@@ -1,0 +1,24 @@
+@media screen {
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet .text {
+    color: var(--oe-wb-ink, #17343b) !important;
+  }
+
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet .form-control:focus,
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet input[type='checkbox']:focus,
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet a.btn:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet .form-control:focus-visible,
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet input[type='checkbox']:focus-visible,
+  html.oe-workbench-context #report_parameters.oe-appointments-report-sheet a.btn:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+}
