@@ -18,6 +18,7 @@
 
 require_once('../../globals.php');
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -52,6 +53,8 @@ if ($searchby && $searchparm) {
 <head>
     <title><?php echo xlt('Group Finder'); ?></title>
     <?php Header::setupHeader('opener'); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/group-finder-popup.css?v=<?php echo attr_url($clinicalAssets->version('group-finder-popup.css')); ?>">
 
     <style>
         form {
@@ -182,7 +185,7 @@ if ($searchby && $searchparm) {
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-group-finder-popup">
 
 <div id="searchCriteria">
     <form method='post' name='theform' id="theform" action='find_group_popup.php'>

@@ -34,6 +34,7 @@ final readonly class ClinicalWorkspaceAssets
         'encounter-document.css',
         'finder.css',
         'global-messages.css',
+        'group-finder-popup.css',
         'history-document.css',
         'history-editor.css',
         'issue-popup.css',
