@@ -204,6 +204,18 @@
         $(".event").dblclick(function() { EditEvent(this); });
         $(".event").mouseover(function() { $(this).toggleClass("event_highlight"); });
         $(".event").mouseout(function() { $(this).toggleClass("event_highlight"); });
+        $('#bigCal div.event_appointment a.event_time:not([href])')
+            .attr({ tabindex: '0', role: 'button' })
+            .off('keydown.eventTimeAccess')
+            .on('keydown.eventTimeAccess', function(e) {
+                if (e.target !== this || e.repeat || (e.originalEvent && e.originalEvent.repeat) ||
+                    e.ctrlKey || e.altKey || e.metaKey || e.shiftKey ||
+                    (e.key !== 'Enter' && e.key !== ' ')) {
+                    return;
+                }
+                e.preventDefault();
+                event_time_click(this);
+            });
         $(".tdMonthName-small").click(function() {
             dpCal = $("#datePicker > table");
             mp = $("#monthPicker");
