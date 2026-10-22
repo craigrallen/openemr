@@ -1,0 +1,17 @@
+# OPEMR-81: calendar category colour control
+
+## Scope and path
+
+The original Feature 16 category editor already renders through `postcalendar_admin_categories()` in `interface/main/calendar/modules/PostCalendar/pnadmin.php`, using `CalendarRenderer` and `templates/calendar/default/admin/submit_category.html.twig`. The form has a native `newcolor` colour input and one `color[]` input per existing category. This fix gives `newcolor` a valid literal `#ffffff` default and associates the two existing translated colour captions with their inputs. The caption colon and line break remain visible. Existing category values still populate their controls through `cat.color|attr`; there is no new palette or arbitrary colour restriction in the template.
+
+The existing confirmation step carries `newcolor` and the `color` array as hidden values to `postcalendar_admin_categoriesUpdate()`. That function writes existing colours to `pc_catcolor` through its update SQL and passes a new colour to `postcalendar_adminapi_addCategories()` for insertion. `postcalendar_userapi_getCategories()` in `interface/main/calendar/modules/PostCalendar/common.api.php` reads `pc_catcolor`; event queries in `pnuserapi.php` also join categories to obtain it. The day, week, and month screen and print views continue through `CalendarRenderDataBuilder` and their existing Twig templates. The template change does not alter these storage or rendering paths, booking, recurrence, no-show behaviour, roles, forms, or picker callbacks.
+
+`var(--white)` is a CSS variable expression, not a valid value for an HTML `input type="color"`. The native control requires a colour value independent of the active theme. `#ffffff` provides the intended white initial value.
+
+## Evidence and remaining checks
+
+Before the production edit, the controller obtained a genuine local RED: the native PHP suite had 3 tests, 45 assertions, and 2 failures for the invalid default and missing label association. The corrected source-driven jsdom run had 4 tests, with 3 failures and 1 pass, covering the native FormData value, default, and labels. An earlier JS TextEncoder setup failure was superseded by that corrected run; it is not the feature RED. There is no hosted RED claim.
+
+Final local GREEN runs passed: native PHP, 3 tests and 95 assertions; source-driven JS, 4 tests; full Jest, 62 suites and 1,263 tests; ESLint, PHP syntax, rooted PHPCS and focused PHPStan level 10. The PHP test renders the shipped template through `CalendarRenderer` with test-local Twig escaping and a header fixture; it does not bootstrap the application. That test-local escaping models fixture output only and does not validate production escaping or security. The JS test reads the source into jsdom; it is not an authenticated browser or save end-to-end test. The initial focused PHPStan run reported four typing issues; honest fixture-value narrowing and checked XPath query results resolve these without suppressions. Hosted verification remains pending. Independent Gemini review of all four files found no introduced production/test defect; its documentation-staleness finding is corrected here. The controller verified all original template bytes outside the three changed lines are identical to the Git base.
+
+Ordinary approval and native authenticated sandbox save, day/week/month display, contrast, keyboard, and role checks remain parked. This is a minimal control fix, not completion of the full configurable-colour feature or researched UI work. No merge, deploy, or live write is part of this change.

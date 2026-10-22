@@ -61,8 +61,8 @@
             							<td class="align-top text-left">
 											{{ _PC_CAT_CONSTANT_ID|text }}:<br />
 											&nbsp;<input type="text" class="form-control" name="newconstantid" value="" size="20"/><br />
-                							{{ _PC_CAT_COLOR|text }}:<br />
-                							&nbsp;<input type="color" name="newcolor" id='newcolor' value="var(--white)" size="10"/>
+                                            <label for="newcolor">{{ _PC_CAT_COLOR|text }}:</label><br />
+                                            &nbsp;<input type="color" name="newcolor" id='newcolor' value="#ffffff" size="10"/>
                                             [<a href="javascript:void(0);" onClick="pick('pick','newcolor');return false;" NAME="pick" ID="pick">{{ _PC_COLOR_PICK_TITLE|text }}</a>]
             							</td>
             							<td class="align-top text-left">
@@ -246,7 +246,7 @@
             							<td class="align-top text-left">
 											{{ _PC_CAT_CONSTANT_ID|text }}:<br />
 											&nbsp;<input type="text" class="form-control" name="constantid[]" value="{{ cat.constantid|attr }}" size="20"/><br />
-                							{{ _PC_CAT_COLOR|text }}:<br />
+                                            <label for="color[{{ cat.id|attr }}]">{{ _PC_CAT_COLOR|text }}:</label><br />
                 							&nbsp;<input type="color" name="color[]" id='color[{{ cat.id }}]' value="{{ cat.color|attr }}" size="10"/>
                                             [<a href="javascript:void(0);" onClick="pick('pick','color[{{ cat.id|attr }}]');return false;" NAME="pick" ID="pick">{{ _PC_COLOR_PICK_TITLE|text }}</a>]
             							</td>
