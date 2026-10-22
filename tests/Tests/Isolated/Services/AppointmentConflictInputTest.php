@@ -16,10 +16,14 @@ use OpenEMR\Services\AppointmentService;
 use Particle\Validator\ValidationResult;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 #[Group('isolated')]
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
 class AppointmentConflictInputTest extends TestCase
 {
     public static function setUpBeforeClass(): void
@@ -162,7 +166,32 @@ class AppointmentConflictInputTest extends TestCase
             'leading whitespace' => [' 9:00'],
             'trailing whitespace' => ['09:00 '],
             'embedded newline' => ["09:0\n"],
+            'trailing newline' => ["09:00\n"],
         ];
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function invalidClockTypeProvider(): array
+    {
+        return [
+            'numeric five digits' => [12345],
+            'array' => [['09:00']],
+            'null' => [null],
+            'boolean' => [true],
+        ];
+    }
+
+    #[DataProvider('invalidClockTypeProvider')]
+    public function testRejectsNonStringClock(mixed $startTime): void
+    {
+        $appointment = $this->validAppointment();
+        $appointment['pc_startTime'] = $startTime;
+
+        $result = $this->validateAppointment($appointment);
+        $this->assertFalse($result->isValid());
+        $this->assertArrayHasKey('pc_startTime', $result->getMessages());
     }
 
     #[DataProvider('invalidClockProvider')]
