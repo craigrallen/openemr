@@ -1,0 +1,67 @@
+/* Procedure type editor (orders/types_edit.php) inside an active workbench popup only. */
+@media screen {
+  html.oe-workbench-popup body.oe-procedure-editor {
+    background: var(--oe-wb-canvas);
+    color: var(--oe-wb-ink);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-sheet {
+    margin: 0 auto;
+    max-width: 960px;
+    padding: 20px 24px 28px;
+  }
+
+  /* The shared popup frame already draws the fieldset border; this sets its paper and room.
+     The pair is !important only to outrank theme-defaults.scss `fieldset` colours, which are !important. */
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-document {
+    background: var(--oe-wb-paper) !important;
+    border-radius: 8px;
+    color: var(--oe-wb-ink) !important;
+    min-width: 0;
+    padding: 4px 18px 18px;
+  }
+
+  /* Help toggles and close links: reserve the ring so focus never shifts layout. */
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-document a {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-document a:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-document a:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-actions-row {
+    margin: 16px 0 0;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-actions {
+    padding: 0;
+  }
+
+  /* Save, Cancel and (when editing) Delete keep their own palettes and wrap instead of overflowing. */
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-commit {
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-commit .btn {
+    border-radius: 6px;
+    margin-left: 0;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-commit .btn:focus {
+    outline-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-procedure-editor .oe-procedure-commit .btn:focus-visible {
+    outline-color: var(--oe-wb-petrol);
+  }
+}
