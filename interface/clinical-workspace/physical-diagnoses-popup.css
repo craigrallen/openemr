@@ -1,0 +1,180 @@
+/*
+ * Physical exam diagnosis editor (interface/forms/physical_exam/edit_diagnoses.php)
+ * as a document sheet inside an active clinical workbench dlgopen popup.
+ * Every rule is scoped to html.oe-workbench-popup (set by popup.js only inside an
+ * active same-origin workbench) plus the route body; print, legacy mode, tab frames
+ * and standalone windows keep the original rendering. No font sizes are set, so the
+ * theme's own sizes are kept; colours come only from the shared --oe-wb-* tokens.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-physical-diagnoses {
+    margin: 0;
+    padding: clamp(6px, 3vw, 18px);
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-form {
+    margin: 0;
+  }
+
+  /* The original <center> is the paper; its centring is undone for the document text. */
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-sheet {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding: clamp(8px, 4vw, 24px);
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgb(23 52 59 / 6%);
+    text-align: start;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table td {
+    padding-block: 6px;
+    padding-inline: 4px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-block-end: 1px solid var(--oe-wb-line);
+    vertical-align: middle;
+  }
+
+  /* Column labels: a quiet ruled heading row at the theme's full size. */
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-head > td {
+    padding-block: 0 8px;
+    color: var(--oe-wb-muted);
+    background: var(--oe-wb-paper);
+    border-block-end: 1px solid var(--oe-wb-line);
+    font-weight: 600;
+    text-align: start;
+    vertical-align: bottom;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table input[type='text'] {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 36px;
+    padding-block: 6px;
+    padding-inline: 8px;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-muted);
+    border-radius: 4px;
+
+    /* Tab scrolling stops at the border box; reserve the focus ring (2px + offset) inside a short frame.
+       Quirks mode takes viewport scroll-padding from <html>, so the margin sits on each control. */
+    scroll-margin-block: 8px;
+  }
+
+  /* Order keeps room for its five characters; the diagnosis input keeps its inline width:100%. */
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table input[name^='form_ordering'] {
+    width: 4em;
+    max-width: 100%;
+  }
+
+  /* :focus is a separate rule: an engine without :focus-visible drops a whole grouped list. */
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table input[type='text']:focus {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table input[type='text']:focus-visible {
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Save and Cancel wrap onto new lines as whole controls. Native input labels stay single-line;
+     max-width keeps each control inside the sheet. */
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-block: 16px 0;
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit'],
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button'] {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 36px;
+    padding-block: 7px;
+    padding-inline: 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    scroll-margin-block: 8px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit'] {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border: 1px solid var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button'] {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-muted);
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button']:hover {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit']:focus,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button']:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit']:focus-visible,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}
+
+/* Tiny frames: the new.php dlgopen(500) dialog keeps 34.7% of the viewport after a resize, leaving
+   roughly 100-130px inside the iframe on a phone. Cells stack in their original DOM order and only
+   spacing tightens; fonts, controls and the button labels are unchanged. 180px and up keep the rules above. */
+@media screen and (max-width: 160px) {
+  html.oe-workbench-popup body.oe-physical-diagnoses {
+    padding: 4px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-sheet {
+    padding: 6px;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table > tbody,
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table tr {
+    display: block;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-table td {
+    display: block;
+    width: auto;
+  }
+
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='submit'],
+  html.oe-workbench-popup body.oe-physical-diagnoses .oe-physical-diagnoses-actions input[type='button'] {
+    padding-inline: 8px;
+  }
+}

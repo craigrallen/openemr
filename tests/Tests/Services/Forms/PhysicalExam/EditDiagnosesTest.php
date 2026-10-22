@@ -91,6 +91,47 @@ class EditDiagnosesTest extends TestCase
         );
     }
 
+    public function testRenderPresentsDocumentSheetWithoutChangingControls(): void
+    {
+        $this->insertDiagnosis(10, 'Rash <left> & "arm"');
+
+        $output = $this->renderEditor();
+
+        // One screen-only, helper-versioned route sheet; never the shared workspace sheet.
+        $this->assertSame(1, preg_match_all(
+            '#<link rel="stylesheet" media="screen" href="[^"]*/interface/clinical-workspace/physical-diagnoses-popup\.css\?v=\d+">#',
+            $output
+        ));
+        $this->assertStringNotContainsString('clinical-workspace/workspace.css', $output);
+
+        foreach (
+            [
+                '<body class="body_top oe-physical-diagnoses">',
+                "<form method='post' name='theform' class='oe-physical-diagnoses-form' action='edit_diagnoses.php?lineid=" . self::LINE_ID . "'",
+                "<center class='oe-physical-diagnoses-sheet'>",
+                "<table border='0' width='100%' class='oe-physical-diagnoses-table'>",
+                "<tr class='oe-physical-diagnoses-head'>",
+                "<p class='oe-physical-diagnoses-actions'>",
+            ] as $presented
+        ) {
+            $this->assertSame(1, substr_count($output, $presented), $presented);
+        }
+
+        // One persisted row plus exactly five appended blank rows, with unchanged names, types and limits.
+        $this->assertSame(6, preg_match_all("/<input type='text' size='3' maxlength='5' name='form_ordering\\[\\d+]' value='[^']*' \\/>/", $output));
+        $this->assertSame(6, preg_match_all("/<input type='text' size='20' maxlength='250' name='form_diagnosis\\[\\d+]' value='[^']*' style='width:100%' \\/>/", $output));
+        $this->assertStringContainsString(
+            "name='form_diagnosis[1]' value='Rash &lt;left&gt; &amp; &quot;arm&quot;'",
+            $output
+        );
+        $this->assertStringContainsString("name='form_ordering[6]' value='6'", $output);
+        $this->assertStringNotContainsString("name='form_ordering[7]'", $output);
+        $this->assertSame(1, substr_count($output, "<input type='submit' name='form_save' value='Save' />"));
+        $this->assertSame(1, substr_count($output, "<input type='button' value='Cancel' onclick='window.close()' />"));
+        $this->assertSame(1, substr_count($output, 'name="csrf_token_form"'));
+        $this->assertSame(1, substr_count($output, "onsubmit='return top.restoreSession()'"));
+    }
+
     public function testSaveFallsBackToRowNumberForInvalidOrdering(): void
     {
         DiagnosisHelper::save(

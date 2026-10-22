@@ -18,9 +18,11 @@ require_once(__DIR__ . "/../../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
+use OpenEMR\Core\OEGlobalsBag;
 use OpenEMR\Forms\PhysicalExam\DiagnosisHelper;
 
 $line_id = DiagnosisHelper::normalizeLineId($_REQUEST['lineid'] ?? null);
@@ -45,10 +47,12 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <title><?php echo xlt('Edit Diagnoses for');?><?php echo text($line_id); ?></title>
 
 <?php Header::setupHeader('opener'); ?>
+<?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/physical-diagnoses-popup.css?v=<?php echo attr_url($clinicalAssets->version('physical-diagnoses-popup.css')); ?>">
 
 </head>
 
-<body class="body_top">
+<body class="body_top oe-physical-diagnoses">
 <?php
  // If we are saving, then save and close the window.
  //
@@ -95,15 +99,15 @@ $diagnosisRows = array_pad(
     ['ordering' => null, 'diagnosis' => '']
 );
 ?>
-<form method='post' name='theform' action='edit_diagnoses.php?lineid=<?php echo attr_url($line_id); ?>'
+<form method='post' name='theform' class='oe-physical-diagnoses-form' action='edit_diagnoses.php?lineid=<?php echo attr_url($line_id); ?>'
  onsubmit='return top.restoreSession()'>
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
-<center>
+<center class='oe-physical-diagnoses-sheet'>
 
-<table border='0' width='100%'>
+<table border='0' width='100%' class='oe-physical-diagnoses-table'>
 
- <tr>
+ <tr class='oe-physical-diagnoses-head'>
   <td width='5%'><?php echo xlt('Order'); ?></td>
   <td width='95%'><?php echo xlt('Diagnosis'); ?></td>
  </tr>
@@ -122,7 +126,7 @@ $diagnosisRows = array_pad(
 
 </table>
 
-<p>
+<p class='oe-physical-diagnoses-actions'>
 <input type='submit' name='form_save' value='<?php echo xla('Save'); ?>' />
 
 &nbsp;

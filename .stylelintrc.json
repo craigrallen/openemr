@@ -67,6 +67,14 @@
             "rules": {
                 "media-feature-range-notation": "prefix"
             }
+        },
+        {
+            "files": [
+                "interface/clinical-workspace/physical-diagnoses-popup.css"
+            ],
+            "rules": {
+                "media-feature-range-notation": "prefix"
+            }
         }
     ]
 }
