@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenEMR\Tests\Isolated\Calendar;
 
 use OpenEMR\PostCalendar\ViewModel\CalendarViewModel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -24,9 +25,14 @@ final class CalendarEventEditorAccessTest extends TestCase
         return dirname(__DIR__, 4);
     }
 
-    private static function renderSharedScript(): string
+    private static function renderSharedScript(string $view): string
     {
-        $twig = new Environment(new FilesystemLoader(self::root() . '/templates'), ['cache' => false]);
+        $loader = new FilesystemLoader(self::root() . '/templates');
+        self::assertSame(
+            realpath(self::root() . '/templates/' . self::SHARED),
+            $loader->getSourceContext(self::SHARED)->getPath()
+        );
+        $twig = new Environment($loader, ['cache' => false]);
         // The shipped template uses these production escaping functions. Register only
         // its two filters, with no application container or database initialization.
         $twig->addFilter(new TwigFilter('js_escape', \js_escape(...)));
@@ -34,7 +40,7 @@ final class CalendarEventEditorAccessTest extends TestCase
 
         return $twig->render(self::SHARED, [
             'webroot' => '/oe',
-            'viewtype' => 'day',
+            'viewtype' => $view,
             'Date' => '20261001',
             'timeslotCss' => '20px',
             'timeslotHeightVal' => 20,
@@ -43,9 +49,16 @@ final class CalendarEventEditorAccessTest extends TestCase
         ]);
     }
 
-    public function testShippedSharedScriptEnhancesOnlyNativeEventTimeAnchorsInAppointments(): void
+    /** @return list<array{string}> */
+    public static function screenViews(): array
     {
-        $html = self::renderSharedScript();
+        return [['day'], ['week'], ['month']];
+    }
+
+    #[DataProvider('screenViews')]
+    public function testShippedSharedScriptEnhancesOnlyNativeEventTimeAnchorsInAppointments(string $view): void
+    {
+        $html = self::renderSharedScript($view);
 
         self::assertStringContainsString('a.event_time:not([href])', $html);
         self::assertStringContainsString('.event_appointment', $html);
@@ -75,6 +88,10 @@ final class CalendarEventEditorAccessTest extends TestCase
     #[PreserveGlobalState(false)]
     public function testNativeAnchorHelperRetainsOriginalClickTextAndTitle(): void
     {
+        self::assertSame(
+            realpath(self::root() . '/src/PostCalendar/ViewModel/CalendarViewModel.php'),
+            (new \ReflectionClass(CalendarViewModel::class))->getMethod('eventTimeAnchorHtml')->getFileName()
+        );
         $GLOBALS['disable_translation'] = true;
         $html = CalendarViewModel::eventTimeAnchorHtml('10:00 <early>');
 

@@ -59,6 +59,7 @@ describe('original calendar event time editor access', () => {
     let linked;
     let nestedLink;
     let nestedButton;
+    let outsideGrid;
 
     beforeAll(async () => {
         window.$ = window.jQuery = require('jquery'); // repository-pinned jQuery
@@ -76,7 +77,8 @@ describe('original calendar event time editor access', () => {
             </div>
             <div class="event_appointment event" id="20261005-93-7"><span>14:00</span></div>
             <a class="event_time" onclick="event_time_click(this)">15:00</a>
-        </div>`;
+        </div>
+        ${booking('20261006-94-8', '16:00')}`;
 
         // Execute every original inline block, including its real jQuery ready
         // callback and EditEvent route. External src scripts have no inline body.
@@ -86,6 +88,7 @@ describe('original calendar event time editor access', () => {
         [individual, group, other, linked] = document.querySelectorAll('#bigCal a.event_time');
         nestedLink = document.querySelector('a.patient');
         nestedButton = document.querySelector('button');
+        outsideGrid = document.getElementById('20261006-94-8').querySelector('a.event_time');
 
         // jsdom does not execute HTML inline onclick attributes in Jest's default
         // environment. Compile each fixture's exact attribute as its click handler.
@@ -109,6 +112,11 @@ describe('original calendar event time editor access', () => {
         expect(individual.textContent).toBe('10:00');
         expect(group.textContent).toBe('11:30');
         expect(individual.getAttribute('onclick')).toBe('event_time_click(this)');
+        nestedButton.focus();
+        individual.focus();
+        expect(document.activeElement).toBe(individual);
+        nestedButton.focus();
+        expect(document.activeElement).toBe(nestedButton);
     });
 
     test.each(['Enter', ' '])('%s opens the individual editor once through the native route', (pressed) => {
@@ -158,7 +166,7 @@ describe('original calendar event time editor access', () => {
 
     test('non-booking anchors, native links, and nested controls retain their behavior', () => {
         const outside = document.querySelectorAll('#bigCal a.event_time')[4];
-        for (const anchor of [other, linked, outside, nestedLink]) {
+        for (const anchor of [other, linked, outside, outsideGrid, nestedLink]) {
             expect(anchor.hasAttribute('tabindex')).toBe(false);
             expect(anchor.hasAttribute('role')).toBe(false);
             expect(key(anchor, 'Enter').defaultPrevented).toBe(false);
@@ -168,6 +176,24 @@ describe('original calendar event time editor access', () => {
         expect(key(nestedButton, 'Enter').defaultPrevented).toBe(false);
         expect(linked.getAttribute('href')).toBe('#existing');
         expect(window.dlgopen).not.toHaveBeenCalled();
+    });
+
+    test('descendant keydown and keyup do not activate the appointment twice', () => {
+        const child = document.createElement('span');
+        individual.appendChild(child);
+        try {
+            expect(key(child, 'Enter').defaultPrevented).toBe(false);
+            expect(key(child, ' ').defaultPrevented).toBe(false);
+            const released = new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true });
+            individual.dispatchEvent(released);
+            expect(released.defaultPrevented).toBe(false);
+            expect(window.dlgopen).not.toHaveBeenCalled();
+            key(individual, 'Enter');
+            individual.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+            expect(window.dlgopen).toHaveBeenCalledTimes(1);
+        } finally {
+            child.remove();
+        }
     });
 
     test('an empty grid is inert and remains empty', () => {
