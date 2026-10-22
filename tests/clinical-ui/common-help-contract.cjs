@@ -299,7 +299,7 @@ if (process.argv.includes('--history')) {
             ...names(['ls-files', '--others', '--exclude-standard', '-z'])
         ]);
         const allowed = new Set([route, fixture, 'tests/clinical-ui/common-help-contract.cjs',
-            'tests/js/common-help.test.js', 'docs/clinical-ui/COMMON-HELP-POPUP.md']);
+            'tests/js/common-help.test.js', 'docs/clinical-ui/COMMON-HELP.md']);
         for (const file of all) assert.ok(allowed.has(file), 'out-of-scope change: ' + file);
     });
 }
