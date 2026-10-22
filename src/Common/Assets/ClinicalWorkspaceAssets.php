@@ -28,6 +28,7 @@ final readonly class ClinicalWorkspaceAssets
     private const SUPPORTED = [
         'ajtooltip.js',
         'appointment.css',
+        'billing-clear-popup.css',
         'calendar-sidebar.js',
         'calendar-workday.css',
         'calendar-workday.js',
@@ -43,6 +44,7 @@ final readonly class ClinicalWorkspaceAssets
         'patient-picker-popup.css',
         'patient-results-popup.css',
         'patient-search.css',
+        'popup.js',
         'soap-document.css',
         'soap-document.js',
         'soap-reference.css',
