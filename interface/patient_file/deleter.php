@@ -24,6 +24,7 @@ use OpenEMR\BC\Utilities;
 use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Http\CurrentRequest;
@@ -195,6 +196,8 @@ function delete_document($document): void
 <html>
 <head>
     <?php Header::setupHeader('opener'); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/deleter-popup.css?v=<?php echo attr_url($clinicalAssets->version('deleter-popup.css')); ?>">
 <title><?php echo xlt('Delete Patient, Encounter, Form, Issue, Document, Payment, Billing or Transaction'); ?></title>
 
 <script>
@@ -210,8 +213,8 @@ function popup_close() {
 </script>
 </head>
 
-<body>
-    <div class="container mt-3">
+<body class="oe-deleter-popup">
+    <div class="container mt-3 oe-deleter-document">
         <?php
         // If the delete is confirmed...
         //
@@ -481,7 +484,7 @@ function popup_close() {
         }
         ?>
 
-        <form method='post' name="deletefrm" action='deleter.php?patient=<?php echo $patient ?>&encounterid=<?php echo $encounterid ?>&formid=<?php echo $formid ?>&issue=<?php echo attr_url($issue) ?>&document=<?php echo $document ?>&document_pid=<?php echo $documentPid ?>&payment=<?php echo attr_url($payment) ?>&billing=<?php echo attr_url($billing) ?>&transaction=<?php echo $transaction; ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>'>
+        <form method='post' name="deletefrm" class="oe-deleter-form" action='deleter.php?patient=<?php echo $patient ?>&encounterid=<?php echo $encounterid ?>&formid=<?php echo $formid ?>&issue=<?php echo attr_url($issue) ?>&document=<?php echo $document ?>&document_pid=<?php echo $documentPid ?>&payment=<?php echo attr_url($payment) ?>&billing=<?php echo attr_url($billing) ?>&transaction=<?php echo $transaction; ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>'>
             <input type="hidden" name="csrf_token_form"
                 value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
             <p>

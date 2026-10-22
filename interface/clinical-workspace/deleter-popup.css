@@ -1,0 +1,32 @@
+/*
+ * OPEMR-5: deletion confirmation popup (interface/patient_file/deleter.php) as a paper
+ * document on the workbench canvas. Inert unless popup.js marks <html> inside an active
+ * workbench. Colour only: the route's gutters, typography, buttons, echoed SQL and status
+ * messages keep the theme. Screen only: the declarations are excluded in print; actual
+ * print and legacy rendering have not been measured.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-deleter-popup,
+  html.oe-workbench-popup body.oe-deleter-popup {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context body.oe-deleter-popup .oe-deleter-document,
+  html.oe-workbench-popup body.oe-deleter-popup .oe-deleter-document {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.oe-deleter-popup .oe-deleter-form button:focus,
+  html.oe-workbench-popup body.oe-deleter-popup .oe-deleter-form button:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-deleter-popup .oe-deleter-form button:focus-visible,
+  html.oe-workbench-popup body.oe-deleter-popup .oe-deleter-form button:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+}
