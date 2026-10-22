@@ -1,0 +1,14 @@
+Command: python3 -m unittest discover -s tests/ci -p test_php_runtime_security.py -v
+test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest.test_independent_fpm_engine) ... ok
+test_native_engine (test_php_runtime_security.NativeGuardTest.test_native_engine) ... ok
+test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest.test_synthetic_versions_using_shipped_code) ... ok
+test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) ... ok
+test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest.test_missing_or_late_floor_rejected) ... ok
+test_pin_mutations_rejected (test_php_runtime_security.RuntimeSourceTest.test_pin_mutations_rejected) ... ok
+test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 1.809s
+
+OK
+Exit status: 0

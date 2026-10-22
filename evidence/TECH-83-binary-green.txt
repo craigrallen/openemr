@@ -1,0 +1,39 @@
+Command: python3 -B -m unittest discover -s tests/ci -p test_php_runtime_security.py -v
+test_checksums_before_permissions_or_execution (test_php_runtime_security.BinaryAssetTest.test_checksums_before_permissions_or_execution) ... ok
+test_download_and_checksum_failures_stop_install (test_php_runtime_security.BinaryAssetTest.test_download_and_checksum_failures_stop_install) ... ok
+test_fail_closed_hash_selection (test_php_runtime_security.BinaryAssetTest.test_fail_closed_hash_selection) ... ok
+test_separate_php_release (test_php_runtime_security.BinaryAssetTest.test_separate_php_release) ... ok
+test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest.test_independent_fpm_engine) ... ok
+test_native_engine (test_php_runtime_security.NativeGuardTest.test_native_engine) ... ok
+test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest.test_synthetic_versions_using_shipped_code) ... ok
+test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) ... ok
+test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest.test_missing_or_late_floor_rejected) ... ok
+test_pin_mutations_rejected (test_php_runtime_security.RuntimeSourceTest.test_pin_mutations_rejected) ... ok
+test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.850s
+
+OK
+
+Exit code: 0
+
+Command: /usr/bin/python3 -B -m unittest discover -s tests/ci -p test_php_runtime_security.py -v
+test_checksums_before_permissions_or_execution (test_php_runtime_security.BinaryAssetTest) ... ok
+test_download_and_checksum_failures_stop_install (test_php_runtime_security.BinaryAssetTest) ... ok
+test_fail_closed_hash_selection (test_php_runtime_security.BinaryAssetTest) ... ok
+test_separate_php_release (test_php_runtime_security.BinaryAssetTest) ... ok
+test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest) ... ok
+test_native_engine (test_php_runtime_security.NativeGuardTest) ... ok
+test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest) ... ok
+test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest) ... ok
+test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest) ... ok
+test_pin_mutations_rejected (test_php_runtime_security.RuntimeSourceTest) ... ok
+test_supported_sources (test_php_runtime_security.RuntimeSourceTest) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.842s
+
+OK
+
+Exit code: 0

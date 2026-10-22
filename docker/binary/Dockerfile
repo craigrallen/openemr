@@ -24,6 +24,8 @@ FROM alpine:${ALPINE_VERSION} AS base
 # OpenEMR version and binary release information
 ARG OPENEMR_VERSION=8_4_1
 ARG BINARY_RELEASE_DATE=10032026
+# PHP engines are independently verified; keep the application PHAR release unchanged.
+ARG PHP_BINARY_RELEASE_DATE=10212026
 ARG PHP_VERSION=8.5
 # Forge tags use an abbreviated PHP version (e.g. "8.5" -> "php85"). Derived
 # once here rather than per-RUN, the same way docker/flex/Dockerfile does it.
@@ -99,18 +101,32 @@ RUN usermod -u 1000 apache
 # These binaries are statically compiled and include all necessary extensions
 # We need php-fpm (for FastCGI) and php-cli (for command-line scripts like auto_configure.php)
 # Architecture naming: amd64 and arm64 are used directly in release URLs and filenames
-RUN ARCH_SUFFIX="${TARGETARCH}" \
+RUN case "${TARGETARCH}:${PHP_VERSION}:${PHP_VERSION_ABBR}:${OPENEMR_VERSION}:${PHP_BINARY_RELEASE_DATE}" in \
+        amd64:8.5:85:8_4_1:10212026) \
+            PHP_CLI_SHA256=a1285f604dfdde3dbbb789bcb992b68408d5c48bde3d77e866396c4e506f9f13; \
+            PHP_FPM_SHA256=8117575be791f5adb5c0674044dbf353de905c9cf9e57d6117c067b355459805 ;; \
+        arm64:8.5:85:8_4_1:10212026) \
+            PHP_CLI_SHA256=467e11b0d2a9b4345c99a3e213edcd9194b565e83faebd30f965c41815ef31f0; \
+            PHP_FPM_SHA256=d554149b5a82ec50979f6062b38be41e9149e3d90ed6c5beefba5d9065566487 ;; \
+        *) echo "TECH-83: unsupported PHP binary release combination" >&2; exit 1 ;; \
+    esac \
+    && ARCH_SUFFIX="${TARGETARCH}" \
     && cd /tmp \
-    && curl -fSL "https://github.com/Jmevorach/openemr-static-binary-forge/releases/download/linux_${ARCH_SUFFIX}-php${PHP_VERSION_ABBR}-openemr-v${OPENEMR_VERSION}-${ARCH_SUFFIX}-${BINARY_RELEASE_DATE}/php-fpm-v${OPENEMR_VERSION}-linux-${ARCH_SUFFIX}" -o php-fpm \
-    && test -s php-fpm || (echo "ERROR: php-fpm download failed - file is empty or missing" && exit 1) \
-    && test "$(stat -f%z php-fpm 2>/dev/null || stat -c%s php-fpm 2>/dev/null || echo 0)" -gt 1000000 || (echo "ERROR: php-fpm download appears invalid (file too small)" && exit 1) \
-    && curl -fSL "https://github.com/Jmevorach/openemr-static-binary-forge/releases/download/linux_${ARCH_SUFFIX}-php${PHP_VERSION_ABBR}-openemr-v${OPENEMR_VERSION}-${ARCH_SUFFIX}-${BINARY_RELEASE_DATE}/php-cli-v${OPENEMR_VERSION}-linux-${ARCH_SUFFIX}" -o php-cli \
-    && test -s php-cli || (echo "ERROR: php-cli download failed - file is empty or missing" && exit 1) \
-    && test "$(stat -f%z php-cli 2>/dev/null || stat -c%s php-cli 2>/dev/null || echo 0)" -gt 1000000 || (echo "ERROR: php-cli download appears invalid (file too small)" && exit 1) \
+    && curl -fSL "https://github.com/Jmevorach/openemr-static-binary-forge/releases/download/linux_${ARCH_SUFFIX}-php${PHP_VERSION_ABBR}-openemr-v${OPENEMR_VERSION}-${ARCH_SUFFIX}-${PHP_BINARY_RELEASE_DATE}/php-fpm-v${OPENEMR_VERSION}-linux-${ARCH_SUFFIX}" -o php-fpm \
+    && curl -fSL "https://github.com/Jmevorach/openemr-static-binary-forge/releases/download/linux_${ARCH_SUFFIX}-php${PHP_VERSION_ABBR}-openemr-v${OPENEMR_VERSION}-${ARCH_SUFFIX}-${PHP_BINARY_RELEASE_DATE}/php-cli-v${OPENEMR_VERSION}-linux-${ARCH_SUFFIX}" -o php-cli \
+    && { printf '%s\n' "${PHP_CLI_SHA256}  php-cli" "${PHP_FPM_SHA256}  php-fpm" | sha256sum -c -; } \
     && chmod +x php-fpm php-cli \
     && mv php-fpm /usr/local/bin/php-fpm \
     && mv php-cli /usr/local/bin/php \
     && ln -sf /usr/local/bin/php /usr/local/bin/php-cli
+
+# TECH-83: bounded stable engine floor; package/forge tags alone are insufficient.
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
+RUN php -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- "${PHP_VERSION}"
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
+RUN php -n -r '$banner=$argv[2]; if (!preg_match("/\APHP ([^ ]+) \(fpm-fcgi\)/",$banner,$match)) {exit(1);} $v=$match[1]; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- "${PHP_VERSION}" "$(php-fpm -n -v)"
 
 # Install Composer (PHP dependency manager) for OpenEMR package installation
 # Required by the CI/CD test suite

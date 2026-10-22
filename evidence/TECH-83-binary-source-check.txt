@@ -1,0 +1,30 @@
+Command: python3 -B --version
+Python 3.15.0
+Exit code: 0
+Command: /usr/bin/python3 -B --version
+Python 3.9.6
+Exit code: 0
+Command: hadolint --version
+Haskell Dockerfile Linter 2.15.1
+Exit code: 0
+Command: hadolint docker/binary/Dockerfile docker/flex/Dockerfile docker/release/Dockerfile docker/railway/Dockerfile docker/library/dockers/dev-php-fpm-8-2/Dockerfile docker/library/dockers/dev-php-fpm-8-3/Dockerfile docker/library/dockers/dev-php-fpm-8-4/Dockerfile docker/library/dockers/dev-php-fpm-8-5/Dockerfile
+Exit code: 0
+Command: /bin/sh -n
+Exit code: 0
+Syntax input: binary PHP download RUN only, Docker continuation lines removed; not executed.
+Command: python3 -B -c import ast; from pathlib import Path; ast.parse(Path('tests/ci/test_php_runtime_security.py').read_text()); print('Python test AST syntax: PASS')
+Python test AST syntax: PASS
+Exit code: 0
+Command: /usr/bin/python3 -B -c import ast; from pathlib import Path; ast.parse(Path('tests/ci/test_php_runtime_security.py').read_text()); print('Python test AST syntax: PASS')
+Python test AST syntax: PASS
+Exit code: 0
+PASS: all four exact controller evidence SHA256 values present; controller reports matched hashes and 8.5.12. No network/asset execution.
+PASS: all existing PHP guards byte-identical; seven nonbinary Dockerfiles changed only by instruction-local lint comments; binary Composer/application/extraction/setup/runtime suffix byte-identical to HEAD.
+PASS: release Dockerfile vs baseline 18647270e0c799189d2dc10f801e8de2bff1a360 differs only by floor and comments/adjacent blank line. npm/ccdaservice behavior unchanged; reported hosted failure not reproduced offline.
+Command: git diff --exit-code HEAD -- .github/workflows
+Exit code: 0
+PASS: original receipt raw backup verified; only trailing whitespace normalized. Controller report directory write denied; backup in /private/tmp/php-security-2026-10-22/.
+Command: git diff --check
+Exit code: 0
+Command: git diff --check 18647270e0c799189d2dc10f801e8de2bff1a360
+Exit code: 0

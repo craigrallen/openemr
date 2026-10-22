@@ -13,7 +13,12 @@
 # No credentials are baked in; they come from Railway service variables.
 # ============================================================================
 
-FROM openemr/openemr:latest@sha256:a8e4386f6d9a44f17add20c20e6dbc53c7092e855500ae62eac3cd5e47c45daa AS runtime
+FROM openemr/openemr:latest@sha256:def5407b07d56acf74e733a8dad5f2c086b06f98454c606ef07c9f785fb8da9b AS runtime
+
+# TECH-83: reject stale, prerelease, or unexpected engines before dependency work.
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
+RUN php -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- 8.5
 
 # ----------------------------------------------------------------------------
 # PHP dependencies (uses the runtime's PHP and extensions)

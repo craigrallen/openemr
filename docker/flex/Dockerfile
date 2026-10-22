@@ -144,6 +144,11 @@ RUN apk add --no-cache \
     php${PHP_VERSION_ABBR}-zip \
     php${PHP_VERSION_ABBR}-zlib
 
+# TECH-83: bounded stable engine floor; package/forge tags alone are insufficient.
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
+RUN /usr/bin/php${PHP_VERSION_ABBR} -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- "${PHP_VERSION}"
+
 # ============================================================================
 # APACHE CONFIGURATION
 # ============================================================================

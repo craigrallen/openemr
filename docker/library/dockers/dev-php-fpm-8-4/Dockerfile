@@ -10,7 +10,12 @@
 # php-fpm Dockerfile build for openemr development docker environment
 # This docker is hosted here: https://hub.docker.com/r/openemr/dev-php-fpm/ <tag is 7.2>
 #
-FROM php:8.4-fpm
+FROM php:8.4.27-fpm@sha256:e2d8e787dc775bdbd9d7e0c5e8f2f9ddb41ce5977c8bbaf99a2ba2e7d90fd8ae
+
+# TECH-83: reject stale, prerelease, or unexpected engines before dependency work.
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
+RUN php -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- 8.4
 
 # Add mariadb-client package that is needed in the OpenEMR Backup gui, which does direct command mysql commands
 # Add imagemagick that is needed for some image processing in OpenEMR

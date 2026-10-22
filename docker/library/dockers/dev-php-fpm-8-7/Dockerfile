@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# TECH-83: EXPERIMENTAL / NONPRODUCTION BLOCKER
+# No stable security-floor acceptance; upstream fix evidence is required.
+# See docs/php-security-rollout.md (including the native php-src master build).
 #
 # Copyright (C) 2018-2025 Brady Miller <brady.g.miller@gmail.com>
 #
