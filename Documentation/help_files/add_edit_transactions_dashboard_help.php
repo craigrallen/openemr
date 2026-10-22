@@ -19,8 +19,21 @@ require_once("../../interface/globals.php");
     <head>
     <?php Header::setupHeader();?>
     <title><?php echo xlt("Add Edit Transactions Help");?></title>
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-add-edit-transactions-help-popup {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-add-edit-transactions-help-popup > .oe-help-container {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+  }
+}
+    </style>
     </head>
-    <body>
+    <body class="oe-add-edit-transactions-help-popup">
         <div class="container oe-help-container">
             <div>
                <h2 class="text-center"><a name='entire_doc'><?php echo xlt("Add Edit Transactions Help");?></a></h2>
