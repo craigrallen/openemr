@@ -1,0 +1,26 @@
+name: TECH-84 PHP admin images
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.9'
+    - name: Offline regression tests
+      run: python3 -B scripts/test_php_admin_images.py
+    - name: Check scoped source declarations
+      run: python3 -B scripts/check_php_admin_images.py
+    - name: Check diff whitespace
+      run: git diff --check

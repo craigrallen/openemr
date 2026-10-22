@@ -1,0 +1,83 @@
+TECH-84 RED: real source baseline 18647270e0c799189d2dc10f801e8de2bff1a360
+$ python3 -B scripts/test_php_admin_images.py
+test_duplicate_declaration (__main__.AdminImageTests.test_duplicate_declaration) ... ok
+test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) ...
+  test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-light/docker-compose.yml') ... FAIL
+  test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-redis/docker-compose.yml') ... FAIL
+  test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy/docker-compose.yml') ... FAIL
+  test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-insane/docker-compose.yml') ... FAIL
+test_missing_file (__main__.AdminImageTests.test_missing_file) ... ok
+test_positive_declared_pins (__main__.AdminImageTests.test_positive_declared_pins) ... ok
+test_reject_each_bad_declaration (__main__.AdminImageTests.test_reject_each_bad_declaration) ... ok
+test_worktree_is_pinned (__main__.AdminImageTests.test_worktree_is_pinned) ... FAIL
+
+======================================================================
+FAIL: test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-light/docker-compose.yml')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/TECH-84--craigrallen--openemr/scripts/test_php_admin_images.py", line 64, in test_inverse_matches_real_baseline_bytes
+    self.assertEqual(lines[number], new.encode())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'   [14 chars]dmin:5.2.3@sha256:7ebeef41095cbe071a00e3c85c8b[34 chars]59\n' != b'   [14 chars]dmin:latest@sha256:62a50b1419fe55b9b4c3cd6f5ae[35 chars]ff\n'
+
+======================================================================
+FAIL: test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-redis/docker-compose.yml')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/TECH-84--craigrallen--openemr/scripts/test_php_admin_images.py", line 64, in test_inverse_matches_real_baseline_bytes
+    self.assertEqual(lines[number], new.encode())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'   [14 chars]dmin:5.2.3@sha256:7ebeef41095cbe071a00e3c85c8b[34 chars]59\n' != b'   [14 chars]dmin:latest@sha256:62a50b1419fe55b9b4c3cd6f5ae[35 chars]ff\n'
+
+======================================================================
+FAIL: test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy/docker-compose.yml')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/TECH-84--craigrallen--openemr/scripts/test_php_admin_images.py", line 64, in test_inverse_matches_real_baseline_bytes
+    self.assertEqual(lines[number], new.encode())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'   [14 chars]dmin:5.2.3@sha256:7ebeef41095cbe071a00e3c85c8b[34 chars]59\n' != b'   [14 chars]dmin:latest@sha256:62a50b1419fe55b9b4c3cd6f5ae[35 chars]ff\n'
+
+======================================================================
+FAIL: test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-insane/docker-compose.yml')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/TECH-84--craigrallen--openemr/scripts/test_php_admin_images.py", line 64, in test_inverse_matches_real_baseline_bytes
+    self.assertEqual(lines[number], new.encode())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'   [14 chars]dmin:5.2.3@sha256:7ebeef41095cbe071a00e3c85c8b[34 chars]59\n' != b'   [14 chars]dmin:latest@sha256:62a50b1419fe55b9b4c3cd6f5ae[35 chars]ff\n'
+
+======================================================================
+FAIL: test_worktree_is_pinned (__main__.AdminImageTests.test_worktree_is_pinned)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/TECH-84--craigrallen--openemr/scripts/test_php_admin_images.py", line 21, in test_worktree_is_pinned
+    self.assertEqual(check(read_sources()), [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: ['docker/development-easy-light/docker-com[339 chars]ion'] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+'docker/development-easy-light/docker-compose.yml:109: expected exact approved image declaration'
+
++ []
+- ['docker/development-easy-light/docker-compose.yml:109: expected exact '
+-  'approved image declaration',
+-  'docker/development-easy-redis/docker-compose.yml:261: expected exact '
+-  'approved image declaration',
+-  'docker/development-easy/docker-compose.yml:150: expected exact approved '
+-  'image declaration',
+-  'docker/development-insane/docker-compose.yml:572: expected exact approved '
+-  'image declaration']
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.015s
+
+FAILED (failures=5)
+exit=1
+$ python3 -B scripts/check_php_admin_images.py
+docker/development-easy-light/docker-compose.yml:109: expected exact approved image declaration
+docker/development-easy-redis/docker-compose.yml:261: expected exact approved image declaration
+docker/development-easy/docker-compose.yml:150: expected exact approved image declaration
+docker/development-insane/docker-compose.yml:572: expected exact approved image declaration
+exit=1
