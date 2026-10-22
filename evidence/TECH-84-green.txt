@@ -1,0 +1,24 @@
+TECH-84 GREEN: 2026-10-22T14:13:15.143355+00:00
+Baseline commit: 18647270e0c799189d2dc10f801e8de2bff1a360
+$ python3 --version
+Python 3.15.0
+exit=0
+$ python3 -B scripts/test_php_admin_images.py
+test_duplicate_declaration (__main__.AdminImageTests.test_duplicate_declaration) ... ok
+test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) ... ok
+test_missing_file (__main__.AdminImageTests.test_missing_file) ... ok
+test_positive_declared_pins (__main__.AdminImageTests.test_positive_declared_pins) ... ok
+test_reject_each_bad_declaration (__main__.AdminImageTests.test_reject_each_bad_declaration) ... ok
+test_worktree_is_pinned (__main__.AdminImageTests.test_worktree_is_pinned) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.016s
+
+OK
+exit=0
+$ python3 -B scripts/check_php_admin_images.py
+PASS: all scoped admin image declarations match approved immutable pins
+exit=0
+$ git diff --check
+exit=0
+Python source compilation: PASS (no bytecode artifacts)
