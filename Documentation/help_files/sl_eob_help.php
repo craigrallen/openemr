@@ -31,8 +31,46 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
         }
     </style>
 
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-sl-eob-help-popup {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup > .oe-help-container {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup .oe-help-heading {
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup .oe-help-container a:not(.btn) {
+    background-color: transparent;
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup .oe-help-redirect {
+    background-color: transparent;
+    color: var(--oe-wb-ink, #17343b) !important;
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup .oe-help-container fieldset {
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #17343b) !important;
+  }
+
+  html.oe-workbench-context body.oe-sl-eob-help-popup .oe-help-container legend {
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #17343b) !important;
+  }
+}
+    </style>
     </head>
-    <body>
+    <body class="oe-sl-eob-help-popup">
         <div class="container oe-help-container" id="home-div">
             <div>
                 <h2 class="text-center"><a name='entire_doc'><?php echo xlt("EOB Data Entry");?></a></h2>
