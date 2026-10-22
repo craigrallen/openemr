@@ -14,6 +14,7 @@
 require_once(__DIR__ . "/../../globals.php");
 require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.inc.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
 
@@ -81,6 +82,9 @@ function get_history_codes($pid)
     <title><?php echo xlt("Find Code History"); ?></title>
     <meta charset="utf-8" />
     <?php Header::setupHeader(['opener']); ?>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); // Screen-only; inert until mode.js finds an active workbench. ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/code-history.css?v=<?php echo attr_url($clinicalAssets->version('code-history.css')); ?>">
+    <script src="<?php echo attr(\OpenEMR\Core\OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
     <script>
         const errorMsg = '' + <?php echo xlj("Error finding diagnosis element. Try again."); ?>;
 
@@ -159,15 +163,15 @@ function get_history_codes($pid)
     </script>
 </head>
 
-<body>
-    <div class="container-fluid sticky-top">
-        <div class="input-group bg-white">
+<body class="oe-code-history">
+    <div class="container-fluid sticky-top oe-code-history-editor">
+        <div class="input-group bg-white oe-code-history-dx">
             <div class="input-group-prepend">
                 <button class="btn btn-danger" onclick='clearCodes(this)'><i class="fa fa-trash fa-1x"></i></button>
             </div>
             <input class='form-control text-danger' type='text' id='workingDx' title='<?php echo xla('Current Working Procedure Diagnoses'); ?>' value='' />
         </div>
-        <div id="tips" class="d-none">
+        <div id="tips" class="d-none oe-code-history-tips">
             <section class="card bg-warning">
                 <header class="card-heading card-heading-sm">
                     <h4 class="card-title"><?php echo xlt('Usage Tips') ?></h4>
@@ -192,8 +196,8 @@ function get_history_codes($pid)
             <span class="sr-only"><?php echo xlt('Loading'); ?>...</span>
         </div>
     </div>
-    <div class="container-fluid">
-        <div class="table-responsive mt-1">
+    <div class="container-fluid oe-code-history-sheet">
+        <div class="table-responsive mt-1 oe-code-history-results">
             <table class="table table-sm table-hover" id="historyTable">
                 <thead>
                     <tr>
