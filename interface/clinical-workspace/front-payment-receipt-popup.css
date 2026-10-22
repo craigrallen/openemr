@@ -1,0 +1,18 @@
+@media screen {
+  html.oe-workbench-context .oe-front-payment-receipt .section-2 {
+    color: var(--oe-wb-ink, #17343b);
+    background: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context .oe-front-payment-receipt button:focus,
+  html.oe-workbench-context .oe-front-payment-receipt input[type='button']:focus {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context .oe-front-payment-receipt button:focus-visible,
+  html.oe-workbench-context .oe-front-payment-receipt input[type='button']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+}
