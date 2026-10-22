@@ -17,6 +17,7 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
 $pid = $session->get('pid', 0);
 
 use OpenEMR\BC\ServiceContainer;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
@@ -383,6 +384,7 @@ while ($srow = sqlFetchArray($sres)) {
 <head>
 <title><?php echo xlt('Letter Generator'); ?></title>
 <?php Header::setupHeader(['datetime-picker', 'topdialog']); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/letter-editor-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('letter-editor-popup.css')); ?>">
 
 <script>
 <?php echo $ulist; ?>
@@ -462,9 +464,9 @@ function insertAtCursor(myField, myValue) {
 
 </head>
 
-<body class="body_top" onunload='imclosing()'>
+<body class="body_top oe-letter-editor-popup" onunload='imclosing()'>
 
-<form method='post' action='letter.php' id="theform" name="theform" onsubmit="return top.restoreSession()">
+<form method='post' action='letter.php' id="theform" class="oe-letter-editor-sheet" name="theform" onsubmit="return top.restoreSession()">
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 <input type="hidden" name="formaction" id="formaction" value="">
 <input type='hidden' name='form_pid' value='<?php echo attr($pid) ?>' />
