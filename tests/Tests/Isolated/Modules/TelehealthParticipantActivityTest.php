@@ -52,7 +52,7 @@ final class TelehealthParticipantActivityTest extends TestCase
      * that a test runner might otherwise convert to exceptions or suppress.
      *
      * @param array<string, mixed> $session
-     * @return list<array{role: string, inRoom: string, id: int}>
+     * @return array<mixed>
      */
     private function sparseList(array $session): array
     {
@@ -85,8 +85,20 @@ final class TelehealthParticipantActivityTest extends TestCase
             'unparseable string' => ['unparseable string', 'not-a-date'],
             'NUL byte' => ['NUL byte', $future . "\0"],
             'trailing text' => ['trailing text', $future . ' extra'],
+            'leading whitespace' => ['leading whitespace', ' ' . $future],
+            'trailing whitespace' => ['trailing whitespace', $future . ' '],
+            'unpadded month' => ['unpadded month', $futureYear . '-6-01 12:00:00'],
+            'unpadded day' => ['unpadded day', $futureYear . '-06-1 12:00:00'],
+            'unpadded hour' => ['unpadded hour', $futureYear . '-06-01 2:00:00'],
+            'unpadded minute' => ['unpadded minute', $futureYear . '-06-01 12:0:00'],
+            'unpadded second' => ['unpadded second', $futureYear . '-06-01 12:00:0'],
             'overflow day' => ['overflow day', $futureYear . '-02-30 12:00:00'],
             'overflow month' => ['overflow month', $futureYear . '-13-01 12:00:00'],
+            'overflow hour' => ['overflow hour', $futureYear . '-06-01 24:00:00'],
+            'overflow minute' => ['overflow minute', $futureYear . '-06-01 12:60:00'],
+            'overflow second' => ['overflow second', $futureYear . '-06-01 12:00:60'],
+            'zero date' => ['zero date', $futureYear . '-00-00 12:00:00'],
+            'zero year' => ['zero year', '0000-06-01 12:00:00'],
         ];
     }
 
@@ -159,6 +171,34 @@ final class TelehealthParticipantActivityTest extends TestCase
                 'patient_related_start_time' => 'present',
                 'patient_related_last_update' => $future,
             ])
+        );
+    }
+
+    public function testCanonicalDatesFarFromActivityBoundaryRemainValid(): void
+    {
+        $futureLeapYear = (int) date('Y') + 1;
+        while ($futureLeapYear % 4 !== 0 || ($futureLeapYear % 100 === 0 && $futureLeapYear % 400 !== 0)) {
+            $futureLeapYear++;
+        }
+        $session = [
+            'user_id' => 101,
+            'pid' => 202,
+            'pid_related' => 303,
+            'provider_start_time' => 'present',
+            'provider_last_update' => $futureLeapYear . '-02-29 12:00:00',
+            'patient_start_time' => 'present',
+            'patient_last_update' => '2020-06-01 12:00:00',
+            'patient_related_start_time' => 'present',
+            'patient_related_last_update' => (new \DateTimeImmutable('now'))->modify('+1 hour')->format('Y-m-d H:i:s'),
+        ];
+
+        self::assertSame(
+            [
+                ['role' => 'provider', 'inRoom' => 'Y', 'id' => 101],
+                ['role' => 'patient', 'inRoom' => 'N', 'id' => 202],
+                ['role' => 'patient', 'inRoom' => 'Y', 'id' => 303],
+            ],
+            $this->sparseList($session)
         );
     }
 }
