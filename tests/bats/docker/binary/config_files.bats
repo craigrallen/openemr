@@ -43,12 +43,14 @@ setup() {
     local php_version
     local openemr_version
     local binary_release_date
+    local php_binary_release_date
     local alpine_version
     local php_version_abbr
     local probe
     php_version=$(sed -n 's/^ARG PHP_VERSION=//p' "$dockerfile" | head -1)
     openemr_version=$(sed -n 's/^ARG OPENEMR_VERSION=//p' "$dockerfile" | head -1)
     binary_release_date=$(sed -n 's/^ARG BINARY_RELEASE_DATE=//p' "$dockerfile" | head -1)
+    php_binary_release_date=$(sed -n 's/^ARG PHP_BINARY_RELEASE_DATE=//p' "$dockerfile" | head -1)
     alpine_version=$(sed -n 's/^ARG ALPINE_VERSION=//p' "$dockerfile" | head -1)
     # Shape, not value. These four ARGs are bot-maintained by
     # .github/workflows/updatecli-docker-pins.yml, so pinning the literals
@@ -58,11 +60,13 @@ setup() {
     [[ "$php_version" =~ ^[0-9]+\.[0-9]+$ ]]
     [[ "$openemr_version" =~ ^[0-9]+(_[0-9]+)+$ ]]
     [[ "$binary_release_date" =~ ^[0-9]{8}$ ]]
+    # The PHP binary release is a separate manual security pin.
+    [[ "$php_binary_release_date" =~ ^[0-9]{8}$ ]]
     [[ "$alpine_version" =~ ^3\.[0-9]+$ ]]
     php_version_abbr=$(sed -n 's/^ARG PHP_VERSION_ABBR=//p' "$dockerfile" | head -1)
     [[ "$php_version_abbr" == '${PHP_VERSION//./}' ]]
-    assert_file_contains "$dockerfile" 'php\${PHP_VERSION_ABBR}-openemr-v\${OPENEMR_VERSION}-.*-\${BINARY_RELEASE_DATE}/php-fpm-v\${OPENEMR_VERSION}'
-    assert_file_contains "$dockerfile" 'php\${PHP_VERSION_ABBR}-openemr-v\${OPENEMR_VERSION}-.*-\${BINARY_RELEASE_DATE}/php-cli-v\${OPENEMR_VERSION}'
+    assert_file_contains "$dockerfile" 'php\${PHP_VERSION_ABBR}-openemr-v\${OPENEMR_VERSION}-.*-\${PHP_BINARY_RELEASE_DATE}/php-fpm-v\${OPENEMR_VERSION}'
+    assert_file_contains "$dockerfile" 'php\${PHP_VERSION_ABBR}-openemr-v\${OPENEMR_VERSION}-.*-\${PHP_BINARY_RELEASE_DATE}/php-cli-v\${OPENEMR_VERSION}'
     assert_file_contains "$dockerfile" 'php\${PHP_VERSION_ABBR}-openemr-v\${OPENEMR_VERSION}-.*-\${BINARY_RELEASE_DATE}/openemr.phar'
 
     if ! command -v docker >/dev/null 2>&1; then
