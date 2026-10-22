@@ -1,0 +1,19 @@
+# UB-04 form popup: screen presentation slice (OPEMR-80)
+
+## Rationale and exact scope
+
+The UB-04 editor is opened by `popUB04(pid, enc)` in `interface/billing/billing_report.php`. That caller retains its existing session restoration, query parameters, and `dlgopen` behavior. `interface/billing/ub04_form.php` already loads the shared workbench popup assets through `Header::setupHeader()` in its user UI path. When the shared popup controller detects a same-origin workbench host, it adds `oe-workbench-context` to the popup document element. This slice gives that context the workbench ink and canvas on the page body and ink and paper on `#menu` and `#formhelp`.
+
+The production edit consists of exactly the two insertions declared in `tests/clinical-ui/ub04-form-popup.cjs`: a PHP-guarded `@media screen` style block before the existing `.container` style block, and a PHP-guarded `ub04-workbench-route` class in the existing `<body>` tag. The selectors require both `html.oe-workbench-context` and the route class. The existing CSS variables have explicit fallback colors. The style does not target the claim sheet, its controls, or `#p1`; it changes no form geometry, print CSS, financial processing, security checks, or claim data. This is surrounding body, menu, and help presentation only. It is not completion of the full researched UI or feature 22.
+
+Both additions are conditional on `$isAuthorized !== 1`. In the authorized claim-renderer path, PHP emits neither the style block nor the body class. The two-insertion source oracle proves the source can be restored byte for byte to its fixture by removing those additions. It does not prove actual PHP renderer output or PDF acceptance.
+
+## Evidence and pending verification
+
+The controller captured a genuine final RED after refining the tests and before production edits: eight tests, seven passed, one failed, exit 1 because the actual route lacked the declared presentation. The tests-only change was committed after that capture. The subsequent controller verification reported the portable contract (8 tests), history gate (9 tests), PHP syntax check, and diff check as PASS. The ESLint wrapper and stylelint on the actual, nonignored extracted CSS also passed.
+
+The initial full Jest run reported 1,259 passing tests and one failing adapter. Its child `node --test` process inherited a spec reporter, while the adapter asserted TAP output. The adapter now passes `--test-reporter=tap` explicitly and retains its TAP assertions. The controller's full Jest rerun passed: 62 suites, 1,260 tests. Rooted PHPCS initially found a newline-after-brace error in the inline `<body>` guard. The strengthened source contract then recorded a fresh failing Node run (`phpcs-red.log`) before production switched to the declared terse conditional echo. Final portable (8), history (9), PHP syntax, rooted PHPCS, ESLint, actual CSS stylelint, full Jest (62 suites / 1,260 tests), and diff checks passed.
+
+Independent Gemini 4 Argon High review completed against 11 artifacts and found no introduced P1, P2, or P3 issues in the reviewed diff. That review preceded the adapter reporter and body ternary corrections. The final whole-diff independent Gemini review included both corrections and again found no introduced actionable P1, P2 or P3 defect. These are static review results; hosted CI and coverage remain pending publication. The source oracle and synthetic popup context checks are narrower than native acceptance.
+
+Native acceptance remains open for real billing roles and financial actions, including save, reset, and PDF flows; print and authorized renderer output; claim-sheet geometry across zoom and viewport sizes; light and dark theme contrast; keyboard and focus behavior; RTL layout; and security behavior across ACL, CSRF, session, and patient or encounter context. No claim of production acceptance follows from this source edit alone.

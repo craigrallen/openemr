@@ -466,6 +466,22 @@ function resetClaim(){
 <?php } ?>
 </script>
 
+<?php if ($isAuthorized !== 1) { ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.ub04-workbench-route {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context body.ub04-workbench-route #menu,
+  html.oe-workbench-context body.ub04-workbench-route #formhelp {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
+</style>
+<?php } ?>
 <style>
 .container {
 text-align:center;
@@ -991,7 +1007,7 @@ textarea{
 #ub04id429{left:19px;  top:1155px; width:263px;  text-align:left;}
 </style>
 </head>
-<body onload="adjustForm();">
+<body<?php echo $isAuthorized !== 1 ? ' class="ub04-workbench-route"' : ''; ?> onload="adjustForm();">
 <div class="container" id="formContainer">
 <?php if ($isAuthorized !== 1) {?>
 <h3 class='formhide'><em><?php echo xlt('Claim Edit') ?> </em><button class="btn btn-sm btn-warning" onclick="myZoom()" ><?php echo xlt('Zoom'); ?></button></h3>
