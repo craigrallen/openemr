@@ -128,9 +128,9 @@ final class PortalMessageRecipientTest extends TestCase
 
     /**
      * @param array<string, mixed> $scenario
-     * @return array{output: mixed, writes: list<array{string, array<mixed>}>, lookups: mixed, csrf: mixed}
+     * @return array{output: string, writes: list<array{string, array<mixed>}>, lookups: list<array{string, array<mixed>}>, csrf: array{int, string, bool}|null}
      */
-    private function dispatch(array $scenario): array
+    public static function dispatch(array $scenario): array
     {
         $process = new Process([PHP_BINARY, __DIR__ . '/fixtures/message-send.php', json_encode($scenario, JSON_THROW_ON_ERROR)]);
         $process->run();
@@ -138,15 +138,39 @@ final class PortalMessageRecipientTest extends TestCase
         self::assertSame('', $process->getErrorOutput());
         $result = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
         self::assertIsArray($result);
+        self::assertArrayHasKey('output', $result);
+        self::assertIsString($result['output']);
+        self::assertArrayHasKey('csrf', $result);
+        $csrf = $result['csrf'];
+        if ($csrf !== null) {
+            self::assertIsArray($csrf);
+            self::assertCount(3, $csrf);
+            self::assertIsInt($csrf[0]);
+            self::assertIsString($csrf[1]);
+            self::assertIsBool($csrf[2]);
+            $csrf = [$csrf[0], $csrf[1], $csrf[2]];
+        }
+        self::assertArrayHasKey('lookups', $result);
+        self::assertIsArray($result['lookups']);
+        $lookups = [];
+        foreach ($result['lookups'] as $lookup) {
+            self::assertIsArray($lookup);
+            self::assertCount(2, $lookup);
+            self::assertIsString($lookup[0]);
+            self::assertIsArray($lookup[1]);
+            $lookups[] = [$lookup[0], $lookup[1]];
+        }
+        self::assertArrayHasKey('writes', $result);
         self::assertIsArray($result['writes']);
         $writes = [];
         foreach ($result['writes'] as $write) {
             self::assertIsArray($write);
+            self::assertCount(2, $write);
             self::assertIsString($write[0]);
             self::assertIsArray($write[1]);
             $writes[] = [$write[0], $write[1]];
         }
-        return ['output' => $result['output'], 'writes' => $writes, 'lookups' => $result['lookups'], 'csrf' => $result['csrf']];
+        return ['output' => $result['output'], 'writes' => $writes, 'lookups' => $lookups, 'csrf' => $csrf];
     }
 
     /** @return iterable<string, array{array<string, mixed>}> */
@@ -154,7 +178,7 @@ final class PortalMessageRecipientTest extends TestCase
     {
         foreach (['add', 'reply'] as $task) {
             foreach (['inactive', 'nonportal', 'missing', 'patient-99', '', null, ['eligible']] as $id) {
-                yield $task . ':' . json_encode($id) => [['post' => ['task' => $task, 'recipient_id' => $id]]];
+                yield $task . ':' . json_encode($id, JSON_THROW_ON_ERROR) => [['post' => ['task' => $task, 'recipient_id' => $id]]];
             }
             yield $task . ':lookup exception' => [['post' => ['task' => $task], 'lookup' => 'exception']];
         }
@@ -183,16 +207,24 @@ final class PortalMessageRecipientTest extends TestCase
         self::assertSame('ok', $result['output']);
         self::assertSame([INPUT_POST, 'messages-portal', true], $result['csrf']);
         self::assertCount(2, $result['writes']);
-        self::assertSame([[
+        $recipientLookup = [
             'SELECT username, fname, lname FROM users WHERE username = ? AND active = 1 AND portal_user = 1',
             ['eligible'],
-        ]], $result['lookups']);
+        ];
+        self::assertSame($recipientLookup, $result['lookups'][0] ?? null);
+        if ($task === 'add') {
+            self::assertCount(1, $result['lookups']);
+        } else {
+            self::assertGreaterThanOrEqual(2, count($result['lookups']), 'Patient reply must authorize its selected thread after the canonical recipient lookup');
+        }
         foreach ($result['writes'] as $index => [$sql, $params]) {
             self::assertStringStartsWith('INSERT INTO onsite_mail', $sql);
             self::assertSame([
                 'Synthetic body', $index === 0 ? 'patient-42' : 'eligible', 'patient-42', 'Default',
                 '1', '1', 'Synthetic title', '', $index === 0 ? $status : 'New',
-                $index === 0 ? 100 : 80, 'patient-42', 'Patient Name', 'eligible', 'Canonical Staff', 100,
+                $task === 'add' ? ($index === 0 ? 200 : 201) : ($index === 0 ? 100 : 80),
+                'patient-42', 'Patient Name', 'eligible', 'Canonical Staff',
+                $task === 'add' ? 200 : 100,
             ], array_slice($params, 1));
         }
     }
@@ -206,6 +238,8 @@ final class PortalMessageRecipientTest extends TestCase
         foreach ($result['writes'] as $index => [$sql, $params]) {
             self::assertSame($index === 0 ? 'staff-sender' : 'patient-99', $params[2]);
             self::assertSame(['staff-sender', 'Staff Sender', 'patient-99', 'Legacy Patient'], array_slice($params, 11, 4));
+            self::assertSame($index === 0 ? 100 : 80, $params[10]);
+            self::assertSame(100, $params[15]);
         }
     }
 
