@@ -1,0 +1,15 @@
+# Appointment notification input safety (OPEMR-101)
+
+## Scope and reason
+
+`AppointmentNotificationRunner::run()` reads appointment rows returned by the existing fetch path. Its send-window check previously passed date and time fields directly to PHP's permissive `strtotime()`: missing fields could acquire an implicit date or time, and invalid calendar or clock values could normalize to another instant. A malformed row could therefore enter the delivery path.
+
+The run-only gate now requires raw strings: a complete ASCII `YYYY-MM-DD` date that passes `checkdate()`, and an ASCII `HH:MM` or `HH:MM:SS` time with hour 00–23 and minute/second 00–59. It rejects missing keys, non-strings, relative or alternate formats, surrounding whitespace, newline suffixes, and overflow values before parsing. It does not change `renderMessage()` or the shared string conversion helper. For lexically valid values, the existing `strtotime()` timezone and DST normalization, timestamp comparison, rounding, catch-up window, and counters remain in place. This includes PHP's handling of a syntactically valid local time in a DST gap.
+
+## Files and evidence
+
+- `interface/modules/custom_modules/oe-module-faxsms/src/Notification/AppointmentNotificationRunner.php`: input gate in `isInCronWindow()` only.
+- `tests/Tests/Isolated/Modules/FaxSMS/Notification/AppointmentNotificationInputTest.php`: native `run()` cases with a fixed clock, canned rows, disabled client constructor, and mocked delivery methods. A `ReflectionClass` assertion identifies the production source file; no evaluated or copied runner implementation is used. The tests also cover accepted MySQL seconds, `HH:MM`, leap day, Stockholm ordinary time and DST normalization, catch-up, and window boundaries.
+- Controller-established RED on the original production code: 28 tests with 16 genuine delivery-entry failures. The initial run using the wrong `phpunit.xml` failed during setup and is not product RED. The controller reports `RED-native.log` and `RED-native.xml` retained under `project/verification/notification-inputs-20261022`. Tests-only baseline commit: `3f582906`.
+
+Controller GREEN: 41 focused tests / 200 assertions; broader FaxSMS module: 215 tests / 726 assertions. Native PHP syntax, rooted PHPCS (2 files, explicitly resolved Slevomat standard), and diff hygiene pass. Fresh wrapped Codex Astra independent read-only review cleared the complete three-path diff against `origin/master`; implementation used wrapped Codex Sol because Claude Code authentication was unavailable. Same provider, different model/context. Initial PHPCS sniff-resolution failure is retained as setup evidence; no repository configuration was changed. Hosted exact-head static, full-suite, coverage and CI gates remain pending at publication. The isolated dry-run path checks selection and counters with mocked `EmailClient` methods; it does not establish real delivery, consent, authentication, configuration, or clinical/legal acceptance. This work does not provide complete booking confirmations.
