@@ -32,6 +32,7 @@ require_once("../../interface/globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -54,6 +55,8 @@ if (trim($_POST['contextname'] ?? '') != '' && $_POST['action'] == 'add') {
 <html>
     <head>
         <?php Header::setupHeader('opener'); ?>
+        <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/context-manager-popup.css?v=<?php echo attr_url($clinicalAssets->version('context-manager-popup.css')); ?>">
         <style>
             .bottom {
                 border-bottom: 1px solid var(--black);
@@ -165,9 +168,9 @@ if (trim($_POST['contextname'] ?? '') != '' && $_POST['action'] == 'add') {
      </script>
 
     </head>
-    <body class="body_top">
-     <form name="designation_managment" action="" method="post">
-        <table cellpadding='2' cellspacing='0' border="0" align="center">
+    <body class="body_top oe-context-manager">
+     <form name="designation_managment" action="" method="post" class="oe-context-manager-form">
+        <table cellpadding='2' cellspacing='0' border="0" align="center" class="oe-context-manager-sheet">
 
             <tr height="30">
               <td class='title_bar' colspan="4" align="center"><u><?php echo htmlspecialchars(xl('Add Context'), ENT_QUOTES);?></u></td>
@@ -175,7 +178,7 @@ if (trim($_POST['contextname'] ?? '') != '' && $_POST['action'] == 'add') {
             </tr>
             <tr id="contextlist">
                 <td colspan="4">
-                    <table>
+                    <table class="oe-context-manager-list">
                         <tr>
                          <td align="center" class="title_bar_top top right bottom left">#</td>
                          <td align="center" class="title_bar_top top right bottom"><?php echo htmlspecialchars(xl('Context'), ENT_QUOTES);?></td>
@@ -202,12 +205,12 @@ if (trim($_POST['contextname'] ?? '') != '' && $_POST['action'] == 'add') {
                 </td>
             </tr>
             <tr id="contextadd">
-                <td colspan="3"><input type="text" name="contextname" id="contextname"></td>
-                <td colspan="1"><a href="#" onclick="checkSubmit()" class="btn btn-primary"><span><?php echo htmlspecialchars(xl('Save'), ENT_QUOTES);?><a href="#" id="cancel" class="btn btn-secondary"><span><?php echo htmlspecialchars(xl('Cancel'), ENT_QUOTES);?></span></a></span></a></td>
+                <td colspan="3" class="oe-context-manager-field"><input type="text" name="contextname" id="contextname"></td>
+                <td colspan="1" class="oe-context-manager-actions"><a href="#" onclick="checkSubmit()" class="btn btn-primary"><span><?php echo htmlspecialchars(xl('Save'), ENT_QUOTES);?><a href="#" id="cancel" class="btn btn-secondary"><span><?php echo htmlspecialchars(xl('Cancel'), ENT_QUOTES);?></span></a></span></a></td>
             </tr>
             <tr id="contextupdate">
-                <td colspan="3"><input type="text" name="updatecontextname" id="updatecontextname"></td>
-                <td colspan="1"><a href="#" onclick="checkUpdate()" class="btn btn-primary"><span><?php echo htmlspecialchars(xl('Update'), ENT_QUOTES);?><a href="#" id="ucancel" class="btn btn-secondary"><span><?php echo htmlspecialchars(xl('Cancel'), ENT_QUOTES);?></span></a></span></a></td>
+                <td colspan="3" class="oe-context-manager-field"><input type="text" name="updatecontextname" id="updatecontextname"></td>
+                <td colspan="1" class="oe-context-manager-actions"><a href="#" onclick="checkUpdate()" class="btn btn-primary"><span><?php echo htmlspecialchars(xl('Update'), ENT_QUOTES);?><a href="#" id="ucancel" class="btn btn-secondary"><span><?php echo htmlspecialchars(xl('Cancel'), ENT_QUOTES);?></span></a></span></a></td>
             </tr>
             <input type="hidden" name="action" id="action">
             <input type="hidden" name="item" id="item">
