@@ -21,14 +21,18 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
-/** A narrow ADODB surface for the native sqlStatement/sqlFetchArray functions. */
+/**
+ * A narrow ADODB surface for the native sqlStatement/sqlFetchArray functions.
+ *
+ * @phpstan-import-type Bindings from Database
+ */
 final class AvailabilityQueryTransport
 {
     public function __construct(private readonly ?Database $database)
     {
     }
 
-    /** @param list<string|int> $binds */
+    /** @param Bindings $binds */
     public function Execute(string $sql, array $binds, bool $audit): AvailabilityRows
     {
         if ($this->database === null) {
@@ -49,7 +53,7 @@ final class AvailabilityQueryTransport
 /** @phpstan-type EventRow array<string, mixed> */
 final class AvailabilityRows
 {
-    /** @param list<array<string, mixed>> $rows */
+    /** @param array<array<string, mixed>> $rows */
     public function __construct(private array $rows)
     {
     }
@@ -203,9 +207,12 @@ final class AvailableSlotsBoundaryTest extends TestCase
 
         require_once self::ROOT . 'library/translation.inc.php';
         require_once self::ROOT . 'library/sql.inc.php';
-        // These source-level arrays must land in the global symbol table for sortAppointments.
-        global $COMPARE_FUNCTION_HASH, $ORDERHASH;
+        // Capture the native include-scope sort arrays in the global symbol table.
+        $COMPARE_FUNCTION_HASH = [];
+        $ORDERHASH = [];
         require_once self::ROOT . 'library/appointments.inc.php';
+        $GLOBALS['COMPARE_FUNCTION_HASH'] = $COMPARE_FUNCTION_HASH;
+        $GLOBALS['ORDERHASH'] = $ORDERHASH;
 
         foreach (['getAvailableSlots', 'fetchAllEvents', 'fetchEvents', 'sqlStatement', 'sqlFetchArray'] as $name) {
             $reflection = new ReflectionFunction($name);
