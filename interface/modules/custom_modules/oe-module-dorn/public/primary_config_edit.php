@@ -65,8 +65,19 @@ if ($npi) {
         color: red;
       }
     </style>
+    <style media="screen">
+      html.oe-workbench-context body.oe-dorn-primary-popup {
+        background-color: var(--oe-wb-canvas);
+      }
+
+      html.oe-workbench-context body.oe-dorn-primary-popup > .container-fluid > form.form {
+        background-color: var(--oe-wb-paper);
+        color: var(--oe-wb-ink);
+        box-shadow: inset 0 0 0 1px var(--oe-wb-line);
+      }
+    </style>
 </head>
-<body>
+<body class="oe-dorn-primary-popup">
     <div class="container-fluid">
         <form class="form" method='post' name='theform' action="primary_config_edit.php?npi=<?php echo attr_url($data->npi); ?>&csrf_token_form=<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>">
             <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
