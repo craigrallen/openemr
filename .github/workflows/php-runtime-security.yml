@@ -3,15 +3,15 @@ name: PHP runtime source security
 on:
   pull_request:
     paths:
-      - 'docker/**/Dockerfile'
-      - 'tests/ci/test_php_runtime_security.py'
-      - '.github/workflows/php-runtime-security.yml'
+    - 'docker/**/Dockerfile'
+    - 'tests/ci/test_php_runtime_security.py'
+    - '.github/workflows/php-runtime-security.yml'
   push:
     branches: [master, TECH-83-php-runtime-security]
     paths:
-      - 'docker/**/Dockerfile'
-      - 'tests/ci/test_php_runtime_security.py'
-      - '.github/workflows/php-runtime-security.yml'
+    - 'docker/**/Dockerfile'
+    - 'tests/ci/test_php_runtime_security.py'
+    - '.github/workflows/php-runtime-security.yml'
 
 permissions:
   contents: read
@@ -20,11 +20,11 @@ jobs:
   source-contract:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.9'
-      - name: Offline runtime source checks
-        run: python3 -m unittest discover -s tests/ci -p test_php_runtime_security.py -v
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.9'
+    - name: Offline runtime source checks
+      run: python3 -m unittest discover -s tests/ci -p test_php_runtime_security.py -v

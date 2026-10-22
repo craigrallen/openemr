@@ -58,6 +58,100 @@ def check_source(path, source):
                                            ' "$(php-fpm -n -v)"'), 'independent FPM floor required'
 
 
+PHP_ASSET_HASHES = {
+    'amd64': ('a1285f604dfdde3dbbb789bcb992b68408d5c48bde3d77e866396c4e506f9f13',
+              '8117575be791f5adb5c0674044dbf353de905c9cf9e57d6117c067b355459805'),
+    'arm64': ('467e11b0d2a9b4345c99a3e213edcd9194b565e83faebd30f965c41815ef31f0',
+              'd554149b5a82ec50979f6062b38be41e9149e3d90ed6c5beefba5d9065566487'),
+}
+
+
+class BinaryAssetTest(unittest.TestCase):
+    def source(self):
+        return (ROOT / 'docker/binary/Dockerfile').read_text()
+
+    def test_separate_php_release(self):
+        source = self.source()
+        self.assertIn('ARG PHP_BINARY_RELEASE_DATE=10212026', source)
+        self.assertIn('ARG BINARY_RELEASE_DATE=10032026', source)
+        self.assertIn('ARG OPENEMR_VERSION=8_4_1', source)
+        urls = re.findall(r'https://[^" ]+/releases/download/[^" ]+', source)
+        self.assertEqual(len(urls), 3)
+        for url in urls:
+            date = '${BINARY_RELEASE_DATE}' if url.endswith('/openemr.phar') else '${PHP_BINARY_RELEASE_DATE}'
+            self.assertIn('-' + date + '/', url)
+
+    def test_fail_closed_hash_selection(self):
+        source = self.source()
+        self.assertIn('RUN case ', source)
+        selector = source.split('RUN case ', 1)[1].split('    && cd /tmp', 1)[0]
+        selector = 'case ' + selector.replace('\\\n', '').rstrip()
+        for arch, branch, version, date in [
+                ('amd64', '8.5', '8_4_1', '10212026'),
+                ('arm64', '8.5', '8_4_1', '10212026'),
+                ('386', '8.5', '8_4_1', '10212026'),
+                ('', '8.5', '8_4_1', '10212026'),
+                ('amd64', '8.4', '8_4_1', '10212026'),
+                ('amd64', '8.6', '8_4_1', '10212026'),
+                ('amd64', '8.5', '8_3_0', '10212026'),
+                ('amd64', '8.5', '8_4_1', '10032026')]:
+            with self.subTest(arch=arch, branch=branch, version=version, date=date):
+                result = subprocess.run(['/bin/sh', '-c', selector +
+                    '; printf "%s %s" "$PHP_CLI_SHA256" "$PHP_FPM_SHA256"'],
+                    env={'TARGETARCH': arch, 'PHP_VERSION': branch,
+                         'PHP_VERSION_ABBR': branch.replace('.', ''),
+                         'OPENEMR_VERSION': version, 'PHP_BINARY_RELEASE_DATE': date},
+                    capture_output=True, text=True)
+                accepted = arch in PHP_ASSET_HASHES and (branch, version, date) == ('8.5', '8_4_1', '10212026')
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
+                if accepted:
+                    self.assertEqual(result.stdout, ' '.join(PHP_ASSET_HASHES[arch]))
+
+    def test_checksums_before_permissions_or_execution(self):
+        source = self.source()
+        block = source.split('RUN ', 1)[1] if 'RUN case ' not in source else source.split('RUN case ', 1)[1].split('\n\n', 1)[0]
+        self.assertIn('sha256sum -c -', block)
+        self.assertIn('"${PHP_CLI_SHA256}  php-cli"', block)
+        self.assertIn('"${PHP_FPM_SHA256}  php-fpm"', block)
+        self.assertLess(block.index('-o php-cli'), block.index('sha256sum -c -'))
+        self.assertLess(block.index('-o php-fpm'), block.index('sha256sum -c -'))
+        self.assertLess(block.index('sha256sum -c -'), block.index('chmod +x'))
+        self.assertNotIn('||', block, 'download/checksum failure must not recover')
+        self.assertIn('&& chmod +x php-fpm php-cli', block)
+
+
+    def test_download_and_checksum_failures_stop_install(self):
+        # Run the shipped shell chain with inert command doubles: no downloads,
+        # filesystem writes, permission changes, or PHP/application execution.
+        source = self.source()
+        self.assertIn('RUN case ', source)
+        block = 'case ' + source.split('RUN case ', 1)[1].split('\n\n', 1)[0]
+        block = block.replace('\\\n', '')
+        stubs = """
+cd() { :; }
+curl() { echo download; return "$DOWNLOAD_STATUS"; }
+sha256sum() { cat >/dev/null; echo checksum; return "$CHECKSUM_STATUS"; }
+chmod() { echo chmod; }
+mv() { echo mv; }
+ln() { echo ln; }
+"""
+        for download, checksum in [('0', '0'), ('1', '0'), ('0', '1')]:
+            with self.subTest(download=download, checksum=checksum):
+                result = subprocess.run(['/bin/sh', '-c', stubs + block],
+                    env={'PATH': '/usr/bin:/bin', 'TARGETARCH': 'amd64',
+                         'PHP_VERSION': '8.5', 'PHP_VERSION_ABBR': '85',
+                         'OPENEMR_VERSION': '8_4_1', 'PHP_BINARY_RELEASE_DATE': '10212026',
+                         'DOWNLOAD_STATUS': download, 'CHECKSUM_STATUS': checksum},
+                    capture_output=True, text=True)
+                accepted = download == checksum == '0'
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
+                self.assertEqual('chmod' in result.stdout, accepted)
+                self.assertEqual('mv' in result.stdout, accepted)
+                self.assertEqual('ln' in result.stdout, accepted)
+                if download != '0':
+                    self.assertNotIn('checksum', result.stdout)
+
+
 class RuntimeSourceTest(unittest.TestCase):
     def test_supported_sources(self):
         for path in [*PINS, *PACKAGES]:

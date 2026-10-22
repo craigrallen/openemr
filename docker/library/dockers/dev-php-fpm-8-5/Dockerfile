@@ -13,6 +13,8 @@
 FROM php:8.5.12-fpm@sha256:f665ad19c093eee54db3a03c89102d6828b1bbf4f327689e5947a8686c6585a1
 
 # TECH-83: reject stale, prerelease, or unexpected engines before dependency work.
+# PHP variables must reach the PHP interpreter literally, without shell expansion.
+# hadolint ignore=SC2016
 RUN php -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- 8.5
 
 # Add mariadb-client package that is needed in the OpenEMR Backup gui, which does direct command mysql commands
