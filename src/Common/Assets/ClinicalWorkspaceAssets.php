@@ -32,6 +32,7 @@ final readonly class ClinicalWorkspaceAssets
         'calendar-workday.css',
         'calendar-workday.js',
         'encounter-document.css',
+        'fax-dispatch-popup.css',
         'finder.css',
         'global-messages.css',
         'history-document.css',
