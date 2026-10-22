@@ -18,6 +18,7 @@ require_once("../globals.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Http\CurrentRequest;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -48,6 +49,7 @@ $simpleSearch = $_GET['simple_search'] ?? null;
 <html>
 <head>
     <?php Header::setupHeader('opener'); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/new-patient-duplicates-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('new-patient-duplicates-popup.css')); ?>">
 <style>
   form {
     padding: 0;
@@ -193,7 +195,7 @@ $simpleSearch = $_GET['simple_search'] ?? null;
             </tr>
         </table>
     </div>
-    <div id="searchResultsHeader" class="table-responsive">
+    <div id="searchResultsHeader" class="table-responsive oe-new-patient-duplicates-sheet">
         <table class="table">
             <thead class="thead-light">
             <tr>
@@ -239,7 +241,7 @@ $simpleSearch = $_GET['simple_search'] ?? null;
                 ?>
             </tr>
         </table>
-        <div style="text-align: center;">
+        <div class="oe-new-patient-duplicates-actions" style="text-align: center;">
             <?php if ($pubpid_matched) { ?>
                 <input class='btn btn-primary' type='button' value='<?php echo xla('Cancel'); ?>' onclick='dlgclose();' />
             <?php } else { ?>
