@@ -12,6 +12,7 @@
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -99,6 +100,7 @@ if (!empty($_GET['search_term']) || !empty($_GET['search'])) {
     <title><?php echo xlt('Portal'); ?> | <?php echo xlt('Templates'); ?></title>
     <meta name="description" content="Developed By sjpadgett@gmail.com">
     <?php Header::setupHeader(['datetime-picker', 'select2', 'summernote']); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/portal-template-assignments-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('portal-template-assignments-popup.css')); ?>">
     <script>
         const profiles = <?php echo js_escape($profile_list); ?>;
         let currentEdit = "";
@@ -566,7 +568,7 @@ if (!empty($_GET['search_term']) || !empty($_GET['search'])) {
 </head>
 <body class="body-top">
     <div class='container-xl'>
-        <nav class='nav navbar bg-light text-dark sticky-top'>
+        <nav class='nav navbar bg-light text-dark sticky-top oe-portal-template-heading'>
             <span class='title'><?php echo xlt('Template Maintenance'); ?></span>
             <div class="ml-auto">
                 <label class="form-check"><?php echo xlt('Full Editor'); ?>
