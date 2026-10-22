@@ -22,6 +22,7 @@ require_once(\OpenEMR\Core\OEGlobalsBag::getInstance()->getSrcDir() . "/options.
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclExtended;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -61,6 +62,7 @@ $iter = $result[0];
 <head>
 
 <?php Header::setupHeader(['common','opener', 'erx']); ?>
+<link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/edit-user-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('edit-user-popup.css')); ?>">
 
 <script src="checkpwd_validation.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>"></script>
 
@@ -250,9 +252,9 @@ function toggle_password() {
   }
 </style>
 </head>
-<body class="body_top">
+<body class="body_top oe-edit-user-screen">
 
-<div class="container">
+<div class="container oe-edit-user-document">
     <?php
     /*  Get the list ACL for the user */
     $is_super_user = AclMain::aclCheckCore('admin', 'super');
