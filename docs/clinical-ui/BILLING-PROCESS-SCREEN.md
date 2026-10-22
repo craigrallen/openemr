@@ -1,0 +1,25 @@
+# OPEMR-76: billing process popup screen
+
+## Decision and scope
+
+The billing process results page now uses the existing workbench palette when the shared popup script places `oe-workbench-context` on the document element. A page-specific `oe-billing-process` body class gates the two rules. Within `@media screen`, the body receives the ink and canvas tokens, and its direct `.container` receives the ink and paper tokens. The literal fallbacks are `#17343b`, `#f3f7f5`, and `#fff`. This gives the result surface a nominal paired ink and background palette within the workbench while leaving unrelated pages outside the selector.
+
+The sole `!important` declaration is the body canvas background. The existing shared popup paper rule is normal priority and already loses to the more specific scoped selector; the important declaration conservatively stabilizes only the body background across theme order. No observed important theme override is claimed. There is no new font, wrapper, geometry, control, asset, or print rule. The body marker exists in the DOM for all media, but the palette delta applies only to screen. Inherited shared popup styles can still affect actual popup fonts and controls.
+
+The production edit is exactly the style block after the unchanged `Header::setupHeader()` line and the body class in `interface/billing/billing_process.php`. Removing that block and changing the body tag back to `<body>` recovers every original route byte. The inherited malformed HTML remains untouched. This is a presentation change, not a financial, security, or markup audit.
+
+## Caller and execution boundary
+
+The real caller is the `billing_report.php` form at line 753 and its submit handlers at lines 1481–1499. The controller's extracted-original-handler synthetic jQuery 3.7.1/jsdom run showed that the unusual unclosed selector is accepted: the popup button assigns the named `Popup_Window` at 400 × 300, while normal or no-click submit removes the target. The caller is unchanged. That synthetic result does not establish native named-window reuse, opener behavior, or COOP behavior in a browser.
+
+The existing `Header::setupHeader()` asset path through configuration loads the unchanged popup script. Source inspection and synthetic popup-script windows support a same-origin opener ancestry path to `oe-workbench-context`. Native popup and print behavior still require QA. No caller, shared asset, script, or popup lifecycle code changed.
+
+The route still requires `acct/eob` **or** `acct/bill` write access, validates POST CSRF input, and constructs and executes `BillingProcessor` before the HTML response. The logger source, escaped result rendering, and `onLogComplete()` after the HTML remain byte-identical under the complete inverse check. No live route, helper, financial PHP, bootstrap, database, or network execution was performed. This does not constitute financial or security verification.
+
+## Evidence and remaining acceptance
+
+Hermes owns run 1 of a maximum of 2; Codex is the fallback because Claude was unauthenticated. The controller recorded a genuine local RED before production: 45 tests, 44 passed, 1 missing-presentation failure, from tests-only commit `c93ca67f`. There is no hosted RED claim. The contract is `tests/isolated/billing-process-contract.cjs`; its exact style, body marker, placement, and full inverse define this change. No tests were executed during this production edit.
+
+For the authorized test owner, the portable command is `node --test --test-reporter=tap tests/isolated/billing-process-contract.cjs`. Pinned Git provenance uses `node tests/isolated/billing-process-contract.cjs --history`; the custom flag must not follow `node --test`. The controller recorded local GREEN: portable 45/45 and explicit history 49/49; full Jest 62 suites and 1,260 tests; rooted ESLint PASS; nonignored actual dedented CSS Stylelint PASS with no warnings; PHP `-l` PASS; actual Git-base full inverse PASS at 2,357 bytes with SHA-256 `289a1ac77c094e74f8379c0530a2e69a07311a0fd57c2533585ded35003fc673`; and diff check PASS. All 13 individual temporary links were removed. An independent Gemini 4 Argon High inline STATIC review completed its 11-artifact review with no introduced P1/P2/P3 findings; its process exit was 0 with no tool calls. Reviewer line references and count estimates are not authoritative measurements. Hosted checks, CI, publication, and native acceptance remain pending.
+
+QA still needs a financial sandbox, session roles and authority, default/dark/solar themes, heading and list descendants, focus contrast, window opening and resizing, keyboard and RTL behavior, and OS print output. No effective or native contrast acceptance is claimed. Native QA and ordinary approval remain OPEN; there is no standing bypass, merge, or deploy. The All22, full researched UI, demo, exhaustive popup, Swedish, and prior parked states remain OPEN. All denied boundaries and unpublished work remain in force. The eventual PR base is `master`; the exact uppercase `OPEMR-76` title and commits remain controller-owned.
