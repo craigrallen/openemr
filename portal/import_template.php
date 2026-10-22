@@ -14,6 +14,7 @@
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
@@ -526,6 +527,7 @@ function renderProfileHtml(): void
             Header::setupHeader(['opener']); ?>
             <script src="<?php echo $globalsBag->getString('web_root'); ?>/portal/public/assets/sortablejs/Sortable.min.js?v=<?php echo $globalsBag->get('v_js_includes'); ?>"></script>
         <?php } ?>
+        <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/template-profile-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('template-profile-popup.css')); ?>">
     </head>
     <style>
       body {
@@ -646,7 +648,7 @@ function renderProfileHtml(): void
             ?>
             <div class='row'>
                 <div class='col-6 col-height'>
-                    <nav id='disposeProfile' class='navbar navbar-light bg-light sticky-top'>
+                    <nav id='disposeProfile' class='navbar navbar-light bg-light sticky-top oe-template-profile-actions'>
                         <div class='btn-group'>
                             <button class='btn btn-primary btn-save btn-sm' onclick='return submitProfiles();'><?php echo xlt('Save Profiles'); ?></button>
                             <button class='btn btn-secondary btn-cancel btn-sm' onclick='dlgclose();'><?php echo xlt('Quit'); ?></button>
