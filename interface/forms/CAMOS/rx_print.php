@@ -434,7 +434,7 @@ if (filter_input(INPUT_POST, 'print_pdf') || filter_input(INPUT_POST, 'print_htm
     }
 } else { // end of if print. OPTION selection of what to print
     ?>
-<html>
+<html class='oe-camos-selection'>
 <head>
 <title>
     <?php echo xlt('CAMOS'); ?>
@@ -494,6 +494,21 @@ return count_turnoff;
 
 </script>
 <link rel="stylesheet" href="./rx.css?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>" />
+<script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot() . '/interface/clinical-workspace/popup.js?v=' . urlencode(OEGlobalsBag::getInstance()->getString('v_js_includes'))); ?>"></script>
+<style>
+@media screen {
+  html.oe-workbench-context.oe-camos-selection body {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context.oe-camos-selection form {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+  }
+}
+</style>
 </head>
 <h1><?php echo xlt('Select CAMOS Entries for Printing'); ?></h1>
 <form method=POST name='pick_items' target=_new>
