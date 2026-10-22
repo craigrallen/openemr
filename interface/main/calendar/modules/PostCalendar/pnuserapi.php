@@ -1752,14 +1752,23 @@ function calculateEvents($days, $events, $viewtype)
                 // (for rt2 appointments set prior to fix it remains unchanged). This can be done
                 // since $nd has no influence past the mktime functions - epsdky 2016.
 
-                // make us current
-                while ($ny < $cy) {
+                // The requested days can span two years. Catch up by calendar month
+                // so the original series phase (including legacy day overflow) stays intact.
+                $first_month = substr($start_date, 0, 7);
+                $last_month = substr((string) $stop, 0, 7);
+                if ($last_month < $first_month) {
+                    break;
+                }
+                while ("$ny-$nm" < $first_month) {
                     $occurance = date('Y-m-d', mktime(0, 0, 0, $nm + $rfreq, $nd, $ny));
+                    if ($occurance <= "$ny-$nm-$nd") {
+                        break;
+                    }
                     [$ny, $nm, $nd] = explode('-', $occurance);
                 }
 
                 // populate the event array
-                while ($ny <= $cy) {
+                while ("$ny-$nm" <= $last_month) {
                     $dnum = $rnum; // get day event repeats on
                     do {
                         $occurance = Date_Calc::NWeekdayOfMonth($dnum--, $rday, $nm, $ny, $format = "%Y-%m-%d");
@@ -1792,6 +1801,9 @@ function calculateEvents($days, $events, $viewtype)
                     }
 
                     $occurance = date('Y-m-d', mktime(0, 0, 0, $nm + $rfreq, $nd, $ny));
+                    if ($occurance <= "$ny-$nm-$nd") {
+                        break;
+                    }
                     [$ny, $nm, $nd] = explode('-', $occurance);
                 }
                 break;

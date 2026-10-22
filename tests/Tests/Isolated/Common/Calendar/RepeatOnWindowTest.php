@@ -19,6 +19,7 @@ namespace OpenEMR\Tests\Isolated\Common\Calendar;
 use DateInterval;
 use DatePeriod;
 use DateTimeImmutable;
+use ErrorException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -170,6 +171,90 @@ final class RepeatOnWindowTest extends TestCase
         );
     }
 
+    public function testLegacySeriesStartInsideMonthBackfillsEarlierWeekday(): void
+    {
+        // Preserve the existing REPEAT_ON behavior: the rule can place an
+        // occurrence before eventDate in its starting month. This assertion
+        // records legacy behavior, not a policy decision about start dates.
+        $this->assertOccurrences(
+            '2024-01-28', '2024-03-02', '20240215',
+            self::repeatOn('2024-02-20', '2024-03-31', number: 1),
+            ['2024-02-06']
+        );
+    }
+
+    public function testNullEndDateReturnsNoOccurrencesWithoutDiagnostics(): void
+    {
+        // A null-ended row can reach calculateEvents with a valid REPEAT_ON
+        // specification; it does not authorize an indefinite recurrence.
+        $this->assertOccurrences(
+            '2024-01-28', '2024-03-02', '20240215',
+            self::repeatOnWithEndDate(null),
+            [],
+            rejectDiagnostics: true
+        );
+    }
+
+    public function testMissingAndZeroRepeatOnFieldsAreRejectedByCheckEvent(): void
+    {
+        foreach (['event_repeat_on_freq', 'event_repeat_on_num', 'event_repeat_on_day'] as $field) {
+            $missing = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
+            $spec = unserialize($missing['recurrspec'], ['allowed_classes' => false]);
+            unset($spec[$field]);
+            $missing['recurrspec'] = serialize($spec);
+            $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $missing, []);
+        }
+
+        foreach (['event_repeat_on_freq', 'event_repeat_on_num'] as $field) {
+            $zero = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
+            $spec = unserialize($zero['recurrspec'], ['allowed_classes' => false]);
+            $spec[$field] = 0;
+            $zero['recurrspec'] = serialize($spec);
+            $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $zero, []);
+        }
+
+        $nullWeekday = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
+        $spec = unserialize($nullWeekday['recurrspec'], ['allowed_classes' => false]);
+        $spec['event_repeat_on_day'] = null;
+        $nullWeekday['recurrspec'] = serialize($spec);
+        $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $nullWeekday, []);
+    }
+
+    public function testSundayZeroIsAValidRepeatOnWeekday(): void
+    {
+        $this->assertOccurrences(
+            '2024-01-28', '2024-03-02', '20240215',
+            self::repeatOn('2024-02-01', '2024-02-29', number: 1, weekday: 0),
+            ['2024-02-04']
+        );
+    }
+
+    public function testEveryTwoMonthsKeepsMidyearPhaseAcrossGridBounds(): void
+    {
+        $event = self::repeatOn('2024-01-02', '2024-06-30', frequency: 2, number: 1);
+        // April's grid contains March 31, but the next active month is May.
+        $this->assertOccurrences('2024-03-31', '2024-05-04', '20240415', $event, []);
+        $this->assertOccurrences('2024-04-28', '2024-06-01', '20240515', $event, ['2024-05-07']);
+    }
+
+    public function testHistoricalUnflaggedDayOverflowRemainsDistinct(): void
+    {
+        // Jan 31 + one month overflows past February in the legacy series.
+        $unflagged = self::repeatOn('2024-01-31', '2024-03-31', number: 1);
+        $unflagged['recurrspec'] = serialize([
+            'event_repeat_on_freq' => 1,
+            'event_repeat_on_num' => 1,
+            'event_repeat_on_day' => 2,
+            'exdate' => '',
+        ]);
+        $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $unflagged, []);
+        $this->assertOccurrences(
+            '2024-01-28', '2024-03-02', '20240215',
+            self::repeatOn('2024-01-31', '2024-03-31', number: 1),
+            ['2024-02-06']
+        );
+    }
+
     public function testNonRecurringEventIsPreserved(): void
     {
         $event = [
@@ -206,10 +291,25 @@ final class RepeatOnWindowTest extends TestCase
         ];
     }
 
+    /** @return array<string, mixed> */
+    private static function repeatOnWithEndDate(mixed $endDate): array
+    {
+        $event = self::repeatOn('2024-02-06', '2024-02-27', number: 1);
+        $event['endDate'] = $endDate;
+        return $event;
+    }
+
     /** @param array<string, mixed> $event
      *  @param list<string> $expected
      */
-    private function assertOccurrences(string $first, string $last, string $viewDate, array $event, array $expected): void
+    private function assertOccurrences(
+        string $first,
+        string $last,
+        string $viewDate,
+        array $event,
+        array $expected,
+        bool $rejectDiagnostics = false
+    ): void
     {
         $GLOBALS['repeatOnWindowViewDate'] = $viewDate;
         // Check the supplied bounds against a Sunday-to-Saturday month grid
@@ -237,7 +337,18 @@ final class RepeatOnWindowTest extends TestCase
             throw new RuntimeException('calculateEvents fixture did not load.');
         }
         /** @var array<string, list<array<string, mixed>>> $actual */
-        $actual = $calculator($days, [$event], 'month');
+        if ($rejectDiagnostics) {
+            set_error_handler(static function (int $severity, string $message): never {
+                throw new ErrorException($message, 0, $severity);
+            });
+            try {
+                $actual = $calculator($days, [$event], 'month');
+            } finally {
+                restore_error_handler();
+            }
+        } else {
+            $actual = $calculator($days, [$event], 'month');
+        }
         $populated = [];
         foreach ($actual as $date => $events) {
             if ($events !== []) {
