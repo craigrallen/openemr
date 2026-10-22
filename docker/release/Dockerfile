@@ -157,21 +157,43 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin -
 # ============================================================================
 # MULTI-STAGE BUILD: OpenEMR Source and Dependencies
 # ============================================================================
-# Stage 1: Fetch OpenEMR source code via git clone
-# Use git clone instead of GitHub archive because OpenEMR's .gitattributes
+# Stage 1: Fetch OpenEMR source code via Git
+# Use Git instead of GitHub archive because OpenEMR's .gitattributes
 # marks tests/, phpunit*.xml, and other dev files as export-ignore, which
-# excludes them from archives but not from clones.
-# Supports branches or tags via OPENEMR_VERSION build argument, and building
-# from a fork or mirror via OPENEMR_GIT (must be clonable without credentials).
+# excludes them from archives but not from Git checkouts.
+# Default to this fork's reviewed security candidate, which includes ccdaservice.
+# OPENEMR_VERSION accepts a branch, tag, or full lowercase commit SHA.
+# OPENEMR_COMMIT optionally takes precedence and MUST be a full lowercase SHA.
+# OPENEMR_GIT supports public forks/mirrors (no credentials required).
 # Examples:
 #   - Branch: --build-arg OPENEMR_VERSION=master
 #   - Tag:    --build-arg OPENEMR_VERSION=v8_4_1
+#   - Commit: --build-arg OPENEMR_COMMIT=<40-character-lowercase-SHA>
 #   - Fork:   --build-arg OPENEMR_GIT=https://github.com/<you>/openemr.git --build-arg OPENEMR_VERSION=<branch>
-ARG OPENEMR_VERSION=master
+# Declare selectors in base so source and final stages inherit build overrides.
+ARG OPENEMR_VERSION=d2b5e698299fa2c6597da7561aa7083d42f1c575
+ARG OPENEMR_COMMIT=
 FROM base AS openemr-source
-ARG OPENEMR_GIT=https://github.com/openemr/openemr.git
-RUN git clone "${OPENEMR_GIT}" --branch "${OPENEMR_VERSION}" --depth 1 openemr \
-    && rm -rf openemr/.git
+ARG OPENEMR_GIT=https://github.com/craigrallen/openemr.git
+RUN set -eu; \
+    commit="${OPENEMR_COMMIT}"; \
+    if [ -z "$commit" ] && [ "${#OPENEMR_VERSION}" -eq 40 ] \
+        && printf '%s' "$OPENEMR_VERSION" | grep -Eq '^[0-9a-f]{40}$'; then \
+        commit="$OPENEMR_VERSION"; \
+    fi; \
+    if [ -n "$commit" ]; then \
+        case "$commit" in *[!0-9a-f]*) echo 'Invalid OPENEMR_COMMIT: full lowercase SHA required' >&2; exit 1 ;; esac; \
+        [ "${#commit}" -eq 40 ] || { echo 'Invalid OPENEMR_COMMIT: full lowercase SHA required' >&2; exit 1; }; \
+        git init openemr; \
+        git -C openemr remote add origin "$OPENEMR_GIT"; \
+        git -C openemr fetch --depth 1 origin "$commit"; \
+        git -C openemr checkout --detach FETCH_HEAD; \
+        [ "$(git -C openemr rev-parse HEAD)" = "$commit" ] \
+            || { echo 'OpenEMR source commit verification failed' >&2; exit 1; }; \
+    else \
+        git clone "$OPENEMR_GIT" --branch "$OPENEMR_VERSION" --depth 1 openemr; \
+    fi; \
+    rm -rf openemr/.git
 
 # Stage 2: Install PHP dependencies (Composer)
 # Separate stage allows Docker to cache this layer independently
@@ -484,6 +506,6 @@ LABEL org.opencontainers.image.title="OpenEMR"
 LABEL org.opencontainers.image.source="https://github.com/openemr/openemr"
 LABEL org.opencontainers.image.url="https://www.open-emr.org"
 LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
-LABEL org.opencontainers.image.revision="${OPENEMR_VERSION}"
+LABEL org.opencontainers.image.revision="${OPENEMR_COMMIT:-${OPENEMR_VERSION}}"
 LABEL org.opencontainers.image.version="${IMAGE_VERSION}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"

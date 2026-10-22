@@ -234,5 +234,117 @@ class NativeGuardTest(unittest.TestCase):
         self.assertNotEqual(self.run_guard(code, '8.5', 'PHP 8.5.12 (cli)').returncode, 0)
 
 
+class ReleaseApplicationSourceTest(unittest.TestCase):
+    PIN = 'd2b5e698299fa2c6597da7561aa7083d42f1c575'
+    REPO = 'https://github.com/craigrallen/openemr.git'
+
+    def source(self):
+        return (ROOT / 'docker/release/Dockerfile').read_text()
+
+    def defaults(self):
+        # All application args must be in base or the source stage, before RUN.
+        before_run = self.source().split('FROM base AS openemr-source', 1)
+        inherited = before_run[0].split('FROM alpine:${ALPINE_VERSION} AS base', 1)[1]
+        local = before_run[1].split('RUN ', 1)[0]
+        return dict(re.findall(r'^ARG (OPENEMR_\w+)=(.*)$', inherited + local, re.M))
+
+    def run_source(self, version=None, commit=None, failure='', actual=None, repo=None):
+        block = self.source().split('FROM base AS openemr-source', 1)[1]
+        block = block.split('RUN ', 1)[1].split('\n\n', 1)[0].replace('\\\n', '')
+        args = self.defaults()
+        if version is not None:
+            args['OPENEMR_VERSION'] = version
+        if commit is not None:
+            args['OPENEMR_COMMIT'] = commit
+        if repo is not None:
+            args['OPENEMR_GIT'] = repo
+        # Inert Git double: execute the exact Dockerfile shell, without network,
+        # config reads, application startup, repository writes, or real removal.
+        stubs = r'''
+git() {
+    printf 'git' >&2
+    for arg do printf ' <%s>' "$arg" >&2; done
+    printf '\n' >&2
+    if [ "$1" = '-C' ]; then shift 2; fi
+    if [ "$1" = "$FAILURE" ]; then return 1; fi
+    if [ "$1" = 'rev-parse' ]; then printf '%s\n' "$ACTUAL"; fi
+}
+rm() { printf 'cleanup\n' >&2; }
+'''
+        return subprocess.run(['/bin/sh', '-c', stubs + block],
+            env={'PATH': '/usr/bin:/bin', **args, 'FAILURE': failure,
+                 'ACTUAL': self.PIN if actual is None else actual},
+            capture_output=True, text=True)
+
+    def test_default_fork_and_reviewed_commit(self):
+        self.assertEqual(self.defaults()['OPENEMR_GIT'], self.REPO)
+        self.assertEqual(self.defaults()['OPENEMR_VERSION'], self.PIN)
+        self.assertEqual(self.defaults()['OPENEMR_COMMIT'], '')
+        result = self.run_source()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('<fetch> <--depth> <1> <origin> <' + self.PIN + '>', result.stderr)
+        self.assertIn('<checkout> <--detach> <FETCH_HEAD>', result.stderr)
+        self.assertIn('<rev-parse> <HEAD>', result.stderr)
+        self.assertIn('cleanup', result.stderr)
+
+    def test_branch_and_tag_overrides(self):
+        for ref in ('master', 'feature/security', 'v8_4_1'):
+            with self.subTest(ref=ref):
+                result = self.run_source(version=ref)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('<clone> <' + self.REPO + '> <--branch> <' + ref + '>', result.stderr)
+                self.assertNotIn('<fetch>', result.stderr)
+                self.assertIn('cleanup', result.stderr)
+
+    def test_explicit_commit_overrides_version(self):
+        commit = 'a' * 40
+        result = self.run_source(version='v8_4_1', commit=commit, actual=commit)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('<fetch> <--depth> <1> <origin> <' + commit + '>', result.stderr)
+        self.assertNotIn('<clone>', result.stderr)
+        self.assertIn('cleanup', result.stderr)
+        # The existing VERSION route also supports full commits, including
+        # a caller-supplied public mirror; no implicit default pin wins over it.
+        mirror = 'https://example.invalid/openemr.git'
+        result = self.run_source(version=commit, actual=commit, repo=mirror)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('<remote> <add> <origin> <' + mirror + '>', result.stderr)
+        self.assertIn('<fetch> <--depth> <1> <origin> <' + commit + '>', result.stderr)
+        self.assertIn('LABEL org.opencontainers.image.revision="${OPENEMR_COMMIT:-${OPENEMR_VERSION}}"', self.source())
+
+    def test_invalid_commits_rejected_before_git(self):
+        for commit in ('master', 'abc123', 'a' * 39, 'a' * 41, 'g' * 40,
+                       '--upload-pack=evil', 'a' * 40 + '\n', 'A' * 40):
+            with self.subTest(commit=commit):
+                result = self.run_source(commit=commit)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn('git <', result.stderr)
+                self.assertNotIn('cleanup', result.stderr)
+
+    def test_git_failures_and_mismatch_fail_closed(self):
+        for failure in ('init', 'remote', 'fetch', 'checkout', 'rev-parse'):
+            with self.subTest(failure=failure):
+                result = self.run_source(failure=failure)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn('cleanup', result.stderr)
+        result = self.run_source(actual='b' * 40)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('cleanup', result.stderr)
+        result = self.run_source(version='missing-branch', failure='clone')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('cleanup', result.stderr)
+
+    def test_release_argument_route_and_ccda_preserved(self):
+        workflow = (ROOT / '.github/workflows/docker-build-release.yml').read_text()
+        self.assertEqual(workflow.count('OPENEMR_VERSION=${{ needs.prep.outputs.openemr_version_ref }}'), 2)
+        self.assertEqual(workflow.count('context: ./docker/release'), 2)
+        orchestrator = (ROOT / '.github/workflows/docker-release-orchestrator.yml').read_text()
+        self.assertIn('-f openemr_version_ref="$OPENEMR_VERSION_REF"', orchestrator)
+        source = self.source()
+        self.assertIn('&& cd ccdaservice', source)
+        self.assertIn('COPY --from=openemr-assets /openemr/ccdaservice /tmp/openemr/ccdaservice', source)
+        self.assertIn('FROM production AS final', source)
+
+
 if __name__ == '__main__':
     unittest.main()

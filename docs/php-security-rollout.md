@@ -120,3 +120,51 @@ extension/runtime compatibility, application/security/startup/migration and
 clinical acceptance, and deployment approval remain required. No credentials,
 database, live application bootstrap, network, global configuration, commit,
 push, merge, deployment, or nested agents were used.
+
+
+## Release application source repair (2026-10-22)
+
+The release default now fetches the public fork
+`https://github.com/craigrallen/openemr.git` at reviewed security candidate
+`d2b5e698299fa2c6597da7561aa7083d42f1c575`. Local Git tree inspection confirms
+that candidate contains `ccdaservice`. This addresses the source-selection
+cause of the controller-reported build blocker; a real build is still required.
+
+`OPENEMR_VERSION` defaults to that full commit and still accepts explicit
+branches/tags. Optional `OPENEMR_COMMIT` takes precedence over VERSION and
+accepts only a full 40-character lowercase hexadecimal commit ID. Commit
+selection initializes a repository, shallow-fetches the exact ID, checks out
+FETCH_HEAD detached, and verifies HEAD equals the requested ID before removing
+Git metadata. Invalid explicit commits, Git failures, or mismatches stop the
+build without fallback. `OPENEMR_GIT` remains a public fork/mirror override.
+The revision label reflects the effective selector, including COMMIT overrides.
+
+Argument routing was inspected before edits: the orchestrator passes
+release-targets.yml's `openemr_version_ref` to docker-build-release.yml, whose
+gated and non-gated builds both pass `OPENEMR_VERSION` with docker/release as
+context. The selectors are declared in base and inherited by openemr-source
+and final. Existing workflows explicitly select branches/tags (including
+master), so those builds override the default pin; the optional COMMIT argument
+is available to direct Docker builds, not newly wired into workflow dispatch.
+Workflows also retain their existing upstream-only execution and metadata
+lookup behavior. No workflow or release-target data was changed.
+
+`evidence/TECH-83-release-red.txt` records the pre-fix regression run: 17 test
+methods, 19 failing assertions/subtests, exit 1; all 11 existing security test
+methods passed. `evidence/TECH-83-release-green.txt` records 17 passing methods,
+exit 0, after the fix and additional mirror/commit-label assertions. Both
+`python3 -B` and Apple `/usr/bin/python3 -B` passed the existing security-suite
+command above, with no skips. New tests run the shipped source shell using
+inert Git/removal doubles: default fork/pin, branch/tag overrides, full commit
+and repository overrides, invalid commits, Git failures, and HEAD mismatch.
+These are offline control-flow tests, not Git transport or Docker build proof.
+Hadolint and git diff --check passed. Source preservation checks confirm all
+Dockerfile content outside source selection and the revision label is unchanged,
+including PHP engine checks, CQM/CCDA dependency/build/copy steps and runtime.
+
+No network fetch, real image build, application/DB/mail/cron bootstrap,
+credential/config/environment-file read, authentication probe, nested agent,
+commit, push, deployment, publication, or new Jira ticket was performed.
+Independent review, real builds, functionality acceptance and publication
+remain with the controller; this follow-up does not declare all TECH-83
+production acceptance gates complete.

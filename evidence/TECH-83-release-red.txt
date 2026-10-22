@@ -1,0 +1,215 @@
+test_checksums_before_permissions_or_execution (test_php_runtime_security.BinaryAssetTest.test_checksums_before_permissions_or_execution) ... ok
+test_download_and_checksum_failures_stop_install (test_php_runtime_security.BinaryAssetTest.test_download_and_checksum_failures_stop_install) ... ok
+test_fail_closed_hash_selection (test_php_runtime_security.BinaryAssetTest.test_fail_closed_hash_selection) ... ok
+test_separate_php_release (test_php_runtime_security.BinaryAssetTest.test_separate_php_release) ... ok
+test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest.test_independent_fpm_engine) ... ok
+test_native_engine (test_php_runtime_security.NativeGuardTest.test_native_engine) ... ok
+test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest.test_synthetic_versions_using_shipped_code) ... ok
+test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) ...
+  test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='master') ... FAIL
+  test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='feature/security') ... FAIL
+  test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='v8_4_1') ... FAIL
+test_default_fork_and_reviewed_commit (test_php_runtime_security.ReleaseApplicationSourceTest.test_default_fork_and_reviewed_commit) ... FAIL
+test_explicit_commit_overrides_version (test_php_runtime_security.ReleaseApplicationSourceTest.test_explicit_commit_overrides_version) ... FAIL
+test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) ...
+  test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='init') ... FAIL
+  test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='remote') ... FAIL
+  test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='fetch') ... FAIL
+  test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='checkout') ... FAIL
+  test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='rev-parse') ... FAIL
+test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) ... FAIL
+test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) ...
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='master') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='abc123') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='gggggggggggggggggggggggggggggggggggggggg') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='--upload-pack=evil') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n') ... FAIL
+  test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA') ... FAIL
+test_release_argument_route_and_ccda_preserved (test_php_runtime_security.ReleaseApplicationSourceTest.test_release_argument_route_and_ccda_preserved) ... ok
+test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) ... ok
+test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest.test_missing_or_late_floor_rejected) ... ok
+test_pin_mutations_rejected (test_php_runtime_security.RuntimeSourceTest.test_pin_mutations_rejected) ... ok
+test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) ... ok
+
+======================================================================
+FAIL: test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='master')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 293, in test_branch_and_tag_overrides
+    self.assertIn('<clone> <' + self.REPO + '> <--branch> <' + ref + '>', result.stderr)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '<clone> <https://github.com/craigrallen/openemr.git> <--branch> <master>' not found in 'git <clone> <https://github.com/openemr/openemr.git> <--branch> <master> <--depth> <1> <openemr>\ncleanup\n'
+
+======================================================================
+FAIL: test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='feature/security')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 293, in test_branch_and_tag_overrides
+    self.assertIn('<clone> <' + self.REPO + '> <--branch> <' + ref + '>', result.stderr)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '<clone> <https://github.com/craigrallen/openemr.git> <--branch> <feature/security>' not found in 'git <clone> <https://github.com/openemr/openemr.git> <--branch> <feature/security> <--depth> <1> <openemr>\ncleanup\n'
+
+======================================================================
+FAIL: test_branch_and_tag_overrides (test_php_runtime_security.ReleaseApplicationSourceTest.test_branch_and_tag_overrides) (ref='v8_4_1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 293, in test_branch_and_tag_overrides
+    self.assertIn('<clone> <' + self.REPO + '> <--branch> <' + ref + '>', result.stderr)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '<clone> <https://github.com/craigrallen/openemr.git> <--branch> <v8_4_1>' not found in 'git <clone> <https://github.com/openemr/openemr.git> <--branch> <v8_4_1> <--depth> <1> <openemr>\ncleanup\n'
+
+======================================================================
+FAIL: test_default_fork_and_reviewed_commit (test_php_runtime_security.ReleaseApplicationSourceTest.test_default_fork_and_reviewed_commit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 278, in test_default_fork_and_reviewed_commit
+    self.assertEqual(self.defaults()['OPENEMR_GIT'], self.REPO)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'https://github.com/openemr/openemr.git' != 'https://github.com/craigrallen/openemr.git'
+- https://github.com/openemr/openemr.git
+?                    ^^  ---
++ https://github.com/craigrallen/openemr.git
+?                    ^^^^^^^^^
+
+
+======================================================================
+FAIL: test_explicit_commit_overrides_version (test_php_runtime_security.ReleaseApplicationSourceTest.test_explicit_commit_overrides_version)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 301, in test_explicit_commit_overrides_version
+    self.assertIn('<fetch> <--depth> <1> <origin> <' + commit + '>', result.stderr)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '<fetch> <--depth> <1> <origin> <aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>' not found in 'git <clone> <https://github.com/openemr/openemr.git> <--branch> <v8_4_1> <--depth> <1> <openemr>\ncleanup\n'
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='init')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 318, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='remote')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 318, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='fetch')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 318, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='checkout')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 318, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed) (failure='rev-parse')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 318, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_git_failures_and_mismatch_fail_closed (test_php_runtime_security.ReleaseApplicationSourceTest.test_git_failures_and_mismatch_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 321, in test_git_failures_and_mismatch_fail_closed
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='master')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='abc123')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='gggggggggggggggggggggggggggggggggggggggg')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='--upload-pack=evil')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_invalid_commits_rejected_before_git (test_php_runtime_security.ReleaseApplicationSourceTest.test_invalid_commits_rejected_before_git) (commit='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 310, in test_invalid_commits_rejected_before_git
+    self.assertNotEqual(result.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+----------------------------------------------------------------------
+Ran 17 tests in 2.200s
+
+FAILED (failures=19)
