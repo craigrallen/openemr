@@ -1083,13 +1083,45 @@ class PatientService extends BaseService
         $currUser = ($user_id > 0) ? ['id' => $user_id] : $user->getCurrentlyLoggedInUser();
         $sql = "SELECT patients FROM recent_patients WHERE user_id = ?";
         $res = sqlQuery($sql, [$currUser['id']]);
-        // original code:  return ($res) ? unserialize($res['patients']) : [];
-        // We only want the pid value so we can fetch the data from patient_data...
-        //
-        $pids = [];
-        foreach (($res) ? unserialize($res['patients'], ['allowed_classes' => false]) : [] as $v) {
-            $pids[]['pid'] = $v['pid'];
+        if (!is_array($res) || !isset($res['patients']) || !is_string($res['patients'])) {
+            return [];
         }
-        return($pids);
+
+        $serialized = $res['patients'];
+        $invalidSerialization = false;
+        set_error_handler(static function (int $severity) use (&$invalidSerialization): bool {
+            $invalidSerialization = true;
+            return true;
+        }, E_WARNING | E_NOTICE);
+        try {
+            $recentPatients = unserialize($serialized, ['allowed_classes' => false]);
+        } finally {
+            restore_error_handler();
+        }
+
+        // The writer stores a serialized array. The round trip also rejects
+        // trailing bytes on PHP versions that silently decode a valid prefix.
+        if ($invalidSerialization || !is_array($recentPatients) || serialize($recentPatients) !== $serialized) {
+            return [];
+        }
+
+        $pids = [];
+        foreach ($recentPatients as $entry) {
+            if (!is_array($entry) || !array_key_exists('pid', $entry)) {
+                continue;
+            }
+
+            $pid = $entry['pid'];
+            if (is_int($pid)) {
+                if ($pid <= 0) {
+                    continue;
+                }
+            } elseif (!is_string($pid) || preg_match('/\A[0-9]+\z/', $pid) !== 1 || strspn($pid, '0') === strlen($pid)) {
+                continue;
+            }
+
+            $pids[] = ['pid' => $pid];
+        }
+        return $pids;
     }
 }
