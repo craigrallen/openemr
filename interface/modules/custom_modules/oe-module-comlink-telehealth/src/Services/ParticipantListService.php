@@ -125,7 +125,21 @@ class ParticipantListService
             !empty($session[$userKey . '_start_time']) &&
             !empty($session[$userKey . '_last_update'])
         ) {
-            $dateTime = \DateTime::createFromFormat("Y-m-d H:i:s", $session[$userKey . '_last_update']);
+            $lastUpdate = $session[$userKey . '_last_update'];
+            if (!is_string($lastUpdate) || str_contains($lastUpdate, "\0") || str_starts_with($lastUpdate, '0000-')) {
+                return "N";
+            }
+
+            $dateTime = \DateTime::createFromFormat("Y-m-d H:i:s", $lastUpdate);
+            $parseErrors = \DateTime::getLastErrors();
+            if (
+                $dateTime === false ||
+                ($parseErrors !== false && ($parseErrors['warning_count'] > 0 || $parseErrors['error_count'] > 0)) ||
+                $dateTime->format("Y-m-d H:i:s") !== $lastUpdate
+            ) {
+                return "N";
+            }
+
             $currentDateTime = new \DateTime();
             // odd that this statement returns an empty string instead of false
             if ($currentDateTime < $dateTime->add(new \DateInterval("PT15S"))) {
