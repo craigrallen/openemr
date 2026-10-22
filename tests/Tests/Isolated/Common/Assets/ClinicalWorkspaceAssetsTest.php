@@ -153,6 +153,9 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss issues encounters stylesheet' => ['issues_encounters_document.css'],
+            'issues encounters route basename' => ['problem_encounter.php'],
+            'issues encounters stylesheet traversal' => ['../clinical-workspace/issues-encounters-document.css'],
         ];
     }
 
@@ -450,6 +453,44 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function issuesEncountersStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('issues-encounters-document.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_007_001);
+        $this->writeAsset('issues-encounters-document.css', 1_700_007_002);
+        self::assertSame('1700007002', $assets->version('issues-encounters-document.css'));
+
+        $this->writeAsset('issues-encounters-document.css', 1_700_007_100);
+        self::assertSame('1700007100', $assets->version('issues-encounters-document.css'));
+        self::assertSame('1700007001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/issues-encounters-document.css');
+        self::assertSame('0', $assets->version('issues-encounters-document.css'));
+        self::assertSame('1700007001', $assets->version('issue-popup.css'));
+
+        foreach (['issues_encounters_document.css', 'Issues-Encounters-Document.css', 'issues-encounters-document.CSS', '../clinical-workspace/issues-encounters-document.css', 'issues-encounters-document.css?v=1', 'issues-encounters-document.js', 'problem-encounter.css'] as $unsupported) {
+            try {
+                $assets->version($unsupported);
+                self::fail('Expected rejection of ' . $unsupported);
+            } catch (\InvalidArgumentException) {
+                // Rejected by name, as required.
+            }
+        }
+    }
+
+    #[Test]
+    public function shippedIssuesEncountersStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/issues-encounters-document.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('issues-encounters-document.css'));
     }
 
     #[Test]
