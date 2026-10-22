@@ -1,0 +1,59 @@
+/*
+ * Order results (interface/orders/single_order_results.php) within an active clinical
+ * workbench popup. list_reports.php opens the route with window.open; popup.js marks
+ * <html> only when the opener chain reaches an active workbench shell, and the route's
+ * own body class keeps the shared renderer's other consumers out of scope.
+ *
+ * Colour, borders, and the sheet's padding and radius: the route's inline body margin
+ * and font, the renderer's .table-responsive scroller, column widths, the abnormal-result
+ * flag and the notes pre (theme pre ink with the renderer's bg-white utility) are left
+ * as they are, and no button palette is set here. Screen only: print keeps the legacy
+ * rendering.
+ */
+@media screen {
+  html.oe-workbench-popup body.oe-order-results-popup {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  /* The renderer's existing form > .labres.table-responsive wrapper becomes the document sheet. */
+  html.oe-workbench-popup body.oe-order-results-popup .labres {
+    padding: 16px 18px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  /* Table paper only; the theme's table-striped rows and inline row paint still draw over it. */
+  html.oe-workbench-popup body.oe-order-results-popup .labres .table {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-popup body.oe-order-results-popup .labres tr.head {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-popup body.oe-order-results-popup .labres td {
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-order-results-popup .labres th {
+    border-color: var(--oe-wb-line);
+  }
+
+  /* Fallback for browsers without :focus-visible; kept as its own rule so one never voids the other. */
+  html.oe-workbench-popup body.oe-order-results-popup .labres .btn:focus,
+  html.oe-workbench-popup body.oe-order-results-popup .labres a:focus {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-popup body.oe-order-results-popup .labres .btn:focus-visible,
+  html.oe-workbench-popup body.oe-order-results-popup .labres a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}
