@@ -153,6 +153,10 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss disclosure stylesheet' => ['disclosure_popup.css'],
+            'disclosure stylesheet case variant' => ['Disclosure-Popup.css'],
+            'disclosure stylesheet traversal' => ['../clinical-workspace/disclosure-popup.css'],
+            'disclosure stylesheet query suffix' => ['disclosure-popup.css?v=1'],
         ];
     }
 
@@ -450,6 +454,35 @@ class ClinicalWorkspaceAssetsTest extends TestCase
         clearstatcache(true, $shipped);
 
         self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('patient-search.css'));
+    }
+
+    #[Test]
+    public function disclosurePopupStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('disclosure-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('disclosure-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('disclosure-popup.css'));
+
+        $this->writeAsset('disclosure-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('disclosure-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/disclosure-popup.css');
+        self::assertSame('0', $assets->version('disclosure-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+    }
+
+    #[Test]
+    public function shippedDisclosurePopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/disclosure-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('disclosure-popup.css'));
     }
 
     #[Test]
