@@ -25,9 +25,6 @@ final class RepeatOnWindowFixture
 {
     public static function load(Connection $mockConnection): void
     {
-        if (PHP_SAPI !== 'cli') {
-            throw new RuntimeException('Calendar source fixture is CLI only.');
-        }
         if (!$mockConnection instanceof MockObject) {
             throw new RuntimeException('Calendar database transport must be a PHPUnit mock.');
         }
@@ -65,7 +62,8 @@ final class RepeatOnWindowFixture
             throw new RuntimeException('Database singleton was already initialized.');
         }
         $singleton->setValue(null, $instance);
-        if (Database::instance() !== $instance || Database::instance()->getDbalConnection() !== $mockConnection) {
+        $connection = new ReflectionProperty(Database::class, 'conn');
+        if (Database::instance() !== $instance || $connection->getValue($instance) !== $mockConnection) {
             throw new RuntimeException('Legacy database transport is not the PHPUnit connection mock.');
         }
 
