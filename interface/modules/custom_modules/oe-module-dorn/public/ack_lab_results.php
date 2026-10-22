@@ -49,8 +49,22 @@ if ($resultsGuid) {
     <head>
         <?php Header::setupHeader(['opener']);?>
         <title><?php echo xlt("Alert"); ?></title>
+        <style>
+            @media screen {
+              html.oe-workbench-context body.oe-dorn-ack-result {
+                background-color: var(--oe-wb-canvas);
+                color: var(--oe-wb-ink);
+              }
+
+              html.oe-workbench-context body.oe-dorn-ack-result > h3 {
+                background-color: var(--oe-wb-paper);
+                color: var(--oe-wb-ink);
+                box-shadow: inset 0 0 0 1px var(--oe-wb-line);
+              }
+            }
+        </style>
     </head>
-    <body>
+    <body class="oe-dorn-ack-result">
     <?php
     if ($rejectResults == true) {
         ?>
