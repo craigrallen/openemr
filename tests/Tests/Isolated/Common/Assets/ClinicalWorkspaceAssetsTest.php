@@ -66,7 +66,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     #[Test]
     public function popupStylesheetsUseTheirOwnModificationTimesAndMissingFallback(): void
     {
-        $names = ['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'];
+        $names = ['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css', 'patient-match-popup.css'];
         $assets = new ClinicalWorkspaceAssets($this->directory);
 
         foreach ($names as $index => $name) {
@@ -91,7 +91,7 @@ class ClinicalWorkspaceAssetsTest extends TestCase
     public function shippedPopupStylesheetsUseTheirActualModificationTimes(): void
     {
         $assets = new ClinicalWorkspaceAssets();
-        foreach (['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css'] as $name) {
+        foreach (['issue-popup.css', 'patient-picker-popup.css', 'patient-results-popup.css', 'patient-match-popup.css'] as $name) {
             $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/' . $name;
             self::assertFileExists($shipped);
             clearstatcache(true, $shipped);
