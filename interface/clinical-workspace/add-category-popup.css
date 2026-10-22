@@ -1,0 +1,63 @@
+/*
+ * Nation Notes Add Category (library/custom_template/add_template.php) as quiet document paper
+ * inside a workbench popup.
+ *
+ * Every rule is scoped to html.oe-workbench-context.oe-workbench-popup plus the route's body
+ * class, and the sheet is linked with media="screen", so the standalone page and print keep the
+ * legacy rendering. Tokens come from popup.css. The original table/control structure and
+ * typography are preserved; the new form padding and border change geometry, and that new form
+ * geometry is unmeasured.
+ *
+ * interface/themes/color_base.scss paints .body_top, .bgcolor2 and .body_nav with
+ * background-color: $paler !important, so the body canvas below is the sheet's one !important.
+ * The theme's .text ink on the table row is left to inherit; it is not overridden here.
+ */
+@media screen {
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas) !important;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form {
+    margin: 0;
+    padding: 12px;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 6px;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #template_name,
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #multi_context {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #template_name:focus,
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #multi_context:focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #template_name:focus-visible,
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #multi_context:focus-visible {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #template_name:disabled,
+  html.oe-workbench-context.oe-workbench-popup body.body_top.oe-add-category form.oe-add-category-form #multi_context:disabled {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+    border-color: var(--oe-wb-line);
+  }
+}
