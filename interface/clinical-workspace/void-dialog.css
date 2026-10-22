@@ -1,0 +1,108 @@
+/*
+ * Void Reason dialog (patient_file/void_dialog.php) as a small document sheet.
+ *
+ * The fee sheet and checkout open this route with dlgopen. popup.js marks <html> with
+ * oe-workbench-context only inside an active workbench, so every rule pairs that marker with
+ * the route's body class, and the sheet is linked with media="screen": the standalone page,
+ * legacy mode and print keep the legacy rendering. Tokens come from popup.css.
+ *
+ * Typography, the generated reason select, the notes input (including its inline width) and
+ * the two original button inputs are kept; only paint, spacing and the table's stacking change.
+ * Field paint skips Bootstrap validation states. No breakpoints: narrow frames wrap.
+ */
+@media screen {
+  html.oe-workbench-context body.oe-void-dialog {
+    margin: 0;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+  }
+
+  /* One paper sheet; Bootstrap's container-fluid gutter is folded into its padding. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-document {
+    max-width: 36rem;
+    margin-block: 0.5rem;
+    margin-inline: auto;
+    padding-block: 0.75rem;
+    padding-inline: 0.75rem;
+    overflow-x: auto;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 8px;
+  }
+
+  /* The legacy <center> stays in the DOM; its UA centring gives way to start alignment. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-document center {
+    text-align: start;
+  }
+
+  /* The two-column field table is stacked on its existing nodes: label above control. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields,
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields tbody,
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields tr {
+    display: block;
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields {
+    width: 100%;
+  }
+
+  /* nowrap on the label cells is only a presentational hint; labels may wrap when narrow. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields td {
+    display: block;
+    padding: 0;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields td:first-child {
+    margin-block-end: 0.25rem;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields td:last-child {
+    margin-block-end: 0.75rem;
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields select:not(.is-invalid, .is-valid, .was-validated *),
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields input[type='text']:not(.is-invalid, .is-valid, .was-validated *) {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields select:not(.is-invalid, .is-valid, .was-validated *):focus,
+  html.oe-workbench-context body.oe-void-dialog .oe-void-fields input[type='text']:not(.is-invalid, .is-valid, .was-validated *):focus {
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-paper);
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 1px;
+  }
+
+  /* Inline flow: the original &nbsp; plus newline lets Cancel wrap below Submit at full size. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-actions {
+    margin-block: 0.25rem 0;
+    text-align: start;
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-actions input[type='button'] {
+    max-width: 100%;
+    margin-block: 0.25rem;
+    color: var(--oe-wb-ink);
+    background: var(--oe-wb-canvas);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 4px;
+  }
+
+  /* Submit is the first original input. */
+  html.oe-workbench-context body.oe-void-dialog .oe-void-actions input[type='button']:first-child {
+    color: var(--oe-wb-on-petrol);
+    background: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-context body.oe-void-dialog .oe-void-actions input[type='button']:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+}
