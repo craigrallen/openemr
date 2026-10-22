@@ -274,6 +274,20 @@ function setappt(year, mon, mday, hours, minutes) {
     f.form_minute.value = ('' + (minutes + 100)).substring(1);
 }
 
+function getAppointmentStartMinutes() {
+    var f = document.forms[0];
+    var hour = parseInt(f.form_hour.value);
+    var minute = parseInt(f.form_minute.value);
+    if (addEditEventConfig.timeDisplayFormat == 1 && f.form_ampm) {
+        if (f.form_ampm.value == '1' && hour == 12) {
+            hour = 0;
+        } else if (f.form_ampm.value == '2' && hour < 12) {
+            hour += 12;
+        }
+    }
+    return hour * 60 + minute;
+}
+
 // Invoke the find-available popup.
 function find_available(extra) {
     //Infeg Save button should become active once an appointment is selected.

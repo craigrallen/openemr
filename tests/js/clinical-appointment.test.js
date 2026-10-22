@@ -9,6 +9,7 @@ const { createModeController } = require('../../interface/clinical-workspace/mod
 
 const repo = path.join(__dirname, '../..');
 const phpPath = path.join(repo, 'interface/main/calendar/add_edit_event.php');
+const jsPath = path.join(repo, 'interface/main/calendar/add_edit_event.js');
 const cssPath = path.join(repo, 'interface/clinical-workspace/appointment.css');
 const SCOPE = 'body.oe-clinical-workspace.oe-clinical-appointment';
 
@@ -57,6 +58,36 @@ const BASELINE = {
     },
 };
 
+// OPEMR-79 moved only the old inline SubmitForm() display-format condition to
+// getAppointmentStartMinutes() in add_edit_event.js. Keep BASELINE as captured;
+// every other original guard retains its exact PHP multiplicity.
+const RELOCATED_GUARD_COUNTS = Object.freeze({
+    "(OEGlobalsBag::getInstance()->get('time_display_format')  == 1)": 0,
+});
+
+function preservationErrors(php, js) {
+    const current = inventory(php);
+    const errors = [];
+    Object.entries(BASELINE).forEach(([kind, entries]) => {
+        Object.entries(entries).forEach(([key, originalCount]) => {
+            const expected = kind === 'guards' && Object.hasOwn(RELOCATED_GUARD_COUNTS, key)
+                ? RELOCATED_GUARD_COUNTS[key] : originalCount;
+            if ((current[kind][key] || 0) !== expected) errors.push(`${kind}: ${key}`);
+        });
+    });
+
+    // Bound the JS assertion to the actual conversion helper, not another
+    // display-format check elsewhere in add_edit_event.js.
+    const helper = js.split('function getAppointmentStartMinutes() {')[1]?.split('\nfunction ')[0] || '';
+    if (!helper.includes('if (addEditEventConfig.timeDisplayFormat == 1 && f.form_ampm) {')) {
+        errors.push('relocated JS display-format guard');
+    }
+    if (!php.includes("'timeDisplayFormat' => OEGlobalsBag::getInstance()->getInt('time_display_format'),")) {
+        errors.push('PHP display-format config mapping');
+    }
+    return errors;
+}
+
 // Opening tag of the element carrying a given literal id.
 function tagWithId(src, id) {
     const match = src.match(new RegExp(`<[a-z]+\\b[^>]*\\bid=['"]${id}['"][^>]*>`));
@@ -65,12 +96,35 @@ function tagWithId(src, id) {
 }
 
 describe('appointment editor keeps every existing control', () => {
-    const current = inventory(source());
+    const php = source();
+    const js = fs.readFileSync(jsPath, 'utf8');
+    const current = inventory(php);
 
-    test.each(Object.keys(BASELINE))('%s are all still present with the same multiplicity', (kind) => {
+    test.each(Object.keys(BASELINE))('%s retain baseline multiplicity except the explicit relocation', (kind) => {
         Object.entries(BASELINE[kind]).forEach(([key, n]) => {
-            expect([kind, key, current[kind][key] || 0]).toEqual([kind, key, n]);
+            const expected = kind === 'guards' && Object.hasOwn(RELOCATED_GUARD_COUNTS, key)
+                ? RELOCATED_GUARD_COUNTS[key] : n;
+            expect([kind, key, current[kind][key] || 0]).toEqual([kind, key, expected]);
         });
+    });
+
+    test('the relocated condition is guarded in the real helper and configured from PHP globals', () => {
+        expect(preservationErrors(php, js)).toEqual([]);
+    });
+
+    test('missing JS guard, PHP config mapping, or another original PHP guard each fails preservation', () => {
+        const jsWithoutGuard = js.replace(
+            "var minute = parseInt(f.form_minute.value);\n    if (addEditEventConfig.timeDisplayFormat == 1 && f.form_ampm) {",
+            "var minute = parseInt(f.form_minute.value);\n    if (f.form_ampm) {"
+        );
+        const phpWithoutConfig = php.replace("'timeDisplayFormat' => OEGlobalsBag::getInstance()->getInt('time_display_format'),", "'timeDisplayFormat' => 1,");
+        const phpWithoutOtherGuard = php.replace('<?php if ($is_holiday) {?>', '<?php if (true) {?>');
+        expect(jsWithoutGuard).not.toBe(js);
+        expect(phpWithoutConfig).not.toBe(php);
+        expect(phpWithoutOtherGuard).not.toBe(php);
+        expect(preservationErrors(php, jsWithoutGuard)).toContain('relocated JS display-format guard');
+        expect(preservationErrors(phpWithoutConfig, js)).toContain('PHP display-format config mapping');
+        expect(preservationErrors(phpWithoutOtherGuard, js)).toContain('guards: ($is_holiday)');
     });
 
     test('form id, post target and the tab links are unchanged', () => {
