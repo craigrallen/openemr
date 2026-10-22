@@ -316,6 +316,21 @@ height: " . attr($page_height) . "pt;
 }
 </style>";
 
+$html .= "
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-printed-fee-sheet {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-printed-fee-sheet form[name='theform'] {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+}
+</style>";
+
 $html .= "<title>" . text($frow['name'] ?? '') . "</title>" .
     Header::setupHeader(['opener', 'topdialog'], false) .
     "<script>";
@@ -334,7 +349,7 @@ function printlog_before_print() {
 
 </script>
 </head>
-<body bgcolor='#ffffff'>
+<body bgcolor='#ffffff' class='oe-printed-fee-sheet'>
 <form name='theform' method='post' action='printed_fee_sheet.php?fill=" . attr_url($form_fill) . "'
 onsubmit='return opener.top.restoreSession()'>
 <div style='text-align: center;'>";
