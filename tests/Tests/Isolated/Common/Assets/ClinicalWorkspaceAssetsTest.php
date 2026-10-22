@@ -153,6 +153,8 @@ class ClinicalWorkspaceAssetsTest extends TestCase
             'near-miss patient picker stylesheet' => ['patient_picker_popup.css'],
             'near-miss patient results stylesheet' => ['patient_results_popup.css'],
             'popup stylesheet traversal' => ['../clinical-workspace/issue-popup.css'],
+            'near-miss drug editor stylesheet' => ['drug_editor_popup.css'],
+            'drug editor stylesheet traversal' => ['../clinical-workspace/drug-editor-popup.css'],
         ];
     }
 
@@ -459,6 +461,68 @@ class ClinicalWorkspaceAssetsTest extends TestCase
 
         self::assertNotSame('0', $assets->version('soap-document.css'));
         self::assertNotSame('0', $assets->version('soap-document.js'));
+    }
+
+    #[Test]
+    public function drugEditorPopupStylesheetUsesItsOwnModificationTimeAndMissingFallback(): void
+    {
+        $assets = new ClinicalWorkspaceAssets($this->directory);
+        self::assertSame('0', $assets->version('drug-editor-popup.css'));
+
+        $this->writeAsset('issue-popup.css', 1_700_005_001);
+        $this->writeAsset('drug-editor-popup.css', 1_700_005_002);
+        self::assertSame('1700005002', $assets->version('drug-editor-popup.css'));
+
+        $this->writeAsset('drug-editor-popup.css', 1_700_005_100);
+        self::assertSame('1700005100', $assets->version('drug-editor-popup.css'));
+        self::assertSame('1700005001', $assets->version('issue-popup.css'));
+
+        unlink($this->directory . '/drug-editor-popup.css');
+        self::assertSame('0', $assets->version('drug-editor-popup.css'));
+    }
+
+    #[Test]
+    public function shippedDrugEditorPopupStylesheetIsVersioned(): void
+    {
+        $shipped = dirname(__DIR__, 5) . '/interface/clinical-workspace/drug-editor-popup.css';
+        self::assertFileExists($shipped);
+        clearstatcache(true, $shipped);
+
+        self::assertSame((string) filemtime($shipped), (new ClinicalWorkspaceAssets())->version('drug-editor-popup.css'));
+    }
+
+    #[Test]
+    public function supportedListIsExactlyTheExistingAssetsPlusTheDrugEditorPopup(): void
+    {
+        $supported = (new \ReflectionClassConstant(ClinicalWorkspaceAssets::class, 'SUPPORTED'))->getValue();
+
+        self::assertSame([
+            'ajtooltip.js',
+            'appointment.css',
+            'calendar-sidebar.js',
+            'calendar-workday.css',
+            'calendar-workday.js',
+            'drug-editor-popup.css',
+            'encounter-document.css',
+            'finder.css',
+            'global-messages.css',
+            'history-document.css',
+            'history-editor.css',
+            'issue-popup.css',
+            'lbf-document.css',
+            'mode.js',
+            'patient-messages.css',
+            'patient-picker-popup.css',
+            'patient-results-popup.css',
+            'patient-search.css',
+            'soap-document.css',
+            'soap-document.js',
+            'soap-reference.css',
+            'soap-reference.js',
+            'visit-history.css',
+            'visit-history.js',
+            'workspace.css',
+        ], $supported);
     }
 
     private function writeAsset(string $name, int $mtime): void

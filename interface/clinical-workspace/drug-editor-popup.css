@@ -1,0 +1,120 @@
+/**
+ * Drug editor popup (interface/drugs/add_edit_drug.php) inside the clinical
+ * workbench popup frame: the form reads as one paper sheet with hairline
+ * detail rows. Screen-only and scoped to the workbench popup; legacy and print
+ * keep the original page. Typography, the body's themed .body_top background
+ * and the route's own .drugsonly / .ippfonly display rules are left alone.
+ *
+ * @package   OpenEMR
+ * @link      https://www.open-emr.org
+ * @author    Craig Allen <craig@interconnected.au>
+ * @copyright Copyright (c) 2026 Craig Allen
+ * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
+ */
+
+@media screen {
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form {
+    max-width: 100%;
+    padding: 0.5rem 1rem 1rem;
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border: 1px solid var(--oe-wb-line);
+    border-radius: 4px;
+  }
+
+  /* Detail rows: only the bottom margin is replaced; the inherited mt-3 stays. */
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form > .form-group {
+    margin-bottom: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--oe-wb-line);
+  }
+
+  /* Warehouse limits and templates scroll inside the sheet when their columns cannot fit. */
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .oe-drug-editor-limits {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .oe-drug-editor-templates {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Fields */
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .form-control {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .oe-drug-editor-limits .form-control,
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .oe-drug-editor-templates .form-control {
+    min-width: 5rem;
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .form-control[readonly] {
+    color: var(--oe-wb-disabled-ink);
+    background-color: var(--oe-wb-disabled-paper);
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .form-control::placeholder {
+    color: var(--oe-wb-muted);
+    opacity: 1;
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-radius: 4px;
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .form-control:focus-visible,
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form input[type='checkbox']:focus-visible,
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol);
+    outline-offset: 2px;
+  }
+
+  /* Focus fallback for every browser; the outline above is keyboard-only. */
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-form .form-control:not([readonly]):focus {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  /* Actions wrap onto further lines rather than dropping or clipping a button. */
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+    padding-top: 1rem;
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn-primary {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-petrol);
+    border-color: var(--oe-wb-petrol);
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn-primary:hover {
+    color: var(--oe-wb-on-petrol);
+    background-color: var(--oe-wb-ink);
+    border-color: var(--oe-wb-ink);
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn-secondary {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    border-color: var(--oe-wb-line);
+  }
+
+  html.oe-workbench-popup body.oe-drug-editor-popup .oe-drug-editor-actions > .btn-secondary:hover {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+    border-color: var(--oe-wb-line);
+  }
+}
