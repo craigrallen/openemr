@@ -26,6 +26,7 @@ use OpenEMR\Billing\InvoiceSummary;
 use OpenEMR\Billing\SLEOB;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Common\Utils\FormatMoney;
@@ -57,6 +58,7 @@ $info_msg = "";
 <html>
 <head>
     <?php Header::setupHeader(['datetime-picker', 'opener', 'no_dialog']); ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/eob-invoice-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('eob-invoice-popup.css')); ?>">
     <title><?php echo xlt('EOB Posting - Invoice') ?></title>
     <script>
 
@@ -466,7 +468,7 @@ $bnrow = sqlQuery("select billing_note from form_encounter where pid = ? AND enc
             <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>"/>
             <input type="hidden" name="isPosting" value="<?php echo attr($from_posting); ?>"/>
             <input type="hidden" name="isLastClosed" value="" />
-            <fieldset>
+            <fieldset class="oe-eob-invoice-actions">
                 <legend><?php echo xlt('Invoice Actions'); ?></legend>
                 <div class="form-row">
                     <div class="form-group col-lg">
