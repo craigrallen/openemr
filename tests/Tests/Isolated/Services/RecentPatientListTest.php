@@ -97,6 +97,7 @@ final class RecentPatientListTest extends TestCase
         return (new ReflectionClass(PatientService::class))->newInstanceWithoutConstructor();
     }
 
+    /** @return array<mixed> */
     private function read(mixed $serialized, int $userId = 41, bool $rowExists = true): array
     {
         $this->expectOnlyReads([[self::RECENT_SQL, [$userId], $rowExists ? ['patients' => $serialized] : false]]);
@@ -104,7 +105,10 @@ final class RecentPatientListTest extends TestCase
         return $this->withoutDiagnostics(fn(): array => $this->service()->getRecentPatientList($userId));
     }
 
-    /** @param callable(): array $read */
+    /**
+     * @param callable(): array<mixed> $read
+     * @return array<mixed>
+     */
     private function withoutDiagnostics(callable $read): array
     {
         // A truncated serialization emits E_NOTICE/E_WARNING on some PHP
