@@ -15,6 +15,7 @@
 
 require_once("../globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\Header;
 use OpenEMR\Core\OEGlobalsBag;
 
@@ -107,6 +108,8 @@ if (isset($_GET['typeid'])) {
 <head>
     <?php Header::setupHeader(['opener']); ?>
     <title><?php echo xlt('Procedure Picker'); ?></title>
+    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); // Screen-only; inert until popup.js marks an active workbench popup. ?>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/order-type-popup.css?v=<?php echo attr_url($clinicalAssets->version('order-type-popup.css')); ?>">
 
     <script>
         // AI-generated code start (GitHub Copilot) - Refactored to use URLSearchParams
@@ -135,10 +138,10 @@ if (isset($_GET['typeid'])) {
         // AI-generated code end
     </script>
 </head>
-<body>
-<div class="container">
-    <div class="row">
-        <form class="form-inline" method='post' name='theform' action='find_order_popup.php<?php echo "?order=" . attr_url($order) . "&labid=" . attr_url($labid);
+<body class="oe-order-type">
+<div class="container oe-order-type-sheet">
+    <div class="row oe-order-type-layout">
+        <form class="form-inline oe-order-type-form" method='post' name='theform' action='find_order_popup.php<?php echo "?order=" . attr_url($order) . "&labid=" . attr_url($labid);
         if (isset($_GET['formid'])) {
             echo '&formid=' . attr_url($_GET['formid']);
         }
@@ -150,11 +153,11 @@ if (isset($_GET['typeid'])) {
             echo '&addfav=' . attr_url($_GET['addfav']);
         }
         ?>'>
-        <div class="col-sm-12">
-                <div class="input-group">
+        <div class="col-sm-12 oe-order-type-editor">
+                <div class="input-group oe-order-type-search">
                 <input type="hidden" name='isfav' value='<?php echo attr($_REQUEST['ordLookup'] ?? ''); ?>' />
                 <input class="form-control" id='search_term' name='search_term' value='<?php echo attr($_REQUEST['search_term'] ?? ''); ?>' title='<?php echo xla('Any part of the desired code or its description'); ?>' placeholder="<?php echo xla('Search for') ?>&hellip;"/>
-                <span class="input-group-append">
+                <span class="input-group-append oe-order-type-actions">
                     <button type="submit" class="btn btn-primary btn-search" name='bn_search' value="true"><?php echo xlt('Search'); ?></button>
                         <?php if (!isset($_REQUEST['addfav'])) { ?>
                         <button type="submit" class="btn btn-primary btn-search" name='bn_grpsearch' value="true"><?php echo xlt('Favorites'); ?></button>
@@ -164,8 +167,8 @@ if (isset($_GET['typeid'])) {
             </div>
         </div>
         <?php if (!empty($_REQUEST['bn_search']) || !empty($_REQUEST['bn_grpsearch'])) { ?>
-            <div class="table-responsive mt-3">
-                <table class="table table-striped table-sm">
+            <div class="table-responsive mt-3 oe-order-type-results">
+                <table class="table table-striped table-sm oe-order-type-table">
                     <thead>
                     <th><?php echo xlt('Type'); ?></th>
                     <th><?php echo xlt('Code'); ?></th>
