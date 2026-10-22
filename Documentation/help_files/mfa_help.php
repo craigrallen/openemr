@@ -26,8 +26,36 @@ require_once("../../interface/globals.php");
             font-style: italic;
         }
     </style>
+    <style>
+@media screen {
+  html.oe-workbench-context body.mfa-help-workbench-route {
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.mfa-help-workbench-route > .oe-help-container {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.mfa-help-workbench-route .oe-help-heading {
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.mfa-help-workbench-route .oe-help-container a:not(.btn) {
+    background-color: transparent;
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.mfa-help-workbench-route .oe-help-redirect {
+    background-color: transparent;
+    color: var(--oe-wb-ink, #17343b) !important;
+  }
+}
+    </style>
     </head>
-    <body>
+    <body class="mfa-help-workbench-route">
         <div class="container oe-help-container">
             <div>
                 <h2 class="text-center"><a name='entire_doc'><?php echo xlt("Multi Factor Authorization Help");?></a></h2>
