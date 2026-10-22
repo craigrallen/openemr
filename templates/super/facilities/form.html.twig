@@ -1,6 +1,7 @@
 <html>
 <head>
 {{ setupHeader(['opener', 'erx']) }}
+<link rel="stylesheet" media="screen" href="{{ webroot|attr }}/interface/clinical-workspace/facility-popup.css?v={{ clinicalWorkspaceAssetVersion('facility-popup.css')|attr_url }}">
 
 <script src="../main/calendar/modules/PostCalendar/pnincludes/AnchorPosition.js?v={{ assetVersion|attr_url }}"></script>
 <script src="../main/calendar/modules/PostCalendar/pnincludes/PopupWindow.js?v={{ assetVersion|attr_url }}"></script>
@@ -127,8 +128,8 @@ function displayAlert() {
 </script>
 
 </head>
-<body class="body_top">
-    <div class="container-fluid">
+<body class="body_top oe-facility-popup">
+    <div class="container-fluid oe-facility-document">
         <div class="row mb-3">
             <div class="col-sm-12 d-flex justify-content-between align-items-center">
                 <h5 class="m-0">{{ ((mode == "add") ? "Add Facility" : "Edit Facility")|xlt }}</h5>
