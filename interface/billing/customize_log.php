@@ -17,6 +17,7 @@ require_once("../globals.php");
 use OpenEMR\BC\ServiceContainer;
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\OEGlobalsBag;
 
 //ensure user has proper access
@@ -24,10 +25,31 @@ if (!AclMain::aclCheckCore('acct', 'eob', '', 'write') && !AclMain::aclCheckCore
     AccessDeniedHelper::denyWithTemplate("ACL check failed for acct/eob or acct/bill: Billing Log", xl("Billing Log"));
 }
 
+$clinicalAssets = new ClinicalWorkspaceAssets();
+?>
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?php echo xlt('Billing Log'); ?></title>
+    <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/billing-log-popup.css?v=<?php echo attr_url($clinicalAssets->version('billing-log-popup.css')); ?>">
+    <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/popup.js?v=<?php echo attr_url($clinicalAssets->version('popup.js')); ?>"></script>
+</head>
+<body class="oe-billing-log">
+<main class="oe-billing-log-sheet">
+<div class="oe-billing-log-content">
+<?php
 $filename = OEGlobalsBag::getInstance()->get('OE_SITE_DIR') . '/documents/edi/process_bills.log';
 
 if (!file_exists($filename)) {
     echo xlt("Billing log is empty");
+    ?>
+</div>
+</main>
+</body>
+</html>
+    <?php
     exit;
 }
 
@@ -41,3 +63,8 @@ if (!empty($fh)) {
 } else {
     echo xlt("Billing log is empty");
 }
+?>
+</div>
+</main>
+</body>
+</html>

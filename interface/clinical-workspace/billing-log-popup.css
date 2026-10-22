@@ -1,0 +1,20 @@
+/* Billing log popup paper, only within an active workbench on screen. */
+@media screen {
+  html.oe-workbench-context body.oe-billing-log {
+    background: var(--oe-wb-canvas, #edf3f4);
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-billing-log main.oe-billing-log-sheet {
+    background: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    margin: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--oe-wb-border, #c9d7da);
+    border-radius: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-billing-log .oe-billing-log-content {
+    overflow-wrap: anywhere;
+  }
+}
