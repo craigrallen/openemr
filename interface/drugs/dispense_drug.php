@@ -227,8 +227,17 @@ body {
 </style>
    <title><?php echo xlt('Prescription Label') ; ?></title>
    <?php echo Header::setupAssets(['workbench-popup']); ?>
+<style media="screen">
+html.oe-workbench-context body.oe-prescription-label-popup {
+  background-color: var(--oe-wb-canvas, #f3f7f5);
+}
+
+html.oe-workbench-context body.oe-prescription-label-popup > center > table {
+  background-color: var(--oe-wb-paper, #fff);
+}
+</style>
 </head>
-<body leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>
+<body class="oe-prescription-label-popup" leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>
 <center>
 <table border='0' cellpadding='0' cellspacing='0' style='width: 200pt'>
  <tr><td class="labtop" nowrap>
