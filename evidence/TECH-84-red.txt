@@ -1,7 +1,7 @@
 TECH-84 RED: real source baseline 18647270e0c799189d2dc10f801e8de2bff1a360
 $ python3 -B scripts/test_php_admin_images.py
 test_duplicate_declaration (__main__.AdminImageTests.test_duplicate_declaration) ... ok
-test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) ... 
+test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) ...
   test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-light/docker-compose.yml') ... FAIL
   test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy-redis/docker-compose.yml') ... FAIL
   test_inverse_matches_real_baseline_bytes (__main__.AdminImageTests.test_inverse_matches_real_baseline_bytes) (path='docker/development-easy/docker-compose.yml') ... FAIL
