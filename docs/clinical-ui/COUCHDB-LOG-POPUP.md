@@ -1,0 +1,9 @@
+# CouchDB log popup source contract
+
+The production source implements the exact `proposedRoute()`, `proposedAssets()`, and `proposedCss` candidates in `tests/clinical-ui/couchdb-log-popup.test.cjs`. The frozen original route and asset fixtures, existing caller, popup engine, and test oracle remain unchanged. The Node source guards require complete equality with the declared transformation, reverse only the route additions to recover the exact original bytes, and reject anchored mutations, including a deleted local ACL block and filename lookup moved before the ACL.
+
+The route checks `admin/users` immediately after its imports and uses the terminating `AccessDeniedHelper::denyWithTemplate` path before a filename lookup, filesystem read, decryption, or HTML. It keeps the existing missing-file exit, empty translations, `text()` escaping, and `nl2br()`. The added markup is a document head and the `oe-couchdb-log` body, sheet, and content wrappers. The head versions local `couchdb-log-popup.css` and the existing `popup.js` through `ClinicalWorkspaceAssets`, with escaped webroot and URL values. The CSS is screen-only and requires `html.oe-workbench-context`. The existing popup engine obtains that class from its host. A standalone route with no workbench host does not receive the new CSS.
+
+The controller verified genuine hosted JS RED for tests-only commit `6bc966167fd13e6e5d708303a4d4ae029d191478` in run `39147574406`: the three intended checked-in route, asset, and CSS assertions failed; all five synthetic, inverse, and mutation tests passed. The other 61 Jest suites and 1259 tests passed. This is the pre-implementation baseline, not a GREEN result for the production source.
+
+Source checks do **not** prove actual PHP parsing or bootstrap, filesystem or cryptography behaviour, ACL authority, rendered theme, keyboard use, narrow screens, RTL, print output, or role behaviour. Controller review and CI, plus native acceptance, remain pending.
