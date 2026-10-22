@@ -26,9 +26,9 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  *
  * @phpstan-import-type Bindings from Database
  */
-final class AvailabilityQueryTransport
+final readonly class AvailabilityQueryTransport
 {
-    public function __construct(private readonly ?Database $database)
+    public function __construct(private ?Database $database)
     {
     }
 
@@ -44,6 +44,7 @@ final class AvailabilityQueryTransport
         return new AvailabilityRows($this->database->fetchAll($sql, $binds));
     }
 
+    /** @param array<mixed> $arguments */
     public function __call(string $name, array $arguments): never
     {
         throw new RuntimeException('Unexpected database transport call: ' . $name);
@@ -64,6 +65,7 @@ final class AvailabilityRows
         return array_shift($this->rows) ?? false;
     }
 
+    /** @param array<mixed> $arguments */
     public function __call(string $name, array $arguments): never
     {
         throw new RuntimeException('Unexpected result transport call: ' . $name);

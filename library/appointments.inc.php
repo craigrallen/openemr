@@ -495,6 +495,7 @@ function fetchXPastAppts($pid2, $pastApptsNumber, $orderOfAppts = '1'): array
 }
 
 // get the event slot size in seconds
+/** @return int|float */
 function getSlotSize()
 {
     if (OEGlobalsBag::getInstance()->has('calendar_interval')) {
