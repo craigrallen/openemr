@@ -1,0 +1,27 @@
+# OPEMR-62 patient-linked notes popup
+
+## Scope and production phase
+
+This is a source presentation partial for `interface/patient_file/summary/pnotes.php`, the patient-linked summary route opened by eye_mag `showpnotes(docid)`. It is distinct from `pnotes_full.php`, `pnotes_print.php`, and global messages. The contract freezes the 5,464-byte original route. Production now has the approved screen-only color seam and route-specific body class. Canonical Claude Opus 5.5 returned an actual organization monthly 429 before writes; Codex Sol implemented the tests and production fallback. Gemini 4 Argon High completed the controller-owned independent review.
+
+The controller ran genuine route RED before the production edit: `/Users/craig/.hermes/projects/openemr/verification/patient-linked-notes-20261020/red-real.log` reports 36 tests, 35 passed, and one failure solely for the missing route-specific body class. Fixture, history, negative mutations, and actual synthetic activation passed. The route was untouched before RED. History mode authenticates the fixture against base `18647270e0c799189d2dc10f801e8de2bff1a360` and pins unchanged launch, asset, popup, and theme sources. The durable controller evidence directory is `/Users/craig/.hermes/projects/openemr/verification/patient-linked-notes-20261020`. Neither source mode renders PHP or verifies a browser.
+
+## Completed controller verification
+
+Post-edit mandatory history, including the source inverse, passed 36/36 with no skips, and the portable suite passed 32/32. Full Jest passed 62 suites and 1,260 tests. PHP syntax, diff check, and rooted ESLint with zero warnings passed. Stylelint ran on the actual extracted, non-ignored inline style source: one source, zero errors, zero warnings. The first full Jest attempt failed because the fresh worktree lacked ESM/config dependencies. The controller recovered with 11 temporary, individual sibling dependency links and retained the initial diagnostics; no source, configuration, or gate was changed for that recovery.
+
+Gemini 4 Argon High completed a substantive inline independent review of the five-file change and dependency evidence. It reported no introduced P1 or P2 findings; tool use was none and stderr was empty. This review is source evidence, not a native rendering or clinical acceptance result.
+
+## Production delta
+
+The route adds `oe-patient-linked-notes` to the existing `body_bottom` class, leaving the body element and all other attributes intact. One inline `<style>` follows `Header::setupHeader()` before `</head>`. Its sole `@media screen` wrapper contains the four exact contract selectors: `html.oe-workbench-context body.oe-patient-linked-notes` pairs canvas and ink; `#pnotes` pairs paper and ink with an inset neutral edge; the direct raw table pairs paper and ink; the direct title-link selector declares petrol ink. The existing child `.title` rule declares explicit ink and may win the cascade, so effective petrol title color is not established. The body class is an all-media DOM delta, while the CSS is inert in print and outside active workbench context. No opener asset is needed: the real `dlgopen` iframe's same-origin parent traversal reaches the active shell.
+
+The inverse contract removes only that style block and body class and requires every remaining byte of the route to equal the frozen original. It therefore preserves PHP, SQL, ACL and squad checks, session and document/order patient authority, escaping, note count and order, note-type helper output, billing red spans, alert link, mouseover highlight behavior, title markup, and all existing links. It allows no geometry, font, border layout, control, wrapper, JavaScript, or query change. The inset box shadow is an edge without box geometry change. `notes.scss` retains the billing and hover backgrounds; `color_base.scss` also gives `.highlight` an `!important` background and foreground. These cascade rules mean preserved source does not establish effective contrast. The seam does not repaint semantic descendants or rows.
+
+## Outstanding acceptance
+
+- Hosted exact-head CI verification remains pending; the completed controller checks and independent review do not establish a hosted result.
+- Native default, Dark, and Solar checks must inspect effective title and link color, raw table foreground and background, note hover, billing red and warning contrast, and note-type helper output. Compiled theme cascade may limit the proposed source colors; source contracts do not clear contrast.
+- Open the real `modal-xl`, 500-height, auto-height iframe from `showpnotes`, then resize the desktop modal and check narrow and short viewports. Check keyboard behavior, RTL, roles including restricted access, legacy mode, print, and patient, document, and order authority with appropriate approved test data.
+- Original feature 6 staff send/read/restricted acceptance and ordinary approval remain open. All 22 feature acceptance, UI/demo evidence, and Swedish work remain open. Preserve the Swedish clone and publication denial and the PR 112 edits and denied review; this slice does not imply their approval. This source partial does not establish full feature 6 or research fidelity.
+- No live bootstrap, database, patient, billing, or document requests occurred here. No merge, deploy, master change, policy or cron change is part of this handoff. Branch, commit, and PR naming must retain `OPEMR-62`; the canonical fork's default branch exception is `master`.

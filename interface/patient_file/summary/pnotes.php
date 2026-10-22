@@ -40,8 +40,31 @@ $tmore = '';
 <html>
 <head>
 <?php Header::setupHeader(); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-patient-linked-notes {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-canvas);
+  }
+
+  html.oe-workbench-context body.oe-patient-linked-notes #pnotes {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+    box-shadow: inset 0 0 0 1px var(--oe-wb-line);
+  }
+
+  html.oe-workbench-context body.oe-patient-linked-notes #pnotes > table {
+    color: var(--oe-wb-ink);
+    background-color: var(--oe-wb-paper);
+  }
+
+  html.oe-workbench-context body.oe-patient-linked-notes #pnotes > a {
+    color: var(--oe-wb-petrol);
+  }
+}
+</style>
 </head>
-<body class="body_bottom">
+<body class="body_bottom oe-patient-linked-notes">
 
 <?php
 $thisauth = AclMain::aclCheckCore('patients', 'notes');
