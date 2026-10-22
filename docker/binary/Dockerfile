@@ -112,6 +112,10 @@ RUN ARCH_SUFFIX="${TARGETARCH}" \
     && mv php-cli /usr/local/bin/php \
     && ln -sf /usr/local/bin/php /usr/local/bin/php-cli
 
+# TECH-83: bounded stable engine floor; package/forge tags alone are insufficient.
+RUN php -n -r '$v=PHP_VERSION; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- "${PHP_VERSION}"
+RUN php -n -r '$banner=$argv[2]; if (!preg_match("/\APHP ([^ ]+) \(fpm-fcgi\)/",$banner,$match)) {exit(1);} $v=$match[1]; $b=$argv[1]; $f=["8.2"=>35,"8.3"=>36,"8.4"=>27,"8.5"=>12]; if (!preg_match("/\A(8\.[2345])\.([0-9]+)\z/D",$v,$m) || $m[1]!==$b || !isset($f[$b]) || (int)$m[2]<$f[$b]) {fwrite(STDERR,"TECH-83: rejected PHP ".$v." for ".$b."\n"); exit(1);}' -- "${PHP_VERSION}" "$(php-fpm -n -v)"
+
 # Install Composer (PHP dependency manager) for OpenEMR package installation
 # Required by the CI/CD test suite
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer

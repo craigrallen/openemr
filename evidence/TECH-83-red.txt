@@ -1,0 +1,189 @@
+Command: python3 -m unittest discover -s tests/ci -p test_php_runtime_security.py -v
+test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest.test_independent_fpm_engine) ... FAIL
+test_native_engine (test_php_runtime_security.NativeGuardTest.test_native_engine) ... FAIL
+test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest.test_synthetic_versions_using_shipped_code) ... FAIL
+test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) ... 
+  test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm-8-6/Dockerfile') ... FAIL
+  test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm-8-7/Dockerfile') ... FAIL
+  test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm/Dockerfile') ... FAIL
+test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest.test_missing_or_late_floor_rejected) ... FAIL
+test_pin_mutations_rejected (test_php_runtime_security.RuntimeSourceTest.test_pin_mutations_rejected) ... ok
+test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) ... 
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/railway/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-2/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-3/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-4/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-5/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/release/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/flex/Dockerfile') ... FAIL
+  test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/binary/Dockerfile') ... FAIL
+
+======================================================================
+FAIL: test_independent_fpm_engine (test_php_runtime_security.NativeGuardTest.test_independent_fpm_engine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 133, in test_independent_fpm_engine
+    self.assertTrue(guard('php', '"${PHP_VERSION}"', FPM_ENGINE, ' "$(php-fpm -n -v)"') in source, 'missing shipped FPM guard')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : missing shipped FPM guard
+
+======================================================================
+FAIL: test_native_engine (test_php_runtime_security.NativeGuardTest.test_native_engine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 113, in test_native_engine
+    result = self.run_guard(self.shipped(), branch)
+                            ~~~~~~~~~~~~^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 101, in shipped
+    self.assertTrue(guard('php', '8.5') in source, 'missing shipped Railway guard')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : missing shipped Railway guard
+
+======================================================================
+FAIL: test_synthetic_versions_using_shipped_code (test_php_runtime_security.NativeGuardTest.test_synthetic_versions_using_shipped_code)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 117, in test_synthetic_versions_using_shipped_code
+    code = self.shipped()
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 101, in shipped
+    self.assertTrue(guard('php', '8.5') in source, 'missing shipped Railway guard')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : missing shipped Railway guard
+
+======================================================================
+FAIL: test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm-8-6/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 91, in test_experimental_disposition
+    self.assertTrue('TECH-83: EXPERIMENTAL / NONPRODUCTION BLOCKER' in (ROOT / path).read_text(), path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : docker/library/dockers/dev-php-fpm-8-6/Dockerfile
+
+======================================================================
+FAIL: test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm-8-7/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 91, in test_experimental_disposition
+    self.assertTrue('TECH-83: EXPERIMENTAL / NONPRODUCTION BLOCKER' in (ROOT / path).read_text(), path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : docker/library/dockers/dev-php-fpm-8-7/Dockerfile
+
+======================================================================
+FAIL: test_experimental_disposition (test_php_runtime_security.RuntimeSourceTest.test_experimental_disposition) (path='docker/library/dockers/dev-php-fpm/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 91, in test_experimental_disposition
+    self.assertTrue('TECH-83: EXPERIMENTAL / NONPRODUCTION BLOCKER' in (ROOT / path).read_text(), path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : docker/library/dockers/dev-php-fpm/Dockerfile
+
+======================================================================
+FAIL: test_missing_or_late_floor_rejected (test_php_runtime_security.RuntimeSourceTest.test_missing_or_late_floor_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 82, in test_missing_or_late_floor_rejected
+    self.assertTrue(guards, path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: [] is not true : docker/railway/Dockerfile
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/railway/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 47, in check_source
+    assert lines[0] == expected, f'{path}: exact verified runtime pin required'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/railway/Dockerfile: exact verified runtime pin required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-2/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 47, in check_source
+    assert lines[0] == expected, f'{path}: exact verified runtime pin required'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/library/dockers/dev-php-fpm-8-2/Dockerfile: exact verified runtime pin required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-3/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 47, in check_source
+    assert lines[0] == expected, f'{path}: exact verified runtime pin required'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/library/dockers/dev-php-fpm-8-3/Dockerfile: exact verified runtime pin required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-4/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 47, in check_source
+    assert lines[0] == expected, f'{path}: exact verified runtime pin required'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/library/dockers/dev-php-fpm-8-4/Dockerfile: exact verified runtime pin required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/library/dockers/dev-php-fpm-8-5/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 47, in check_source
+    assert lines[0] == expected, f'{path}: exact verified runtime pin required'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/library/dockers/dev-php-fpm-8-5/Dockerfile: exact verified runtime pin required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/release/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 55, in check_source
+    assert lines[index + 1] == guard(binary, '"${PHP_VERSION}"'), f'{path}: postinstall floor required'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/release/Dockerfile: postinstall floor required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/flex/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 55, in check_source
+    assert lines[index + 1] == guard(binary, '"${PHP_VERSION}"'), f'{path}: postinstall floor required'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/flex/Dockerfile: postinstall floor required
+
+======================================================================
+FAIL: test_supported_sources (test_php_runtime_security.RuntimeSourceTest.test_supported_sources) (path='docker/binary/Dockerfile')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 65, in test_supported_sources
+    check_source(path, (ROOT / path).read_text())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/craig/.hermes/projects/php-remediation/craigrallen--openemr/tests/ci/test_php_runtime_security.py", line 55, in check_source
+    assert lines[index + 1] == guard(binary, '"${PHP_VERSION}"'), f'{path}: postinstall floor required'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: docker/binary/Dockerfile: postinstall floor required
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.048s
+
+FAILED (failures=15)
+Exit status: 1
