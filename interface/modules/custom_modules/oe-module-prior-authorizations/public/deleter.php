@@ -35,8 +35,19 @@ sqlQuery("delete from `module_prior_authorizations` where `id` = ?", [$_GET['id'
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title><?php echo xlt('Delete Record') ?></title>
     <?php echo Header::setupAssets(['workbench-popup']); ?>
+    <style media="screen">
+        html.oe-workbench-context body.oe-prior-auth-delete-popup {
+          background-color: var(--oe-wb-canvas, #f3f7f5);
+        }
+
+        html.oe-workbench-context body.oe-prior-auth-delete-popup > p {
+          color: var(--oe-wb-ink, #17343b);
+          background-color: var(--oe-wb-paper, #fff);
+          box-shadow: inset 0 0 0 1px var(--oe-wb-line, #d9e4e2);
+        }
+    </style>
 </head>
-<body>
+<body class="oe-prior-auth-delete-popup">
     <p><?php echo "<br> <br>" .  xlt("If you are seeing this message the record was deleted. Click done, pls"); ?></p>
 </body>
 </html>
