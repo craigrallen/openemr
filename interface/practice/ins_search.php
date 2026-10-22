@@ -27,6 +27,7 @@
 
 require_once(__DIR__ . "/../globals.php");
 
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Session\SessionWrapperFactory;
 use OpenEMR\Core\Header;
@@ -47,6 +48,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     <title><?php echo xlt('Insurance Company Search/Add'); ?></title>
 
     <?php Header::setupHeader(['opener', 'topdialog']); ?>
+    <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/insurance-search-popup.css?v=<?php echo attr_url((new ClinicalWorkspaceAssets())->version('insurance-search-popup.css')); ?>" media="screen">
 
     <style>
         td {
@@ -241,7 +243,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
         "SELECT id, name FROM x12_partners ORDER BY name"
     );
     ?>
-    <div id="form_entry">
+    <div id="form_entry" class="oe-insurance-search-document">
 
         <form method='post' name='theform' action='ins_search.php' onsubmit='return validate(this)'>
             <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
