@@ -1754,8 +1754,8 @@ function calculateEvents($days, $events, $viewtype)
 
                 // The requested days can span two years. Catch up by calendar month
                 // so the original series phase (including legacy day overflow) stays intact.
-                $first_month = substr($start_date, 0, 7);
-                $last_month = substr((string) $stop, 0, 7);
+                $first_month = substr((string) $start_date, 0, 7);
+                $last_month = is_string($stop) ? substr($stop, 0, 7) : '';
                 if ($last_month < $first_month) {
                     break;
                 }

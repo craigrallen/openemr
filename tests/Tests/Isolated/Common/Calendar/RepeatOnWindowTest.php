@@ -3,10 +3,8 @@
 /**
  * Finite REPEAT_ON calendar window regression coverage.
  *
- * The three legacy functions below are extracted verbatim from their shipped
- * sources. Including pnuserapi.php or appointments.inc.php would execute their
- * application bootstrap. Only postcalendar_getDate is substituted, in this
- * test namespace, to pin the requested display month without a session.
+ * The shipped calendar and appointment sources are included by a CLI-only
+ * fixture with fixed module configuration and an in-memory session.
  *
  * @package OpenEMR
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
@@ -19,12 +17,15 @@ namespace OpenEMR\Tests\Isolated\Common\Calendar;
 use DateInterval;
 use DatePeriod;
 use DateTimeImmutable;
+use Doctrine\DBAL\Connection;
 use ErrorException;
+use OpenEMR\Tests\Isolated\Common\Calendar\Fixtures\RepeatOnWindowFixture;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
+use ReflectionFunction;
 use RuntimeException;
 
 #[Group('isolated')]
@@ -46,39 +47,50 @@ final class RepeatOnWindowTest extends TestCase
         }
 
         $this->previousTimezone = date_default_timezone_get();
-        $this->hadViewDate = array_key_exists('repeatOnWindowViewDate', $GLOBALS);
-        $this->previousViewDate = $GLOBALS['repeatOnWindowViewDate'] ?? null;
+        $this->hadViewDate = array_key_exists('Date', $GLOBALS);
+        $this->previousViewDate = $GLOBALS['Date'] ?? null;
         date_default_timezone_set('UTC');
 
-        require_once __DIR__ . '/../../../../../interface/main/calendar/modules/PostCalendar/pnincludes/Date/Calc.php';
-
-        // These constants are normally declared by common.api.php, whose
-        // top-level module configuration cannot run in an isolated test.
-        foreach (['NO_REPEAT' => 0, 'REPEAT' => 1, 'REPEAT_ON' => 2, 'REPEAT_DAYS' => 3] as $name => $value) {
-            if (!defined($name)) {
-                define($name, $value);
-            }
+        require_once __DIR__ . '/fixtures/repeat-on-window.php';
+        $connection = $this->createMock(Connection::class);
+        $moduleIdQuery = 'SELECT fixture_modules.pn_id FROM fixture_modules WHERE fixture_modules.pn_name = ?';
+        $moduleInfoQuery = 'SELECT fixture_modules.pn_name, fixture_modules.pn_type, '
+            . 'fixture_modules.pn_directory, fixture_modules.pn_regid, '
+            . 'fixture_modules.pn_displayname, fixture_modules.pn_description, '
+            . 'fixture_modules.pn_version FROM fixture_modules WHERE fixture_modules.pn_id = ?';
+        $connection->expects(self::once())->method('fetchOne')->with(
+            self::callback(static fn (string $sql): bool => preg_replace('/\s+/', ' ', trim($sql)) === $moduleIdQuery),
+            ['PostCalendar']
+        )->willReturn(1);
+        $connection->expects(self::once())->method('fetchNumeric')->with(
+            self::callback(static fn (string $sql): bool => preg_replace('/\s+/', ' ', trim($sql)) === $moduleInfoQuery),
+            [1]
+        )->willReturn(['PostCalendar', 0, 'PostCalendar', 1, 'PostCalendar', '', '1']);
+        $forbiddenIo = [
+            'executeQuery', 'executeCacheQuery', 'executeStatement', 'prepare',
+            'insert', 'update', 'delete', 'lastInsertId', 'transactional',
+            'beginTransaction', 'commit', 'rollBack', 'createSavepoint',
+            'rollbackSavepoint', 'getNativeConnection', 'fetchAssociative',
+            'fetchAllAssociative', 'fetchAllAssociativeIndexed',
+            'fetchAllNumeric', 'fetchAllKeyValue', 'fetchFirstColumn',
+        ];
+        foreach ($forbiddenIo as $operation) {
+            $connection->method($operation)->willThrowException(new RuntimeException("Unexpected DB operation: $operation"));
         }
-
-        $calendar = __DIR__ . '/../../../../../interface/main/calendar/modules/PostCalendar/';
-        self::loadFunction($calendar . 'pnuserapi.php', 'calculateEvents');
-        self::loadFunction($calendar . 'common.api.php', 'pcGetTopicName');
-        self::loadFunction(__DIR__ . '/../../../../../library/appointments.inc.php', 'checkEvent');
-
-        // A namespace-local seam: calculateEvents resolves this unqualified
-        // call here, while its other calls use the extracted shipped functions.
-        eval('namespace ' . __NAMESPACE__ . '; function postcalendar_getDate(): string {
-            return $GLOBALS["repeatOnWindowViewDate"];
-        }');
+        RepeatOnWindowFixture::load($connection);
+        self::assertSame(
+            realpath(__DIR__ . '/../../../../../interface/main/calendar/modules/PostCalendar/pnuserapi.php'),
+            (new ReflectionFunction('calculateEvents'))->getFileName()
+        );
     }
 
     protected function tearDown(): void
     {
         date_default_timezone_set($this->previousTimezone);
         if ($this->hadViewDate) {
-            $GLOBALS['repeatOnWindowViewDate'] = $this->previousViewDate;
+            $GLOBALS['Date'] = $this->previousViewDate;
         } else {
-            unset($GLOBALS['repeatOnWindowViewDate']);
+            unset($GLOBALS['Date']);
         }
     }
 
@@ -200,6 +212,7 @@ final class RepeatOnWindowTest extends TestCase
         foreach (['event_repeat_on_freq', 'event_repeat_on_num', 'event_repeat_on_day'] as $field) {
             $missing = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
             $spec = unserialize($missing['recurrspec'], ['allowed_classes' => false]);
+            self::assertIsArray($spec);
             unset($spec[$field]);
             $missing['recurrspec'] = serialize($spec);
             $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $missing, []);
@@ -208,6 +221,7 @@ final class RepeatOnWindowTest extends TestCase
         foreach (['event_repeat_on_freq', 'event_repeat_on_num'] as $field) {
             $zero = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
             $spec = unserialize($zero['recurrspec'], ['allowed_classes' => false]);
+            self::assertIsArray($spec);
             $spec[$field] = 0;
             $zero['recurrspec'] = serialize($spec);
             $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $zero, []);
@@ -215,6 +229,7 @@ final class RepeatOnWindowTest extends TestCase
 
         $nullWeekday = self::repeatOn('2024-02-01', '2024-02-29', number: 1);
         $spec = unserialize($nullWeekday['recurrspec'], ['allowed_classes' => false]);
+        self::assertIsArray($spec);
         $spec['event_repeat_on_day'] = null;
         $nullWeekday['recurrspec'] = serialize($spec);
         $this->assertOccurrences('2024-01-28', '2024-03-02', '20240215', $nullWeekday, []);
@@ -311,7 +326,7 @@ final class RepeatOnWindowTest extends TestCase
         bool $rejectDiagnostics = false
     ): void
     {
-        $GLOBALS['repeatOnWindowViewDate'] = $viewDate;
+        $GLOBALS['Date'] = $viewDate;
         // Check the supplied bounds against a Sunday-to-Saturday month grid
         // using PHP's calendar, independently of the shipped Date_Calc helper.
         $month = DateTimeImmutable::createFromFormat('!Ymd', $viewDate);
@@ -332,25 +347,23 @@ final class RepeatOnWindowTest extends TestCase
             $days[$day->format('Y-m-d')] = [];
         }
 
-        $calculator = __NAMESPACE__ . '\\calculateEvents';
-        if (!function_exists($calculator)) {
-            throw new RuntimeException('calculateEvents fixture did not load.');
-        }
-        /** @var array<string, list<array<string, mixed>>> $actual */
         if ($rejectDiagnostics) {
             set_error_handler(static function (int $severity, string $message): never {
                 throw new ErrorException($message, 0, $severity);
             });
             try {
-                $actual = $calculator($days, [$event], 'month');
+                $actual = \calculateEvents($days, [$event], 'month');
             } finally {
                 restore_error_handler();
             }
         } else {
-            $actual = $calculator($days, [$event], 'month');
+            $actual = \calculateEvents($days, [$event], 'month');
         }
+        self::assertIsArray($actual);
         $populated = [];
         foreach ($actual as $date => $events) {
+            self::assertIsString($date);
+            self::assertIsArray($events);
             if ($events !== []) {
                 self::assertSame([$event], $events, "Unexpected event payload on $date");
                 $populated[] = $date;
@@ -359,38 +372,4 @@ final class RepeatOnWindowTest extends TestCase
         self::assertSame($expected, $populated);
     }
 
-    private static function loadFunction(string $path, string $name): void
-    {
-        $source = file_get_contents($path);
-        if ($source === false || !preg_match('/\bfunction\s+&?\s*' . preg_quote($name, '/') . '\s*\(/', $source, $match, PREG_OFFSET_CAPTURE)) {
-            throw new RuntimeException("Cannot locate $name in $path");
-        }
-
-        $start = $match[0][1];
-        $fragment = substr($source, $start);
-        $depth = 0;
-        $opened = false;
-        $length = 0;
-        foreach (token_get_all('<?php ' . $fragment) as $token) {
-            $text = is_array($token) ? $token[1] : $token;
-            if ($text === '{') {
-                $opened = true;
-                ++$depth;
-            } elseif ($text === '}') {
-                --$depth;
-                if ($opened && $depth === 0) {
-                    $length += strlen($text);
-                    break;
-                }
-            }
-            $length += strlen($text);
-        }
-        if (!$opened || $depth !== 0) {
-            throw new RuntimeException("Cannot isolate $name in $path");
-        }
-
-        // The injected opening tag belongs to token_get_all, not the source.
-        $body = substr($fragment, 0, $length - strlen('<?php '));
-        eval('namespace ' . __NAMESPACE__ . '; use \\Date_Calc; ' . $body);
-    }
 }
