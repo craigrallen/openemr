@@ -20,6 +20,7 @@ require_once($srcdir . "/options.inc.php");
 
 use OpenEMR\Common\Acl\AccessDeniedHelper;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
 use OpenEMR\Core\OEGlobalsBag;
 
 // Match the sibling record_request.php gate on the transaction directory —
@@ -176,6 +177,17 @@ while (!feof($fh)) {
 }
 
 fclose($fh);
+
+$s = str_replace(
+    "{referral_preview_assets}",
+    '<link rel="stylesheet" media="screen" href="' . attr(OEGlobalsBag::getInstance()->getWebRoot()) .
+        '/interface/clinical-workspace/referral-preview.css?v=' .
+        attr_url((new ClinicalWorkspaceAssets())->version('referral-preview.css')) . '">' . "\n  " .
+    '<script src="' . attr(OEGlobalsBag::getInstance()->getWebRoot()) .
+        '/interface/clinical-workspace/popup.js?v=' .
+        attr_url((new ClinicalWorkspaceAssets())->version('popup.js')) . '"></script>',
+    $s
+);
 
 $s = str_replace("{header1}", genFacilityTitle($TEMPLATE_LABELS['label_form1_title'], -1, $logo), $s);
 $s = str_replace("{header2}", genFacilityTitle($TEMPLATE_LABELS['label_form2_title'], -1, $logo), $s);
