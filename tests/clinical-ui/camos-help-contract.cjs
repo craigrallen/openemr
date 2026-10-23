@@ -114,7 +114,7 @@ test('verifier rejects original-byte changes, seams, scope, palette and behavior
         escapedVisited: s => replaceAnchor(s, scope + ' a:visited {', 'a:visited {'),
         unpairedBody: s => replaceAnchor(s, '    color: #17343b;\n  }', '  }', 5),
         wrongInk: s => replaceAnchor(s, 'color: #17343b;', 'color: #000;', 6),
-        wrongPetrol: s => replaceAnchor(s, 'color: #086878;', 'color: #6a5acd;', 1),
+        wrongPetrol: s => replaceAnchor(s, '    color: #086878;\n  }', '    color: #6a5acd;\n  }', 1),
         font: s => replaceAnchor(s, '    background-color: #f3f7f5;', '    font-family: Arial;\n    background-color: #f3f7f5;', 2),
         geometry: s => replaceAnchor(s, '    border-color: #d9e4e2;', '    border-width: 2px;\n    border-color: #d9e4e2;'),
         display: s => replaceAnchor(s, '    outline-color: #086878;', '    display: block;\n    outline-color: #086878;'),
