@@ -155,7 +155,7 @@ class VitalsCalculatedService extends BaseService
             ];
 
             // Add source vital UUID if present and not already added
-            $sourceVitalUuid = !empty($sourceVitalUuid) ? UuidRegistry::uuidToString($record['source_vital_uuid']) : null;
+            $sourceVitalUuid = !empty($record['source_vital_uuid']) ? UuidRegistry::uuidToString($record['source_vital_uuid']) : null;
             if (
                 !empty($sourceVitalUuid) &&
                 !in_array($sourceVitalUuid, $groupedRecords[$uuid]['parent_observation_uuid'])
