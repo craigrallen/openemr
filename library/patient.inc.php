@@ -584,12 +584,13 @@ function getPatientNameSplit($term)
         $names = explode(',', $term);
         $n['last'] = $names[0];
         if (str_contains(trim($names[1]), ' ')) {
-            [$n['first'], $n['middle']] = explode(' ', trim($names[1]));
+            $givenNames = array_values(array_filter(explode(' ', trim($names[1])), static fn ($name) => $name !== ''));
+            [$n['first'], $n['middle']] = $givenNames;
         } else {
             $n['first'] = $names[1];
         }
     } elseif (str_contains($term, ' ')) {
-        $names = explode(' ', $term);
+        $names = array_values(array_filter(explode(' ', $term), static fn ($name) => $name !== ''));
         if (count($names) == 1) {
             $n['last'] = $names[0];
         } elseif (count($names) == 3) {
