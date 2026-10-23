@@ -693,10 +693,10 @@ class EncounterService extends BaseService
     {
         $validator = new Validator();
 
-        $validator->optional('subjective')->lengthBetween(2, 65535);
-        $validator->optional('objective')->lengthBetween(2, 65535);
-        $validator->optional('assessment')->lengthBetween(2, 65535);
-        $validator->optional('plan')->lengthBetween(2, 65535);
+        $validator->optional('subjective')->string()->lengthBetween(2, 65535);
+        $validator->optional('objective')->string()->lengthBetween(2, 65535);
+        $validator->optional('assessment')->string()->lengthBetween(2, 65535);
+        $validator->optional('plan')->string()->lengthBetween(2, 65535);
 
         return $validator->validate($soapNote);
     }
