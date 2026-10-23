@@ -583,12 +583,19 @@ function getPatientNameSplit($term)
     if (str_contains($term, ',')) {
         $names = explode(',', $term);
         $n['last'] = $names[0];
-        if (str_contains(trim($names[1]), ' ')) {
-            [$n['first'], $n['middle']] = explode(' ', trim($names[1]));
+        $givenNames = trim($names[1]);
+        if (str_contains($givenNames, ' ')) {
+            while (str_contains($givenNames, '  ')) {
+                $givenNames = str_replace('  ', ' ', $givenNames);
+            }
+            [$n['first'], $n['middle']] = explode(' ', $givenNames);
         } else {
             $n['first'] = $names[1];
         }
     } elseif (str_contains($term, ' ')) {
+        while (str_contains($term, '  ')) {
+            $term = str_replace('  ', ' ', $term);
+        }
         $names = explode(' ', $term);
         if (count($names) == 1) {
             $n['last'] = $names[0];
