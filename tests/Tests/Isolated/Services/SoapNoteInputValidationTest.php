@@ -99,7 +99,9 @@ class SoapNoteInputValidationTest extends TestCase
             self::assertSame($input, $result->getValues());
         } else {
             $reason = $length < 2 ? LengthBetween::TOO_SHORT : LengthBetween::TOO_LONG;
-            self::assertArrayHasKey($reason, $result->getMessages()[$field]);
+            $messages = $result->getMessages();
+            self::assertIsArray($messages[$field]);
+            self::assertArrayHasKey($reason, $messages[$field]);
         }
     }
 
@@ -135,7 +137,9 @@ class SoapNoteInputValidationTest extends TestCase
         if ($valid) {
             self::assertSame($input, $result->getValues());
         } else {
-            self::assertArrayHasKey(LengthBetween::TOO_LONG, $result->getMessages()[$field]);
+            $messages = $result->getMessages();
+            self::assertIsArray($messages[$field]);
+            self::assertArrayHasKey(LengthBetween::TOO_LONG, $messages[$field]);
         }
     }
 
@@ -162,14 +166,12 @@ class SoapNoteInputValidationTest extends TestCase
     public function testUnknownFieldDoesNotCreateAnErrorOrValidatedValue(): void
     {
         $input = ['unknown' => ['anything']];
-        $original = $input;
         $result = $this->service()->validateSoapNote($input);
         self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertTrue($result->isValid());
         self::assertSame([], $result->getMessages());
         self::assertSame([], $result->getValues());
-        self::assertSame($original, $input);
     }
 
     private function service(): EncounterService
