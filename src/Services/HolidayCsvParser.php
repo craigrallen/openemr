@@ -88,6 +88,10 @@ final class HolidayCsvParser implements HolidayCsvParserInterface
 
     private static function parseDate(string $value): ?DateTimeImmutable
     {
+        if (str_contains($value, "\0")) {
+            return null;
+        }
+
         foreach (self::ACCEPTED_DATE_FORMATS as $format) {
             $dt = DateTimeImmutable::createFromFormat('!' . $format, $value);
             if ($dt instanceof DateTimeImmutable && $dt->format($format) === $value) {
