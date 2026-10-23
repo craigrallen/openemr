@@ -74,6 +74,7 @@ final class DocumentReferenceReadTest extends TestCase
         ];
     }
 
+    /** @param array<mixed>|false $row */
     #[DataProvider('absentMetadataRows')]
     public function testAbsentMetadataReturnsFalseAfterOnlyTheBoundLookup(
         int $pid,
