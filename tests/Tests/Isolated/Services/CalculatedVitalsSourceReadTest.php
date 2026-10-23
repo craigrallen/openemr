@@ -172,6 +172,55 @@ final class CalculatedVitalsSourceReadTest extends TestCase
         self::assertSame($expectedSecond, $actual[1]);
     }
 
+    public function testEntirelySourceLessCalculationDoesNotInheritInterleavedSources(): void
+    {
+        $missingSourceRow = self::row(self::CALCULATION_A, null, 'bps', '121', 2);
+        unset($missingSourceRow['source_vital_uuid']);
+
+        $rows = [
+            self::row(self::CALCULATION_A, null, 'bps', '121', 2),
+            self::row(self::CALCULATION_B, self::SOURCE_C, 'bps', '130', 2),
+            self::row(self::CALCULATION_A, '', 'bpd', '81', 1),
+            self::row(self::CALCULATION_B, self::SOURCE_B, 'bpd', '85', 1),
+            $missingSourceRow,
+        ];
+
+        $actual = $this->group($rows);
+        self::assertCount(2, $actual);
+        $expectedSourceLess = [
+            'uuid' => self::CALCULATION_A,
+            'date_start' => '2026-10-20 08:00:00',
+            'date_end' => '2026-10-20 08:30:00',
+            'created_at' => '2026-10-20 09:00:00',
+            'updated_at' => '2026-10-21 10:00:00',
+            'created_by' => '17',
+            'created_by_uuid' => self::CREATOR,
+            'updated_by' => '18',
+            'updated_by_uuid' => self::UPDATER,
+            'calculation_id' => 'bp-Mean3Day',
+            'encounter' => '41',
+            'euuid' => self::ENCOUNTER,
+            'pid' => '42',
+            'puuid' => self::PATIENT,
+            'parent_observation_uuid' => [],
+            'components' => [
+                ['vitals_column' => 'bpd', 'value' => 81.0, 'value_string' => null, 'value_unit' => 'mm[Hg]', 'component_order' => 1],
+                ['vitals_column' => 'bps', 'value' => 121.0, 'value_string' => null, 'value_unit' => 'mm[Hg]', 'component_order' => 2],
+            ],
+        ];
+        self::assertSame($expectedSourceLess, $actual[0]);
+
+        $expectedSourced = $expectedSourceLess;
+        $expectedSourced['uuid'] = self::CALCULATION_B;
+        $expectedSourced['calculation_id'] = 'bp-MeanLast5';
+        $expectedSourced['parent_observation_uuid'] = [self::SOURCE_C, self::SOURCE_B];
+        $expectedSourced['components'] = [
+            ['vitals_column' => 'bpd', 'value' => 85.0, 'value_string' => null, 'value_unit' => 'mm[Hg]', 'component_order' => 1],
+            ['vitals_column' => 'bps', 'value' => 130.0, 'value_string' => null, 'value_unit' => 'mm[Hg]', 'component_order' => 2],
+        ];
+        self::assertSame($expectedSourced, $actual[1]);
+    }
+
     public function testEmptyRowsProduceNoCalculatedRecords(): void
     {
         self::assertSame([], $this->group([]));
