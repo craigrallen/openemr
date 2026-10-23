@@ -162,6 +162,9 @@ class DocumentService extends BaseService
     public function getFile($pid, $did)
     {
         $filenameSql = sqlQuery("SELECT `name`, `mimetype` FROM `documents` WHERE `id` = ? AND `foreign_id` = ? AND `deleted` = 0", [$did, $pid]);
+        if ($filenameSql === false || $filenameSql === []) {
+            return false;
+        }
 
         $filename = empty($filenameSql['name']) ? "unknownName" : $filenameSql['name'];
 

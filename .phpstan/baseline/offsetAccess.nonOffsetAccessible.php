@@ -40287,11 +40287,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../src/Services/DocumentService.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Cannot access offset \'mimetype\' on array\\|false\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Services/DocumentService.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Cannot access offset \'parent\' on array\\|false\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../src/Services/DocumentService.php',
