@@ -48,7 +48,6 @@ class ListInputValidationTest extends TestCase
         $this->assertInstanceOf(ValidationResult::class, $result);
         $this->assertFalse($result->isValid());
         $messages = $result->getMessages();
-        $this->assertIsArray($messages);
         $this->assertArrayHasKey($field, $messages);
         $this->assertIsArray($messages[$field]);
         $this->assertNotEmpty($messages[$field]);
@@ -82,7 +81,6 @@ class ListInputValidationTest extends TestCase
             $this->assertInstanceOf(ValidationResult::class, $result);
             $this->assertFalse($result->isValid());
             $messages = $result->getMessages();
-            $this->assertIsArray($messages);
             $this->assertArrayHasKey($field, $messages);
             $this->assertIsArray($messages[$field]);
             $this->assertNotEmpty($messages[$field]);
@@ -115,7 +113,6 @@ class ListInputValidationTest extends TestCase
         $this->assertInstanceOf(ValidationResult::class, $result);
         $this->assertFalse($result->isValid());
         $messages = $result->getMessages();
-        $this->assertIsArray($messages);
         $this->assertArrayHasKey($field, $messages);
         $this->assertIsArray($messages[$field]);
         $this->assertNotEmpty($messages[$field]);
@@ -174,7 +171,6 @@ class ListInputValidationTest extends TestCase
         $this->assertInstanceOf(ValidationResult::class, $result);
         $this->assertSame($valid, $result->isValid());
         $messages = $result->getMessages();
-        $this->assertIsArray($messages);
         if ($valid) {
             $this->assertSame([], $messages);
             $this->assertSame($value, $result->getValues()[$field]);
@@ -250,7 +246,6 @@ class ListInputValidationTest extends TestCase
         $this->assertInstanceOf(ValidationResult::class, $result);
         $this->assertFalse($result->isValid());
         $messages = $result->getMessages();
-        $this->assertIsArray($messages);
         $this->assertArrayHasKey($field, $messages);
         $this->assertIsArray($messages[$field]);
         $this->assertSame(
@@ -287,7 +282,6 @@ class ListInputValidationTest extends TestCase
         $this->assertInstanceOf(ValidationResult::class, $result);
         $this->assertSame($valid, $result->isValid());
         $messages = $result->getMessages();
-        $this->assertIsArray($messages);
         if ($valid) {
             $this->assertSame([], $messages);
             foreach ($changes as $field => $value) {

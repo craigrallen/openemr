@@ -1,6 +1,6 @@
 # OPEMR-120 list input validation
 
-Owner: Hermes / run1 / max2. The tests-only characterization is commit `a8d1bf9a`; the production change is confined to `src/Services/ListService.php`. This bounded review follow-up adds resource coverage in `tests/Tests/Isolated/Services/ListInputValidationTest.php` and updates this document.
+Owner: Hermes / run1 / max2. The tests-only characterization is commit `a8d1bf9a`; the production change is confined to `src/Services/ListService.php`. The review follow-up added resource coverage in `tests/Tests/Isolated/Services/ListInputValidationTest.php`. This subsequent scoped correction addresses the first hosted PHPStan failure at `95cd312f`.
 
 ## Provenance and change
 
@@ -30,10 +30,12 @@ The broader Services command is:
 vendor/bin/phpunit -c phpunit-isolated.xml tests/Tests/Isolated/Services
 ```
 
-Neither command was run in this bounded follow-up. The controller owns execution and final resource-inclusive totals. Hosted CI is a separate publication gate; see the controller delivery evidence for the exact-head outcome. Final controller local resource-inclusive verification: original service RED 76 tests / 9 TypeErrors / zero assertion failures; guarded service GREEN 76 tests / 416 assertions / zero issues. The initial full static review inspected Particle internals and identified the resource coverage gap; the final complete-three-file static follow-up cleared that gap, but did not independently rerun tests or recheck dependency internals.
+Neither command was run in the resource-test follow-up. The controller owns execution and final resource-inclusive totals. Final controller local resource-inclusive verification before the hosted run: original service RED 76 tests / 9 TypeErrors / zero assertion failures; guarded service GREEN 76 tests / 416 assertions / zero issues. The initial full static review inspected Particle internals and identified the resource coverage gap; the final complete-three-file static follow-up cleared that gap, but did not independently rerun tests or recheck dependency internals.
+
+The first exact-head hosted PHPStan run at `95cd312f` failed. Its log reported three new mixed-offset errors for `title`, `type` and `diagnosis` inside `ListService::validate()`, plus six always-true top-level `assertIsArray($messages)` calls in the isolated test. The service now documents its array input as `@param array<mixed> $list`, matching the array inputs passed by the REST write paths and tests while preserving mixed field values and the existing runtime signature. The six tautological assertions were removed because `ValidationResult::getMessages()` is statically an array; nested field-message array assertions and runtime `ValidationResult` assertions remain. Existing ListService offset suppressions concern other methods and were not changed. The controller will rerun native tests and fresh exact-head hosted checks; their outcomes are not yet known.
 
 ## Acceptance and remaining work
 
-Acceptance for this slice is field errors without `TypeError` for supplied nonempty arrays, resources and non-`Stringable` objects in the three text fields, while the characterized empty, scalar, byte-length, PID and date behavior remains intact. Resource-inclusive local RED/GREEN is verified above; hosted CI remains a separate gate. This follow-up edits only the test and this document; the service guard is unchanged.
+Acceptance for this slice is field errors without `TypeError` for supplied nonempty arrays, resources and non-`Stringable` objects in the three text fields, while the characterized empty, scalar, byte-length, PID and date behavior remains intact. Resource-inclusive local RED/GREEN is verified above; the controller's fresh verification and hosted CI remain pending. This correction edits only the service docblock, six test assertions and this document; the service guard is unchanged.
 
 Real authenticated endpoint checks, roles and ACL, session behavior, persistence, and clinical and security QA remain pending. Ordinary approval is required; there is no standing bypass. There has been no merge or deployment. After ownership of this candidate is resolved, the next different candidate remains controller-selected.

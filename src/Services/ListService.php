@@ -31,6 +31,7 @@ class ListService
     {
     }
 
+    /** @param array<mixed> $list */
     public function validate($list)
     {
         $validator = new Validator();
