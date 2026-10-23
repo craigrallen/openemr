@@ -58,9 +58,52 @@ $tback = '';
         });
     </script>
 
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-insurance-patient-browser {
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser .title {
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser .bold {
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser span.text {
+    color: var(--oe-wb-ink, #17343b);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser > table.table {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    border-color: var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser > table.table th,
+  html.oe-workbench-context body.oe-insurance-patient-browser > table.table td {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-ink, #17343b);
+    border-color: var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser > table.table a.text,
+  html.oe-workbench-context body.oe-insurance-patient-browser > table.table a.text:visited {
+    background-color: var(--oe-wb-paper, #fff);
+    color: var(--oe-wb-petrol, #086878);
+  }
+
+  html.oe-workbench-context body.oe-insurance-patient-browser :focus-visible {
+    outline-color: var(--oe-wb-petrol, #086878);
+  }
+}
+    </style>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-insurance-patient-browser">
 
 <a href="javascript:window.close();"><span class="title"><?php echo xlt('Browse for Record'); ?></span><span class="back"><?php echo text($tback);?></span></a>
 
