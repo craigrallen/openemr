@@ -31,20 +31,20 @@ class ListService
     {
     }
 
-    /** @param array<mixed> $list */
     public function validate($list)
     {
         $validator = new Validator();
+        $values = is_array($list) ? $list : [];
 
         $title = $validator->required('title');
-        $value = $list['title'] ?? null;
+        $value = $values['title'] ?? null;
         if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
             $title->string();
         }
         $title->lengthBetween(2, 255);
 
         $type = $validator->required('type');
-        $value = $list['type'] ?? null;
+        $value = $values['type'] ?? null;
         if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
             $type->string();
         }
@@ -53,7 +53,7 @@ class ListService
         $validator->required('pid')->numeric();
 
         $diagnosis = $validator->optional('diagnosis');
-        $value = $list['diagnosis'] ?? null;
+        $value = $values['diagnosis'] ?? null;
         if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
             $diagnosis->string();
         }

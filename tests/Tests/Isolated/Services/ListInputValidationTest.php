@@ -17,6 +17,7 @@ use Particle\Validator\ValidationResult;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+use TypeError;
 
 class ListInputValidationTest extends TestCase
 {
@@ -31,6 +32,23 @@ class ListInputValidationTest extends TestCase
     private static function validList(): array
     {
         return ['title' => 'Asthma', 'type' => 'medical_problem', 'pid' => '42'];
+    }
+
+    #[DataProvider('malformedRootProvider')]
+    public function testMalformedRootRetainsValidatorTypeError(mixed $list): void
+    {
+        $this->expectException(TypeError::class);
+
+        $this->service->validate($list);
+    }
+
+    /** @return array<string, array{mixed}> */
+    public static function malformedRootProvider(): array
+    {
+        return [
+            'scalar root' => ['not an array'],
+            'object root' => [new stdClass()],
+        ];
     }
 
     /**
