@@ -34,11 +34,30 @@ class ListService
     public function validate($list)
     {
         $validator = new Validator();
+        $values = is_array($list) ? $list : [];
 
-        $validator->required('title')->lengthBetween(2, 255);
-        $validator->required('type')->lengthBetween(2, 255);
+        $title = $validator->required('title');
+        $value = $values['title'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $title->string();
+        }
+        $title->lengthBetween(2, 255);
+
+        $type = $validator->required('type');
+        $value = $values['type'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $type->string();
+        }
+        $type->lengthBetween(2, 255);
+
         $validator->required('pid')->numeric();
-        $validator->optional('diagnosis')->lengthBetween(2, 255);
+
+        $diagnosis = $validator->optional('diagnosis');
+        $value = $values['diagnosis'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $diagnosis->string();
+        }
+        $diagnosis->lengthBetween(2, 255);
         $validator->optional('begdate')->datetime('Y-m-d H:i:s');
         $validator->optional('enddate')->datetime('Y-m-d H:i:s');
 
