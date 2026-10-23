@@ -54,6 +54,9 @@ class PatientPortalService
             "Select `pid`, `email`, `email_direct` From `patient_data` Where `pid` = ?",
             [$pid]
         );
+        if ($patient === false || $patient === []) {
+            return ['valid' => false];
+        }
         $portal = sqlQuery(
             "Select `pid`, `portal_username` From `patient_access_onsite` Where `pid` = ?",
             [$patient['pid']]
@@ -180,7 +183,7 @@ class PatientPortalService
      * @param mixed|null $default
      * @return mixed
      */
-    public function getRequest(string $param = null, mixed $default = null): mixed
+    public function getRequest(?string $param = null, mixed $default = null): mixed
     {
         if ($param) {
             return $_REQUEST[$param] ?? $default;
