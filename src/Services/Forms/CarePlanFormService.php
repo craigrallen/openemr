@@ -245,7 +245,7 @@ class CarePlanFormService
      */
     public function parseNote(string $note): string
     {
-        preg_match_all("/\{\|([^\]]*)\|}/", $note, $matches);
+        preg_match_all("/\{\|([^\]]*?)\|}/", $note, $matches);
 
         return json_encode($matches[1]) ?: '[]';
     }
