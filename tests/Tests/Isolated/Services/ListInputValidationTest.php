@@ -67,6 +67,40 @@ class ListInputValidationTest extends TestCase
         ];
     }
 
+    #[DataProvider('resourceFieldProvider')]
+    public function testResourceReturnsFieldError(string $field): void
+    {
+        $resource = fopen('php://memory', 'r+');
+        $this->assertIsResource($resource);
+
+        try {
+            $data = self::validList();
+            $data[$field] = $resource;
+
+            $result = $this->service->validate($data);
+
+            $this->assertInstanceOf(ValidationResult::class, $result);
+            $this->assertFalse($result->isValid());
+            $messages = $result->getMessages();
+            $this->assertIsArray($messages);
+            $this->assertArrayHasKey($field, $messages);
+            $this->assertIsArray($messages[$field]);
+            $this->assertNotEmpty($messages[$field]);
+        } finally {
+            fclose($resource);
+        }
+    }
+
+    /** @return array<string, array{string}> */
+    public static function resourceFieldProvider(): array
+    {
+        return [
+            'title resource' => ['title'],
+            'type resource' => ['type'],
+            'diagnosis resource' => ['diagnosis'],
+        ];
+    }
+
     #[DataProvider('requiredEmptyProvider')]
     public function testRequiredTextRejectsAbsentAndEmptyValues(string $field, bool $present, mixed $value): void
     {

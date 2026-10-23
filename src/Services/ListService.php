@@ -35,10 +35,28 @@ class ListService
     {
         $validator = new Validator();
 
-        $validator->required('title')->lengthBetween(2, 255);
-        $validator->required('type')->lengthBetween(2, 255);
+        $title = $validator->required('title');
+        $value = $list['title'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $title->string();
+        }
+        $title->lengthBetween(2, 255);
+
+        $type = $validator->required('type');
+        $value = $list['type'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $type->string();
+        }
+        $type->lengthBetween(2, 255);
+
         $validator->required('pid')->numeric();
-        $validator->optional('diagnosis')->lengthBetween(2, 255);
+
+        $diagnosis = $validator->optional('diagnosis');
+        $value = $list['diagnosis'] ?? null;
+        if (is_array($value) || is_resource($value) || (is_object($value) && !($value instanceof \Stringable))) {
+            $diagnosis->string();
+        }
+        $diagnosis->lengthBetween(2, 255);
         $validator->optional('begdate')->datetime('Y-m-d H:i:s');
         $validator->optional('enddate')->datetime('Y-m-d H:i:s');
 
