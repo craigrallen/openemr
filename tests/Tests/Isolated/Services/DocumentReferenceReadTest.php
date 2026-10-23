@@ -45,21 +45,7 @@ final class DocumentReferenceReadTest extends TestCase
         $storage = new MockArraySessionStorage();
         SessionWrapperFactory::getInstance()->setActiveSession(new Session($storage), $storage);
 
-        // DocumentService loads C_Document at file load time. Its require
-        // chain runs FacilityService at top level and can fail on the missing
-        // database before the DocumentService class is first used. As in the
-        // REST controller isolated test, only that known load error is safe
-        // to swallow; the class definitions have already been installed.
-        $previous = error_reporting(0);
-        try {
-            class_exists(DocumentService::class);
-        } catch (\Error $loadError) {
-            if (!str_contains($loadError->getMessage(), 'ExecuteNoLog')) {
-                throw $loadError;
-            }
-        } finally {
-            error_reporting($previous);
-        }
+        class_exists(DocumentService::class);
 
         self::assertSame(
             realpath(__DIR__ . '/../../../../src/Services/DocumentService.php'),
