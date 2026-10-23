@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 
 #[Group('isolated')]
 class CarePlanFormServiceIsolatedTest extends TestCase
@@ -38,6 +39,17 @@ class CarePlanFormServiceIsolatedTest extends TestCase
         self::assertSame($expected, $this->service->parseNote($note));
     }
 
+    #[Test]
+    public function parseNoteUsesTheCarePlanFormServiceImplementation(): void
+    {
+        $method = new ReflectionMethod($this->service, 'parseNote');
+
+        self::assertSame(
+            realpath(dirname(__DIR__, 5) . '/src/Services/Forms/CarePlanFormService.php'),
+            $method->getFileName()
+        );
+    }
+
     /**
      * @return array<string, array{string, string}>
      *
@@ -50,17 +62,24 @@ class CarePlanFormServiceIsolatedTest extends TestCase
             'empty string' => ['', '[]'],
             'single marker' => ['see {|Diabetes|} today', '["Diabetes"]'],
             'empty marker' => ['{||}', '[""]'],
-            // Documents current behaviour, which is not what you would want. The
-            // character class [^\]] excludes only ']', so the capture runs greedily
-            // across the closing '|}' of the first marker and swallows everything up
-            // to the last one. Faithfully ported from the global parse_note() in
-            // library/global_functions.inc.php:677 -- fixing it changes the
-            // note_related_to values written for every multi-issue description, so it
-            // belongs in its own change, not a refactor.
-            'multiple markers collapse into one capture' => [
+            'separated markers' => [
                 '{|Asthma|} and {|COPD|}',
-                '["Asthma|} and {|COPD"]',
+                '["Asthma","COPD"]',
             ],
+            'adjacent markers' => ['{|Asthma|}{|COPD|}', '["Asthma","COPD"]'],
+            'duplicate markers retain order' => ['{|A|} {|B|} {|A|}', '["A","B","A"]'],
+            'multiple empty markers' => ['{||} and {||}', '["",""]'],
+            'Unicode markers' => ['{|Hjärta|} {|糖尿病|}', '["Hj\\u00e4rta","\\u7cd6\\u5c3f\\u75c5"]'],
+            'multiline description' => ["{|First|}\nnext line {|Second|}", '["First","Second"]'],
+            'newline within marker' => ["{|First\nSecond|}", '["First\\nSecond"]'],
+            'pipe within marker' => ['{|A|B|} {|C|}', '["A|B","C"]'],
+            'stray closing delimiters' => ['|} {|A|} |}', '["A"]'],
+            'malformed closing delimiter' => ['{|broken} and {|Good|}', '["broken} and {|Good"]'],
+            'unclosed marker' => ['{|unfinished', '[]'],
+            'complete then unclosed marker' => ['{|A|} {|unfinished', '["A"]'],
+            'closing bracket remains a barrier' => ['{|A]B|}', '[]'],
+            'valid marker after rejected bracket marker' => ['{|bad]marker|} text {|Good|}', '["Good"]'],
+            'invalid UTF-8 falls back to empty JSON array' => ["{|\xB1|}", '[]'],
         ];
     }
 
