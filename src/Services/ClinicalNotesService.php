@@ -541,11 +541,13 @@ class ClinicalNotesService extends BaseService
      * AI Generated
      * Save linked documents for a clinical note
      * @param int $clinicalNoteId The clinical note ID
-     * @param array $documentsData Array of document data with uuid values
+     * @param array<mixed> $documentsData Document rows with optional uuid values
      * @param string $createdBy Username of the user creating the links
      */
     public function saveLinkedDocuments(int $clinicalNoteId, array $documentsData, string $createdBy)
     {
+        $this->validateLinkedUuids($documentsData);
+
         // First clear existing links
         $this->clearLinkedDocuments($clinicalNoteId);
 
@@ -581,11 +583,13 @@ class ClinicalNotesService extends BaseService
      * AI Generated
      * Save linked procedure results for a clinical note
      * @param int $clinicalNoteId The clinical note ID
-     * @param array $resultsData Array of result data with uuid values
+     * @param array<mixed> $resultsData Result rows with optional uuid values
      * @param string $createdBy Username of the user creating the links
      */
     public function saveLinkedResults(int $clinicalNoteId, array $resultsData, string $createdBy)
     {
+        $this->validateLinkedUuids($resultsData);
+
         // First clear existing links
         $this->clearLinkedResults($clinicalNoteId);
 
@@ -615,6 +619,33 @@ class ClinicalNotesService extends BaseService
     {
         $sql = "DELETE FROM clinical_notes_procedure_results WHERE clinical_note_id = ?";
         QueryUtils::sqlStatementThrowException($sql, [$clinicalNoteId]);
+    }
+
+    /**
+     * Validate every actionable UUID before either link table is changed or queried.
+     *
+     * @param array<mixed> $entries Rows with optional uuid values
+     */
+    private function validateLinkedUuids(array $entries): void
+    {
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $uuid = $entry['uuid'] ?? null;
+            if (
+                $uuid === null || $uuid === false || $uuid === 0 || $uuid === 0.0
+                || $uuid === '' || $uuid === '0' || $uuid === []
+            ) {
+                continue;
+            }
+
+            if (!is_string($uuid)) {
+                throw new \InvalidArgumentException('Linked UUID must be a string');
+            }
+            UuidRegistry::uuidToBytes($uuid);
+        }
     }
 
     /**
