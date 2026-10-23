@@ -629,12 +629,22 @@ class ClinicalNotesService extends BaseService
     private function validateLinkedUuids(array $entries): void
     {
         foreach ($entries as $entry) {
-            if (isset($entry['uuid']) && !empty($entry['uuid'])) {
-                if (!is_string($entry['uuid'])) {
-                    throw new \InvalidArgumentException('Linked UUID must be a string');
-                }
-                UuidRegistry::uuidToBytes($entry['uuid']);
+            if (!is_array($entry)) {
+                continue;
             }
+
+            $uuid = $entry['uuid'] ?? null;
+            if (
+                $uuid === null || $uuid === false || $uuid === 0 || $uuid === 0.0
+                || $uuid === '' || $uuid === '0' || $uuid === []
+            ) {
+                continue;
+            }
+
+            if (!is_string($uuid)) {
+                throw new \InvalidArgumentException('Linked UUID must be a string');
+            }
+            UuidRegistry::uuidToBytes($uuid);
         }
     }
 

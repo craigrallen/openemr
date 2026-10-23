@@ -199,7 +199,7 @@ final class ClinicalNoteLinkedInputTest extends TestCase
         ]);
         $this->save($method, [
             [], ['uuid' => null], ['uuid' => ''], ['uuid' => '0'],
-            ['uuid' => 0], ['uuid' => false], ['uuid' => []],
+            ['uuid' => 0], ['uuid' => 0.0], ['uuid' => false], ['uuid' => []],
             null, false, 4, 'unstructured row',
             ['uuid' => self::FIRST_UUID],
         ]);
