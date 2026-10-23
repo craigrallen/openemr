@@ -28,12 +28,12 @@ class MessageService
     {
         $validator = new Validator();
 
-        $validator->required('body')->lengthBetween(2, 65535);
-        $validator->required('to')->lengthBetween(2, 255);
-        $validator->required('from')->lengthBetween(2, 255);
-        $validator->required('groupname')->lengthBetween(2, 255);
-        $validator->required('title')->lengthBetween(2, 255);
-        $validator->required('message_status')->lengthBetween(2, 20);
+        $validator->required('body')->string()->lengthBetween(2, 65535);
+        $validator->required('to')->string()->lengthBetween(2, 255);
+        $validator->required('from')->string()->lengthBetween(2, 255);
+        $validator->required('groupname')->string()->lengthBetween(2, 255);
+        $validator->required('title')->string()->lengthBetween(2, 255);
+        $validator->required('message_status')->string()->lengthBetween(2, 20);
 
         return $validator->validate($message);
     }
