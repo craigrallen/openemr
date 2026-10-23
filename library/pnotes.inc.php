@@ -38,6 +38,9 @@ function getPnoteById($id, $cols = "*")
 function checkPnotesNoteId(int $id, string $user): bool
 {
     $check = QueryUtils::querySingleRow("SELECT `id`, `user`, `assigned_to` FROM pnotes WHERE id = ? AND deleted != 1", [$id]);
+    if (!($check['id'] ?? null) || $check['id'] != $id || !isset($check['user'], $check['assigned_to'])) {
+        return false;
+    }
     if (
         !empty($check['id'])
         && ($check['id'] == $id)

@@ -45,6 +45,7 @@ final class PnotesRecipientReadTest extends TestCase
         require_once __DIR__ . '/../../../../library/pnotes.inc.php';
     }
 
+    /** @param array<string, mixed>|false $noteRow */
     #[DataProvider('unusableNoteRows')]
     public function testAbsentOrWrongNoteDeniesBeforePortalLookup(array|false $noteRow): void
     {
@@ -62,10 +63,14 @@ final class PnotesRecipientReadTest extends TestCase
             'missing id' => [['user' => 'alice', 'assigned_to' => 'portal-user']],
             'empty id' => [['id' => '', 'user' => 'alice', 'assigned_to' => 'portal-user']],
             'zero id' => [['id' => 0, 'user' => 'alice', 'assigned_to' => 'portal-user']],
+            'string zero id' => [['id' => '0', 'user' => 'alice', 'assigned_to' => 'portal-user']],
+            'null id' => [['id' => null, 'user' => 'alice', 'assigned_to' => 'portal-user']],
+            'false id' => [['id' => false, 'user' => 'alice', 'assigned_to' => 'portal-user']],
             'different id' => [['id' => 43, 'user' => 'alice', 'assigned_to' => 'portal-user']],
         ];
     }
 
+    /** @param array<string, mixed> $noteRow */
     #[DataProvider('incompleteRecipientRows')]
     public function testIncompleteRecipientMetadataDeniesWithoutNoticeOrPortalLookup(array $noteRow): void
     {
@@ -85,6 +90,7 @@ final class PnotesRecipientReadTest extends TestCase
         ];
     }
 
+    /** @param array<string, mixed> $noteRow */
     #[DataProvider('directRecipients')]
     public function testCompleteDirectRecipientKeepsLooseIdentityAndSkipsPortalLookup(
         array $noteRow,
@@ -104,9 +110,13 @@ final class PnotesRecipientReadTest extends TestCase
             'loose numeric owner' => [['id' => 42, 'user' => 42, 'assigned_to' => 'bob'], '42'],
             'loose numeric assignee' => [['id' => 42, 'user' => 'bob', 'assigned_to' => 42], '42'],
             'portal-user is direct assignee' => [['id' => 42, 'user' => 'bob', 'assigned_to' => 'portal-user'], 'portal-user'],
+            'empty owner recipient' => [['id' => 42, 'user' => '', 'assigned_to' => 'bob'], ''],
+            'empty assignee recipient' => [['id' => 42, 'user' => 'bob', 'assigned_to' => ''], ''],
+            'both recipients empty' => [['id' => 42, 'user' => '', 'assigned_to' => ''], ''],
         ];
     }
 
+    /** @param array<string, mixed>|false $portalRow */
     #[DataProvider('portalOutcomes')]
     public function testPortalAssigneeUsesExistingActivePortalUserPredicate(
         array|false $portalRow,
@@ -143,6 +153,7 @@ final class PnotesRecipientReadTest extends TestCase
         self::assertFalse($this->withoutPhpNotices(static fn(): bool => \checkPnotesNoteId(42, 'alice')));
     }
 
+    /** @param list<array{string, list<int|string>}> $expectedCalls */
     #[DataProvider('failingLookup')]
     public function testSqlFailurePropagates(string $failedSql, array $expectedCalls): void
     {
