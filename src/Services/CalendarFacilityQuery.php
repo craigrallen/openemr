@@ -15,6 +15,7 @@ use Closure;
 use InvalidArgumentException;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Core\OEGlobalsBag;
+use UnexpectedValueException;
 
 final class CalendarFacilityQuery
 {
@@ -69,8 +70,11 @@ final class CalendarFacilityQuery
                 "tablename = 'users' AND table_id = ?",
                 [$uID]
             );
+            if (!isset($countrow['count'])) {
+                throw new UnexpectedValueException('Unable to determine facility restriction count');
+            }
         }
-        if (!$restrict || !isset($countrow['count']) || !$countrow['count']) {
+        if (!$restrict || !$countrow['count']) {
             $sql = "SELECT f.id, f.name, f.color, f.inactive FROM facility AS f ORDER BY " . $orderClause;
             return ($this->fetchRecords)($sql, []);
         } else {
