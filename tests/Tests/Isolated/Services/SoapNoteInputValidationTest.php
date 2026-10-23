@@ -12,6 +12,7 @@ namespace OpenEMR\Tests\Isolated\Services;
 
 use OpenEMR\Services\EncounterService;
 use Particle\Validator\Rule\LengthBetween;
+use Particle\Validator\ValidationResult;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -53,6 +54,7 @@ class SoapNoteInputValidationTest extends TestCase
         $input = [$field => $value];
         $original = $input;
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertFalse($result->isValid());
         self::assertSame([$field], array_keys($result->getMessages()));
@@ -65,6 +67,7 @@ class SoapNoteInputValidationTest extends TestCase
     {
         foreach ([[], [$field => null], [$field => ''], [$field => []]] as $input) {
             $result = $this->service()->validateSoapNote($input);
+            self::assertInstanceOf(ValidationResult::class, $result);
 
             self::assertTrue($result->isValid());
             self::assertSame([], $result->getMessages());
@@ -88,6 +91,7 @@ class SoapNoteInputValidationTest extends TestCase
         $value = str_repeat('a', $length);
         $input = [$field => $value];
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertSame($valid, $result->isValid());
         if ($valid) {
@@ -114,6 +118,7 @@ class SoapNoteInputValidationTest extends TestCase
     {
         $input = [$field => "Å\nβ\r\nend"];
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertTrue($result->isValid());
         self::assertSame($input, $result->getValues());
@@ -124,6 +129,7 @@ class SoapNoteInputValidationTest extends TestCase
     {
         $input = [$field => $value];
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertSame($valid, $result->isValid());
         if ($valid) {
@@ -145,6 +151,7 @@ class SoapNoteInputValidationTest extends TestCase
         $original = $input;
 
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertFalse($result->isValid());
         self::assertSame(['subjective', 'assessment', 'plan'], array_keys($result->getMessages()));
@@ -155,12 +162,14 @@ class SoapNoteInputValidationTest extends TestCase
     public function testUnknownFieldDoesNotCreateAnErrorOrValidatedValue(): void
     {
         $input = ['unknown' => ['anything']];
+        $original = $input;
         $result = $this->service()->validateSoapNote($input);
+        self::assertInstanceOf(ValidationResult::class, $result);
 
         self::assertTrue($result->isValid());
         self::assertSame([], $result->getMessages());
         self::assertSame([], $result->getValues());
-        self::assertSame(['unknown' => ['anything']], $input);
+        self::assertSame($original, $input);
     }
 
     private function service(): EncounterService
