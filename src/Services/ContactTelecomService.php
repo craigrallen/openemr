@@ -100,10 +100,15 @@ class ContactTelecomService extends BaseService
                     'value' => $telecom['value'] ?? 'N/A'
                 ]);
 
+                $contactTelecom = new ContactTelecom($contactTelecomId);
+                if (!empty($contactTelecomId) && $contactTelecom->getContact()->get_id() !== $contactId) {
+                    $this->getLogger()->warning("Skipping telecom with invalid ownership", ['index' => $index]);
+                    continue;
+                }
+
                 // Handle INACTIVATE/DELETE
                 if ($action == 'INACTIVATE' || $action == 'DELETE') {
                     if (!empty($contactTelecomId)) {
-                        $contactTelecom = new ContactTelecom($contactTelecomId);
                         if (!empty($contactTelecom->get_id())) {
                             $contactTelecom->deactivate();
                             if ($contactTelecom->persist()) {
@@ -119,16 +124,6 @@ class ContactTelecomService extends BaseService
                 }
 
                 // Handle ADD and UPDATE
-                $contactTelecom = new ContactTelecom($contactTelecomId);
-
-                if ($action == 'UPDATE' && empty($contactTelecom->get_id())) {
-                    $this->getLogger()->error("UPDATE action but telecom not found, treating as ADD", [
-                        'contact_telecom_id' => $contactTelecomId,
-                        'index' => $index
-                    ]);
-                    $contactTelecom = new ContactTelecom();
-                }
-
                 // Set system
                 $system = $telecom['system'] ?? 'phone';
                 if (isset($systems[$system])) {
