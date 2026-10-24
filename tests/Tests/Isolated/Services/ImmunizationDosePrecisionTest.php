@@ -71,6 +71,7 @@ class ImmunizationDosePrecisionTest extends TestCase
 
         $result = $this->service()->createResultRecordFromDatabaseResult($row);
 
+        self::assertIsFloat($result['amount_administered']);
         if ($expected === 0.1 || $expected === 0.001) {
             self::assertEqualsWithDelta($expected, $result['amount_administered'], 0.0000001);
         } else {
@@ -120,6 +121,7 @@ class ImmunizationDosePrecisionTest extends TestCase
         self::assertSame('2027-02-04T00:00:00+00:00', $result['expiration_date']);
         self::assertSame('2026-01-01T00:00:00+00:00', $result['education_date']);
         self::assertTrue($result['primarySource']);
+        self::assertIsFloat($result['amount_administered']);
         self::assertSame(0.5, $result['amount_administered']);
         self::assertSame('mL', $result['amount_administered_unit']);
         self::assertSame($original, $row);
@@ -155,6 +157,7 @@ class ImmunizationDosePrecisionTest extends TestCase
         ]);
 
         self::assertEquals(0, $result['amount_administered']);
+        self::assertSame(0.0, $result['amount_administered']);
     }
 
     public function testAbsentDoseWarnsAndRetainsNumericZeroValue(): void
@@ -176,5 +179,6 @@ class ImmunizationDosePrecisionTest extends TestCase
         self::assertMatchesRegularExpression('/\bUndefined array key\b/i', $warnings[0][1]);
         self::assertStringContainsString('amount_administered', $warnings[0][1]);
         self::assertEquals(0, $result['amount_administered']);
+        self::assertSame(0.0, $result['amount_administered']);
     }
 }
