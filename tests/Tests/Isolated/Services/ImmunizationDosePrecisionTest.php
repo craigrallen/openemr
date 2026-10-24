@@ -160,6 +160,29 @@ class ImmunizationDosePrecisionTest extends TestCase
         self::assertSame(0.0, $result['amount_administered']);
     }
 
+    /** @return array<string, array{string|bool, float}> */
+    public static function legacyNonnumericDoses(): array
+    {
+        return [
+            'empty string' => ['', 0.0],
+            'nonnumeric string' => ['not-a-number', 0.0],
+            'numeric prefix with unit' => ['1.5 mL', 1.0],
+            'true' => [true, 1.0],
+            'false' => [false, 0.0],
+        ];
+    }
+
+    #[DataProvider('legacyNonnumericDoses')]
+    public function testNonnumericDoseRetainsLegacyIntvalValueAsFloat(string|bool $dose, float $expected): void
+    {
+        $result = $this->service()->createResultRecordFromDatabaseResult([
+            'primarySource' => '1',
+            'amount_administered' => $dose,
+        ]);
+
+        self::assertSame($expected, $result['amount_administered']);
+    }
+
     public function testAbsentDoseWarnsAndRetainsNumericZeroValue(): void
     {
         $service = $this->service();
