@@ -30,34 +30,38 @@ final class CarePlanNarrativeStripTest extends TestCase
 {
     private const SOURCE = '/interface/modules/zend_modules/module/Carecoordination/src/Carecoordination/Model/EncounterccdadispatchTable.php';
 
-    /** @return iterable<string, array{string, string}> */
+    /** @return iterable<string, array{string, string, string}> */
     public static function narratives(): iterable
     {
-        yield 'intervening words' => ['Before {|11|} keep this text {|22|} after', 'Before  keep this text  after'];
-        yield 'no marker and XML escaping' => ['A & <B> "quoted"', 'A & <B> "quoted"'];
-        yield 'single marker' => ['Before {|11|} after', 'Before  after'];
-        yield 'adjacent markers' => ['Before {|11|}{|22|} after', 'Before  after'];
-        yield 'multiline markers' => ["Before {|11|}\nkeep text\n{|22|} after", "Before \nkeep text\n after"];
-        yield 'bracket excludes legacy match' => ['Before {|11]22|} after', 'Before {|11]22|} after'];
-        yield 'unclosed marker remains literal' => ['Before {|11 after', 'Before {|11 after'];
-        yield 'closed marker after unclosed prefix follows legacy grammar' => ['Before {|bad {|22|} after', 'Before  after'];
+        $cases = [
+            'intervening words' => ['Before {|11|} keep this text {|22|} after', 'Before  keep this text  after'],
+            'no marker and XML escaping' => ['A & <B> "quoted"', 'A & <B> "quoted"'],
+            'single marker' => ['Before {|11|} after', 'Before  after'],
+            'adjacent markers' => ['Before {|11|}{|22|} after', 'Before  after'],
+            'multiline markers' => ["Before {|11|}\nkeep text\n{|22|} after", "Before \nkeep text\n after"],
+            'bracket excludes legacy match' => ['Before {|11]22|} after', 'Before {|11]22|} after'],
+            'unclosed marker remains literal' => ['Before {|11 after', 'Before {|11 after'],
+            'closed marker after unclosed prefix follows legacy grammar' => ['Before {|bad {|22|} after', 'Before  after'],
+        ];
+        foreach ($cases as $name => [$description, $expected]) {
+            foreach (['care_plan', 'goal', 'health_concern', 'planned_procedure'] as $type) {
+                yield "$name / $type" => [$description, $expected, $type];
+            }
+        }
     }
 
     #[DataProvider('narratives')]
     #[RunInSeparateProcess]
-    public function testNarrativeAcrossNativeOutputSections(string $description, string $expected): void
+    public function testNarrativeInNativeOutputSection(string $description, string $expected, string $type): void
     {
-        $rows = [];
-        foreach (['care_plan', 'goal', 'health_concern', 'planned_procedure'] as $index => $type) {
-            $rows[] = [
-                'source' => 'care_plan', 'encounter' => '456', 'code' => 'SNOMED-CT:123',
-                'codetext' => 'Example', 'description' => $description,
-                'date' => '2026-10-24', 'moodCode' => 'INT', 'care_plan_type' => $type,
-                'note_issues' => '', 'plan_status' => 'active', 'proposed_date' => '2026-11-01',
-                'provenance_updated_by' => 7, 'modifydate' => '2026-10-24',
-                'form_id' => 100 + $index,
-            ];
-        }
+        $rows = [[
+            'source' => 'care_plan', 'encounter' => '456', 'code' => 'SNOMED-CT:123',
+            'codetext' => 'Example', 'description' => $description,
+            'date' => '2026-10-24', 'moodCode' => 'INT', 'care_plan_type' => $type,
+            'note_issues' => '', 'plan_status' => 'active', 'proposed_date' => '2026-11-01',
+            'provenance_updated_by' => 7, 'modifydate' => '2026-10-24',
+            'form_id' => 100,
+        ]];
 
         $this->installBoundaries($rows);
         $tree = $this->loadExactSourceMirror();
@@ -90,27 +94,50 @@ final class CarePlanNarrativeStripTest extends TestCase
         $document = new \DOMDocument();
         self::assertTrue($document->loadXML('<root>' . $xml . '</root>'));
         $xpath = new \DOMXPath($document);
-        foreach (['/root/planofcare/item', '/root/goals/item', '/root/health_concerns/concern'] as $path) {
-            $nodes = $xpath->query($path);
-            self::assertNotFalse($nodes);
-            self::assertSame($path === '/root/planofcare/item' ? 2 : 1, $nodes->length, $path);
-            foreach ($nodes as $node) {
-                $narrative = $path === '/root/health_concerns/concern'
-                    ? $node->getElementsByTagName('text')->item(0)?->textContent
-                    : $node->getElementsByTagName('description')->item(0)?->textContent;
-                self::assertSame(
-                    $path === '/root/health_concerns/concern' ? '2026-10-24 ' . $expected : $expected,
-                    $narrative,
-                    $path
-                );
-            }
+        $path = match ($type) {
+            'goal' => '/root/goals/item',
+            'health_concern' => '/root/health_concerns/concern',
+            default => '/root/planofcare/item',
+        };
+        $nodes = $xpath->query($path);
+        self::assertNotFalse($nodes);
+        self::assertCount(1, $nodes, $type);
+        $narrative = $type === 'health_concern'
+            ? $nodes->item(0)?->getElementsByTagName('text')->item(0)?->textContent
+            : $nodes->item(0)?->getElementsByTagName('description')->item(0)?->textContent;
+        self::assertSame($type === 'health_concern' ? '2026-10-24 ' . $expected : $expected, $narrative, $type);
+        if ($type === 'planned_procedure') {
+            self::assertSame('RQO', $nodes->item(0)?->getElementsByTagName('moodCode')->item(0)?->textContent);
         }
-        self::assertSame(1, substr_count($xml, '<moodCode>RQO</moodCode>'));
-        self::assertStringContainsString('<proposed_date>2026-11-01</proposed_date>', $xml);
+        if ($type === 'care_plan' || $type === 'planned_procedure') {
+            self::assertSame('2026-11-01', $nodes->item(0)?->getElementsByTagName('proposed_date')->item(0)?->textContent);
+        }
         self::assertStringContainsString('<sha_extension>' . $dispatch->formatUid('100' . $expected) . '</sha_extension>', $xml);
         if (str_contains($description, '&')) {
             self::assertStringContainsString('A &amp; &lt;B&gt; &quot;quoted&quot;', $xml);
         }
+    }
+
+    #[RunInSeparateProcess]
+    public function testFilteredEmptyEncounterListReturnsBeforeAnyDataAccess(): void
+    {
+        $this->installBoundaries([]);
+        $tree = $this->loadExactSourceMirror();
+        try {
+            $session = new Session(new MockArraySessionStorage());
+            SessionWrapperFactory::getInstance()->setActiveSession($session);
+            $dispatch = new EncounterccdadispatchTable();
+            $dispatch->searchFiltered = true;
+            $xml = $dispatch->getPlanOfCare('123', '456');
+        } finally {
+            self::removeTree($tree);
+        }
+
+        self::assertSame('<planofcare></planofcare><goals></goals><health_concerns></health_concerns>', $xml);
+        self::assertSame([], $GLOBALS['carePlanUuidCalls']);
+        self::assertSame([], $GLOBALS['carePlanQueryCalls']);
+        self::assertSame([], $GLOBALS['carePlanSqlCalls']);
+        self::assertSame([], $GLOBALS['carePlanSdohCalls']);
     }
 
     /** @param array<int, array<string, mixed>> $rows */

@@ -4284,7 +4284,7 @@ class EncounterccdadispatchTable
             $proposedDate = !empty($row['proposed_date']) ? substr((string)$row['proposed_date'], 0, 10) : '';
             $status = trim($row['plan_status'] ?? $status); // planned|active|completed|canceled
             // Strip { | ... | } markup from description. Embedded issue codes are handled separately.
-            $row['description'] = preg_replace("/\{\|([^\]]*)\|}/", '', (string)$row['description']);
+            $row['description'] = preg_replace("/\{\|([^\]]*?)\|}/", '', (string)$row['description']);
             $tmp = explode(":", (string)$row['code']);
             $code_type = $tmp[0] ?? '';
             $code = $tmp[1] ?? '';
