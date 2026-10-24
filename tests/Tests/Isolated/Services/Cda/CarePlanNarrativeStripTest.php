@@ -194,8 +194,7 @@ final class CarePlanNarrativeStripTest extends TestCase
             }
         })::class, UuidRegistry::class);
         class_alias((new class () {
-            /** @return null */
-            public static function getCurrentAssessment(int $pid): ?array
+            public static function getCurrentAssessment(int $pid): null
             {
                 CarePlanNarrativeStripTest::$sdohCalls[] = $pid;
                 return null;
