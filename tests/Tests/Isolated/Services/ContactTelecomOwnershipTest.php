@@ -19,7 +19,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
-use function OpenEMR\Common\ORDataObject\installContactTelecomOwnershipSqlBoundary;
 
 /** Only database boundaries are doubled; the service and both data objects remain native. */
 final class ContactTelecomOwnershipBoundary
@@ -130,11 +129,11 @@ final class ContactTelecomOwnershipTest extends TestCase
 
     private function service(?LoggerInterface $logger = null): ContactTelecomService
     {
-        // Function definitions run only in the isolated child, never during discovery.
+        // Load the SQL boundary only in the isolated child, never during discovery.
         foreach (['sqlQuery', 'sqlStatement', 'escape_table_name', 'get_db', 'add_escape_custom'] as $name) {
             self::assertFalse(function_exists('OpenEMR\\Common\\ORDataObject\\' . $name));
         }
-        installContactTelecomOwnershipSqlBoundary();
+        require dirname(__DIR__, 3) . '/Fixtures/ContactTelecomOwnershipSqlBoundary.php';
 
         self::assertFalse(class_exists(QueryUtils::class, false));
         self::assertTrue(class_alias(ContactTelecomOwnershipQueryRecorder::class, QueryUtils::class));
@@ -228,12 +227,11 @@ final class ContactTelecomOwnershipTest extends TestCase
             ->method('warning')
             ->with('Skipping telecom with invalid ownership', ['index' => 0]);
         $service = $this->service($logger);
-        ContactTelecomOwnershipBoundary::$telecoms['73'] = [
+        $before = [
             'id' => '73', 'contact_id' => $ownerId, 'system' => 'phone',
             'use' => 'home', 'value' => 'unowned', 'status' => 'A',
         ];
-        $before = ContactTelecomOwnershipBoundary::$telecoms['73'] ?? null;
-        self::assertIsArray($before);
+        ContactTelecomOwnershipBoundary::$telecoms['73'] = $before;
 
         self::assertSame([], $service->saveTelecomsForContact(41, [[
             'data_action' => $action, 'contact_telecom_id' => '73', 'value' => 'replacement',
@@ -375,44 +373,5 @@ final class ContactTelecomOwnershipTest extends TestCase
         $service->saveTelecomsForContact(41, [[
             'data_action' => 'UPDATE', 'contact_telecom_id' => '71', 'value' => 'replacement',
         ]]);
-    }
-}
-
-namespace OpenEMR\Common\ORDataObject;
-
-/** Install SQL substitutes only when the isolated test child enters service(). */
-function installContactTelecomOwnershipSqlBoundary(): void
-{
-    /**
-     * @param list<string|int|null> $binds
-     * @return array<string, string|null>
-     */
-    function sqlQuery(string $sql, array $binds = []): array
-    {
-        return \OpenEMR\Tests\Isolated\Services\ContactTelecomOwnershipBoundary::read($sql, $binds);
-    }
-
-    function sqlStatement(string $sql): bool
-    {
-        return \OpenEMR\Tests\Isolated\Services\ContactTelecomOwnershipBoundary::write($sql, []);
-    }
-
-    function escape_table_name(string $table): string
-    {
-        return '`' . $table . '`';
-    }
-
-    function get_db(): object
-    {
-        $db = $GLOBALS['adodb']['db'] ?? null;
-        if (!is_object($db)) {
-            throw new \LogicException('Test database boundary was not installed');
-        }
-        return $db;
-    }
-
-    function add_escape_custom(string $value): string
-    {
-        return addslashes($value);
     }
 }
