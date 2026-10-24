@@ -7942,11 +7942,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../src/RestControllers/SMART/SMARTAuthorizationController.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\RestControllers\\\\TransactionRestController\\:\\:CreateTransaction\\(\\) should return OpenEMR\\\\RestControllers\\\\a but returns array\\<array\\>\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/RestControllers/TransactionRestController.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Method OpenEMR\\\\Services\\\\AllergyIntoleranceService\\:\\:getAll\\(\\) should return OpenEMR\\\\Validators\\\\ProcessingResult but returns mixed\\.$#',
     'count' => 3,
     'path' => __DIR__ . '/../../src/Services/AllergyIntoleranceService.php',

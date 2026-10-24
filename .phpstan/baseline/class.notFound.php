@@ -347,11 +347,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../src/RestControllers/Config/RestConfig.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Method OpenEMR\\\\RestControllers\\\\TransactionRestController\\:\\:CreateTransaction\\(\\) has invalid return type OpenEMR\\\\RestControllers\\\\a\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/RestControllers/TransactionRestController.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Method OpenEMR\\\\Services\\\\FHIR\\\\DiagnosticReport\\\\FhirDiagnosticReportClinicalNotesService\\:\\:createProvenanceResource\\(\\) has invalid return type OpenEMR\\\\Services\\\\FHIR\\\\DiagnosticReport\\\\the\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../src/Services/FHIR/DiagnosticReport/FhirDiagnosticReportClinicalNotesService.php',
