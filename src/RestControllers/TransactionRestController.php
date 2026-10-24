@@ -77,7 +77,7 @@ class TransactionRestController
      * Process a HTTP POST request used to create a patient record.
      *
      * @param  $data - array of patient fields.
-     * @return a 201/Created status code and the patient identifier if successful.
+     * @return array[] Response envelope; successful creation uses HTTP 201.
      */
     #[OA\Post(
         path: '/api/patient/{pid}/transaction',
@@ -114,12 +114,10 @@ class TransactionRestController
         $controllerValidationResult = RestControllerHelper::validationHandler($serviceValidation);
         if (is_array($controllerValidationResult)) {
             $processingResult->setValidationMessages($controllerValidationResult);
-            return RestControllerHelper::handleProcessingResult($processingResult, 201, true);
+        } else {
+            $serviceResult = $this->patientTransactionService->insert($pid, $data);
+            $processingResult->addData($serviceResult);
         }
-
-
-        $serviceResult = $this->patientTransactionService->insert($pid, $data);
-        $processingResult->addData($serviceResult);
 
         return RestControllerHelper::handleProcessingResult($processingResult, 201, true);
     }

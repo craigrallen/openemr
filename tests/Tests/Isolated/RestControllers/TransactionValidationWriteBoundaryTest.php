@@ -29,7 +29,8 @@ class TransactionValidationWriteBoundaryTest extends TestCase
             define('OPENEMR_STATIC_ANALYSIS', true);
         }
 
-        $this->previousHttpStatus = http_response_code();
+        $previousHttpStatus = http_response_code();
+        $this->previousHttpStatus = is_int($previousHttpStatus) ? $previousHttpStatus : false;
         $overrides = new ReflectionProperty(ServiceContainer::class, 'overrides');
         $cache = new ReflectionProperty(ServiceContainer::class, 'cache');
         $previousServiceOverrides = $overrides->getValue();

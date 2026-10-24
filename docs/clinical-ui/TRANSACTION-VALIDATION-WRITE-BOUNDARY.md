@@ -10,8 +10,9 @@ service validation messages into a `ProcessingResult` but then called
 `PatientTransactionService::insert` anyway. An invalid referral could therefore
 reach the persistence path.
 
-This slice adds one early return immediately after setting validation messages
-in `CreateTransaction`. It uses the existing
+This slice guards `insert` in `CreateTransaction`: validation errors set
+messages, while only valid requests call `insert` and add its result. Both
+branches use the single existing final
 `RestControllerHelper::handleProcessingResult($processingResult, 201, true)`
 contract: validation messages produce a 400 response with `validationErrors`
 and empty `internalErrors`, `data`, and `links`. Valid requests still call
@@ -44,14 +45,16 @@ tests expect the native missing, empty, date, length, and string-type rule
 keys. They retain the no-insert and full response-envelope assertions and add
 wrong-type and UTF-8 byte-boundary cases. Against the original controller
 source, corrected RED reported **18 tests, 94 assertions, 13 forbidden-insert
-failures, and zero errors**. With the single early return, GREEN reported
+failures, and zero errors**. With the earlier early-return implementation,
+GREEN reported
 **18 tests, 233 assertions, and zero issues**. The broader RestControllers run
 reported **248 tests, 1,073 assertions, exit 0, and nine incomplete tests**.
 Two-file PHP syntax, diff, and full 7,745-byte inverse checks passed. These
-results preceded this followup edit; the edited head has not been rerun under
-the current read-only execution constraint.
+results preceded the current guard and PHPStan correction; the corrected
+working tree has not been rerun under the current read-only execution constraint.
 
-The test restores the prior numeric HTTP status after each case. When PHP
+The test narrows PHP's reported status to an integer or `false` and restores
+the prior numeric HTTP status after each case. When PHP
 initially reports `false` (no response code set), PHP offers no API to unset
 the code after the controller changes it. Teardown therefore sets a neutral
 200 in that case; it cannot restore the exact initial `false` state.
@@ -66,11 +69,13 @@ clinical acceptance test. The real service validator may throw for a missing
 path. The handling of `insert` returning `false` or throwing is unchanged.
 
 This note and slice do not close the full 22-item clinical UI register or
-claim an implemented UI feature. A fresh independent Astra static review of
+claim an implemented UI feature. A previous independent Astra static review of
 `80362db8` found no production correctness defect and identified two P3
 followups: stale verification text here and the unset HTTP-status teardown
-case. This followup addresses both in the owned test and note. Native tests,
-strict PHPStan, and other required checks still need verification on the
-edited head. No hosted CI or authenticated or clinical acceptance result is
-claimed. Ordinary approval and applicable delivery gates remain before merge
-or deployment.
+case. A subsequent hosted PHPStan run on `80f356c3` failed on the extra
+deprecated helper call and return, the prose `@return a` type, and the test's
+unnarrowed HTTP status. This correction addresses those source findings; the
+working tree still needs native tests, strict PHPStan, and other required
+checks. No hosted CI or authenticated or clinical acceptance result is claimed
+for the corrected working tree. Ordinary approval and applicable delivery
+gates remain before merge or deployment.
