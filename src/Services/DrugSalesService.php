@@ -269,8 +269,12 @@ class DrugSalesService extends BaseService
         }
 
         // Get relevant options for this product.
-        $rowdrug = QueryUtils::fetchRecords("SELECT allow_combining, reorder_point, name, dispensable " .
-            "FROM drugs WHERE drug_id = ?", [$drug_id])[0];
+        $drugRows = QueryUtils::fetchRecords("SELECT allow_combining, reorder_point, name, dispensable " .
+            "FROM drugs WHERE drug_id = ?", [$drug_id]);
+        if ($drugRows === []) {
+            return $testonly ? false : 0;
+        }
+        $rowdrug = $drugRows[0];
         $allow_combining = $rowdrug['allow_combining'];
         $dispensable     = $rowdrug['dispensable'];
 
