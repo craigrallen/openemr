@@ -138,13 +138,15 @@ final class ContactTelecomOwnershipTest extends TestCase
         self::assertFalse(class_exists(QueryUtils::class, false));
         self::assertTrue(class_alias(ContactTelecomOwnershipQueryRecorder::class, QueryUtils::class));
 
-        $GLOBALS['adodb'] = ['db' => new class {
-            /** @return list<string> */
-            public function MetaPrimaryKeys(string $table): array
-            {
-                return ['id'];
-            }
-        }];
+        $adodbInstallPath = \Composer\InstalledVersions::getInstallPath('adodb/adodb-php');
+        if (!is_string($adodbInstallPath)) {
+            throw new \LogicException('ADODB install path was not found');
+        }
+        require_once $adodbInstallPath . '/drivers/adodb-mysqli.inc.php';
+        require_once dirname(__DIR__, 4) . '/library/ADODB_mysqli_log.php';
+        $db = $this->createMock(\ADODB_mysqli_log::class);
+        $db->method('MetaPrimaryKeys')->willReturn(['id']);
+        $GLOBALS['adodb'] = ['db' => $db];
         $session = new Session(new MockArraySessionStorage());
         $session->set('authUser', 'synthetic-author');
         $factory = new SessionWrapperFactory('/synthetic-test');
