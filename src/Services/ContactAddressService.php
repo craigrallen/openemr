@@ -86,10 +86,29 @@ class ContactAddressService extends BaseService
                     'line1' => $address['line_1'] ?? 'N/A'
                 ]);
 
+                if (!empty($contactAddressId)) {
+                    $association = QueryUtils::querySingleRow(
+                        'SELECT contact_id FROM contact_address WHERE id = ?',
+                        [$contactAddressId]
+                    );
+                    $owner = $association === false ? null : ($association['contact_id'] ?? null);
+                    $owned = is_int($owner) ? $owner > 0 && $owner === $contactId
+                        : is_string($owner) && ctype_digit($owner) && ltrim($owner, '0') === (string) $contactId;
+                    if (!$owned) {
+                        $this->getLogger()->error("Address does not belong to contact", [
+                            'contact_id' => $contactId,
+                            'contact_address_id' => $contactAddressId,
+                            'index' => $index
+                        ]);
+                        continue;
+                    }
+                }
+
+                $contactAddress = new ContactAddress($contactAddressId);
+
                 // Handle INACTIVATE/DELETE
                 if ($action == 'INACTIVATE' || $action == 'DELETE') {
                     if (!empty($contactAddressId)) {
-                        $contactAddress = new ContactAddress($contactAddressId);
                         if (!empty($contactAddress->get_id())) {
                             $contactAddress->deactivate();
                             if ($contactAddress->persist()) {
@@ -113,19 +132,6 @@ class ContactAddressService extends BaseService
                 }
 
                 // Handle ADD and UPDATE
-                // For UPDATE, load existing; for ADD, create new
-                $contactAddress = new ContactAddress($contactAddressId);
-
-                // Verify for UPDATE that we loaded an existing record
-                if ($action == 'UPDATE' && empty($contactAddress->get_id())) {
-                    $this->getLogger()->error("UPDATE action but address not found, treating as ADD", [
-                        'contac_address_id' => $contactAddressId,
-                        'index' => $index
-                    ]);
-                    // Create a new one instead
-                    $contactAddress = new ContactAddress();
-                }
-
                 // Set type
                 $type = $address['type'] ?? 'both';
                 if (isset($types[$type])) {
