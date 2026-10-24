@@ -210,6 +210,9 @@ class SocialHistoryService extends BaseService
     {
         // grab our history data and replace any new values in the row
         $real = $this->getHistoryData($pid);
+        if ($real === false) {
+            $real = ['pid' => $pid];
+        }
         foreach ($new as $key => $value) {
             $real[$key] = $value;
         }

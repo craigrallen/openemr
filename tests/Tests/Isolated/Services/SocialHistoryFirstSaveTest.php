@@ -62,6 +62,13 @@ final class SocialHistoryFirstSaveTest extends TestCase
         $this->assertAppendFromMissingRow([], 'insert into history_data set pid = ?, date = NOW(), uuid = ? , `id` = ?, `created_by` = ?', ['', 17]);
     }
 
+    public function testFirstSavePreservesNumericStringPidInBindAndReturn(): void
+    {
+        $this->assertAppendFromMissingRow(['tobacco' => 'never'],
+            'insert into history_data set pid = ?, date = NOW(), uuid = ? , `tobacco` = ?, `id` = ?, `created_by` = ?',
+            ['never', '', 17], '41');
+    }
+
     public function testExistingHistoryAppendsWithUntouchedFieldsAndFreshAttribution(): void
     {
         $oldUuid = str_repeat('o', 16);
@@ -83,6 +90,7 @@ final class SocialHistoryFirstSaveTest extends TestCase
 
         $result = $this->service()->updateHistoryDataForPatientPid(41, ['tobacco' => 'current']);
         $assertFinished();
+        self::assertIsArray($result);
         self::assertSame(41, $result['pid']);
         self::assertSame(915, $result['id']);
         self::assertSame($uuid, $result['uuid']);
@@ -131,6 +139,7 @@ final class SocialHistoryFirstSaveTest extends TestCase
 
         $result = $this->service()->updateHistoryDataForPatientPid(41, ['pid' => 42]);
         $assertFinished();
+        self::assertIsArray($result);
         self::assertSame(42, $result['pid']);
     }
 
@@ -138,21 +147,22 @@ final class SocialHistoryFirstSaveTest extends TestCase
      * @param array<string, mixed> $fields
      * @param list<mixed> $extraBinds
      */
-    private function assertAppendFromMissingRow(array $fields, string $insertSql, array $extraBinds): void
+    private function assertAppendFromMissingRow(array $fields, string $insertSql, array $extraBinds, int|string $pid = 41): void
     {
         $uuid = null;
         $events =& $this->recordSaveEvents();
         $assertFinished = $this->installDatabase([
-            $this->readRow(41, false),
+            $this->readRow($pid, false),
             $this->uniqueUuidCheck('uuid_registry', $uuid),
             $this->uniqueUuidCheck('history_data', $uuid),
             $this->registryInsert($uuid),
-            $this->historyInsert($insertSql, array_merge([41], $extraBinds), $uuid),
+            $this->historyInsert($insertSql, array_merge([$pid], $extraBinds), $uuid),
         ]);
 
-        $result = $this->service()->updateHistoryDataForPatientPid(41, $fields);
+        $result = $this->service()->updateHistoryDataForPatientPid($pid, $fields);
         $assertFinished();
-        self::assertSame(41, $result['pid']);
+        self::assertIsArray($result);
+        self::assertSame($pid, $result['pid']);
         self::assertSame(915, $result['id']);
         self::assertSame($uuid, $result['uuid']);
         self::assertSame(17, $result['created_by']);
@@ -162,7 +172,7 @@ final class SocialHistoryFirstSaveTest extends TestCase
         }
         self::assertCount(2, $events);
         self::assertSame(ServiceSaveEvent::EVENT_PRE_SAVE, $events[0]['type']);
-        self::assertSame(41, $events[0]['data']['pid']);
+        self::assertSame($pid, $events[0]['data']['pid']);
         self::assertSame('', $events[0]['data']['id']);
         self::assertSame(17, $events[0]['data']['created_by']);
         self::assertSame(ServiceSaveEvent::EVENT_POST_SAVE, $events[1]['type']);
@@ -181,7 +191,9 @@ final class SocialHistoryFirstSaveTest extends TestCase
         foreach ([ServiceSaveEvent::EVENT_PRE_SAVE, ServiceSaveEvent::EVENT_POST_SAVE] as $type) {
             $this->dispatcher->addListener($type, static function (ServiceSaveEvent $event) use (&$events, $type): void {
                 self::assertInstanceOf(SocialHistoryService::class, $event->getService());
-                $events[] = ['type' => $type, 'data' => $event->getSaveData()];
+                $saveData = $event->getSaveData();
+                self::assertIsArray($saveData);
+                $events[] = ['type' => $type, 'data' => $saveData];
             });
         }
         return $events;
