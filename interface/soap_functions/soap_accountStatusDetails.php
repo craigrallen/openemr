@@ -55,8 +55,27 @@ $accountStatus = $eRxSOAP->getAccountStatus()
 ?>
 <head>
     <?php Header::setupHeader(); ?>
+    <style id="oe-erx-account-status-style">
+@media screen {
+  html.oe-workbench-context body.oe-erx-account-status {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+  }
+
+  html.oe-workbench-context body.oe-erx-account-status table.text,
+  html.oe-workbench-context body.oe-erx-account-status table.text td {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.oe-erx-account-status table.text th {
+    color: var(--oe-wb-petrol, #086878);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+}
+    </style>
 </head>
-<body class='body_top'>
+<body class='body_top oe-erx-account-status'>
     <table class='text' align=center width='90%' height='80%' style='padding-top:6%'>
         <tr>
             <th colspan=2><?php echo xlt('eRx Account Status'); ?></th>
