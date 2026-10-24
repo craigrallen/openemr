@@ -129,12 +129,14 @@ class EmployerService extends BaseService
 
         if (!$create) {
             $old = $this->getMostRecentEmployerData($pid);
-            $valuesToSave = [];
-            foreach ($old as $key => $oldValue) {
-                $newValue = empty($new[$key]) ? '' : $new[$key];
-                $valuesToSave[$key] = strcmp((string) $newValue, (string) $oldValue) != 0 ? $newValue : $oldValue;
+            if (is_array($old)) {
+                $valuesToSave = [];
+                foreach ($old as $key => $oldValue) {
+                    $newValue = empty($new[$key]) ? '' : $new[$key];
+                    $valuesToSave[$key] = strcmp((string) $newValue, (string) $oldValue) != 0 ? $newValue : $oldValue;
+                }
+                $new = $valuesToSave;
             }
-            $new = $valuesToSave;
         }
         // we ignore any date that is passed in, we always set it to now
         if (isset($new['date'])) {
