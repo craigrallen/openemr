@@ -46,7 +46,8 @@ class ImmunizationService extends BaseService
         $record = parent::createResultRecordFromDatabaseResult($row);
 
         $record['primarySource'] = $record['primarySource'] === '1';
-        $record['amount_administered'] = intval($record['amount_administered']);
+        $amount = $record['amount_administered'];
+        $record['amount_administered'] = is_numeric($amount) ? (float) $amount : (float) intval($amount);
         // TODO: @adunsulag check with @brady.miller and @sjpadgeet on if the OpenEMR and mysql instances always in UTC time?
         $dates = ['create_date', 'administered_date', 'expiration_date', 'education_date'];
 
