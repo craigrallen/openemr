@@ -18,10 +18,14 @@ use Particle\Validator\Rule\NotEmpty;
 use Particle\Validator\Rule\Required;
 use Particle\Validator\ValidationResult;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use stdClass;
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
 class ReferralBodyValidationTest extends TestCase
 {
     public static function setUpBeforeClass(): void
@@ -71,8 +75,7 @@ class ReferralBodyValidationTest extends TestCase
         self::assertFalse($result->isValid());
         $messages = $result->getMessages();
         self::assertSame(['body'], array_keys($messages));
-        self::assertIsArray($messages['body']);
-        self::assertNotEmpty($messages['body']);
+        self::assertSame([IsString::NOT_A_STRING => 'body must be a string'], $messages['body']);
         self::assertArrayNotHasKey('body', $result->getValues());
     }
 
@@ -91,8 +94,7 @@ class ReferralBodyValidationTest extends TestCase
             self::assertFalse($result->isValid());
             $messages = $result->getMessages();
             self::assertSame(['body'], array_keys($messages));
-            self::assertIsArray($messages['body']);
-            self::assertNotEmpty($messages['body']);
+            self::assertSame([IsString::NOT_A_STRING => 'body must be a string'], $messages['body']);
             self::assertArrayNotHasKey('body', $result->getValues());
         } finally {
             fclose($resource);
@@ -138,18 +140,22 @@ class ReferralBodyValidationTest extends TestCase
             'false' => [false, LengthBetween::TOO_SHORT],
             'true' => [true, LengthBetween::TOO_SHORT],
             'single digit integer' => [7, LengthBetween::TOO_SHORT],
-            'one-character Stringable' => [new class {
-                public function __toString(): string
-                {
-                    return 'A';
-                }
-            }, LengthBetween::TOO_SHORT],
+            'one-character Stringable' => ['stringable:A', LengthBetween::TOO_SHORT],
         ];
     }
 
     #[DataProvider('shortScalarBodyProvider')]
     public function testShortScalarBodyRetainsLengthError(mixed $body, string $reason): void
     {
+        if ($body === 'stringable:A') {
+            $body = new class {
+                public function __toString(): string
+                {
+                    return 'A';
+                }
+            };
+        }
+
         $input = self::validReferral();
         $input['body'] = $body;
 
@@ -211,18 +217,22 @@ class ReferralBodyValidationTest extends TestCase
         return [
             'integer with two digits' => [12],
             'decimal' => [12.5],
-            'Stringable object' => [new class {
-                public function __toString(): string
-                {
-                    return 'AB';
-                }
-            }],
+            'Stringable object' => ['stringable:AB'],
         ];
     }
 
     #[DataProvider('acceptedBodyProvider')]
     public function testLegacyLengthCompatibleBodyKeepsOriginalValue(mixed $body): void
     {
+        if ($body === 'stringable:AB') {
+            $body = new class {
+                public function __toString(): string
+                {
+                    return 'AB';
+                }
+            };
+        }
+
         $input = self::validReferral();
         $input['body'] = $body;
 
