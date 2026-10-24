@@ -19,9 +19,13 @@ and empty `internalErrors`, `data`, and `links`. Valid requests still call
 `insert` with the original payload and use the existing 201 multiple-result
 response, including its data array and pagination links.
 
-The only owned files in this slice are the controller, its new isolated
-`TransactionValidationWriteBoundaryTest.php`, and this note. Service,
-helper, routes, authorization, read, and update behavior are outside scope.
+The five owned files in this slice are the controller, its isolated
+`TransactionValidationWriteBoundaryTest.php`, this note, and
+`.phpstan/baseline/class.notFound.php` and `.phpstan/baseline/return.type.php`.
+The baseline changes each remove one obsolete five-line
+`TransactionRestController::CreateTransaction` suppression after its return
+annotation was corrected to `array<array<mixed>>`. Service, helper, routes,
+authorization, read, and update behavior are outside scope.
 
 ## Actual RED evidence
 
@@ -45,13 +49,16 @@ tests expect the native missing, empty, date, length, and string-type rule
 keys. They retain the no-insert and full response-envelope assertions and add
 wrong-type and UTF-8 byte-boundary cases. Against the original controller
 source, corrected RED reported **18 tests, 94 assertions, 13 forbidden-insert
-failures, and zero errors**. With the earlier early-return implementation,
-GREEN reported
-**18 tests, 233 assertions, and zero issues**. The broader RestControllers run
-reported **248 tests, 1,073 assertions, exit 0, and nine incomplete tests**.
-Two-file PHP syntax, diff, and full 7,745-byte inverse checks passed. These
-results preceded the current guard and PHPStan correction; the corrected
-working tree has not been rerun under the current read-only execution constraint.
+failures, and zero errors**. An earlier GREEN reported **18 tests, 233
+assertions, and zero issues**; its 13 redundant array assertions were later
+removed. The final native isolated replay against the current typed controller
+and test reported **18 tests, 220 assertions, and zero issues**. The controller
+uses a guard `else` so `insert` runs only after validation succeeds, followed
+by the single existing shared response call. Its return annotation describes
+the response envelope. A historical broader RestControllers run reported
+**248 tests, 1,073 assertions, exit 0, and nine incomplete tests**; it preceded
+the later controller and test revisions. The final broader suite has not been
+rerun under the current read-only execution constraint.
 
 The test narrows PHP's reported status to an integer or `false` and restores
 the prior numeric HTTP status after each case. When PHP
@@ -72,10 +79,12 @@ This note and slice do not close the full 22-item clinical UI register or
 claim an implemented UI feature. A previous independent Astra static review of
 `80362db8` found no production correctness defect and identified two P3
 followups: stale verification text here and the unset HTTP-status teardown
-case. A subsequent hosted PHPStan run on `80f356c3` failed on the extra
-deprecated helper call and return, the prose `@return a` type, and the test's
-unnarrowed HTTP status. This correction addresses those source findings; the
-working tree still needs native tests, strict PHPStan, and other required
-checks. No hosted CI or authenticated or clinical acceptance result is claimed
-for the corrected working tree. Ordinary approval and applicable delivery
-gates remain before merge or deployment.
+case. A subsequent hosted PHPStan run on `80f356c3` found an extra deprecated
+helper call and return, the prose `@return a` type, and the test's unnarrowed
+HTTP status. Those source findings were corrected. Hosted strict PHPStan
+analysis on `a62463e2` passed, but its baseline stability step failed because
+the two now-obsolete suppressions remained. The two baseline files here match
+the regenerated artifacts byte for byte; the final whole CI run is pending.
+No authenticated route, HTTP/database, or clinical acceptance result is claimed
+for this working tree. Ordinary approval and applicable delivery gates remain
+before merge or deployment.
