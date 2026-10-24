@@ -114,6 +114,7 @@ class TransactionRestController
         $controllerValidationResult = RestControllerHelper::validationHandler($serviceValidation);
         if (is_array($controllerValidationResult)) {
             $processingResult->setValidationMessages($controllerValidationResult);
+            return RestControllerHelper::handleProcessingResult($processingResult, 201, true);
         }
 
 

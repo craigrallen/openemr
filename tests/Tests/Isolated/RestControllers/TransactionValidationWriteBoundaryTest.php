@@ -17,7 +17,9 @@ use ReflectionProperty;
 class TransactionValidationWriteBoundaryTest extends TestCase
 {
     private int|false $previousHttpStatus;
+    /** @var array<array-key, mixed> */
     private array $previousServiceOverrides;
+    /** @var array<array-key, mixed> */
     private array $previousServiceCache;
 
     protected function setUp(): void
@@ -30,8 +32,12 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         $this->previousHttpStatus = http_response_code();
         $overrides = new ReflectionProperty(ServiceContainer::class, 'overrides');
         $cache = new ReflectionProperty(ServiceContainer::class, 'cache');
-        $this->previousServiceOverrides = $overrides->getValue();
-        $this->previousServiceCache = $cache->getValue();
+        $previousServiceOverrides = $overrides->getValue();
+        $previousServiceCache = $cache->getValue();
+        self::assertIsArray($previousServiceOverrides);
+        self::assertIsArray($previousServiceCache);
+        $this->previousServiceOverrides = $previousServiceOverrides;
+        $this->previousServiceCache = $previousServiceCache;
         ServiceContainer::override(LoggerInterface::class, new NullLogger());
     }
 
@@ -50,27 +56,34 @@ class TransactionValidationWriteBoundaryTest extends TestCase
     public static function invalidReferralProvider(): array
     {
         return [
-            'missing referral date' => [['referralDate' => null], ['referralDate' => 'required']],
-            'invalid referral date' => [['referralDate' => 'not-a-date'], ['referralDate' => 'datetime']],
-            'missing body' => [['body' => null], ['body' => 'required']],
-            'body below two bytes' => [['body' => 'x'], ['body' => 'lengthBetween']],
-            'body above 150 bytes' => [['body' => str_repeat('x', 151)], ['body' => 'lengthBetween']],
-            'missing group name' => [['groupname' => null], ['groupname' => 'required']],
-            'empty group name' => [['groupname' => ''], ['groupname' => 'required']],
-            'missing referring NPI' => [['referByNpi' => null], ['referByNpi' => 'required']],
-            'empty referring NPI' => [['referByNpi' => ''], ['referByNpi' => 'required']],
+            'missing referral date' => [['referralDate' => null], ['referralDate' => 'Required::NON_EXISTENT_KEY']],
+            'invalid referral date' => [['referralDate' => 'not-a-date'], ['referralDate' => 'DateTime::INVALID_VALUE']],
+            'missing body' => [['body' => null], ['body' => 'Required::NON_EXISTENT_KEY']],
+            'body below two bytes' => [['body' => 'x'], ['body' => 'LengthBetween::TOO_SHORT']],
+            'body above 150 bytes' => [['body' => str_repeat('x', 151)], ['body' => 'LengthBetween::TOO_LONG']],
+            'body above 150 UTF-8 bytes' => [['body' => str_repeat('é', 75) . 'x'], ['body' => 'LengthBetween::TOO_LONG']],
+            'missing group name' => [['groupname' => null], ['groupname' => 'Required::NON_EXISTENT_KEY']],
+            'empty group name' => [['groupname' => ''], ['groupname' => 'NotEmpty::EMPTY_VALUE']],
+            'non-string group name' => [['groupname' => 123], ['groupname' => 'IsString::NOT_A_STRING']],
+            'missing referring NPI' => [['referByNpi' => null], ['referByNpi' => 'Required::NON_EXISTENT_KEY']],
+            'empty referring NPI' => [['referByNpi' => ''], ['referByNpi' => 'NotEmpty::EMPTY_VALUE']],
+            'non-string referring NPI' => [['referByNpi' => 123], ['referByNpi' => 'IsString::NOT_A_STRING']],
             'several missing fields' => [
                 ['referralDate' => null, 'body' => null, 'groupname' => null, 'referByNpi' => null],
                 [
-                    'referralDate' => 'required',
-                    'body' => 'required',
-                    'groupname' => 'required',
-                    'referByNpi' => 'required',
+                    'referralDate' => 'Required::NON_EXISTENT_KEY',
+                    'body' => 'Required::NON_EXISTENT_KEY',
+                    'groupname' => 'Required::NON_EXISTENT_KEY',
+                    'referByNpi' => 'Required::NON_EXISTENT_KEY',
                 ],
             ],
         ];
     }
 
+    /**
+     * @param array<string, mixed> $changes
+     * @param array<string, string> $expectedRules
+     */
     #[DataProvider('invalidReferralProvider')]
     public function testInvalidReferralDoesNotInsertAndReturnsValidationEnvelope(
         array $changes,
@@ -93,9 +106,14 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         self::assertSame([], $response['internalErrors']);
         self::assertSame([], $response['data']);
         self::assertSame([], $response['links']);
-        self::assertSame(array_keys($expectedRules), array_keys($response['validationErrors']));
+        $validationErrors = $response['validationErrors'];
+        self::assertIsArray($validationErrors);
+        self::assertSame(array_keys($expectedRules), array_keys($validationErrors));
         foreach ($expectedRules as $field => $rule) {
-            self::assertArrayHasKey($rule, $response['validationErrors'][$field]);
+            self::assertArrayHasKey($field, $validationErrors);
+            $fieldErrors = $validationErrors[$field];
+            self::assertIsArray($fieldErrors);
+            self::assertArrayHasKey($rule, $fieldErrors);
         }
     }
 
@@ -105,6 +123,7 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         return [
             'two bytes' => ['ab'],
             '150 bytes' => [str_repeat('x', 150)],
+            '150 UTF-8 bytes' => [str_repeat('é', 75)],
         ];
     }
 
@@ -137,6 +156,7 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         $this->assertSuccessfulInsert(['type' => 'Referral', 'message' => 'Please call back']);
     }
 
+    /** @return array<string, string> */
     private static function validReferral(): array
     {
         return [
@@ -148,6 +168,7 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         ];
     }
 
+    /** @param array<string, mixed> $data */
     private function assertSuccessfulInsert(array $data): void
     {
         $result = ['id' => 41, 'form_id' => 57];
