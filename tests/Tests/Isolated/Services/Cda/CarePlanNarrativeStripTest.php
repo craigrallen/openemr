@@ -30,6 +30,21 @@ final class CarePlanNarrativeStripTest extends TestCase
 {
     private const SOURCE = '/interface/modules/zend_modules/module/Carecoordination/src/Carecoordination/Model/EncounterccdadispatchTable.php';
 
+    /** @var list<array<string, mixed>> */
+    public static array $rows = [];
+
+    /** @var list<array{string, array<int, mixed>, bool}> */
+    public static array $queryCalls = [];
+
+    /** @var list<list<string>> */
+    public static array $uuidCalls = [];
+
+    /** @var list<int> */
+    public static array $sdohCalls = [];
+
+    /** @var list<array{string, array<int, mixed>|false}> */
+    public static array $sqlCalls = [];
+
     /** @return iterable<string, array{string, string, string}> */
     public static function narratives(): iterable
     {
@@ -71,7 +86,7 @@ final class CarePlanNarrativeStripTest extends TestCase
             $session->set('site_id', 'test-site');
             SessionWrapperFactory::getInstance()->setActiveSession($session);
             $dispatch = new class () extends EncounterccdadispatchTable {
-                public function getAuthorXmlForRecord($recordAuthor, $pid, $encounter): string
+                public function getAuthorXmlForRecord(mixed $recordAuthor, mixed $pid, mixed $encounter): string
                 {
                     return '<author>recorded</author>';
                 }
@@ -81,15 +96,15 @@ final class CarePlanNarrativeStripTest extends TestCase
             self::removeTree($tree);
         }
 
-        self::assertSame([['lists']], $GLOBALS['carePlanUuidCalls']);
-        self::assertSame([123], $GLOBALS['carePlanSdohCalls']);
-        self::assertCount(1, $GLOBALS['carePlanQueryCalls']);
-        self::assertStringContainsString('FROM forms AS f', $GLOBALS['carePlanQueryCalls'][0][0]);
-        self::assertStringContainsString('LEFT JOIN form_care_plan AS fcp', $GLOBALS['carePlanQueryCalls'][0][0]);
-        self::assertSame(['Plan_of_Care_Type', '123', 'care_plan', 0], $GLOBALS['carePlanQueryCalls'][0][1]);
-        self::assertCount(1, $GLOBALS['carePlanSqlCalls']);
-        self::assertSame(['123'], $GLOBALS['carePlanSqlCalls'][0][1]);
-        self::assertStringContainsString('FROM form_history_sdoh', $GLOBALS['carePlanSqlCalls'][0][0]);
+        self::assertSame([['lists']], self::$uuidCalls);
+        self::assertSame([123], self::$sdohCalls);
+        self::assertCount(1, self::$queryCalls);
+        self::assertStringContainsString('FROM forms AS f', self::$queryCalls[0][0]);
+        self::assertStringContainsString('LEFT JOIN form_care_plan AS fcp', self::$queryCalls[0][0]);
+        self::assertSame(['Plan_of_Care_Type', '123', 'care_plan', 0], self::$queryCalls[0][1]);
+        self::assertCount(1, self::$sqlCalls);
+        self::assertSame(['123'], self::$sqlCalls[0][1]);
+        self::assertStringContainsString('FROM form_history_sdoh', self::$sqlCalls[0][0]);
 
         $document = new \DOMDocument();
         self::assertTrue($document->loadXML('<root>' . $xml . '</root>'));
@@ -102,15 +117,17 @@ final class CarePlanNarrativeStripTest extends TestCase
         $nodes = $xpath->query($path);
         self::assertNotFalse($nodes);
         self::assertCount(1, $nodes, $type);
+        $node = $nodes->item(0);
+        self::assertInstanceOf(\DOMElement::class, $node);
         $narrative = $type === 'health_concern'
-            ? $nodes->item(0)?->getElementsByTagName('text')->item(0)?->textContent
-            : $nodes->item(0)?->getElementsByTagName('description')->item(0)?->textContent;
+            ? $node->getElementsByTagName('text')->item(0)?->textContent
+            : $node->getElementsByTagName('description')->item(0)?->textContent;
         self::assertSame($type === 'health_concern' ? '2026-10-24 ' . $expected : $expected, $narrative, $type);
         if ($type === 'planned_procedure') {
-            self::assertSame('RQO', $nodes->item(0)?->getElementsByTagName('moodCode')->item(0)?->textContent);
+            self::assertSame('RQO', $node->getElementsByTagName('moodCode')->item(0)?->textContent);
         }
         if ($type === 'care_plan' || $type === 'planned_procedure') {
-            self::assertSame('2026-11-01', $nodes->item(0)?->getElementsByTagName('proposed_date')->item(0)?->textContent);
+            self::assertSame('2026-11-01', $node->getElementsByTagName('proposed_date')->item(0)?->textContent);
         }
         self::assertStringContainsString('<sha_extension>' . $dispatch->formatUid('100' . $expected) . '</sha_extension>', $xml);
         if (str_contains($description, '&')) {
@@ -134,13 +151,13 @@ final class CarePlanNarrativeStripTest extends TestCase
         }
 
         self::assertSame('<planofcare></planofcare><goals></goals><health_concerns></health_concerns>', $xml);
-        self::assertSame([], $GLOBALS['carePlanUuidCalls']);
-        self::assertSame([], $GLOBALS['carePlanQueryCalls']);
-        self::assertSame([], $GLOBALS['carePlanSqlCalls']);
-        self::assertSame([], $GLOBALS['carePlanSdohCalls']);
+        self::assertSame([], self::$uuidCalls);
+        self::assertSame([], self::$queryCalls);
+        self::assertSame([], self::$sqlCalls);
+        self::assertSame([], self::$sdohCalls);
     }
 
-    /** @param array<int, array<string, mixed>> $rows */
+    /** @param list<array<string, mixed>> $rows */
     private function installBoundaries(array $rows): void
     {
         foreach ([QueryUtils::class, UuidRegistry::class, HistorySdohService::class] as $class) {
@@ -150,40 +167,40 @@ final class CarePlanNarrativeStripTest extends TestCase
         self::assertFalse(function_exists('sqlQuery'), 'A live SQL helper must never reach this child');
         self::assertFalse(function_exists('Carecoordination\\Model\\sqlQuery'));
 
-        $GLOBALS['carePlanUuidCalls'] = [];
-        $GLOBALS['carePlanSqlCalls'] = [];
+        self::$uuidCalls = [];
+        self::$sqlCalls = [];
         // Anonymous classes are created only when a child executes this method.
         // Guarding class_exists(..., false) above prevents a real loaded class
         // from being replaced silently; the parent registers no aliases.
-        $GLOBALS['carePlanRows'] = $rows;
-        $GLOBALS['carePlanQueryCalls'] = [];
-        $GLOBALS['carePlanSdohCalls'] = [];
-        class_alias(get_class(new class () {
+        self::$rows = $rows;
+        self::$queryCalls = [];
+        self::$sdohCalls = [];
+        class_alias((new class () {
             /**
              * @param array<int, mixed> $binds
              * @return list<array<string, mixed>>
              */
             public static function fetchRecords(string $sql, array $binds = [], bool $noLog = false): array
             {
-                $GLOBALS['carePlanQueryCalls'][] = [$sql, $binds, $noLog];
-                return $GLOBALS['carePlanRows'];
+                CarePlanNarrativeStripTest::$queryCalls[] = [$sql, $binds, $noLog];
+                return CarePlanNarrativeStripTest::$rows;
             }
-        }), QueryUtils::class);
-        class_alias(get_class(new class () {
+        })::class, QueryUtils::class);
+        class_alias((new class () {
             /** @param list<string> $tables */
             public static function createMissingUuidsForTables(array $tables): void
             {
-                $GLOBALS['carePlanUuidCalls'][] = $tables;
+                CarePlanNarrativeStripTest::$uuidCalls[] = $tables;
             }
-        }), UuidRegistry::class);
-        class_alias(get_class(new class () {
-            /** @return array<string, mixed>|null */
+        })::class, UuidRegistry::class);
+        class_alias((new class () {
+            /** @return null */
             public static function getCurrentAssessment(int $pid): ?array
             {
-                $GLOBALS['carePlanSdohCalls'][] = $pid;
+                CarePlanNarrativeStripTest::$sdohCalls[] = $pid;
                 return null;
             }
-        }), HistorySdohService::class);
+        })::class, HistorySdohService::class);
     }
 
     private function loadExactSourceMirror(): string
@@ -230,7 +247,7 @@ namespace Carecoordination\Model;
  */
 function sqlQuery($statement, $binds = false)
 {
-    $GLOBALS['carePlanSqlCalls'][] = [$statement, $binds];
+    \OpenEMR\Tests\Isolated\Services\Cda\CarePlanNarrativeStripTest::$sqlCalls[] = [$statement, $binds];
     return false;
 }
 PHP;
@@ -263,7 +280,9 @@ PHP;
             \RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($items as $item) {
-            $item->isDir() && !$item->isLink() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+            self::assertInstanceOf(\SplFileInfo::class, $item);
+            $path = $item->getPathname();
+            $item->isDir() && !$item->isLink() ? rmdir($path) : unlink($path);
         }
         rmdir($tree);
     }
