@@ -103,7 +103,6 @@ final class EmployerMissingHistoryTest extends TestCase
         self::assertNotContains('date', $columns);
         self::assertNotContains('id', $columns);
         $values = array_combine($columns, $binds);
-        self::assertIsArray($values);
         return $values;
     }
 
