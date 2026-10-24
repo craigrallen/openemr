@@ -77,7 +77,7 @@ class TransactionRestController
      * Process a HTTP POST request used to create a patient record.
      *
      * @param  $data - array of patient fields.
-     * @return array[] Response envelope; successful creation uses HTTP 201.
+     * @return array<array<mixed>> Response envelope; successful creation uses HTTP 201.
      */
     #[OA\Post(
         path: '/api/patient/{pid}/transaction',

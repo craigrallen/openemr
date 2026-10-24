@@ -107,7 +107,6 @@ class TransactionValidationWriteBoundaryTest extends TestCase
         self::assertSame([], $response['data']);
         self::assertSame([], $response['links']);
         $validationErrors = $response['validationErrors'];
-        self::assertIsArray($validationErrors);
         self::assertSame(array_keys($expectedRules), array_keys($validationErrors));
         foreach ($expectedRules as $field => $rule) {
             self::assertArrayHasKey($field, $validationErrors);
