@@ -8,9 +8,9 @@ namespace OpenEMR\Common\ORDataObject;
 
 /**
  * @param list<string|int|null> $binds
- * @return array<string, mixed>|false
+ * @return array<string, mixed>
  */
-function sqlQuery(string $sql, array $binds = []): array|false
+function sqlQuery(string $sql, array $binds = []): array
 {
     return \OpenEMR\Tests\Isolated\Services\ContactTelecomOwnershipBoundary::read($sql, $binds);
 }
