@@ -184,7 +184,7 @@ final class SocialHistoryFirstSaveTest extends TestCase
         return (new \ReflectionClass(SocialHistoryService::class))->newInstanceWithoutConstructor();
     }
 
-    /** @return list<array{type: string, data: array<string, mixed>}> */
+    /** @return list<array{type: string, data: array<array-key, mixed>}> */
     private function &recordSaveEvents(): array
     {
         $events = [];
@@ -192,7 +192,6 @@ final class SocialHistoryFirstSaveTest extends TestCase
             $this->dispatcher->addListener($type, static function (ServiceSaveEvent $event) use (&$events, $type): void {
                 self::assertInstanceOf(SocialHistoryService::class, $event->getService());
                 $saveData = $event->getSaveData();
-                self::assertIsArray($saveData);
                 $events[] = ['type' => $type, 'data' => $saveData];
             });
         }
