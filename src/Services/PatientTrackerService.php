@@ -38,102 +38,43 @@ class PatientTrackerService extends BaseService
      */
     public static function get_Tracker_Time_Interval($tracker_from_time, $tracker_to_time, $allow_sec = false): string
     {
-
         $tracker_time_calc = strtotime((string) $tracker_to_time) - strtotime((string) $tracker_from_time);
 
         $tracker_time = "";
-        $days = 0;
-        $hours = 0;
-        $minutes = 0;
-        if ($tracker_time_calc > 60 * 60 * 24) {
+        if ($tracker_time_calc >= 60 * 60 * 24) {
             $days = floor($tracker_time_calc / 60 / 60 / 24);
-            if ($days >= 2) {
-                $tracker_time .=  "$days " . xl('days');
-            } else {
-                $tracker_time .=  "$days " . xl('day');
-            }
-
+            $tracker_time .= "$days " . ($days >= 2 ? xl('days') : xl('day'));
             $tracker_time_calc -= $days * (60 * 60 * 24);
         }
 
-        if ($tracker_time_calc > 60 * 60) {
+        if ($tracker_time_calc >= 60 * 60) {
             $hours = floor($tracker_time_calc / 60 / 60);
-            if (strlen($days != 0)) {
-                if ($hours >= 2) {
-                    $tracker_time .=  ", $hours " . xl('hours');
-                } else {
-                    $tracker_time .=  ", $hours " . xl('hour');
-                }
-            } else {
-                if ($hours >= 2) {
-                    $tracker_time .=  "$hours " . xl('hours');
-                } else {
-                    $tracker_time .=  "$hours " . xl('hour');
-                }
-            }
-
+            $tracker_time .= ($tracker_time !== '' ? ', ' : '') . "$hours " .
+                ($hours >= 2 ? xl('hours') : xl('hour'));
             $tracker_time_calc -= $hours * (60 * 60);
         }
 
         if ($allow_sec) {
-            if ($tracker_time_calc > 60) {
+            if ($tracker_time_calc >= 60) {
                 $minutes = floor($tracker_time_calc / 60);
-                if (strlen($hours != 0)) {
-                    if ($minutes >= 2) {
-                        $tracker_time .=  ", $minutes " . xl('minutes');
-                    } else {
-                        $tracker_time .=  ", $minutes " . xl('minute');
-                    }
-                } else {
-                    if ($minutes >= 2) {
-                        $tracker_time .=  "$minutes " . xl('minutes');
-                    } else {
-                        $tracker_time .=  "$minutes " . xl('minute');
-                    }
-                }
-
+                $tracker_time .= ($tracker_time !== '' ? ', ' : '') . "$minutes " .
+                    ($minutes >= 2 ? xl('minutes') : xl('minute'));
                 $tracker_time_calc -= $minutes * 60;
             }
         } else {
             $minutes = round($tracker_time_calc / 60);
-            if (!empty($hours) && strlen($hours != 0)) {
-                if ($minutes >= 2) {
-                    $tracker_time .=  ", $minutes " . xl('minutes');
-                } else {
-                    $tracker_time .=  ", $minutes " . xl('minute');
-                }
-            } else {
-                if ($minutes >= 2) {
-                    $tracker_time .=  "$minutes " . xl('minutes');
-                } else {
-                    if ($minutes > 0) {
-                        $tracker_time .=  "$minutes " . xl('minute');
-                    }
-                }
-            }
-
-            $tracker_time_calc -= $minutes * 60;
-        }
-
-        if ($allow_sec) {
-            if ($tracker_time_calc > 0) {
-                if (strlen($minutes != 0)) {
-                    if ($tracker_time_calc >= 2) {
-                        $tracker_time .= ", $tracker_time_calc " . xl('seconds');
-                    } else {
-                        $tracker_time .= ", $tracker_time_calc " . xl('second');
-                    }
-                } else {
-                    if ($tracker_time_calc >= 2) {
-                        $tracker_time .= "$tracker_time_calc " . xl('seconds');
-                    } else {
-                        $tracker_time .= "$tracker_time_calc " . xl('second');
-                    }
-                }
+            if ($minutes > 0) {
+                $tracker_time .= ($tracker_time !== '' ? ', ' : '') . "$minutes " .
+                    ($minutes >= 2 ? xl('minutes') : xl('minute'));
             }
         }
 
-        return $tracker_time ;
+        if ($allow_sec && $tracker_time_calc > 0) {
+            $tracker_time .= ($tracker_time !== '' ? ', ' : '') . "$tracker_time_calc " .
+                ($tracker_time_calc >= 2 ? xl('seconds') : xl('second'));
+        }
+
+        return $tracker_time;
     }
 
     /**
