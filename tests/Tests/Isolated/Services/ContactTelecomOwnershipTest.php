@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
@@ -22,12 +23,20 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 /** Only database boundaries are doubled; the service and both data objects remain native. */
 final class ContactTelecomOwnershipBoundary
 {
+    /** @var array<string, array<string, string|null>> */
     public static array $contacts = [];
+    /** @var array<string, array<string, string|null>> */
     public static array $telecoms = [];
+    /** @var list<array{string, list<string|int|null>}> */
     public static array $reads = [];
+    /** @var list<array{string, list<string|int|null>}> */
     public static array $writes = [];
     public static bool $failWrite = false;
 
+    /**
+     * @param list<string|int|null> $binds
+     * @return array<string, string|null>
+     */
     public static function read(string $sql, array $binds): array
     {
         self::$reads[] = [$sql, $binds];
@@ -41,6 +50,7 @@ final class ContactTelecomOwnershipBoundary
         return $rows[(string) $binds[0]] ?? [];
     }
 
+    /** @param list<string|int|null> $binds */
     public static function write(string $sql, array $binds): bool
     {
         self::$writes[] = [$sql, $binds];
@@ -49,6 +59,7 @@ final class ContactTelecomOwnershipBoundary
         }
         if (str_starts_with($sql, 'INSERT INTO contact_telecom SET ')) {
             preg_match_all("/`([a-z_]+)` = '((?:\\\\.|[^'])*)'/", $sql, $matches, PREG_SET_ORDER);
+            /** @var array<string, string> $fields */
             $fields = [];
             foreach ($matches as $match) {
                 $fields[$match[1]] = stripslashes($match[2]);
@@ -67,6 +78,7 @@ final class ContactTelecomOwnershipQueryRecorder
 {
     public static int $generatedIds = 0;
 
+    /** @return list<string> */
     public static function listTableFields(string $table): array
     {
         return match ($table) {
@@ -76,6 +88,7 @@ final class ContactTelecomOwnershipQueryRecorder
         };
     }
 
+    /** @param list<string|int|null> $binds */
     public static function sqlStatementThrowException(string $sql, array $binds = []): bool
     {
         return ContactTelecomOwnershipBoundary::write($sql, $binds);
@@ -90,6 +103,10 @@ final class ContactTelecomOwnershipQueryRecorder
 
 final class ContactTelecomOwnershipLists extends ListService
 {
+    /**
+     * @param array<string, string|int> $search
+     * @return list<array{option_id: string, title: string}>
+     */
     public function getOptionsByListName($list_name, $search = []): array
     {
         return match ($list_name) {
@@ -109,7 +126,7 @@ final class ContactTelecomOwnershipTest extends TestCase
         }
     }
 
-    private function service(): ContactTelecomService
+    private function service(?LoggerInterface $logger = null): ContactTelecomService
     {
         // Function definitions run only in the isolated child, never during discovery.
         foreach (['sqlQuery', 'sqlStatement', 'escape_table_name', 'get_db', 'add_escape_custom'] as $name) {
@@ -128,6 +145,7 @@ final class ContactTelecomOwnershipTest extends TestCase
         self::assertTrue(class_alias(ContactTelecomOwnershipQueryRecorder::class, QueryUtils::class));
 
         $GLOBALS['adodb'] = ['db' => new class {
+            /** @return list<string> */
             public function MetaPrimaryKeys(string $table): array
             {
                 return ['id'];
@@ -156,12 +174,13 @@ final class ContactTelecomOwnershipTest extends TestCase
         // The constructor only loads metadata and a kernel. Its state is not needed by
         // saveTelecomsForContact, so bypass it while invoking the actual method body.
         $service = (new \ReflectionClass(ContactTelecomService::class))->newInstanceWithoutConstructor();
-        $service->setLogger(new NullLogger());
+        $service->setLogger($logger ?? new NullLogger());
         (new \ReflectionProperty(ContactTelecomService::class, 'listService'))
             ->setValue($service, new ContactTelecomOwnershipLists());
         return $service;
     }
 
+    /** @return array<string, array{string}> */
     public static function foreignOwnerActions(): array
     {
         return [
@@ -189,6 +208,43 @@ final class ContactTelecomOwnershipTest extends TestCase
         self::assertSame($before, ContactTelecomOwnershipBoundary::$telecoms['72']);
         self::assertSame([], ContactTelecomOwnershipBoundary::$writes);
         self::assertSame(42, (new ContactTelecom('72'))->get_contact_id());
+    }
+
+    /** @return array<string, array{string, string|null}> */
+    public static function unownedRowActions(): array
+    {
+        $cases = [];
+        foreach (['null owner' => null, 'zero owner' => '0'] as $ownerName => $ownerId) {
+            foreach (['UPDATE', 'INACTIVATE', 'DELETE', 'ADD'] as $action) {
+                $cases[$ownerName . ' ' . $action] = [$action, $ownerId];
+            }
+        }
+        return $cases;
+    }
+
+    #[DataProvider('unownedRowActions')]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testExistingUnownedRowIsSkippedWithGenericWarning(string $action, ?string $ownerId): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())
+            ->method('warning')
+            ->with('Skipping telecom with invalid ownership', ['index' => 0]);
+        $service = $this->service($logger);
+        ContactTelecomOwnershipBoundary::$telecoms['73'] = [
+            'id' => '73', 'contact_id' => $ownerId, 'system' => 'phone',
+            'use' => 'home', 'value' => 'unowned', 'status' => 'A',
+        ];
+        $before = ContactTelecomOwnershipBoundary::$telecoms['73'];
+
+        self::assertSame([], $service->saveTelecomsForContact(41, [[
+            'data_action' => $action, 'contact_telecom_id' => '73', 'value' => 'replacement',
+        ]]));
+
+        self::assertSame($before, ContactTelecomOwnershipBoundary::$telecoms['73']);
+        self::assertSame([], ContactTelecomOwnershipBoundary::$writes);
+        self::assertSame(0, ContactTelecomOwnershipQueryRecorder::$generatedIds);
     }
 
     #[DataProvider('foreignOwnerActions')]
@@ -281,6 +337,7 @@ final class ContactTelecomOwnershipTest extends TestCase
         self::assertSame([], ContactTelecomOwnershipBoundary::$writes);
     }
 
+    /** @return array<string, array{string}> */
     public static function nonexistentIdActions(): array
     {
         return [
