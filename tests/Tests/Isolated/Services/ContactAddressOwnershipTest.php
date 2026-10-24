@@ -100,6 +100,7 @@ final class ContactAddressOwnershipTest extends TestCase
             'missing' => [],
             'null-owner' => [self::LINK_ID => $this->linkRow(null)],
             'zero-owner' => [self::LINK_ID => $this->linkRow(0)],
+            default => self::fail('Unexpected ownership case: ' . $case),
         };
 
         $saved = $this->service()->saveAddressesForContact(self::TARGET_CONTACT, [
@@ -157,7 +158,9 @@ final class ContactAddressOwnershipTest extends TestCase
             self::assertSame('Submitted note', $saved[0]->get_notes());
             self::assertSame(2, $saved[0]->get_priority());
             self::assertSame('2024-06-15', $saved[0]->get_period_start()->format('Y-m-d'));
-            self::assertSame('2024-07-01', $saved[0]->get_period_end()->format('Y-m-d'));
+            $periodEnd = $saved[0]->get_period_end();
+            self::assertInstanceOf(\DateTime::class, $periodEnd);
+            self::assertSame('2024-07-01', $periodEnd->format('Y-m-d'));
             foreach (["`type` = 'postal'", "`use` = 'work'", "`notes` = 'Submitted note'",
                 "`priority` = '2'", "`period_start` = '2024-06-15", "`period_end` = '2024-07-01"] as $expected) {
                 self::assertStringContainsString($expected, $linkWrite);
@@ -169,9 +172,11 @@ final class ContactAddressOwnershipTest extends TestCase
             self::assertSame('Stored note', $saved[0]->get_notes());
             self::assertSame(7, $saved[0]->get_priority());
             self::assertSame('2023-02-03 04:05:06', $saved[0]->get_period_start()->format('Y-m-d H:i:s'));
-            self::assertGreaterThan(new \DateTime('2023-12-31 05:06:07'), $saved[0]->get_period_end());
+            $periodEnd = $saved[0]->get_period_end();
+            self::assertInstanceOf(\DateTime::class, $periodEnd);
+            self::assertGreaterThan(new \DateTime('2023-12-31 05:06:07'), $periodEnd);
             self::assertStringContainsString(
-                "`period_end` = '" . $saved[0]->get_period_end()->format('Y-m-d H:i:s') . "'",
+                "`period_end` = '" . $periodEnd->format('Y-m-d H:i:s') . "'",
                 $linkWrite
             );
             foreach (["`type` = 'both'", "`use` = 'home'", "`notes` = 'Stored note'",
@@ -222,6 +227,7 @@ final class ContactAddressOwnershipTest extends TestCase
         ]);
 
         self::assertCount(1, $saved);
+        self::assertInstanceOf(ContactAddress::class, $saved[0]);
         self::assertSame('Replacement Street', $saved[0]->getAddress()->get_line1());
         self::assertContains('contact_address:' . self::LINK_ID, $this->reads);
         self::assertContains('addresses:' . self::ADDRESS_ID, $this->reads);
@@ -253,7 +259,10 @@ final class ContactAddressOwnershipTest extends TestCase
 
         self::assertCount(2, $saved);
         self::assertSame([self::LINK_ID, self::SECOND_LINK_ID], array_map(
-            static fn(ContactAddress $link): mixed => $link->get_id(),
+            static function (mixed $link): mixed {
+                self::assertInstanceOf(ContactAddress::class, $link);
+                return $link->get_id();
+            },
             $saved
         ));
         self::assertContains('contact_address:' . self::FOREIGN_LINK_ID, $this->reads);
@@ -288,6 +297,7 @@ final class ContactAddressOwnershipTest extends TestCase
         ]);
 
         self::assertCount(1, $saved);
+        self::assertInstanceOf(ContactAddress::class, $saved[0]);
         self::assertSame((string) self::LINK_ID, $saved[0]->get_id());
         self::assertSame(self::TARGET_CONTACT, $saved[0]->get_contact_id());
         self::assertSame(self::ADDRESS_ID, $saved[0]->get_address_id());
@@ -337,11 +347,13 @@ final class ContactAddressOwnershipTest extends TestCase
             {
             }
 
+            /** @return array<string, string> */
             public function getValidAddressTypes(): array
             {
                 return ['both' => 'Both', 'postal' => 'Postal'];
             }
 
+            /** @return array<string, string> */
             public function getValidAddressUses(): array
             {
                 return ['home' => 'Home', 'work' => 'Work'];
@@ -367,12 +379,15 @@ final class ContactAddressOwnershipTest extends TestCase
                     'notes', 'status', 'is_primary', 'period_start', 'period_end', 'inactivated_reason',
                     'created_date', 'created_by', 'updated_date', 'updated_by'],
                 'addresses' => ['id', 'foreign_id', 'line1', 'city', 'zip'],
+                default => self::fail('Unexpected table: ' . $match[1]),
             };
             $rows = array_map(static fn(string $field): array => ['Field' => $field], $columns);
         } elseif ($sql === 'SELECT contact_id FROM contact_address WHERE id = ?') {
             self::assertTrue($log);
             self::assertIsArray($binds);
             self::assertCount(1, $binds);
+            self::assertTrue(is_int($binds[0]) || is_string($binds[0]));
+            self::assertTrue(is_numeric($binds[0]));
             $id = (int) $binds[0];
             $this->reads[] = 'contact_address:' . $id;
             $link = $this->links[$id] ?? null;
@@ -382,6 +397,8 @@ final class ContactAddressOwnershipTest extends TestCase
             self::assertIsArray($binds);
             self::assertCount(1, $binds);
             $table = $match[1];
+            self::assertTrue(is_int($binds[0]) || is_string($binds[0]));
+            self::assertTrue(is_numeric($binds[0]));
             $id = (int) $binds[0];
             $this->reads[] = "$table:$id";
             $row = match ($table) {
@@ -391,6 +408,7 @@ final class ContactAddressOwnershipTest extends TestCase
                 'contact_address' => $this->links[$id] ?? null,
                 'addresses' => $id === self::ADDRESS_ID
                     ? ['id' => $id, 'line1' => 'Original Street', 'city' => 'Old City', 'zip' => '10001'] : null,
+                default => self::fail('Unexpected table: ' . $table),
             };
             $rows = $row === null ? [] : [$row];
         } elseif (preg_match('/^INSERT INTO (contact|contact_address|addresses) SET /', $sql)) {
