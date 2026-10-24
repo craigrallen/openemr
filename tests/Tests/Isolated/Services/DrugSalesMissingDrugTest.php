@@ -46,7 +46,7 @@ final class DrugSalesMissingDrugTest extends TestCase
 
         if (!class_exists(\ADORecordSet_mysqli::class)) {
             $adodbSource = (new \ReflectionClass(\ADOConnection::class))->getFileName();
-            if ($adodbSource === false) {
+            if (!is_string($adodbSource)) {
                 self::fail('Cannot locate the installed ADOdb source');
             }
             require_once dirname($adodbSource) . '/drivers/adodb-mysqli.inc.php';
@@ -111,28 +111,44 @@ final class DrugSalesMissingDrugTest extends TestCase
             $this->rows(self::ENCOUNTER_SQL, [41, 82], [['count' => 1]]),
             $this->rows(self::WAREHOUSE_SQL, ['pharmacist'], [['default_warehouse' => 'main']]),
             $this->rows(self::DRUG_SQL, [73], [$this->drugRow(0)]),
+            /**
+             * @param list<mixed>|false $binds
+             * @return list<array<string, mixed>>
+             */
             function (string $sql, array|false $binds, bool $noLog) use (&$uuid): array {
                 self::assertTrue($noLog);
                 self::assertSame('SELECT `uuid` FROM `uuid_registry` WHERE `uuid` = ?', $sql);
-                if (!is_array($binds) || count($binds) !== 1 || !is_string($binds[0])) {
+                if ($binds === false || count($binds) !== 1 || !is_string($binds[0])) {
                     self::fail('Expected one binary UUID bind');
                 }
                 self::assertSame(16, strlen($binds[0]));
                 $uuid = $binds[0];
                 return [];
             },
+            /**
+             * @param list<mixed>|false $binds
+             * @return list<array<string, mixed>>
+             */
             function (string $sql, array|false $binds, bool $noLog) use (&$uuid): array {
                 self::assertTrue($noLog);
                 self::assertSame('SELECT `uuid` FROM `drug_sales` WHERE `uuid` = ?', $sql);
                 self::assertSame([$uuid], $binds);
                 return [];
             },
+            /**
+             * @param list<mixed>|false $binds
+             * @return list<array<string, mixed>>
+             */
             function (string $sql, array|false $binds, bool $noLog) use (&$uuid): array {
                 self::assertFalse($noLog);
                 self::assertSame(self::UUID_REGISTRY_INSERT, $sql);
                 self::assertSame([$uuid, 'drug_sales', 'sale_id', '', '', 0, 0], $binds);
                 return [];
             },
+            /**
+             * @param list<mixed>|false $binds
+             * @return list<array<string, mixed>>
+             */
             function (string $sql, array|false $binds, bool $noLog) use (&$uuid): array {
                 self::assertFalse($noLog);
                 self::assertSame(self::NONDISPENSABLE_INSERT, $sql);
@@ -276,10 +292,14 @@ final class DrugSalesMissingDrugTest extends TestCase
     /**
      * @param list<mixed> $binds
      * @param list<array<string, mixed>>|false $rows
-     * @return \Closure(string, array|false, bool): list<array<string, mixed>>|false
+     * @return \Closure(string, list<mixed>|false, bool): list<array<string, mixed>>|false
      */
     private function rows(string $expectedSql, array $binds, array|false $rows): \Closure
     {
+        /**
+         * @param list<mixed>|false $actualBinds
+         * @return list<array<string, mixed>>|false
+         */
         return static function (string $sql, array|false $actualBinds, bool $noLog) use ($expectedSql, $binds, $rows): array|false {
             self::assertFalse($noLog);
             self::assertSame($expectedSql, $sql);
@@ -292,13 +312,14 @@ final class DrugSalesMissingDrugTest extends TestCase
      * Each expected operation consumes one response. Unexpected SQL, including
      * any inventory, UUID, or sale write, fails at the transport boundary.
      *
-     * @param list<\Closure(string, array|false, bool): list<array<string, mixed>>|false> $operations
+     * @param list<\Closure(string, list<mixed>|false, bool): list<array<string, mixed>>|false> $operations
      * @return \Closure(): void
      */
     private function installDatabase(array $operations): \Closure
     {
         $transport = $this->getMockBuilder(\ADODB_mysqli_log::class)
             ->disableOriginalConstructor()->onlyMethods(['Execute', 'ExecuteNoLog'])->getMock();
+        /** @param list<mixed>|false $binds */
         $execute = function (string $sql, array|false $binds, bool $noLog) use (&$operations): \ADORecordSet_mysqli|false {
             $next = array_shift($operations);
             if (!$next instanceof \Closure) {
@@ -319,12 +340,14 @@ final class DrugSalesMissingDrugTest extends TestCase
             return $result;
         };
         $transport->method('Execute')->willReturnCallback(
+            /** @param list<mixed>|false $binds */
             static function (string $sql, array|false $binds, bool $log) use ($execute): \ADORecordSet_mysqli|false {
                 self::assertTrue($log);
                 return $execute($sql, $binds, false);
             }
         );
         $transport->method('ExecuteNoLog')->willReturnCallback(
+            /** @param list<mixed>|false $binds */
             static fn(string $sql, array|false $binds): \ADORecordSet_mysqli|false => $execute($sql, $binds, true)
         );
         OEGlobalsBag::getInstance()->set('adodb', ['db' => $transport]);
