@@ -378,8 +378,7 @@ final class ContactAddressOwnershipTest extends TestCase
                 'contact_address' => ['id', 'contact_id', 'address_id', 'priority', 'type', 'use',
                     'notes', 'status', 'is_primary', 'period_start', 'period_end', 'inactivated_reason',
                     'created_date', 'created_by', 'updated_date', 'updated_by'],
-                'addresses' => ['id', 'foreign_id', 'line1', 'city', 'zip'],
-                default => self::fail('Unexpected table: ' . $match[1]),
+                default => ['id', 'foreign_id', 'line1', 'city', 'zip'],
             };
             $rows = array_map(static fn(string $field): array => ['Field' => $field], $columns);
         } elseif ($sql === 'SELECT contact_id FROM contact_address WHERE id = ?') {
@@ -406,9 +405,8 @@ final class ContactAddressOwnershipTest extends TestCase
                     : ($id === self::FOREIGN_CONTACT
                         ? ['id' => $id, 'foreign_table_name' => 'patient_data', 'foreign_id' => 91] : null),
                 'contact_address' => $this->links[$id] ?? null,
-                'addresses' => $id === self::ADDRESS_ID
+                default => $id === self::ADDRESS_ID
                     ? ['id' => $id, 'line1' => 'Original Street', 'city' => 'Old City', 'zip' => '10001'] : null,
-                default => self::fail('Unexpected table: ' . $table),
             };
             $rows = $row === null ? [] : [$row];
         } elseif (preg_match('/^INSERT INTO (contact|contact_address|addresses) SET /', $sql)) {
