@@ -8,16 +8,16 @@ This correction applies to the same description used by the care plan, goal, hea
 
 ## Native isolated regression boundary
 
-`CarePlanNarrativeStripTest` loads a byte-identical mirror of the entire production dispatch source in each child process. The two relative includes required by that source resolve to inert files in the child-only mirror. It uses the native `xmlEscape()` helper and parses the returned XML. The author method is overridden to return fixed XML. `QueryUtils`, `UuidRegistry`, and `HistorySdohService` are child-only substitutes, and a namespaced `Carecoordination\Model\sqlQuery()` function intercepts the social-history read. Those boundaries return synthetic rows and record calls; they perform no database or endpoint I/O. The test contains expected narratives, not a copy of the production regex.
+`CarePlanNarrativeStripTest` loads a byte-identical mirror of the entire production dispatch source in each child process. The two relative includes required by that source resolve to inert files in the private temporary mirror. It uses the native `xmlEscape()` helper and parses the returned XML. The author method is overridden to return fixed XML. `QueryUtils`, `UuidRegistry`, and `HistorySdohService` are child-only substitutes. A fixed, generated PHP file inside the mirror defines the namespaced `Carecoordination\Model\sqlQuery()` boundary, which records the social-history read and returns `false`. These boundaries return synthetic rows and record calls; they perform no database or endpoint I/O. The test contains expected narratives, not a copy of the production regex.
 
 The eight narrative cases cover separated and adjacent markers, multiline content, a single marker, no marker with XML escaping, and legacy malformed-marker behavior. Each case runs independently in all four output branches. A separate filtered-empty case checks that the early return occurs before data access.
 
 ## Verification
 
-Run from the repository root in an environment with the checkout's Composer dependencies:
+The repository's isolated-test command is `vendor/bin/phpunit -c phpunit-isolated.xml tests/Tests/Isolated/Services/Cda/CarePlanNarrativeStripTest.php`. With the available vendor launcher, the focused test also ran from the repository root using:
 
 ```sh
-vendor/bin/phpunit -c phpunit-isolated.xml tests/Tests/Isolated/Services/Cda/CarePlanNarrativeStripTest.php
+/Users/craig/.hermes/workspaces/openemr-workbench-shell/vendor/bin/phpunit --no-configuration --do-not-cache-result tests/Tests/Isolated/Services/Cda/CarePlanNarrativeStripTest.php
 ```
 
-Do not add an external bootstrap to this command: its function definitions duplicate those loaded by the vendor launcher. Before the production change, the controller's focused run of the original eight-case test reported **8 tests, 237 assertions, 2 intended failures, 0 errors**; the failures exposed the missing intervening narrative. The independent branch cases and corrected production source await a controller PHPUnit run. That historical RED result does not establish a post-change pass or clinical acceptance. Complete suite, UI, security, and authenticated export validation are outside this isolated check.
+Both the direct run and the repository-configured run passed: **33 tests, 778 assertions, 0 failures, 0 errors**. Controller logs in `verification/ccda-care-plan-narrative-20261024` under the OpenEMR mission directory record earlier original-source RED runs: **33 tests, 764 assertions, 8 intended failures, 0 errors** for the expanded test and **8 tests, 237 assertions, 2 intended failures, 0 errors** for the historical test. Those RED runs establish that the regression detects the missing narrative. Do not add a separate external bootstrap to the direct vendor command; it conflicts with the functions loaded by that launcher in this local setup. This isolated check does not establish clinical acceptance or complete suite, UI, security, and authenticated export behavior.

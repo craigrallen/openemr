@@ -159,30 +159,31 @@ final class CarePlanNarrativeStripTest extends TestCase
         $GLOBALS['carePlanQueryCalls'] = [];
         $GLOBALS['carePlanSdohCalls'] = [];
         class_alias(get_class(new class () {
-            public static function fetchRecords($sql, $binds = [], $noLog = false): array
+            /**
+             * @param array<int, mixed> $binds
+             * @return list<array<string, mixed>>
+             */
+            public static function fetchRecords(string $sql, array $binds = [], bool $noLog = false): array
             {
                 $GLOBALS['carePlanQueryCalls'][] = [$sql, $binds, $noLog];
                 return $GLOBALS['carePlanRows'];
             }
         }), QueryUtils::class);
         class_alias(get_class(new class () {
+            /** @param list<string> $tables */
             public static function createMissingUuidsForTables(array $tables): void
             {
                 $GLOBALS['carePlanUuidCalls'][] = $tables;
             }
         }), UuidRegistry::class);
         class_alias(get_class(new class () {
+            /** @return array<string, mixed>|null */
             public static function getCurrentAssessment(int $pid): ?array
             {
                 $GLOBALS['carePlanSdohCalls'][] = $pid;
                 return null;
             }
         }), HistorySdohService::class);
-
-        // PHP has no runtime API to register a namespaced function. This child-only
-        // function records the native social-history read and returns no row. It is
-        // deliberately scoped to the production class namespace; it never calls SQL.
-        eval('namespace Carecoordination\\Model; function sqlQuery($sql, $binds = []) { $GLOBALS["carePlanSqlCalls"][] = [$sql, $binds]; return false; }');
     }
 
     private function loadExactSourceMirror(): string
@@ -190,14 +191,23 @@ final class CarePlanNarrativeStripTest extends TestCase
         $root = dirname(__DIR__, 5);
         $source = $root . self::SOURCE;
         self::assertFileExists($source);
-        $tree = sys_get_temp_dir() . '/oe-care-plan-' . bin2hex(random_bytes(8));
-        $target = $tree . self::SOURCE;
-        foreach ([dirname($target), $tree . '/custom', $tree . '/interface/forms/vitals'] as $directory) {
-            if (!is_dir($directory) && !mkdir($directory, 0700, true)) {
-                throw new \RuntimeException('Could not create isolated source mirror');
-            }
+        $tempRoot = realpath(sys_get_temp_dir());
+        if ($tempRoot === false) {
+            throw new \RuntimeException('Could not resolve temporary directory');
         }
+        $tree = $tempRoot . '/oe-care-plan-' . bin2hex(random_bytes(8));
+        $target = $tree . self::SOURCE;
+        $createdRoot = false;
         try {
+            if (!mkdir($tree, 0700)) {
+                throw new \RuntimeException('Could not create isolated source mirror root');
+            }
+            $createdRoot = true;
+            foreach ([dirname($target), $tree . '/custom', $tree . '/interface/forms/vitals'] as $directory) {
+                if (!is_dir($directory) && !mkdir($directory, 0700, true)) {
+                    throw new \RuntimeException('Could not create isolated source mirror');
+                }
+            }
             $bytes = file_get_contents($source);
             if ($bytes === false || file_put_contents($target, $bytes) === false) {
                 throw new \RuntimeException('Could not mirror dispatch source');
@@ -208,10 +218,33 @@ final class CarePlanNarrativeStripTest extends TestCase
                     throw new \RuntimeException('Could not create inert relative include');
                 }
             }
+            $sqlBoundary = <<<'PHP'
+<?php
+
+namespace Carecoordination\Model;
+
+/**
+ * @param string $statement
+ * @param array<int, mixed>|false $binds
+ * @return false
+ */
+function sqlQuery($statement, $binds = false)
+{
+    $GLOBALS['carePlanSqlCalls'][] = [$statement, $binds];
+    return false;
+}
+PHP;
+            $sqlBoundaryFile = $tree . '/sql-boundary.php';
+            if (file_put_contents($sqlBoundaryFile, $sqlBoundary) === false) {
+                throw new \RuntimeException('Could not create inert SQL boundary');
+            }
+            require $sqlBoundaryFile;
             require_once $target;
             self::assertSame(realpath($target), (new \ReflectionClass(EncounterccdadispatchTable::class))->getFileName());
         } catch (\Throwable $error) {
-            self::removeTree($tree);
+            if ($createdRoot) {
+                self::removeTree($tree);
+            }
             throw $error;
         }
         return $tree;
@@ -219,7 +252,10 @@ final class CarePlanNarrativeStripTest extends TestCase
 
     private static function removeTree(string $tree): void
     {
-        if (!str_starts_with(basename($tree), 'oe-care-plan-') || !is_dir($tree)) {
+        $tempRoot = realpath(sys_get_temp_dir());
+        if ($tempRoot === false || dirname($tree) !== $tempRoot
+            || preg_match('/^oe-care-plan-[0-9a-f]{16}$/', basename($tree)) !== 1
+            || is_link($tree) || !is_dir($tree)) {
             return;
         }
         $items = new \RecursiveIteratorIterator(
@@ -227,7 +263,7 @@ final class CarePlanNarrativeStripTest extends TestCase
             \RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($items as $item) {
-            $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+            $item->isDir() && !$item->isLink() ? rmdir($item->getPathname()) : unlink($item->getPathname());
         }
         rmdir($tree);
     }
