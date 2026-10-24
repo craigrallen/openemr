@@ -42,9 +42,19 @@ guessed short names rather than Particle's native identifiers. This was a test
 expectation error; the insert-forbidden RED remains established. The corrected
 tests expect the native missing, empty, date, length, and string-type rule
 keys. They retain the no-insert and full response-envelope assertions and add
-wrong-type and UTF-8 byte-boundary cases. The controller will recheck corrected
-RED against the original controller source before final verification; no
-corrected RED or GREEN result is claimed here.
+wrong-type and UTF-8 byte-boundary cases. Against the original controller
+source, corrected RED reported **18 tests, 94 assertions, 13 forbidden-insert
+failures, and zero errors**. With the single early return, GREEN reported
+**18 tests, 233 assertions, and zero issues**. The broader RestControllers run
+reported **248 tests, 1,073 assertions, exit 0, and nine incomplete tests**.
+Two-file PHP syntax, diff, and full 7,745-byte inverse checks passed. These
+results preceded this followup edit; the edited head has not been rerun under
+the current read-only execution constraint.
+
+The test restores the prior numeric HTTP status after each case. When PHP
+initially reports `false` (no response code set), PHP offers no API to unset
+the code after the controller changes it. Teardown therefore sets a neutral
+200 in that case; it cannot restore the exact initial `false` state.
 
 ## Limits and delivery gates
 
@@ -56,7 +66,11 @@ clinical acceptance test. The real service validator may throw for a missing
 path. The handling of `insert` returning `false` or throwing is unchanged.
 
 This note and slice do not close the full 22-item clinical UI register or
-claim an implemented UI feature. Native GREEN results, strict PHPStan and
-other required checks must be verified on the edited head. Ordinary approval,
-independent review, exact-head hosted CI, and applicable authenticated and
-clinical acceptance remain delivery gates before merge or deployment.
+claim an implemented UI feature. A fresh independent Astra static review of
+`80362db8` found no production correctness defect and identified two P3
+followups: stale verification text here and the unset HTTP-status teardown
+case. This followup addresses both in the owned test and note. Native tests,
+strict PHPStan, and other required checks still need verification on the
+edited head. No hosted CI or authenticated or clinical acceptance result is
+claimed. Ordinary approval and applicable delivery gates remain before merge
+or deployment.

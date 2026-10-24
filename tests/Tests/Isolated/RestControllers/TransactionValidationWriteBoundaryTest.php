@@ -47,9 +47,8 @@ class TransactionValidationWriteBoundaryTest extends TestCase
             ->setValue(null, $this->previousServiceOverrides);
         (new ReflectionProperty(ServiceContainer::class, 'cache'))
             ->setValue(null, $this->previousServiceCache);
-        if ($this->previousHttpStatus !== false) {
-            http_response_code($this->previousHttpStatus);
-        }
+        // PHP has no API to restore an unset response code; use neutral 200 in that case.
+        http_response_code($this->previousHttpStatus === false ? 200 : $this->previousHttpStatus);
     }
 
     /** @return array<string, array{array<string, mixed>, array<string, string>}> */
