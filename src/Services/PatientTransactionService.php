@@ -285,7 +285,13 @@ class PatientTransactionService extends BaseService
         switch ($transactionType) {
             case "LBTref":
                 $validator->required('referralDate')->datetime('Y-m-d');
-                $validator->required('body')->lengthBetween(2, 150);
+                $bodyRule = $validator->required('body');
+                $values = is_array($transaction) ? $transaction : [];
+                $body = $values['body'] ?? null;
+                if (is_array($body) || is_resource($body) || (is_object($body) && !($body instanceof \Stringable))) {
+                    $bodyRule->string();
+                }
+                $bodyRule->lengthBetween(2, 150);
                 $validator->required('groupname')->string();
                 $validator->required('referByNpi')->string();
                 break;
