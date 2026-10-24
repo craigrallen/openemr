@@ -243,6 +243,7 @@ final class SurgeryEncounterLinkTest extends TestCase
         $this->database = $db;
     }
 
+    /** @param array<array-key, mixed>|false $binds */
     private function execute(string $sql, array|false $binds): \ADORecordSet_mysqli
     {
         $values = $binds === false ? [] : array_values($binds);
@@ -281,7 +282,10 @@ final class SurgeryEncounterLinkTest extends TestCase
         return $result;
     }
 
-    /** @param list<string> $columns @param list<mixed> $values */
+    /**
+     * @param list<string> $columns
+     * @param list<mixed> $values
+     */
     private function insert(PDO $db, string $table, array $columns, array $values): void
     {
         $sql = 'INSERT INTO ' . $table . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', array_fill(0, count($values), '?')) . ')';
