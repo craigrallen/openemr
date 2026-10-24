@@ -319,7 +319,6 @@ final class DrugSalesMissingDrugTest extends TestCase
     {
         $transport = $this->getMockBuilder(\ADODB_mysqli_log::class)
             ->disableOriginalConstructor()->onlyMethods(['Execute', 'ExecuteNoLog'])->getMock();
-        /** @var \Closure(string, array<mixed>|false, bool): (\ADORecordSet_mysqli|false) $execute */
         $execute = function (string $sql, array|false $binds, bool $noLog) use (&$operations): \ADORecordSet_mysqli|false {
             $next = array_shift($operations);
             if (!$next instanceof \Closure) {
