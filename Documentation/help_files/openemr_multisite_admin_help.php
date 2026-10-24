@@ -30,8 +30,41 @@
             }
         }
     </style>
+    <style>
+@media screen {
+  body.oe-multisite-admin-help-screen {
+    background-color: #f3f7f5;
+    color: #17343b;
+  }
+
+  body.oe-multisite-admin-help-screen .oe-help-container {
+    background-color: #fff;
+    color: #17343b;
+  }
+
+  body.oe-multisite-admin-help-screen h2 {
+    background-color: #fff;
+    color: #17343b;
+  }
+
+  body.oe-multisite-admin-help-screen a:link,
+  body.oe-multisite-admin-help-screen a:visited {
+    background-color: #fff;
+    color: #086878;
+  }
+
+  body.oe-multisite-admin-help-screen a:hover {
+    background-color: #f3f7f5;
+    color: #17343b;
+  }
+
+  body.oe-multisite-admin-help-screen a:focus-visible {
+    outline-color: #086878;
+  }
+}
+    </style>
     </head>
-   <body>
+   <body class="oe-multisite-admin-help-screen">
         <div class="container oe-help-container">
             <div>
                 <h2 class="text-center"><a name='entire_doc'><?php echo ("OpenEMR Multi Site Administration");?></a></h2>
