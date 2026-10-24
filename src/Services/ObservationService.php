@@ -652,7 +652,16 @@ class ObservationService extends BaseService
 
         // End date validation
         if (!empty($observationData['date_end'])) {
-            $endDateTime = DateFormatterUtils::dateStringToDateTime($observationData['date']);
+            $endDateTime = DateFormatterUtils::dateStringToDateTime($observationData['date_end']);
+            if ($endDateTime === false && is_string($observationData['date_end'])) {
+                $storedEndDateTime = \DateTime::createFromFormat('!Y-m-d H:i:s', $observationData['date_end']);
+                if (
+                    $storedEndDateTime !== false
+                    && $storedEndDateTime->format('Y-m-d H:i:s') === $observationData['date_end']
+                ) {
+                    $endDateTime = $storedEndDateTime;
+                }
+            }
             if ($endDateTime === false) {
                 $errors[] = 'Invalid end date format';
             } elseif (!empty($dateTime)) {
