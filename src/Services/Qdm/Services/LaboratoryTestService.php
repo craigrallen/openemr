@@ -57,8 +57,12 @@ class LaboratoryTestService extends AbstractQdmService implements QdmServiceInte
             !empty($record['result'])
             && $record['result'] != 'Negative'
         ) {
+            $value = is_numeric($record['result']) ? 0 + $record['result'] : (int)$record['result'];
+            if (is_float($value) && (!is_finite($value) || $value < PHP_INT_MIN || $value >= (float) PHP_INT_MAX)) {
+                $value = (int)$record['result'];
+            }
             $result = new Quantity([
-                'value' => (int)$record['result'],
+                'value' => $value,
                 'unit' => $record['units']
             ]);
         }
