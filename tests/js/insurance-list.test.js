@@ -36,7 +36,7 @@ function embeddedStyle(fragment) {
 }
 
 function selectors(style) {
-    return [...style.matchAll(/^  (html\.oe-workbench-context [^{\n]+) \{$/gm)].map(match => match[1]);
+    return [...style.matchAll(/^ {2}(html\.oe-workbench-context [^{\n]+) \{$/gm)].map(match => match[1]);
 }
 
 beforeEach(() => {
