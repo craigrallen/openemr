@@ -20,7 +20,7 @@ const style = `    <style id="oe-edit-payment-palette">
 @media screen {
   html.oe-workbench-context body.oe-edit-payment {
     color: var(--oe-wb-ink, #17343b);
-    background-color: var(--oe-wb-paper, #fff);
+    background-color: var(--oe-wb-paper, #fff) !important;
   }
 
   html.oe-workbench-context body.oe-edit-payment fieldset {
@@ -93,11 +93,11 @@ test('synthetic candidate has exactly the allowed additions and a byte-exact inv
     assert.equal(count(candidate, 'oe-edit-payment-palette'), 1);
 });
 
-test('palette is screen-only, three scoped rules, exact declarations and five important overrides', () => {
+test('palette is screen-only, three scoped rules, exact declarations and six important overrides', () => {
     const css = style.slice(style.indexOf('@media screen'), style.indexOf('</style>')).trimEnd();
     assert.equal(count(css, '@media screen'), 1);
     assert.equal(count(css, 'html.oe-workbench-context body.oe-edit-payment'), 3);
-    assert.equal(count(css, '!important'), 5);
+    assert.equal(count(css, '!important'), 6);
     assert.equal(count(css, '\n\n  html.'), 2);
     assert.doesNotMatch(css, /font|padding|margin|width|height|display|position|table|input|button|\.alert|@media print/i);
     assert.equal(count(css, '  html.oe-workbench-context body.oe-edit-payment {'), 1);
@@ -132,8 +132,10 @@ test('extra CSS, context or importance, and displaced or duplicate style fail', 
     mutation('extra CSS', '    border-bottom-color: var(--oe-wb-line, #d9e4e2);',
         '    border-bottom-color: var(--oe-wb-line, #d9e4e2);\n    font-size: 1rem;');
     mutation('context', 'html.oe-workbench-context body.oe-edit-payment fieldset', 'body.oe-edit-payment fieldset');
-    mutation('important', '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b);\n    background-color: var(--oe-wb-paper, #fff);',
-        '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b);\n    background-color: var(--oe-wb-paper, #fff) !important;');
+    mutation('important body foreground', '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b);\n    background-color: var(--oe-wb-paper, #fff) !important;',
+        '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b) !important;\n    background-color: var(--oe-wb-paper, #fff) !important;');
+    mutation('body background importance', '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b);\n    background-color: var(--oe-wb-paper, #fff) !important;',
+        '  html.oe-workbench-context body.oe-edit-payment {\n    color: var(--oe-wb-ink, #17343b);\n    background-color: var(--oe-wb-paper, #fff);');
     mutation('duplicate style', headAfter, headAfter.replace('</head>', style + '</head>'));
     mutation('moved style', headAfter, headBefore.replace('</head>', '</head>\n' + style));
 });
@@ -161,6 +163,11 @@ test('the actual launcher, Header asset, popup context and competing cascade are
     const theme = read('interface/themes/theme-defaults.scss');
     assert.match(theme, /legend \{\s*background-color: \$gray-300 !important;\s*color: \$body-color !important;/);
     assert.match(theme, /fieldset \{\s*background-color: \$light !important;\s*color: \$body-color !important;/);
+    const colorBase = read('interface/themes/color_base.scss');
+    assert.match(colorBase, /\.body_top,\s*\.bgcolor2,\s*\.body_nav \{\s*background-color: \$paler !important;\s*\}/);
+    for (const themeName of ['cobalt_blue', 'forest_green']) {
+        assert.match(read(`interface/themes/colors/style_${themeName}.scss`), /@import "\.\.\/color_base";/);
+    }
     assert.match(original, /fieldset \{\s*border-color: #68171A !important;/);
 });
 
