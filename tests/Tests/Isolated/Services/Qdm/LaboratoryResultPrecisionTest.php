@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OpenEMR\Tests\Isolated\Services\Qdm;
 
 use ErrorException;
+use LogicException;
 use OpenEMR\Cqm\Qdm\BaseTypes\Code;
 use OpenEMR\Cqm\Qdm\BaseTypes\DateTime;
 use OpenEMR\Cqm\Qdm\BaseTypes\Interval;
@@ -62,6 +63,7 @@ final class LaboratoryResultPrecisionTest extends TestCase
                 return match ($type) {
                     'LOINC' => '2.16.840.1.113883.6.1',
                     'SNOMED-CT' => '2.16.840.1.113883.6.96',
+                    default => throw new LogicException('Unexpected code type: ' . $type),
                 };
             });
 
@@ -215,6 +217,7 @@ final class LaboratoryResultPrecisionTest extends TestCase
         ];
     }
 
+    /** @param list<string> $diagnostics */
     #[DataProvider('nonfiniteResults')]
     public function testNonfiniteResultsUseSerializableLegacyInteger(float|string $input, array $diagnostics): void
     {
@@ -355,9 +358,7 @@ final class LaboratoryResultPrecisionTest extends TestCase
         self::assertInstanceOf(DateTime::class, $model->resultDatetime);
         self::assertSame($row['date'], $model->resultDatetime->date);
         self::assertInstanceOf(Interval::class, $model->relevantPeriod);
-        self::assertInstanceOf(DateTime::class, $model->relevantPeriod->low);
         self::assertSame($row['date'], $model->relevantPeriod->low->date);
-        self::assertInstanceOf(DateTime::class, $model->relevantPeriod->high);
         self::assertSame($expectedHigh, $model->relevantPeriod->high->date);
         self::assertTrue($model->relevantPeriod->lowClosed);
         self::assertSame($highClosed, $model->relevantPeriod->highClosed);
