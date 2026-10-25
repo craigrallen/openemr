@@ -115,6 +115,25 @@ $res = sqlStatement($query);
 td {
     font-size: 0.8125rem;
 }
+@media screen {
+  html.oe-workbench-context table.oe-insurance-results {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context table.oe-insurance-results td {
+    border-color: var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context table.oe-insurance-results a {
+    color: var(--oe-wb-petrol, #086878);
+  }
+
+  html.oe-workbench-context table.oe-insurance-results a:focus-visible {
+    outline: 2px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 2px;
+  }
+}
 </style>
 
 <script>
@@ -154,7 +173,7 @@ td {
 <form method='post' name='theform'>
 <center>
 
-<table class="table table-sm border-0 w-100">
+<table class="table table-sm border-0 w-100 oe-insurance-results">
  <tr>
   <td class='font-weight-bold'><?php echo xlt('Name');?>&nbsp;</td>
   <td class='font-weight-bold'><?php echo xlt('Attn');?>&nbsp;</td>
