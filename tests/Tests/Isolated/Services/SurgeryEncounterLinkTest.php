@@ -145,7 +145,15 @@ final class SurgeryEncounterLinkTest extends TestCase
         $orRows = $this->rows($this->surgery()->search($search, false));
 
         self::assertSame([101], array_column($andRows, 'id'));
-        $orIds = array_values(array_unique(array_column($orRows, 'id')));
+        $orIds = [];
+        foreach ($orRows as $row) {
+            $id = $row['id'];
+            if (!is_int($id) && !is_string($id)) {
+                throw new \UnexpectedValueException('Surgery search returned a non-scalar ID');
+            }
+            $orIds[] = $id;
+        }
+        $orIds = array_values(array_unique($orIds));
         sort($orIds);
         self::assertSame([101, 102, 103, 104, 106], $orIds);
         $this->assertOnlyBoundReads([['Append%', 'Ada%'], ['Append%', 'Ada%']]);
@@ -171,7 +179,6 @@ final class SurgeryEncounterLinkTest extends TestCase
         // Both constructors initialize database/UUID state. Search itself
         // needs none of those fields; bypass only construction, not search.
         $service = (new ReflectionClass(SurgeryService::class))->newInstanceWithoutConstructor();
-        self::assertInstanceOf(SurgeryService::class, $service);
         return $service;
     }
 
@@ -180,6 +187,7 @@ final class SurgeryEncounterLinkTest extends TestCase
     {
         self::assertTrue($result->isValid());
         $rows = $result->getData();
+        self::assertIsArray($rows);
         $typedRows = [];
         foreach ($rows as $row) {
             self::assertIsArray($row);
@@ -266,7 +274,6 @@ final class SurgeryEncounterLinkTest extends TestCase
             if ($row === false) {
                 break;
             }
-            self::assertIsArray($row);
             $rows[] = $row;
         }
         $result = $this->getMockBuilder(\ADORecordSet_mysqli::class)
