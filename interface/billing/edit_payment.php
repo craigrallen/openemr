@@ -616,8 +616,28 @@ $ResultSearchSub = sqlStatement(
         }
     </style>
     <?php Header::setupHeader(['datetime-picker', 'common']); ?>
+    <style id="oe-edit-payment-palette">
+@media screen {
+  html.oe-workbench-context body.oe-edit-payment {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff) !important;
+  }
+
+  html.oe-workbench-context body.oe-edit-payment fieldset {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    border-color: var(--oe-wb-line, #d9e4e2) !important;
+  }
+
+  html.oe-workbench-context body.oe-edit-payment legend {
+    color: var(--oe-wb-ink, #17343b) !important;
+    background-color: var(--oe-wb-canvas, #f3f7f5) !important;
+    border-bottom-color: var(--oe-wb-line, #d9e4e2);
+  }
+}
+    </style>
 </head>
-<body class="body_top" onload="OnloadAction()">
+<body class="body_top oe-edit-payment" onload="OnloadAction()">
     <div class="container-fluid">
         <?php if ($saveError !== null) { ?>
             <div class="alert alert-danger m-2" role="alert" id="payment-save-error">
