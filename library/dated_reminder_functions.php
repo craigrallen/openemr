@@ -375,8 +375,9 @@ function sendReminder($sendTo, $fromID, $message, $dueDate, $patID, $priority): 
 // ------- Should run data checks before running this function for more accurate error reporting
 // ------- check sendTo is not empty
         !empty($sendTo) and
-// ------- check dueDate, only allow valid dates, todo -> enhance date checker
-        preg_match('/\d{4}[-]\d{2}[-]\d{2}/', (string) $dueDate) and
+// ------- check dueDate is an exact YYYY-MM-DD calendar date
+        preg_match('/\A([0-9]{4})-([0-9]{2})-([0-9]{2})\z/', (string) $dueDate, $dateParts) and
+        checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1]) and
 // ------- check priority, only allow 1-3
         intval($priority) <= 3 and
 // ------- check message, only up to 255 characters
