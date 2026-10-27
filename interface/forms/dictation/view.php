@@ -33,12 +33,144 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     <title><?php echo xlt("Dictation"); ?></title>
 
     <?php Header::setupHeader();?>
+    <style>
+/* Dictation writing sheet: active workbench only; print keeps the original form. */
+@media screen {
+  html.oe-workbench-context body.oe-dictation-editor {
+    background-color: #f3f7f5 !important;
+    color: #17343b;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-sheet {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    min-width: 0;
+    margin-block: 1.5rem;
+    margin-top: 1.5rem !important;
+    margin-inline: auto;
+    padding-block: 1.75rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #d9e4e2;
+    border-radius: 7px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgb(25 53 56 / 6%);
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-sheet h2 {
+    margin-block: 0 1.5rem;
+    padding-block-end: 0.75rem;
+    border-block-end: 1px solid #d9e4e2;
+    color: #17343b;
+    font-size: 1.7rem;
+    line-height: 1.2;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form fieldset {
+    min-width: 0;
+    margin-block: 0 1.5rem;
+    padding: 0;
+    border: 0;
+    background-color: transparent !important;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form legend {
+    width: 100%;
+    margin-block-end: 0.5rem;
+    padding: 0;
+    border: 0;
+    color: #17343b !important;
+    background-color: transparent !important;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form fieldset .container,
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form fieldset .col-sm-10 {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-inline: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form fieldset .form-group {
+    margin-block-end: 0;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form textarea.form-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 5rem;
+    padding-block: 0.65rem;
+    padding-inline: 0;
+    border: 0;
+    border-block-end: 1px solid #6f878d;
+    border-radius: 0;
+    color: #17343b;
+    background-color: #fff;
+    font-size: 1rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form textarea.form-control:focus {
+    border-block-end-color: #086878;
+    color: #17343b;
+    background-color: #fbfdfe;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form > .form-group:last-child {
+    margin-block: 1.5rem 0;
+    padding-block-start: 1rem;
+    border-block-start: 1px solid #d9e4e2;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form > .form-group:last-child .col-sm-12 {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-inline: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-inline: 0;
+    text-align: left !important;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form .btn-save {
+    color: #fff;
+    background-color: #086878;
+    border-color: #086878;
+  }
+
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form .btn-cancel {
+    color: #17343b !important;
+    background-color: #fff !important;
+    border-color: #6f878d !important;
+  }
+}
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-dictation-editor">
 <?php
 $obj = formFetch("form_dictation", $_GET["id"]);
 ?>
-<div class="container">
+<div class="container oe-dictation-sheet">
     <div class="row">
         <div class="col-12">
             <h2><?php echo xlt("Dictation"); ?></h2>
@@ -46,7 +178,7 @@ $obj = formFetch("form_dictation", $_GET["id"]);
     </div>
     <div class="row">
         <div class="col-12">
-            <form method=post action="<?php echo $rootdir?>/forms/dictation/save.php?mode=update&id=<?php echo attr_url($_GET["id"]);?>" name="my_form">
+            <form method=post action="<?php echo $rootdir?>/forms/dictation/save.php?mode=update&id=<?php echo attr_url($_GET["id"]);?>" name="my_form" class="oe-dictation-form">
                 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
                 <fieldset>
                     <legend class=""><?php echo xlt('Dictation')?></legend>

@@ -10,7 +10,7 @@ const { execFileSync } = require('node:child_process');
 const { test } = require('node:test');
 
 const root = path.resolve(__dirname, '../..');
-const HEAD = '09b29da7771aea334ed5745e058751157af980d7';
+const BASE = '09b29da7771aea334ed5745e058751157af980d7';
 const routes = {
     new: {
         source: 'interface/forms/dictation/new.php',
@@ -42,10 +42,11 @@ const CSS = `<style>
 
   html.oe-workbench-context body.oe-dictation-editor .oe-dictation-sheet {
     box-sizing: border-box;
-    width: min(100%, 860px);
+    width: 100%;
     max-width: 860px;
     min-width: 0;
     margin-block: 1.5rem;
+    margin-top: 1.5rem !important;
     margin-inline: auto;
     padding-block: 1.75rem;
     padding-inline: clamp(1rem, 4vw, 2.25rem);
@@ -89,7 +90,11 @@ const CSS = `<style>
     width: 100%;
     max-width: none;
     min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
     margin-inline: 0;
+    padding-left: 0;
+    padding-right: 0;
     padding-inline: 0;
   }
 
@@ -127,6 +132,19 @@ const CSS = `<style>
     border-block-start: 1px solid #d9e4e2;
   }
 
+  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form > .form-group:last-child .col-sm-12 {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    margin-inline: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-inline: 0;
+    text-align: left !important;
+  }
+
   html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form .btn-group {
     display: flex;
     flex-wrap: wrap;
@@ -143,14 +161,6 @@ const CSS = `<style>
     color: #17343b !important;
     background-color: #fff !important;
     border-color: #6f878d !important;
-  }
-}
-
-@media screen and (max-width: 640px) {
-  html.oe-workbench-context body.oe-dictation-editor .oe-dictation-sheet {
-    margin-block: 0;
-    padding-block: 1.1rem;
-    border-radius: 0;
   }
 }
 </style>`;
@@ -192,10 +202,35 @@ function inspect(source, original, route) {
     assert.equal((source.match(/<button\b/g) || []).length, 2);
 }
 
+function physicalFallbacks(source, selector, inheritedMarginLeft) {
+    const start = source.indexOf(`${selector} {`);
+    assert.ok(start >= 0, `missing ${selector}`);
+    const block = source.slice(start, source.indexOf('}', start));
+    const declarations = [...block.matchAll(/^\s*([\w-]+):\s*([^;]+);/gm)]
+        .map((match) => [match[1], match[2]]);
+    const physical = declarations.filter(([property]) => !property.includes('inline'));
+    const effective = { 'margin-left': inheritedMarginLeft, 'margin-right': '0.5rem',
+        'padding-left': '15px', 'padding-right': '15px' };
+    for (const [property, value] of physical) {
+        if (Object.hasOwn(effective, property)) effective[property] = value;
+    }
+    assert.deepEqual(effective, { 'margin-left': '0', 'margin-right': '0',
+        'padding-left': '0', 'padding-right': '0' },
+    `${selector} must clear inherited physical offsets when logical declarations are dropped`);
+    for (const [physicalProperty, logicalProperty] of [
+        ['margin-left', 'margin-inline'], ['margin-right', 'margin-inline'],
+        ['padding-left', 'padding-inline'], ['padding-right', 'padding-inline']
+    ]) {
+        assert.ok(declarations.findIndex(([property]) => property === physicalProperty)
+            < declarations.findIndex(([property]) => property === logicalProperty),
+        `${physicalProperty} must precede ${logicalProperty}`);
+    }
+}
+
 function authenticOriginal(route, history) {
     const original = read(route.fixture);
     assert.equal(hash(original), route.hash, 'frozen fixture hash');
-    if (history) assert.equal(original, git('show', `HEAD:${route.source}`), 'fixture must match checkout HEAD');
+    if (history) assert.equal(original, git('show', `${BASE}:${route.source}`), 'fixture must match pinned base');
     return original;
 }
 
@@ -227,12 +262,14 @@ test('registered Header popup controller supplies the active context marker', ()
     assert.match(popup, /classList\.contains\('workbench-active'\)/);
 });
 
-if (history) test('HEAD originals and complete working diff stay in seven-file scope', () => {
-    assert.equal(git('rev-parse', 'HEAD').trim(), HEAD);
+if (history) test('base originals and complete checkout diff stay in seven-file scope', () => {
+    git('merge-base', '--is-ancestor', BASE, 'HEAD');
     for (const route of Object.values(routes)) authenticOriginal(route, true);
-    const changed = git('status', '--porcelain=v1', '--untracked-files=all').trimEnd();
-    for (const line of changed ? changed.split('\n') : []) {
-        const file = line.slice(3);
+    const changed = [
+        ...git('diff', '--name-only', '--no-renames', BASE, '--').trimEnd().split('\n'),
+        ...git('ls-files', '--others', '--exclude-standard').trimEnd().split('\n')
+    ].filter(Boolean);
+    for (const file of changed) {
         checkScope([file]);
         if (fs.existsSync(path.join(root, file))) {
             assert.ok(!fs.lstatSync(path.join(root, file)).isSymbolicLink(), `symlink: ${file}`);
@@ -245,6 +282,17 @@ for (const [name, route] of Object.entries(routes)) {
         const original = authenticOriginal(route, history);
         const live = read(route.source);
         inspect(live, original, route);
+    });
+
+    test(`${name}: physical resets survive dropped logical properties`, () => {
+        const live = read(route.source);
+        assert.doesNotMatch(live, /@media screen and \(max-width: 640px\)/);
+        physicalFallbacks(live,
+            'html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form fieldset .col-sm-10',
+            '8.333333%');
+        physicalFallbacks(live,
+            'html.oe-workbench-context body.oe-dictation-editor .oe-dictation-form > .form-group:last-child .col-sm-12',
+            '8.333333%');
     });
 
     test(`${name}: inverse rejects PHP, form, value, CSS and extra layout mutations`, () => {
