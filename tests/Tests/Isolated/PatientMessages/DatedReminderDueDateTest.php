@@ -55,7 +55,6 @@ final class DatedReminderDueDateTest extends TestCase
             (new ReflectionFunction('sendReminder'))->getFileName(),
             'The test must call the native global sendReminder function'
         );
-
     }
 
     protected function tearDown(): void
@@ -126,6 +125,7 @@ final class DatedReminderDueDateTest extends TestCase
     }
 
     /**
+     * @param int|string|array<int|string> $sendTo
      * @param array<int|string> $expectedBinds
      */
     #[DataProvider('validDueDatesAndRecipients')]
