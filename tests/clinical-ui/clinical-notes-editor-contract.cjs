@@ -56,8 +56,8 @@ const CSS = `<style>
     margin: 0;
     padding: 0;
     border: 0;
-    background-color: #fff;
-    color: #182c36;
+    background-color: #fff !important;
+    color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row {
@@ -161,6 +161,11 @@ const CSS = `<style>
     line-height: 1.5;
   }
 
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-documents-container .text-muted,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-results-container .text-muted {
+    color: #536773 !important;
+  }
+
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .document-item.badge,
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .result-item.badge {
     display: inline-flex;
@@ -218,13 +223,13 @@ const CSS = `<style>
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel {
     border-color: #9baeb8;
     background-color: #e4ecef;
-    color: #182c36;
+    color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:hover {
     border-color: #7894a0;
     background-color: #d2e0e5;
-    color: #182c36;
+    color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-delete {
@@ -237,15 +242,6 @@ const CSS = `<style>
     border-color: #762e29;
     background-color: #762e29;
     color: #fff;
-  }
-
-  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group button:disabled,
-  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:disabled {
-    border-color: #aebdc3;
-    background-color: #e4e9eb;
-    color: #536773;
-    cursor: not-allowed;
-    opacity: 1;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus,
@@ -262,7 +258,7 @@ const CSS = `<style>
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus-visible {
     border-color: #7894a0;
     background-color: #e4ecef;
-    color: #182c36;
+    color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-delete:focus,
@@ -271,6 +267,15 @@ const CSS = `<style>
     border-color: #913c36;
     background-color: #913c36;
     color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group button:disabled,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:disabled {
+    border-color: #aebdc3 !important;
+    background-color: #e4e9eb !important;
+    color: #536773 !important;
+    cursor: not-allowed;
+    opacity: 1;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus,
@@ -355,6 +360,59 @@ function assertNarrativeFullWidth(css) {
     assert.doesNotMatch(css, /> \.col-lg-4 > \.row > \.col-12 \{[^}]*padding-(?:right|left): 0;/, 'metadata gutters remain');
 }
 
+function cssRules(css) {
+    return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+        selectors: match[1].split(',').map((member) => member.trim()),
+        body: match[2],
+        index: match.index
+    }));
+}
+
+function assertScopedSelectors(css) {
+    const prefix = 'html.oe-workbench-context body form.oe-clinical-notes-editor';
+    for (const rule of cssRules(css)) {
+        for (const member of rule.selectors) {
+            assert.ok(member.startsWith(`${prefix} `) || member === prefix, `scoped selector: ${member}`);
+        }
+    }
+}
+
+function assertCascadeGuards(css) {
+    const rules = cssRules(css);
+    const prefix = 'html.oe-workbench-context body form.oe-clinical-notes-editor';
+    const ruleFor = (selector, property) => {
+        const matches = rules.filter((rule) => rule.selectors.includes(`${prefix} ${selector}`) &&
+            (!property || rule.body.split('\n').some((line) => line.trim().startsWith(`${property}:`))));
+        assert.equal(matches.length, 1, `unique cascade rule: ${selector}`);
+        return matches[0];
+    };
+    const important = (rule, property, value) => {
+        assert.ok(rule.body.split('\n').some((line) => line.trim() === `${property}: ${value} !important;`),
+            `${rule.selectors.join(', ')}: ${property} must win theme cascade`);
+    };
+    const fieldset = ruleFor('.tb_row > fieldset');
+    important(fieldset, 'background-color', '#fff');
+    important(fieldset, 'color', '#182c36');
+    for (const selector of ['.btn-cancel', '.btn-cancel:hover', '.btn-cancel:focus', '.btn-cancel:focus-visible']) {
+        important(ruleFor(selector, 'color'), 'color', '#182c36');
+    }
+    for (const container of ['.linked-documents-container', '.linked-results-container']) {
+        important(ruleFor(`.tb_row > fieldset > .form-row ${container} .text-muted`), 'color', '#536773');
+    }
+    const lastFocusPalette = Math.max(...rules.filter((rule) => rule.selectors.some((selector) =>
+        selector.includes(':focus') && rule.body.includes('background-color:'))).map((rule) => rule.index));
+    for (const selector of [
+        '> .container-fluid > .form-group button:disabled',
+        '.tb_row > fieldset > .form-row button:disabled'
+    ]) {
+        const disabled = ruleFor(selector);
+        assert.ok(disabled.index > lastFocusPalette, `${selector}: disabled palette follows focus palettes`);
+        important(disabled, 'border-color', '#aebdc3');
+        important(disabled, 'background-color', '#e4e9eb');
+        important(disabled, 'color', '#536773');
+    }
+}
+
 const unchanged = [
     'interface/forms/clinical_notes/templates/partials/new/_clinical-notes-row.html.twig',
     'interface/forms/clinical_notes/templates/partials/new/_clinical-notes-row-actions.html.twig',
@@ -419,10 +477,7 @@ test('CSS supplies workbench paper, full narrative, metadata and narrowly scoped
     assert.match(CSS, /@media screen and \(width <= 640px\)/);
     assert.doesNotMatch(CSS, /@media print|<script|display: none;[^}]*button/);
     assert.doesNotMatch(CSS, /document-search-dialog|results-search-dialog|document-item-template|result-item-template/);
-    for (const selector of CSS.match(/^[^\n{}]+\{/gm) || []) {
-        if (selector.startsWith('@')) continue;
-        assert.ok(selector.includes('html.oe-workbench-context body form.oe-clinical-notes-editor'), `scoped selector: ${selector}`);
-    }
+    assertScopedSelectors(CSS);
 });
 
 test('paired action palettes include hover, focus and disabled states', () => {
@@ -437,11 +492,11 @@ test('paired action palettes include hover, focus and disabled states', () => {
         const opening = CSS.indexOf('{', at);
         const rule = CSS.slice(opening, CSS.indexOf('}', opening));
         assert.ok(rule.includes(`background-color: ${background};`), `${selector} background`);
-        assert.ok(rule.includes(`color: ${ink};`), `${selector} ink`);
+        assert.ok(rule.includes(`color: ${ink}${selector === '.btn-cancel' ? ' !important' : ''};`), `${selector} ink`);
         assert.ok(CSS.includes(`${selector}:hover`), `${selector} hover`);
     }
     assert.match(CSS, /button:focus-visible[\s\S]*?outline: 3px solid #a84c22;/);
-    assert.match(CSS, /button:disabled \{[\s\S]*?background-color: #e4e9eb;[\s\S]*?color: #536773;/);
+    assertCascadeGuards(CSS);
 });
 
 test('synthetic proposal passes the byte-exact inverse', () => {
@@ -477,6 +532,34 @@ test('specific semantic, geometry, palette and scope mutants are rejected', () =
         const mutant = CSS.slice(0, opening) + CSS.slice(opening, closing).replace(gutter, '') + CSS.slice(closing);
         assert.throws(() => assertNarrativeFullWidth(mutant), `reject missing narrative ${gutter}`);
     }
+    const cascadeMutants = [
+        ['.tb_row > fieldset {', 'background-color: #fff !important;', 'background-color: #fff;'],
+        ['.tb_row > fieldset {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel:hover {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel:focus-visible {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.linked-documents-container .text-muted,', 'color: #536773 !important;', 'color: #536773;'],
+        ['.linked-results-container .text-muted {', 'color: #536773 !important;', 'color: #536773;'],
+        ['.form-row button:disabled {', 'background-color: #e4e9eb !important;', 'background-color: #e4e9eb;'],
+        ['.form-row button:disabled {', 'color: #536773 !important;', 'color: #536773;']
+    ];
+    for (const [anchor, before, after] of cascadeMutants) {
+        const at = CSS.indexOf(anchor);
+        assert.ok(at >= 0, `cascade mutant anchor: ${anchor}`);
+        const opening = CSS.indexOf('{', at);
+        const closing = CSS.indexOf('}', opening);
+        const mutant = CSS.slice(0, opening) + CSS.slice(opening, closing).replace(before, after) + CSS.slice(closing);
+        assert.notEqual(mutant, CSS, `cascade mutant changed rule: ${anchor}`);
+        assert.throws(() => assertCascadeGuards(mutant), `reject cascade mutant: ${anchor}`);
+    }
+    for (const container of ['.linked-documents-container', '.linked-results-container']) {
+        const selector = `.tb_row > fieldset > .form-row ${container} .text-muted`;
+        const mutant = replaceOnce(CSS, selector, `.tb_row > fieldset > .form-row ${container}`, 'empty-link selector mutant').toString();
+        assert.throws(() => assertCascadeGuards(mutant), `reject missing ${container} text-muted selector`);
+    }
+    const firstMember = '  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .forms.col-lg-4,';
+    const unscoped = replaceOnce(CSS, firstMember, '  body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .forms.col-lg-4,', 'first selector member').toString();
+    assert.throws(() => assertScopedSelectors(unscoped), 'reject unscoped first selector-list member');
     assert.throws(() => verifySource(baseline, baseline), 'unedited source remains red');
 });
 
