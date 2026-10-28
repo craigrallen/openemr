@@ -20,7 +20,9 @@ Only paths 1 and 5 were edited in the IMPLEMENT phase.
 
 Controller evidence directory: `/Users/craig/.hermes/projects/openemr/verification/clinical-notes-editor-20261028`.
 
-At frozen head `a558e23a`, before the production addition, the genuine red portable contract reported 7 tests, 6 pass, 1 fail; the history variant reported 8 tests, 7 pass, 1 fail. Both failures were the expected missing production addition. The proposed CSS stylelint result was nonignored and reported zero warnings. These are pre-implementation results, not a claim that the edited template has passed controller verification.
+At frozen head `f81aa4c4`, before the production addition, the genuine red portable contract reported 7 tests, 6 pass, 1 fail; the history variant reported 8 tests, 7 pass, 1 fail. Both failures were the expected missing production addition. The proposed CSS stylelint result was nonignored and reported zero warnings. The earlier production CSS addition was then found to be outdated against the updated contract export.
+
+The expanded Solar browser cascade evidence in `browser-cascade-red.json` was captured against that earlier CSS. It recorded genuine red label, input, empty-link, and Solar Cancel states. The updated contract CSS addresses the dark label chain through the fieldset background and text color, with narrowly scoped corrections for muted linked text, Cancel, and disabled buttons. This IMPLEMENT correction copies that CSS export exactly into the existing Twig style block. These are tests-first and pre-correction browser findings, not a claim that the corrected template has passed browser or controller verification.
 
 The controller's contract commands are:
 
@@ -29,7 +31,7 @@ node --test-reporter=tap tests/clinical-ui/clinical-notes-editor-contract.cjs
 node --test-reporter=tap tests/clinical-ui/clinical-notes-editor-contract.cjs --history
 ```
 
-Controller verification after this edit is pending. The browser harness uses native Twig base, main, and partial templates with synthetic data and synthetic Twig helpers. It does not establish an authenticated workflow. The original two reference views provide support for this limited presentation change; full fidelity for both views and coverage of all 22 reference states have not been established.
+Controller verification after this correction is pending. The browser harness uses native Twig base, main, and partial templates with synthetic data and synthetic Twig helpers. It does not establish an authenticated workflow. This work partially supports requirement 2, the document-style note editor; complete requirement 2, all 22 requested features, full researched-design fidelity, and clinical acceptance remain unverified.
 
 No claim is made here that authenticated Save, document or result linking, search, cloning, security, persistence, clinical behavior, full accessibility, reference acceptance, or hosted gates passed.
 
