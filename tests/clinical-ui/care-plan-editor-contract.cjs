@@ -151,7 +151,11 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-care-plan-editor .btn-cancel {
     background-color: #dce5e9;
     border-color: #9baeb8;
-    color: #182c36;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:hover {
+    background: #dce5e9 !important;
   }
 
   html.oe-workbench-context body.oe-care-plan-editor .btn-save:focus,
@@ -163,7 +167,10 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:focus,
   html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:focus-visible {
     background-color: #dce5e9;
-    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:active {
+    background-color: #dce5e9;
   }
 
   html.oe-workbench-context body.oe-care-plan-editor .tb_row textarea.description:focus,
@@ -245,6 +252,35 @@ function assertReasonPalette(css) {
     }
 }
 
+function cancelRule(css, states) {
+    const opening = states.map((state) =>
+        `  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel${state}`).join(',\n') + ' {';
+    once(css, opening, `Cancel ${states.join('/')}`);
+    const start = css.indexOf(opening);
+    const end = css.indexOf('}', start + opening.length);
+    assert.notEqual(end, -1, `Cancel ${states.join('/')}: closing brace`);
+    return css.slice(start + opening.length, end).trim().split('\n').map((line) => line.trim());
+}
+
+function assertCancelPalette(css) {
+    for (const [states, declarations] of [
+        [[''], ['background-color: #dce5e9;', 'border-color: #9baeb8;', 'color: #182c36 !important;']],
+        [[':hover'], ['background: #dce5e9 !important;']],
+        [[':focus', ':focus-visible'], ['background-color: #dce5e9;']],
+        [[':active'], ['background-color: #dce5e9;']]
+    ]) assert.deepEqual(cancelRule(css, states), declarations, `Cancel ${states.join('/')}: exact palette`);
+    assert.doesNotMatch(css, /\.btn-cancel:(?:disabled|invalid)/, 'disabled and validation states stay untouched');
+
+    const important = [...css.matchAll(/\b([a-z-]+): ([^;\n]+) !important;/g)]
+        .map((match) => `${match[1]}: ${match[2]}`).sort();
+    assert.equal(important.length, (css.match(/!important/g) || []).length, 'all important declarations parsed');
+    assert.deepEqual(important, [
+        'background: #dce5e9',
+        'background-color: #fff', 'background-color: #fff',
+        'color: #182c36', 'color: #182c36', 'color: #182c36'
+    ].sort(), 'exact important declaration allowlist');
+}
+
 const unchanged = [
     'interface/forms/care_plan/templates/partials/_care_plan_row.html.twig',
     'interface/forms/care_plan/templates/partials/_reason_row.html.twig',
@@ -322,7 +358,7 @@ test('CSS covers paper geometry, row widths, palette, focus and responsive actio
         assert.match(rule[1], /background-color: #fff !important;/);
         assert.match(rule[1], /color: #182c36 !important;/);
     }
-    for (const [button, background, ink] of [['save', '#175b7c', '#fff'], ['cancel', '#dce5e9', '#182c36']]) {
+    for (const [button, background, ink] of [['save', '#175b7c', '#fff']]) {
         assert.match(CSS, new RegExp(`\\.btn-${button} \\{[^}]*background-color: ${background};[^}]*color: ${ink};`));
         assert.match(CSS, new RegExp(`\\.btn-${button}:focus,\\n[^}]*\\.btn-${button}:focus-visible \\{[^}]*background-color: ${background};[^}]*color: ${ink};`));
     }
@@ -352,6 +388,27 @@ test('reason card and header each keep a readable paired palette', () => {
             assert.notEqual(mutant, CSS, `${selector}: mutant changes ${declaration}`);
             assert.throws(() => assertReasonPalette(mutant), `${selector}: reject ${declaration}`);
         }
+    }
+});
+
+test('Cancel keeps its scoped Solar-readable palette in every interactive state', () => {
+    assertCancelPalette(CSS);
+    const base = '  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel {';
+    const mutants = [
+        ['color: #182c36 !important;', 'color: #182c36;'],
+        ['color: #182c36 !important;', 'color: #dce5e9 !important;'],
+        ['background-color: #dce5e9;\n    border-color: #9baeb8;', 'background-color: #182c36;\n    border-color: #9baeb8;'],
+        ['background: #dce5e9 !important;', 'background: #dce5e9;'],
+        ['background: #dce5e9 !important;', 'background: #182c36 !important;'],
+        ['.btn-cancel:hover {', '.btn-cancel:disabled {'],
+        ['.btn-cancel:focus-visible {', '.btn-cancel:invalid {'],
+        ['.btn-cancel:active {', '.btn-cancel:disabled {'],
+        [base, '  html body.oe-care-plan-editor .btn-cancel {'],
+        ['border-color: #9baeb8;', 'border-color: #9baeb8 !important;']
+    ];
+    for (const [before, after] of mutants) {
+        const damaged = replaceOnce(CSS, before, after, 'Cancel negative mutant').toString();
+        assert.throws(() => assertCancelPalette(damaged), `reject Cancel mutant: ${before}`);
     }
 });
 
