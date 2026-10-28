@@ -1,6 +1,6 @@
 # Care Plan encounter editor: workbench presentation
 
-Issue: OPEMR-147. Owner: Hermes. SCHEDULED run 1 of maximum 2 after rotation from OPEMR-146/OPEMR-217; internal handoffs do not consume runs. This is an authoring state, with controller verification and acceptance pending.
+Issue: OPEMR-147. Owner: Hermes. SCHEDULED run 1 of maximum 2 after rotation from OPEMR-146/PR217; internal phases and handoffs do not consume scheduled runs. This is an authoring state, with controller verification and acceptance pending.
 
 ## Scope and change
 
@@ -12,7 +12,7 @@ The complete five-path boundary for this slice is:
 4. `tests/js/care-plan-editor.test.js`
 5. `docs/clinical-ui/CARE-PLAN-EDITOR.md`
 
-This production phase changes only the template and this document. The fixture, contract, and Jest adapter remain frozen. The template adds the contract's exact `<style>` block immediately before `</head>` and changes only `<body>` to `<body class="oe-care-plan-editor">`. The CSS applies to screens when `html.oe-workbench-context` is present: a bounded paper sheet, full-width row geometry, larger description area, paired action colors, focus outlines, and wrapping actions. The existing `setupHeader()` path loads the workbench popup asset; its context class follows the active workbench host. Outside that context, and in print, the added rules do not apply. There is no added script or new clinical editor workflow.
+This production phase changes only the template and this document. The fixture, contract, and Jest adapter remain frozen. The template adds the contract's exact `<style>` block immediately before `</head>` and changes only `<body>` to `<body class="oe-care-plan-editor">`. The CSS applies to screens when `html.oe-workbench-context` is present: a bounded paper sheet, full-width row geometry, larger description area, paired action colors, focus outlines, wrapping actions, and paired background and text colors for the reason card and its header. The existing `setupHeader()` path loads the workbench popup asset; its context class follows the active workbench host. Outside that context, and in print, the added rules do not apply. There is no added script or new clinical editor workflow.
 
 The original template has a complete byte inverse under the contract's two additions. Its Twig expressions, actions, scripts, IDs, CSRF input, row loop and includes, Save/Cancel handlers, and hidden `#clickId` input are preserved. The pristine row stays in `<template id="care-plan-row-template">` outside the form, where its inputs remain inert until the existing `careplan.js` clones a row.
 
@@ -22,24 +22,26 @@ The original template has a complete byte inverse under the contract's two addit
 
 ## Reference and evidence
 
-The visual reference is `/Users/craig/artifacts/OpenEMR-Research/researched/index.html#encounter`. It supports the original two-pane encounter direction; it is not evidence of fidelity to all 22 researched work areas or of a complete clinical editor. The change adapts the Care Plan form to the current workbench context without claiming full reference fidelity.
+The visual reference is `/Users/craig/artifacts/OpenEMR-Research/researched/index.html#encounter`. It supports original requirement 2's two-pane encounter direction; the original 22 items are feature requirements, not researched work areas. The reference does not establish full fidelity or a complete clinical editor. The change adapts the Care Plan form to the current workbench context without claiming full reference fidelity.
 
-The controller verified tests-only commit `c6f24b5a` against the unchanged production template. Direct portable command:
+The initial production CSS reached controller GREEN: 7/7 portable and 8/8 history checks passed. Offline native Twig rendering passed 40 cases and 120 comparisons for the checked geometry, legacy context, and print behavior; that pass missed the reason card's dark-theme contrast defect. An initial broader run timed out at 26/77; the retained full run passed. These results do not establish authenticated native behavior or full contrast and accessibility acceptance.
+
+An independent reviewer then reported P2 for the reason card. Browser evidence at dark 320 px in both LTR and RTL showed dark text on a black reason card (1.452:1) and failing reason labels (`browser-reason-red.json`). The synthetic proposal and mutation guards passed, and the proposed reason CSS had zero stylelint warnings. The controller verified the tests-only reason correction against the unchanged production template. Direct portable command:
 
 ```sh
 node --test-reporter=tap tests/clinical-ui/care-plan-editor-contract.cjs
 ```
 
-RED: 7 tests, 6 passed, 1 failed, because the actual template lacked the proposed additions. The synthetic proposal and mutation guards passed. Direct history command:
+RED: 8 tests, 7 passed, 1 failed because the actual template lacked the updated reason CSS block. Direct history command:
 
 ```sh
 node --test-reporter=tap tests/clinical-ui/care-plan-editor-contract.cjs --history
 ```
 
-RED: 8 tests, 7 passed, 1 failed for the same actual-template condition. The controller also reported zero stylelint warnings for the proposed CSS. These are pre-edit controller results, not a claimed post-edit GREEN result. The controller owns subsequent tests, independent review, and hosted CI.
+RED: 9 tests, 8 passed, 1 failed for the same actual-template condition. These are pre-edit controller results, not a claimed post-edit GREEN result. The controller owns reason-fix verification, final independent review, and hosted CI; all are pending.
 
-Planned verification uses offline native Twig rendering with synthetic helper boundaries, geometry, legacy-context, and print checks. At authoring, that verification, independent review, and hosted CI are pending. No authenticated native application execution, clinical acceptance, merge, or deployment is claimed.
+No authenticated native application execution, clinical acceptance, merge, or deployment is claimed.
 
 ## Open work and limits
 
-Ordinary approval; Save/Update behavior and persistence; roles, permission and security behavior under real sessions; row cloning and reason widgets; native accessibility, full contrast, translations, RTL, older browsers and operating systems, and print behavior remain OPEN. This is not a new full clinical editor. No master branch, production database, patient data, integrations, vendor assets, policy, or cron actions are part of this slice.
+Ordinary approval; native Save/Update behavior and persistence; roles, permission and security behavior under real sessions; row cloning and reason widgets; native accessibility, full contrast, translations, RTL, older browsers and operating systems, and full reference fidelity remain OPEN. Offline print checks passed, but native print acceptance remains open. This is not a new full clinical editor. No master branch, production database, patient data, integrations, vendor assets, policy, or cron actions are part of this slice.
