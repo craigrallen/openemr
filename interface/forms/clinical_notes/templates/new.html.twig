@@ -157,6 +157,11 @@ The Edit/Create template of the clinical note form.
     display: none;
   }
 
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 .form-control {
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row textarea.description {
     box-sizing: border-box;
     width: 100%;
@@ -239,13 +244,19 @@ The Edit/Create template of the clinical note form.
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel {
     border-color: #9baeb8;
-    background-color: #e4ecef;
+    background-color: #e4ecef !important;
     color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:hover {
     border-color: #7894a0;
-    background-color: #d2e0e5;
+    background-color: #d2e0e5 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:active {
+    border-color: #7894a0;
+    background-color: #d2e0e5 !important;
     color: #182c36 !important;
   }
 
@@ -274,7 +285,7 @@ The Edit/Create template of the clinical note form.
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus,
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus-visible {
     border-color: #7894a0;
-    background-color: #e4ecef;
+    background-color: #e4ecef !important;
     color: #182c36 !important;
   }
 
