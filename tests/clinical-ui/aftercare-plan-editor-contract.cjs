@@ -339,18 +339,21 @@ function verifySource(bytes, baseline) {
 }
 function checkScope(files) {
     const allowed = new Set([sourcePath, fixturePath,
-        'tests/clinical-ui/aftercare-plan-editor-contract.cjs', 'tests/js/aftercare-plan-editor.test.js']);
+        'tests/clinical-ui/aftercare-plan-editor-contract.cjs', 'tests/js/aftercare-plan-editor.test.js',
+        'docs/clinical-ui/AFTERCARE-PLAN-EDITOR.md']);
     for (const file of files) assert.ok(allowed.has(file), `out-of-scope changed path: ${file}`);
 }
 const args = process.argv.slice(2);
 assert.ok(args.every((arg) => arg === '--history'), 'unknown option');
 assert.ok(args.length <= 1, 'duplicate --history');
 
-test('four-path boundary rejects save, view, docs and unrelated changes', () => {
+test('five-path boundary accepts intended changes and rejects unrelated changes', () => {
+    checkScope([sourcePath, fixturePath, 'tests/clinical-ui/aftercare-plan-editor-contract.cjs',
+        'tests/js/aftercare-plan-editor.test.js', 'docs/clinical-ui/AFTERCARE-PLAN-EDITOR.md']);
     assert.throws(() => checkScope([sourcePath, savePath]), /out-of-scope/);
     assert.throws(() => checkScope([viewPath]), /out-of-scope/);
     assert.throws(() => checkScope(['docs/clinical-ui/PLAN.md']), /out-of-scope/);
-    assert.throws(() => checkScope(['docs/clinical-ui/AFTERCARE-PLAN-EDITOR.md']), /out-of-scope/);
+    assert.throws(() => checkScope(['docs/clinical-ui/unrelated.md']), /out-of-scope/);
 });
 test('header emits the context and legacy roots need browser repair', () => {
     const header = read('src/Core/Header.php').toString();
