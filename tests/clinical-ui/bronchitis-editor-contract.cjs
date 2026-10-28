@@ -52,41 +52,46 @@ const CSS = `<style>
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] table {
+    display: block;
+    box-sizing: border-box;
     width: 100%;
     max-width: 100%;
     margin: 0.5rem 0;
+    padding: 5px;
+    overflow-x: auto;
     border-collapse: collapse;
     font-size: 1rem;
   }
 
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tbody {
+    display: table;
+    min-width: 100%;
+  }
+
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tr {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.35rem;
-    padding: 0.3rem 0;
+    display: table-row;
     border-bottom: 1px solid #e5ecee;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] th {
-    display: block;
+    display: table-cell;
     padding: 0.5rem 0;
     color: #183b49;
-    text-align: left;
+    text-align: start;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td {
+    display: table-cell;
     box-sizing: border-box;
-    width: auto;
     max-width: 100%;
     padding: 0.2rem 0;
-    text-align: left;
+    text-align: start;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td[align='right'] {
-    text-align: left;
+    text-align: start;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='text'],
@@ -225,6 +230,28 @@ function rule(css, selector, declarations) {
   for (const declaration of declarations) assert.ok(matches.some((item) => item.declarations.includes(declaration)), `${selector}: ${declaration}`);
 }
 
+function nativeTableGeometry(css) {
+  const form = "form[name='my_form']";
+  rule(css, `${form} table`, ['display: block;', 'box-sizing: border-box;', 'width: 100%;', 'max-width: 100%;', 'padding: 5px;', 'overflow-x: auto;']);
+  rule(css, `${form} tbody`, ['display: table;', 'min-width: 100%;']);
+  rule(css, `${form} tr`, ['display: table-row;']);
+  rule(css, `${form} th`, ['display: table-cell;', 'text-align: start;']);
+  rule(css, `${form} td`, ['display: table-cell;', 'max-width: 100%;', 'text-align: start;']);
+  rule(css, `${form} td[align='right']`, ['text-align: start;']);
+  const table = `${prefix} ${form} table`;
+  const scoped = rules(css);
+  const horizontal = scoped.flatMap((item) => [...item.declarations.matchAll(/\boverflow-x\s*:\s*([^;]+);/g)].map((match) => ({ selectors: item.selectors, value: match[1].trim() })));
+  assert.deepEqual(horizontal, [{ selectors: [table], value: 'auto' }], 'horizontal scrolling belongs only to the existing table region');
+  assert.doesNotMatch(css, /\boverflow\s*:/, 'shorthand overflow could clip the form or page');
+  assert.doesNotMatch(css, /\boverflow(?:-x|-y)?\s*:\s*(?:hidden|clip)\b/);
+  for (const selector of ['tr', 'th', 'td']) {
+    const declarations = scoped.filter((item) => item.selectors.includes(`${prefix} ${form} ${selector}`)).map((item) => item.declarations).join('\n');
+    assert.doesNotMatch(declarations, /\bdisplay\s*:\s*(?:flex|block|grid|inline-flex)\s*;/, `${selector} must keep native table display`);
+    assert.doesNotMatch(declarations, /\b(?:flex-wrap|(?:row-|column-)?gap|align-items)\s*:/, `${selector} must keep native table grouping`);
+    assert.doesNotMatch(declarations, /\bwidth\s*:\s*auto\s*;/, `${selector} must preserve source widths`);
+  }
+}
+
 const allowed = new Set([
   ...files.flatMap((file) => [file.source, file.fixture]),
   'tests/clinical-ui/bronchitis-editor-contract.cjs',
@@ -246,6 +273,8 @@ if (args.includes('--export-css')) {
       for (const token of ['name="my_form"', 'name="csrf_token_form"', 'bronchitis_date_of_illness', 'bronchitis_hpi', 'bronchitis_diagnostic_tests', 'bronchitis_additional_diagnosis', 'bronchitis_treatment', 'link_submit', "Don\\'t Save", 'formFooter();']) assert.ok(source.includes(token), `${file.source}: ${token}`);
       assert.equal((source.match(/class="link_submit"/g) || []).length, 2);
       assert.equal((source.match(/onclick="top.restoreSession\(\)"/g) || []).length, 2);
+      assert.match(source, /<th colspan="5">/, `${file.source}: grouped table header`);
+      assert.match(source, /<td width="\d+" align="right">/, `${file.source}: source cell width and label`);
     }
     assert.match(original(files[0]).toString(), /onset_check\(my_form\)/);
     assert.match(original(files[1]).toString(), /formFetch\("form_bronchitis"/);
@@ -253,28 +282,55 @@ if (args.includes('--export-css')) {
 
   test('the style is screen-only, scoped, and contains no hidden controls or broad transitions', () => {
     assert.match(CSS, /^<style>\n@media screen \{/);
-    assert.doesNotMatch(CSS, /@media print|display:\s*none|overflow-x:\s*(?:hidden|auto)|transition:/);
+    assert.doesNotMatch(CSS, /@media print|display:\s*none|transition:/);
     for (const item of rules(CSS)) for (const selector of item.selectors) assert.ok(selector === prefix || selector.startsWith(`${prefix} `), `unscoped: ${selector}`);
     assert.equal((CSS.match(/<style>/g) || []).length, 1);
     assert.equal((CSS.match(/<\/style>/g) || []).length, 1);
   });
 
-  test('paper, flexible rows, and narrative writing geometry are substantive', () => {
+  test('paper, native clinical columns, and narrative writing geometry are substantive', () => {
     rule(CSS, '', ['background-color: #e8eff0 !important;', 'color: #182c36 !important;']);
     rule(CSS, "form[name='my_form']", ['box-sizing: border-box;', 'width: 100%;', 'max-width: 860px;', 'margin: 0 auto;', 'background-color: #fff;', 'color: #182c36;', 'font-size: 1.25rem;']);
-    rule(CSS, "form[name='my_form'] tr", ['display: flex;', 'flex-wrap: wrap;']);
-    rule(CSS, "form[name='my_form'] td", ['width: auto;', 'max-width: 100%;', 'overflow-wrap: anywhere;']);
+    nativeTableGeometry(CSS);
+    rule(CSS, "form[name='my_form'] td", ['overflow-wrap: anywhere;']);
     rule(CSS, "form[name='my_form'] textarea", ['width: 100%;', 'min-height: 12rem;', 'line-height: 1.7;', 'resize: vertical;']);
     rule(CSS, "form[name='my_form'] .title", ['display: block;', 'font-size: 1.6rem;']);
   });
 
-  test('fluid padding and row spacing avoid range queries and relational selectors', () => {
+  test('fluid padding avoids range queries and relational selectors', () => {
     rule(CSS, '', ['padding: clamp(0.75rem, 3vw, 1.5rem);']);
     rule(CSS, "form[name='my_form']", ['padding: clamp(1rem, 3vw, 2rem);']);
-    rule(CSS, "form[name='my_form'] tr", ['gap: 0.4rem 0.35rem;']);
     assert.doesNotMatch(CSS, /@media[^{}]*\([^)]*(?:<=|>=|<|>)[^)]*\)/);
     assert.doesNotMatch(CSS, /:has\s*\(/);
     assert.doesNotMatch(CSS, /(?:column-gap|row-gap)\s*:/);
+  });
+
+  test('native rows, cells, and bounded table scrolling reject layout regressions', () => {
+    for (const [before, after] of [
+      ['display: table-row;', 'display: flex;\n    flex-wrap: wrap;'],
+      ['display: table-row;', 'display: block;'],
+      ["form[name='my_form'] th {\n    display: table-cell;", "form[name='my_form'] th {\n    display: block;"],
+      ["form[name='my_form'] td {\n    display: table-cell;", "form[name='my_form'] td {\n    display: flex;"],
+      ['min-width: 100%;', 'min-width: auto;'],
+      ['padding: 5px;', 'padding: 2px;'],
+      ['overflow-x: auto;', 'overflow-x: hidden;'],
+      ["form[name='my_form'] tr {\n    display: table-row;", "form[name='my_form'] tr {\n    display: table-row;\n    gap: 0.4rem;"],
+      ["form[name='my_form'] td {\n    display: table-cell;", "form[name='my_form'] td {\n    display: table-cell;\n    width: auto;"],
+      [`${prefix} {\n    margin: 0;`, `${prefix} {\n    overflow: hidden;\n    margin: 0;`]
+    ]) {
+      const mutant = replaceOnce(CSS, before, after).toString();
+      assert.notEqual(mutant, CSS, `mutation changed bytes: ${before}`);
+      assert.throws(() => nativeTableGeometry(mutant), `rejected: ${before}`);
+    }
+    const startCount = CSS.split('text-align: start;').length - 1;
+    assert.equal(startCount, 3);
+    const physicalAlignment = CSS.replaceAll('text-align: start;', 'text-align: left;');
+    assert.notEqual(physicalAlignment, CSS);
+    assert.throws(() => nativeTableGeometry(physicalAlignment), 'physical alignment rejected');
+    const formSelector = `${prefix} form[name='my_form'] {`;
+    const unbounded = CSS.replace(formSelector, `${formSelector}\n    overflow-x: auto;`);
+    assert.notEqual(unbounded, CSS);
+    assert.throws(() => nativeTableGeometry(unbounded), 'scrolling outside the table is rejected');
   });
 
   test('native actions and controls retain paired readable colors and visible focus', () => {
@@ -303,14 +359,27 @@ if (args.includes('--export-css')) {
       ['name="csrf_token_form"', 'name="other_token"'],
       ['onset_check(my_form)', 'onset_check(other_form)'],
       ['@media screen {', '@media print {'],
-      ['html.oe-workbench-context', 'html.other-context'],
+      ['html.oe-workbench-context body.oe-bronchitis-editor form[name=\'my_form\'] table {', 'html.other-context body.oe-bronchitis-editor form[name=\'my_form\'] table {'],
       ['max-width: 860px;', 'max-width: 1200px;'],
       ['min-height: 12rem;', 'min-height: 2rem;'],
       ['line-height: 1.7;', 'line-height: 1;'],
       ['background-color: #eef3f4 !important;', 'background-color: #fff !important;'],
-      ['outline: 3px solid #a84c22;', 'outline: 0;'],
       ['body_top oe-bronchitis-editor', 'body_top other-editor']
-    ]) assert.throws(() => verifySource(replaceOnce(candidate, before, after), baseline), `mutant: ${before}`);
+    ]) {
+      const mutant = replaceOnce(candidate, before, after);
+      assert.ok(!mutant.equals(candidate), `mutation changed bytes: ${before}`);
+      assert.throws(() => verifySource(mutant, baseline), `mutant rejected: ${before}`);
+    }
+    for (const [before, after, expected] of [
+      ['html.oe-workbench-context', 'html.other-context', 28],
+      ['outline: 3px solid #a84c22;', 'outline: 0;', 2]
+    ]) {
+      const count = candidate.toString().split(before).length - 1;
+      assert.equal(count, expected, `repeated token count: ${before}`);
+      const mutant = Buffer.from(candidate.toString().replaceAll(before, after));
+      assert.ok(!mutant.equals(candidate), `mutation changed bytes: ${before}`);
+      assert.throws(() => verifySource(mutant, baseline), `mutant rejected: ${before}`);
+    }
     assert.throws(() => verifySource(baseline, baseline), 'unchanged source is red');
     assert.throws(() => verifySource(replaceOnce(candidate, `${CSS}\n</head>`, '</head>'), baseline), 'missing style');
     assert.throws(() => verifySource(replaceOnce(candidate, '<body class="body_top oe-bronchitis-editor">', '<body class="body_top">'), baseline), 'missing body marker');
