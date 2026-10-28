@@ -85,18 +85,168 @@ if ($formid) {
 <html>
 <head>
     <?php Header::setupHeader(); ?>
+    <style>
+@media screen {
+  html.oe-workbench-context body.oe-clinic-note-editor {
+    margin: 0;
+    background-color: #edf2f3;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-form {
+    box-sizing: border-box;
+    width: min(100%, 860px);
+    min-width: 0;
+    margin-block: 1.5rem;
+    margin-inline: auto;
+    padding-block: 1.75rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-form > center {
+    display: block;
+    text-align: start;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    border: 0;
+    border-collapse: separate;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody,
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr,
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr > td {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr {
+    margin-block-end: 1.5rem;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:first-child > td {
+    padding-block: 0 0.75rem;
+    border-block-end: 1px solid #cbd6da;
+    background-color: transparent;
+    color: #182c36;
+    font-size: 1.5rem;
+    line-height: 1.3;
+    text-align: start;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:first-child {
+    background-color: transparent;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr > td:last-child {
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table td {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-block: 0.35rem;
+    border: 0;
+    white-space: normal;
+    vertical-align: middle;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:not(:first-child) > td:first-child {
+    padding-block: 0 0.45rem;
+    color: #182c36;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 7rem;
+    padding-block: 0.65rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table,
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child tbody,
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child tr {
+    display: block;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table tr:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table tr:first-child td {
+    width: auto;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet input[name='fu_timing'] {
+    box-sizing: border-box;
+    width: min(100%, 12rem) !important;
+    min-height: 2.5rem;
+    padding-inline: 0.65rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-form > center > p:last-of-type {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-block: 1.5rem 0;
+    padding-block-start: 1rem;
+    border-block-start: 1px solid #cbd6da;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-form input[name='bn_save'],
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-form input[type='button'] {
+    min-height: 2.5rem;
+    padding-block: 0.5rem;
+    padding-inline: 1rem;
+    font: inherit;
+  }
+}
+</style>
 </head>
 
-<body bgcolor="#dddddd" topmargin="0" rightmargin="0" leftmargin="2"
+<body class="oe-clinic-note-editor" bgcolor="#dddddd" topmargin="0" rightmargin="0" leftmargin="2"
  bottommargin="0" marginwidth="2" marginheight="0">
-<form method="post" action="<?php echo $rootdir ?>/forms/clinic_note/new.php?id=<?php echo attr_url($formid); ?>"
+<form class="oe-clinic-note-form" method="post" action="<?php echo $rootdir ?>/forms/clinic_note/new.php?id=<?php echo attr_url($formid); ?>"
  onsubmit="return top.restoreSession()">
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
 <center>
 
 <p>
-<table border='1' width='95%'>
+<table class='oe-clinic-note-sheet' border='1' width='95%'>
 
  <tr bgcolor='#dddddd'>
   <td colspan='2' align='center'><b><?php echo xlt("This Encounter"); ?></b></td>
