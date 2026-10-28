@@ -8,12 +8,271 @@
     {{ parent() }}
     {{ setupHeader(['i18next', 'i18formatting', 'datetime-picker', 'datetime-picker-translated', 'reason-code-widget']) }}
     <link rel="stylesheet" href="{{ webroot }}/interface/forms/observation/observation.css?v={{ assetVersion|attr_url }}" type="text/css"/>
+<style>
+@media screen {
+  html.oe-workbench-context body form.oe-observation-editor {
+    box-sizing: border-box;
+    width: min(100%, 860px);
+    max-width: 860px;
+    margin: 1.5rem auto 2rem;
+    padding: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    box-shadow: 0 8px 28px rgb(24 44 54 / 8%);
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .observation-cards-container,
+  html.oe-workbench-context body form.oe-observation-editor .card,
+  html.oe-workbench-context body form.oe-observation-editor .card-body {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card {
+    margin-bottom: 1.5rem !important;
+    border: 1px solid #d5e0e3;
+    border-radius: 5px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    box-shadow: none;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card:hover {
+    box-shadow: none;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card-header.bg-light {
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #d5e0e3;
+    background-color: #edf3f4 !important;
+    color: #183b49 !important;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card-header .fa,
+  html.oe-workbench-context body form.oe-observation-editor .card-header .text-primary,
+  html.oe-workbench-context body form.oe-observation-editor .card-header .text-info,
+  html.oe-workbench-context body form.oe-observation-editor .card-header .text-secondary,
+  html.oe-workbench-context body form.oe-observation-editor .card-header .text-warning {
+    color: #145968 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card-body {
+    padding: 1.25rem 1rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .card-body .row {
+    row-gap: 0.35rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .form-group {
+    margin-bottom: 1rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .form-label {
+    margin-bottom: 0.35rem;
+    color: #183b49 !important;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .form-control {
+    min-width: 0;
+    border-color: #9eb2ba;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .form-control:focus {
+    border-color: #145968;
+    box-shadow: 0 0 0 0.2rem rgb(20 89 104 / 22%);
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor textarea[name='observation'] {
+    width: 100%;
+    min-height: 12rem;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked.bg-light,
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-unlinked.bg-light {
+    background: #f3f7f7 !important;
+    color: #182c36 !important;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked.border-success {
+    border-color: #28735a !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked h6 {
+    display: block;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked .questionnaire-name {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-unlinked {
+    border-color: #728e98 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked .text-success,
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked .fa-link {
+    color: #236447 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .text-muted,
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-unlinked .fa-file-text-o {
+    color: #536773 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .response-id {
+    background-color: #e2ecee;
+    color: #183b49;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .sub-observation.bg-white {
+    min-width: 0;
+    padding: 1rem !important;
+    border-color: #cbd6da !important;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .sub-observation > .d-flex,
+  html.oe-workbench-context body form.oe-observation-editor .card-header.d-flex {
+    flex-wrap: wrap;
+    row-gap: 0.6rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .reasonCodeContainer .code-selector-text-display {
+    color: #183b49;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .action-bar.bg-light {
+    position: static !important;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid #cbd6da !important;
+    background-color: #edf3f4 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .action-bar .btn-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn {
+    transition: none;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-primary {
+    border: 1px solid #145968 !important;
+    background: #145968 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-primary:hover,
+  html.oe-workbench-context body form.oe-observation-editor .btn-primary:active,
+  html.oe-workbench-context body form.oe-observation-editor .btn-primary:focus {
+    border-color: #0d4350 !important;
+    background: #0d4350 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-secondary {
+    border: 1px solid #91a8b1 !important;
+    background: #e4ecef !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-secondary:hover,
+  html.oe-workbench-context body form.oe-observation-editor .btn-secondary:active,
+  html.oe-workbench-context body form.oe-observation-editor .btn-secondary:focus {
+    border-color: #708d98 !important;
+    background: #d2e0e5 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-primary {
+    border-color: #145968 !important;
+    background: #fff !important;
+    color: #145968 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-primary:hover,
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-primary:active,
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-primary:focus {
+    border-color: #0d4350 !important;
+    background: #0d4350 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-danger {
+    border-color: #913c36 !important;
+    background: #fff !important;
+    color: #913c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-danger:hover,
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-danger:active,
+  html.oe-workbench-context body form.oe-observation-editor .btn-outline-danger:focus,
+  html.oe-workbench-context body form.oe-observation-editor .btn-danger {
+    border-color: #913c36 !important;
+    background: #913c36 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn-danger:hover,
+  html.oe-workbench-context body form.oe-observation-editor .btn-danger:active,
+  html.oe-workbench-context body form.oe-observation-editor .btn-danger:focus {
+    border-color: #722b27 !important;
+    background: #722b27 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn:focus-visible {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (width <= 640px) {
+  html.oe-workbench-context body form.oe-observation-editor {
+    margin: 0.75rem auto;
+    padding: 1rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked > .d-flex {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked .btn-group-vertical {
+    width: 100%;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .action-bar .btn-group {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+</style>
 {% endblock %}
 
 {% block content %}
     <div class="container">
         <div class="observation-form-container p-3">
-            <form id="observation_form" method="post" name="observation_form" action="{{ webroot }}/interface/forms/observation/save.php?id={{ formId|attr_url }}">
+            <form id="observation_form" class="oe-observation-editor" method="post" name="observation_form" action="{{ webroot }}/interface/forms/observation/save.php?id={{ formId|attr_url }}">
                 <input type="hidden" name="csrf_token_form" value="{{ csrf_token|attr }}" />
                 <input type="hidden" name="observation_id" value="{{ observation.id|attr }}" />
                 <input type="hidden" name="form_id" value="{{ formId|attr }}" />
