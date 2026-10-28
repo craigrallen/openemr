@@ -118,6 +118,16 @@ const CSS = `<style>
     border-color: #28735a !important;
   }
 
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked h6 {
+    display: block;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .questionnaire-linked .questionnaire-name {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
   html.oe-workbench-context body form.oe-observation-editor .questionnaire-unlinked {
     border-color: #728e98 !important;
   }
@@ -170,6 +180,10 @@ const CSS = `<style>
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-left: auto;
+  }
+
+  html.oe-workbench-context body form.oe-observation-editor .btn {
+    transition: none;
   }
 
   html.oe-workbench-context body form.oe-observation-editor .btn-primary {
@@ -321,6 +335,15 @@ function assertRule(css, selector, declarations) {
     }
 }
 
+function mutateRule(css, selector, before, after) {
+    const start = css.indexOf(`${prefix} ${selector} {`);
+    assert.notEqual(start, -1, `mutant selector: ${selector}`);
+    const end = css.indexOf('}', start);
+    const block = css.slice(start, end);
+    assert.ok(block.includes(before), `mutant declaration: ${before}`);
+    return css.slice(0, start) + block.replace(before, after) + css.slice(end);
+}
+
 const allowed = new Set([
     sourcePath, fixturePath, 'tests/clinical-ui/observation-editor-contract.cjs',
     'tests/js/observation-editor.test.js', 'docs/clinical-ui/OBSERVATION-EDITOR.md'
@@ -372,6 +395,29 @@ if (args.includes('--export-css')) {
             ['.btn-danger:hover', ['background: #722b27 !important;', 'color: #fff !important;']]
         ]) assertRule(CSS, selector, declarations);
         assertRule(CSS, '.btn:focus-visible', ['outline: 3px solid #a84c22;']);
+    });
+
+    test('linked status stays a block and questionnaire name wraps independently', () => {
+        assertRule(CSS, '.questionnaire-linked h6', ['display: block;', 'min-width: 0;']);
+        assertRule(CSS, '.questionnaire-linked .questionnaire-name', ['display: block;', 'overflow-wrap: anywhere;']);
+        for (const [before, after, selector, declaration] of [
+            ['display: block;', 'display: flex;', '.questionnaire-linked h6', 'display: block;'],
+            ['min-width: 0;', 'min-width: auto;', '.questionnaire-linked h6', 'min-width: 0;'],
+            ['display: block;', 'display: inline;', '.questionnaire-linked .questionnaire-name', 'display: block;'],
+            ['overflow-wrap: anywhere;', 'overflow-wrap: normal;', '.questionnaire-linked .questionnaire-name', 'overflow-wrap: anywhere;']
+        ]) {
+            const mutated = mutateRule(CSS, selector, before, after);
+            assert.throws(() => assertRule(mutated, selector, [declaration]), `linked heading mutant: ${selector} ${before}`);
+        }
+        assertRule(read(sourcePath).toString(), '.questionnaire-linked h6', ['display: block;', 'min-width: 0;']);
+        assertRule(read(sourcePath).toString(), '.questionnaire-linked .questionnaire-name', ['display: block;', 'overflow-wrap: anywhere;']);
+    });
+
+    test('form buttons switch paired colors without transition', () => {
+        assertRule(CSS, '.btn', ['transition: none;']);
+        const mutated = mutateRule(CSS, '.btn', 'transition: none;', 'transition: all 0.3s ease;');
+        assert.throws(() => assertRule(mutated, '.btn', ['transition: none;']), 'transition mutant');
+        assertRule(read(sourcePath).toString(), '.btn', ['transition: none;']);
     });
 
     test('synthetic proposal passes byte-exact inverse', () => verifySource(proposed(original())));

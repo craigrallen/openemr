@@ -17,7 +17,7 @@ test('Observation portable source contract passes completely', () => {
     const skipped = [...output.matchAll(/^# skipped (\d+)$/gm)];
     const todo = [...output.matchAll(/^# todo (\d+)$/gm)];
     const enumerated = [...output.matchAll(/^(not ok|ok) (\d+) - .+$/gm)];
-    const declared = 7;
+    const declared = 9;
     const valid = !child.error && child.status === 0
         && plans.length === 1 && counts.length === 1 && passed.length === 1 && failed.length === 1
         && Number(plans[0][1]) === declared && Number(counts[0][1]) === declared
