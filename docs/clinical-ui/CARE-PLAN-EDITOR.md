@@ -12,7 +12,7 @@ The complete five-path boundary for this slice is:
 4. `tests/js/care-plan-editor.test.js`
 5. `docs/clinical-ui/CARE-PLAN-EDITOR.md`
 
-This production phase changes only the template and this document. The fixture, contract, and Jest adapter remain frozen. The template adds the contract's exact `<style>` block immediately before `</head>` and changes only `<body>` to `<body class="oe-care-plan-editor">`. The CSS applies to screens when `html.oe-workbench-context` is present: a bounded paper sheet, full-width row geometry, larger description area, paired action colors, focus outlines, wrapping actions, and paired background and text colors for the reason card and its header. The existing `setupHeader()` path loads the workbench popup asset; its context class follows the active workbench host. Outside that context, and in print, the added rules do not apply. There is no added script or new clinical editor workflow.
+This production phase changes only the template and this document. The fixture, contract, and Jest adapter remain frozen. The template contains the contract's exact `<style>` block immediately before `</head>` and changes only `<body>` to `<body class="oe-care-plan-editor">` relative to the original fixture. The CSS applies to screens when `html.oe-workbench-context` is present: a bounded paper sheet, full-width row geometry, larger description area, paired action colors including the Solar Cancel correction, focus outlines, wrapping actions, and paired background and text colors for the reason card and its header. The existing `setupHeader()` path loads the workbench popup asset; its context class follows the active workbench host. Outside that context, and in print, the added rules do not apply. There is no added script or new clinical editor workflow.
 
 The original template has a complete byte inverse under the contract's two additions. Its Twig expressions, actions, scripts, IDs, CSRF input, row loop and includes, Save/Cancel handlers, and hidden `#clickId` input are preserved. The pristine row stays in `<template id="care-plan-row-template">` outside the form, where its inputs remain inert until the existing `careplan.js` clones a row.
 
@@ -38,7 +38,15 @@ RED: 8 tests, 7 passed, 1 failed because the actual template lacked the updated 
 node --test-reporter=tap tests/clinical-ui/care-plan-editor-contract.cjs --history
 ```
 
-RED: 9 tests, 8 passed, 1 failed for the same actual-template condition. These are pre-edit controller results, not a claimed post-edit GREEN result. The controller owns reason-fix verification, final independent review, and hosted CI; all are pending.
+RED: 9 tests, 8 passed, 1 failed for the same actual-template condition. These were pre-edit results for the reason correction; the reason palette is present in the current template.
+
+### Solar Cancel correction
+
+The native Twig browser check then covered all eight Solar cases and found Cancel text and background at 1.078:1 contrast (`browser-solar-red.json`). This is genuine browser RED evidence for the CSS present before this correction. The proposed scoped CSS keeps Cancel's light background and dark foreground across rest, hover, focus, and active states, while preserving the existing focus outline rules. Its exact literal is exported by the portable contract. The proposed CSS had zero stylelint warnings.
+
+Before the production source edit, the controller ran the tests-only Solar proposal. The first attempt at `cd70b510` had an extra mutant setup failure; that result was retained, and the test setup was corrected without editing production source. All proposal and mutant subtests then passed. The direct portable run was genuinely RED with 9 tests, 8 passed, and 1 failed on the old actual template. The direct history run was genuinely RED with 10 tests, 9 passed, and 1 failed for the same actual-template mismatch. An independent Astra review also found that the Jest adapter expected a hardcoded seven tests while the portable suite now has eight; the tests-only adapter was corrected to check TAP plan, test, pass, and fail agreement.
+
+This document records those pre-edit results, not a post-edit GREEN claim. The controller owns final GREEN verification against the actual template, all-state browser checks, the full hosted run, and fresh independent review. Authenticated native application acceptance remains pending.
 
 No authenticated native application execution, clinical acceptance, merge, or deployment is claimed.
 
