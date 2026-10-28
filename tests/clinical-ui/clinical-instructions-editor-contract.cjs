@@ -113,18 +113,6 @@ const CSS = `<style>
     resize: vertical;
   }
 
-  html.oe-workbench-context body.oe-clinical-instructions-editor textarea#instruction:focus,
-  html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group .btn:focus {
-    outline: 2px solid #216a91;
-    outline-offset: 2px;
-  }
-
-  html.oe-workbench-context body.oe-clinical-instructions-editor textarea#instruction:focus-visible,
-  html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group .btn:focus-visible {
-    outline: 2px solid #216a91;
-    outline-offset: 2px;
-  }
-
   html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group {
     display: flex;
     flex-wrap: wrap;
@@ -135,6 +123,18 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group .btn {
     min-height: 2.5rem;
     white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-clinical-instructions-editor textarea#instruction:focus,
+  html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group .btn:focus {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-clinical-instructions-editor textarea#instruction:focus-visible,
+  html.oe-workbench-context body.oe-clinical-instructions-editor .btn-group .btn:focus-visible {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
   }
 }
 </style>`;
