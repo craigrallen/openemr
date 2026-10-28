@@ -8,6 +8,7 @@ namespace OpenEMR\Tests\Isolated\Services\Qdm;
 
 use ErrorException;
 use LogicException;
+use OpenEMR\Cqm\Qdm\BaseTypes\Code;
 use OpenEMR\Cqm\Qdm\BaseTypes\DateTime;
 use OpenEMR\Cqm\Qdm\BaseTypes\Interval;
 use OpenEMR\Cqm\Qdm\BaseTypes\Quantity;
@@ -117,6 +118,7 @@ final class PhysicalExamPrecisionTest extends TestCase
             $cases['negative integer above float precision'] = [-9007199254740993, -9007199254740993];
             $cases['integer string above float precision'] = ['9007199254740993', 9007199254740993];
             $cases['negative integer string above float precision'] = ['-9007199254740993', -9007199254740993];
+            $cases['native float just inside lower bound'] = [(float) PHP_INT_MIN + 1024.0, (float) PHP_INT_MIN + 1024.0];
         }
         return $cases;
     }
@@ -141,7 +143,7 @@ final class PhysicalExamPrecisionTest extends TestCase
     /** @return array<string, array{bool|int|float|string|null, bool}> */
     public static function legacyInputs(): array
     {
-        return [
+        $cases = [
             'empty string' => ['', true],
             'null' => [null, true],
             'missing value' => [null, false],
@@ -161,6 +163,17 @@ final class PhysicalExamPrecisionTest extends TestCase
             'positive out-of-range native float' => [1e20, true],
             'negative out-of-range native float' => [-1e20, true],
         ];
+        if (PHP_INT_SIZE >= 8) {
+            $cases['positive adjacent integer string'] = ['9223372036854775808', true];
+            $cases['negative adjacent integer string'] = ['-9223372036854775809', true];
+            $cases['positive adjacent decimal string'] = ['9223372036854775808.0', true];
+            $cases['negative adjacent decimal string'] = ['-9223372036854775809.0', true];
+            $cases['positive adjacent exponent string'] = ['9.223372036854775808e18', true];
+            $cases['negative adjacent exponent string'] = ['-9.223372036854775809e18', true];
+            $cases['native float at upper bound'] = [(float) PHP_INT_MAX + 1.0, true];
+            $cases['native float at lower bound'] = [(float) PHP_INT_MIN, true];
+        }
+        return $cases;
     }
 
     #[DataProvider('legacyInputs')]
@@ -249,6 +262,7 @@ final class PhysicalExamPrecisionTest extends TestCase
         self::assertTrue($model->relevantPeriod->lowClosed);
         self::assertTrue($model->relevantPeriod->highClosed);
         self::assertNull($model->reason);
+        self::assertInstanceOf(Code::class, $model->negationRationale);
         self::assertSame('11111', $model->negationRationale->code);
         self::assertSame('2.16.840.1.113883.6.96', $model->negationRationale->system);
         self::assertCount(2, $model->dataElementCodes);
