@@ -84,6 +84,7 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tbody {
     display: table;
     min-width: 100%;
+    width: max-content;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tr {
@@ -96,6 +97,9 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
     padding: 0.5rem 0;
     color: #183b49;
     text-align: start;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td {
@@ -104,8 +108,9 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
     max-width: 100%;
     padding: 0.2rem 0;
     text-align: start;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td[align='right'] {
