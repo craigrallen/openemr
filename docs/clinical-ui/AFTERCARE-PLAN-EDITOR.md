@@ -14,7 +14,7 @@ The layout uses modern CSS `:has()` selectors to identify the original table row
 
 ## Evidence and remaining gates
 
-The controller's preproduction RED evidence is anchored to clean tests-only head `ddc641e425365969d25cfa09768f37c7d0d0c2da`: portable contract 9 tests, 8 passed and 1 missing-source failure; direct history contract 10 tests, 9 passed and 1 missing-source failure. The positive synthetic proposal and presentation/semantic mutants passed their contract checks. The proposed CSS had zero nonignored Stylelint warnings. Initial test-setup and lint failures were preserved in the controller record and corrected before this production edit; they are not product failures. No post-edit test, PHP, runtime, or browser pass is claimed in this document.
+The controller's genuine preproduction RED evidence is anchored to clean tests-only head `ddc641e425365969d25cfa09768f37c7d0d0c2da`: portable contract 9 tests, 8 passed and 1 missing-source failure; direct history contract 10 tests, 9 passed and 1 missing-source failure. Source implementation followed that RED. The positive synthetic proposal and presentation/semantic mutants passed their contract checks. Initial test-setup and lint failures were preserved in the controller record and corrected before the production edit; they are not product failures. An initial history-only test-harness scope regression rejected this document; the controller fixed the exact five-path allowlist without weakening the tests or changing production behavior. At `44ccd2b7d3745b49354ff2f5eff12f6e1f137dad`, the controller reported portable contract 9/9 and direct history contract 10/10 passing, PHP syntax passing, and zero nonignored Stylelint warnings on the actual CSS. These are source, syntax, and lint checks; no runtime or browser pass is claimed here.
 
 Portable command, for a source checkout or hosted adapter that does not expose Git history:
 
@@ -22,12 +22,12 @@ Portable command, for a source checkout or hosted adapter that does not expose G
 node --test --test-reporter=tap tests/clinical-ui/aftercare-plan-editor-contract.cjs
 ```
 
-Direct history command, separately, for the original four-path test scope on a checkout with its baseline history:
+Direct history command, separately, for the five-path delivery scope on a checkout with its baseline history:
 
 ```sh
-node tests/clinical-ui/aftercare-plan-editor-contract.cjs --history
+node --test --test-reporter=tap tests/clinical-ui/aftercare-plan-editor-contract.cjs --history
 ```
 
-The direct history check enforces a four-path changed-file boundary and intentionally rejects this documentation path. It therefore cannot be treated as a passing gate for the combined production and documentation delivery. A hosted adapter must use the portable command and avoid `--history`.
+The direct history check enforces the exact five-path changed-file boundary: the route, its original-source fixture, the portable contract, its Jest companion, and this document. The earlier four-path assertion that rejected this document was a test-harness scope regression and is fixed. The passing direct history result covers this five-path delivery, not completion of the original 22 feature rows. A hosted adapter without baseline Git history must use the portable command and omit `--history`.
 
-Native template-body synthetic browser proof and independent review are pending the controller. Its browser gate should cover five themes, widths, RTL, legacy print, every action state, label contrast, and disabled-state sampling. The source contract and synthetic proposal do not prove authenticated Save or Print, security, persistence, date widgets, or accessibility. This work remains unmerged and undeployed. Run 1/max 2 denotes scheduled delivery runs, not internal implementation phases; ordinary approval applies with no standing bypass.
+Native template-body synthetic browser proof and independent complete review are pending the controller. Its browser gate should cover five themes, widths, RTL, legacy print, every action state, label contrast, and disabled-state sampling. The source contract and synthetic proposal do not prove authenticated Save or Print, widget behavior, security, persistence, accessibility, or clinical acceptance. This work remains unmerged and undeployed. Owner scheduled run 1/max 2 includes QA internal phases; those phases are not extra scheduled runs. Ordinary approval applies with no standing bypass.
