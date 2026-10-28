@@ -34,10 +34,313 @@ The Edit/Create template of the clinical note form.
             console.error("Failed to find oeFormsClinicalNotes object. Please check the JavaScript file.");
         }
     </script>
+<style>
+@media screen {
+  html.oe-workbench-context body form.oe-clinical-notes-editor {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-width: 860px;
+    margin: 1.5rem auto 2rem;
+    padding: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff;
+    color: #182c36;
+    box-shadow: 0 8px 28px rgb(24 44 54 / 8%);
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor > legend {
+    width: 100%;
+    margin: 0 0 1.25rem;
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid #cbd6da;
+    background-color: #fff;
+    color: #182c36;
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid {
+    padding: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    margin: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .forms.col-lg-4,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .forms.col-lg-8 {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .forms > .row {
+    margin: 0;
+    padding: 0 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    gap: 0.75rem 0;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem !important;
+    border-bottom: 1px solid #dbe4e7;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author {
+    box-sizing: border-box;
+    display: flex;
+    flex: 0 0 100%;
+    flex-wrap: wrap;
+    max-width: 100%;
+    min-width: 0;
+    gap: 0.35rem 1.5rem;
+    padding: 0 15px;
+    color: #536773;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author > .col-12 {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author .text-muted {
+    color: #536773 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row > .col-12 {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-8 > .row > .col-12 {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row label {
+    margin-bottom: 0.35rem;
+    color: #182c36;
+    font-size: 0.875rem;
+    font-weight: 650;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .col-lg-4 hr {
+    display: none;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 .form-control {
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row textarea.description {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 12rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid #8fa5af;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #182c36;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-documents-container,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-results-container {
+    background-color: #f3f7f8 !important;
+    border-color: #cbd6da !important;
+    color: #182c36;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-documents-container .text-muted,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .linked-results-container .text-muted {
+    color: #536773 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .document-item.badge,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .result-item.badge {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.4rem 0.55rem;
+    background-color: #dbe9ec;
+    color: #183b49;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-document,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-result {
+    flex: 0 0 auto;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    border: 1px solid #426b78;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #183b49;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-document:hover,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-result:hover {
+    border-color: #913c36;
+    background-color: #fff0ed;
+    color: #762e29;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-documents,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-results {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:hover,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add:hover,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-documents:hover,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-results:hover {
+    border-color: #0d4350;
+    background-color: #0d4350;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel {
+    border-color: #9baeb8;
+    background-color: #e4ecef !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:hover {
+    border-color: #7894a0;
+    background-color: #d2e0e5 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:active {
+    border-color: #7894a0;
+    background-color: #d2e0e5 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-delete {
+    border-color: #913c36;
+    background-color: #913c36;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-delete:hover {
+    border-color: #762e29;
+    background-color: #762e29;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-documents:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add-results:focus {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus-visible {
+    border-color: #7894a0;
+    background-color: #e4ecef !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-delete:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-document:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-result:focus {
+    border-color: #913c36;
+    background-color: #913c36;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group button:disabled,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:disabled {
+    border-color: #aebdc3 !important;
+    background-color: #e4e9eb !important;
+    color: #536773 !important;
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row input:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row input:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row select:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row select:focus-visible,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row textarea:focus,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row textarea:focus-visible {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+}
+
+@media screen and (width <= 640px) {
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row > .col-12 {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+</style>
 {% endblock %}
 {% block pagetitle %}{{ oemrUiSettings.heading_title }}{% endblock %}
 {% block content %}
-    <form method='post' name='my_form' action='{{ rootdir }}/forms/clinical_notes/save.php?id={{ formid|attr_url }}'>
+    <form class='oe-clinical-notes-editor' method='post' name='my_form' action='{{ rootdir }}/forms/clinical_notes/save.php?id={{ formid|attr_url }}'>
         {{ csrfToken('default', 'csrf_token_form') }}
         <legend>{{ 'Note Details'|xlt}}</legend>
         <div class="container-fluid">
