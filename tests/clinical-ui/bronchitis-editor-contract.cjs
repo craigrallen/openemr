@@ -66,6 +66,7 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tbody {
     display: table;
     min-width: 100%;
+    width: max-content;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tr {
@@ -78,6 +79,9 @@ const CSS = `<style>
     padding: 0.5rem 0;
     color: #183b49;
     text-align: start;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td {
@@ -86,8 +90,9 @@ const CSS = `<style>
     max-width: 100%;
     padding: 0.2rem 0;
     text-align: start;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td[align='right'] {
@@ -252,6 +257,23 @@ function nativeTableGeometry(css) {
   }
 }
 
+function clinicalLabelReadability(css) {
+  const form = "form[name='my_form']";
+  for (const [selector, expected] of [
+    [`${form} tbody`, { width: 'max-content' }],
+    [`${form} th`, { 'white-space': 'nowrap', 'overflow-wrap': 'normal', 'word-break': 'normal' }],
+    [`${form} td`, { 'white-space': 'nowrap', 'overflow-wrap': 'normal', 'word-break': 'normal' }]
+  ]) {
+    const target = `${prefix} ${selector}`;
+    const declarations = rules(css).filter((item) => item.selectors.includes(target)).map((item) => item.declarations);
+    assert.ok(declarations.length, `missing readable clinical selector: ${selector}`);
+    for (const [property, value] of Object.entries(expected)) {
+      const values = declarations.flatMap((block) => [...block.matchAll(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+);`, 'g'))].map((match) => match[1].trim()));
+      assert.deepEqual(values, [value], `${selector}: ${property} must keep whole words and content width`);
+    }
+  }
+}
+
 const allowed = new Set([
   ...files.flatMap((file) => [file.source, file.fixture]),
   'tests/clinical-ui/bronchitis-editor-contract.cjs',
@@ -292,7 +314,7 @@ if (args.includes('--export-css')) {
     rule(CSS, '', ['background-color: #e8eff0 !important;', 'color: #182c36 !important;']);
     rule(CSS, "form[name='my_form']", ['box-sizing: border-box;', 'width: 100%;', 'max-width: 860px;', 'margin: 0 auto;', 'background-color: #fff;', 'color: #182c36;', 'font-size: 1.25rem;']);
     nativeTableGeometry(CSS);
-    rule(CSS, "form[name='my_form'] td", ['overflow-wrap: anywhere;']);
+    clinicalLabelReadability(CSS);
     rule(CSS, "form[name='my_form'] textarea", ['width: 100%;', 'min-height: 12rem;', 'line-height: 1.7;', 'resize: vertical;']);
     rule(CSS, "form[name='my_form'] .title", ['display: block;', 'font-size: 1.6rem;']);
   });
@@ -331,6 +353,26 @@ if (args.includes('--export-css')) {
     const unbounded = CSS.replace(formSelector, `${formSelector}\n    overflow-x: auto;`);
     assert.notEqual(unbounded, CSS);
     assert.throws(() => nativeTableGeometry(unbounded), 'scrolling outside the table is rejected');
+  });
+
+  test('clinical labels keep whole words and a scrollable content width', () => {
+    clinicalLabelReadability(CSS);
+    for (const [selector, before, after] of [
+      ['tbody', 'width: max-content;', 'width: auto;'],
+      ...['th', 'td'].flatMap((cell) => [
+        [cell, 'white-space: nowrap;', 'white-space: normal;'],
+        [cell, 'overflow-wrap: normal;', 'overflow-wrap: anywhere;'],
+        [cell, 'word-break: normal;', 'word-break: break-all;']
+      ])
+    ]) {
+      const start = CSS.indexOf(`${prefix} form[name='my_form'] ${selector} {`);
+      assert.notEqual(start, -1, `mutation selector: ${selector}`);
+      const block = CSS.slice(start, CSS.indexOf('\n  }', start) + 4);
+      const changedBlock = replaceOnce(block, before, after).toString();
+      const mutant = replaceOnce(CSS, block, changedBlock).toString();
+      assert.notEqual(mutant, CSS, `mutation changed bytes: ${before}`);
+      assert.throws(() => clinicalLabelReadability(mutant), `rejected: ${selector} ${before}`);
+    }
   });
 
   test('native actions and controls retain paired readable colors and visible focus', () => {
