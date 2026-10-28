@@ -55,8 +55,268 @@ $disabled = '';
  });
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.body_top.oe-aftercare-plan-editor {
+    margin: 0;
+    background-color: #edf2f3 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor > p,
+  html.oe-workbench-context body.oe-aftercare-plan-editor > br,
+  html.oe-workbench-context body.oe-aftercare-plan-editor > form {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-width: 860px;
+    margin-inline: auto;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor > p {
+    margin-block: 1.5rem 0;
+    padding-block: 1.5rem 0;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-bottom: 0;
+    border-radius: 7px 7px 0 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor .forms-title {
+    color: #182c36 !important;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor > br {
+    display: none;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor > form {
+    margin-block: 0 1.5rem;
+    padding-block: 0 2rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-top: 0;
+    border-radius: 0 0 7px 7px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table > tbody,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table tr {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(textarea) {
+    display: block;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form td {
+    padding-block: 0.4rem;
+    padding-inline: 0.3rem;
+    vertical-align: top;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form td:has(> textarea) {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding-inline: 0;
+    padding-bottom: 1.25rem;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(textarea) > td {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(.forms-data),
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(input.datepicker) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form td.forms-subtitle {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding-block: 1.2rem 0.6rem;
+    border-bottom: 1px solid #cbd6da;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(.forms-data) > td,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(input.datepicker) > td {
+    display: block;
+    box-sizing: border-box;
+    flex: 0 1 auto;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(textarea) > td:first-child {
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form .forms-data {
+    background-color: #fff !important;
+    color: #182c36 !important;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.datepicker {
+    box-sizing: border-box;
+    width: min(100%, 11rem);
+    min-height: 2.5rem;
+    padding-block: 0.45rem;
+    padding-inline: 0.65rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(input.button-css) {
+    display: block;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(input.button-css) > td:first-child {
+    display: none;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form tr:has(input.button-css) > td:last-child {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    padding-inline: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 12rem;
+    padding-block: 0.65rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font: inherit;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css {
+    display: inline-block;
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    min-height: 2.5rem;
+    margin-block: 0.3rem;
+    margin-inline: 0.2rem;
+    padding-block: 0.55rem;
+    padding-inline: 0.85rem;
+    border: 1px solid #536773 !important;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form textarea:focus,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form textarea:focus-visible,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.datepicker:focus,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.datepicker:focus-visible,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:focus,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:focus-visible {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:hover,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:focus,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:active {
+    border-color: #182c36 !important;
+    background-color: #e4f0f1 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input.button-css:disabled {
+    border-color: #a9bbc3 !important;
+    background-color: #e8edef !important;
+    color: #536773 !important;
+    cursor: not-allowed;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input[type='submit'].button-css {
+    border-color: #145968 !important;
+    background-color: #145968 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input[type='submit'].button-css:hover,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input[type='submit'].button-css:focus,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input[type='submit'].button-css:active {
+    border-color: #0d414d !important;
+    background-color: #0d414d !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-aftercare-plan-editor form input[type='submit'].button-css:disabled {
+    border-color: #a9bbc3 !important;
+    background-color: #e8edef !important;
+    color: #536773 !important;
+  }
+
+}
+
+@media screen and (width <= 600px) {
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table > tbody,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table tr,
+  html.oe-workbench-context body.oe-aftercare-plan-editor form > table td {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+}
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-aftercare-plan-editor">
 <p><span class="forms-title"><?php echo xlt('AfterCare Planning'); ?></span></p>
 <br />
 <?php
