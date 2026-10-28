@@ -61,8 +61,181 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 </script>
 
 <?php Header::setupHeader(); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-bronchitis-editor {
+    margin: 0;
+    padding: clamp(0.75rem, 3vw, 1.5rem);
+    background-color: #e8eff0 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border: 1px solid #c7d5d9;
+    background-color: #fff;
+    color: #182c36;
+    font-size: 1.25rem;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] .title {
+    display: block;
+    margin: 0 0 1rem;
+    color: #183b49;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] .text {
+    color: #183b49;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] table {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0.5rem 0;
+    padding: 5px;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 1rem;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tbody {
+    display: table;
+    min-width: 100%;
+    width: max-content;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tr {
+    display: table-row;
+    border-bottom: 1px solid #e5ecee;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] th {
+    display: table-cell;
+    padding: 0.5rem 0;
+    color: #183b49;
+    text-align: start;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td {
+    display: table-cell;
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: 0.2rem 0;
+    text-align: start;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td[align='right'] {
+    text-align: start;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='text'],
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] select,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    border: 1px solid #91a8b1;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='text'],
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] select {
+    min-height: 2.4rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='checkbox'] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0 0.3rem 0 0;
+    accent-color: #145968;
+    vertical-align: middle;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] textarea {
+    display: block;
+    width: 100%;
+    min-height: 12rem;
+    padding: 0.75rem;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] a.link_submit {
+    display: inline-block;
+    margin: 0.3rem 0;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #145968;
+    border-radius: 3px;
+    background-color: #145968;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] a.link {
+    display: inline-block;
+    margin: 0.3rem 0;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #91a8b1;
+    border-radius: 3px;
+    background-color: #eef3f4 !important;
+    color: #183b49 !important;
+    text-decoration: none;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='button'] {
+    min-height: 2.4rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #91a8b1;
+    border-radius: 3px;
+    background-color: #eef3f4;
+    color: #183b49;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] a:focus,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input:focus,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] select:focus,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] textarea:focus {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] a:focus-visible,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input:focus-visible,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] select:focus-visible,
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] textarea:focus-visible {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+}
+
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-bronchitis-editor">
 
 <form method=post action="<?php echo $rootdir;?>/forms/bronchitis/save.php?mode=new" name="my_form">
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
