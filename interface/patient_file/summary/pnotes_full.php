@@ -219,6 +219,57 @@ $result_sent = getSentPnotesByDate(
     <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>
     <link rel="stylesheet" media="screen" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/workspace.css?v=<?php echo attr_url($clinicalAssets->version('workspace.css')); ?>">
     <link rel="stylesheet" href="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-messages.css?v=<?php echo attr_url($clinicalAssets->version('patient-messages.css')); ?>">
+    <style>
+@media screen {
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes h3 {
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes h3 span {
+    display: block;
+    margin-top: 6px;
+    font-size: 18px;
+    line-height: 1.4;
+    letter-spacing: normal;
+    overflow-wrap: anywhere;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .row > .row {
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .row > .row > .col-12 {
+    min-width: 0;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .btn-group > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer.jumbotron.p-4 {
+    padding: clamp(12px, 2vw, 28px) !important;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .tabContainer th {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  body.oe-clinical-workspace.oe-clinical-messages #pnotes .noterow > td:nth-child(5) {
+    min-width: 38ch;
+    max-width: 65ch;
+    padding: 18px 22px;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+  }
+}
+    </style>
     <script src="<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/mode.js?v=<?php echo attr_url($clinicalAssets->version('mode.js')); ?>" defer></script>
 
 <script>
