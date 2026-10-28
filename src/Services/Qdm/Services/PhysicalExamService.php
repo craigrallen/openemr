@@ -33,7 +33,7 @@ class PhysicalExamService extends AbstractObservationService implements QdmServi
         if (is_int($number) || (
             is_float($number)
             && is_finite($number)
-            && $number >= (float)PHP_INT_MIN
+            && $number > (float)PHP_INT_MIN
             && $number < PHP_INT_MAX + 1.0
         )) {
             $result = $number;
