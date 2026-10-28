@@ -50,8 +50,210 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
  });
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-treatment-plan-editor {
+    box-sizing: border-box;
+    width: min(100% - 2rem, 860px);
+    min-height: 100vh;
+    margin-block: 1.5rem;
+    margin-inline: auto;
+    padding-block: 2rem;
+    padding-inline: 36px;
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context {
+    background-color: #edf2f3;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor > p {
+    margin-block: 0 1.5rem;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor .forms-title {
+    color: #182c36 !important;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form,
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table {
+    width: 100%;
+    max-width: none;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table {
+    border-collapse: collapse;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(-n + 3) {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 120px minmax(0, 1fr);
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+    margin-block: 0 0.75rem;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(-n + 3) > td {
+    box-sizing: border-box;
+    min-width: 0;
+    width: auto;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(4),
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(12),
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(13) {
+    display: none;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:last-child {
+    display: block;
+    margin-block: 0.5rem 0;
+    padding-block: 1rem 0;
+    border-top: 1px solid #cbd6da;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:last-child > td:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(n + 5):nth-child(-n + 11) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    margin-block: 0 1.5rem;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(n + 5):nth-child(-n + 11) > td {
+    display: block;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(n + 5):nth-child(-n + 11) > td:first-child {
+    color: #182c36 !important;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 12rem;
+    padding-block: 0.65rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font: inherit;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='text'],
+  html.oe-workbench-context body.oe-treatment-plan-editor form select {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 2.5rem;
+    padding-block: 0.35rem;
+    padding-inline: 0.5rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form select[name='provider'] {
+    width: 100% !important;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit'],
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='button'] {
+    min-height: 2.5rem;
+    padding-block: 0.5rem;
+    padding-inline: 1rem;
+    border: 1px solid #536773 !important;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit'] {
+    border-color: #145968 !important;
+    background-color: #145968 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit']:hover,
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit']:focus,
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit']:active {
+    border-color: #0d414d !important;
+    background-color: #0d414d !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='button']:hover,
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='button']:focus,
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='button']:active {
+    border-color: #182c36 !important;
+    background-color: #e4f0f1 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='submit']:disabled {
+    border-color: #536773 !important;
+    background-color: #536773 !important;
+    color: #fff !important;
+    opacity: 1;
+    cursor: default;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form input[type='button']:disabled {
+    border-color: #536773 !important;
+    background-color: #fff !important;
+    color: #536773 !important;
+    opacity: 1;
+    cursor: default;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form textarea:focus-visible,
+  html.oe-workbench-context body.oe-treatment-plan-editor form input:focus-visible,
+  html.oe-workbench-context body.oe-treatment-plan-editor form select:focus-visible {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (width <= 600px) {
+  html.oe-workbench-context body.oe-treatment-plan-editor {
+    width: calc(100% - 1rem);
+    margin-block: 0.5rem;
+    padding-inline: 1rem;
+  }
+
+  html.oe-workbench-context body.oe-treatment-plan-editor form > table > tbody > tr:nth-child(-n + 3) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-treatment-plan-editor">
 <p><span class="forms-title"><?php echo xlt('Treatment Planning'); ?></span></p>
 <br />
 <?php
