@@ -1,0 +1,27 @@
+# Functional and Cognitive Status editor: document sheet slice
+
+## Scope and reference
+
+OPEMR-148 adds a presentation slice to the existing Functional and Cognitive Status form in `interface/forms/functional_cognitive_status/new.php`. The accepted visual reference is `OpenEMR-Research/researched/index.html`, as recorded in [DESIGN-FIDELITY.md](DESIGN-FIDELITY.md). The slice brings a quiet document surface and wider writing area to the native form. Original requirement 2 remains partial; the reference workflow is not complete.
+
+The source presentation change is exactly the frozen `proposed(original())` from `tests/clinical-ui/functional-cognitive-editor-contract.cjs`: one inline `<style>` immediately before `</head>` and one `oe-functional-cognitive-editor` class on `<body>`. Removing those additions restores the original `new.php` source byte for byte. This statement concerns the source presentation transform only: the overall PR also adds the contract, Jest adapter, and original-source fixture. The change does not alter the native form fields, PHP handlers, JavaScript, shared assets, `save.php`, or `view.php`; the unchanged view includes `new.php`.
+
+The CSS applies to screen rendering when the native `oe-workbench-context` class and this form's body class are both present. It does not apply in legacy context or print. The sheet has an 860px maximum width, `clamp(1rem, 4vw, 2.25rem)` inline padding, and a three-column row for code, date, and mental status. Description and row actions span the columns. The description textarea fills its available width, has a 12rem minimum height and 1.7 line height, and can be resized vertically. Actions wrap; at widths of 600px or less the row becomes one column. The CSS requests 1.5rem outer vertical spacing, but the compiled theme's `.mt-3` important rule can override its top margin in normal rendering, so an exact runtime top margin is not claimed.
+
+The selectors cover both source row variants: the initial row has Add and Delete buttons; existing rows have icon actions. Their order, names, values, IDs, and event handlers remain inherited. The initial Delete button still has default submit behavior. Existing-row icons remain inaccessible as controls, repeated checkbox labels target `activity_1`, and cloned count IDs remain inherited. These behaviors have not been accepted as accessible or clinically complete.
+
+## Controller and offline rendering evidence
+
+The frozen contract first observed genuine RED on the actual source: portable 7/8 and direct `--history` 8/9, with the missing source addition causing the failure. The controller later verified genuine GREEN on the actual final source: portable 8/8 and history 9/9. It also verified PHP syntax, diff check, and stylelint of the actual nonignored inline CSS with zero warnings. The contract checks the source and unchanged native boundaries; it does not run the form in an authenticated session.
+
+Final offline native PHP **template-body** rendering used synthetic translation, Header, and CSRF seams to render an initial one-row form and an existing three-row form. It did not execute the route/bootstrap or native handlers. Five compiled themes, four widths (1366, 640, 390, and 320px), and LTR plus simulated RTL produced 80 cases. Across those cases, the controller recorded 240 whole-body DOM, all-computed-style, and geometry comparisons against legacy and print contexts. It also recorded 640 Save/Cancel contrast samples across rest, hover, focus, and active states; the minimum was 7.8989:1. The offline browser runs recorded zero requests and zero errors. At desktop width, measured paper width was 860px and textarea width was 785.984px. Source images support the layout review, not clinical acceptance.
+
+These results support the scoped presentation behavior in the offline rendered template. They do not establish actual PHP controller, save, clone, or widget operation. Simulated RTL does not establish localization behavior. The comparisons do not establish full accessibility, contrast for every control or state, complete reference fidelity, operating-system print behavior, or older browser engine behavior. Authenticated runtime verification remains pending.
+
+There was no local Jest run. Local ESLint, configuration comparison, and source Git diff commands were blocked before execution by the scanner budget and were not retried; local lint is unverified. The controller observations above are separate from those blocked local checks. Hosted full gates and ordinary approval remain pending. The PR is unmerged and undeployed. The scheduled controller limit is two runs including QA; the controller owns run 1 under that limit. Draft PR authorization does not imply merge authorization.
+
+## Native boundaries and remaining work
+
+The existing PHP selects existing rows by form ID, session patient ID, and session encounter. It emits the session CSRF token and posts to the existing `save.php`; that route checks CSRF and consumes the existing description and activity fields. Native Header and the workbench popup provide `oe-workbench-context`. The portable contract reads these source paths, but offline template rendering does not prove authentication, session behavior, patient or encounter authority, persistence, security, or clinical acceptance.
+
+This slice adds no spellcheck, autocorrect, or reference pane. Full reference workflow, authenticated operation, assistive technology and keyboard review, localization, operating-system print review, and older engine review remain open.

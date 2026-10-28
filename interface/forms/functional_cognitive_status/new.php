@@ -133,8 +133,198 @@ $check_res = $formid ? $check_res : [];
             });
         });
     </script>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-functional-cognitive-editor {
+    margin: 0;
+    background-color: #edf2f3 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor > .container.mt-3 {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-width: 860px;
+    margin-block: 1.5rem;
+    margin-inline: auto;
+    padding-block: 1.5rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor > .container.mt-3 > .row {
+    box-sizing: border-box;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor > .container.mt-3 > .row > .col-12 {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor h2 {
+    margin-block: 0 1rem;
+    color: #182c36;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor fieldset {
+    min-width: 0;
+    margin-block: 0 1rem;
+    padding: 0;
+    border: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor legend {
+    width: 100%;
+    margin-block: 0 0.75rem;
+    padding: 0;
+    border: 0;
+    color: #182c36;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor fieldset > .container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row {
+    margin-block: 0 1rem;
+    padding-block: 0 1rem;
+    border-bottom: 1px solid #cbd6da;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row > .form-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+    margin: 0;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row > .form-row > .forms {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row > .form-row > .forms:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row > .form-row > .forms:nth-child(5) {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row .form-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row textarea.description {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 12rem;
+    padding-block: 0.65rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font: inherit;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .form-group > .position-override {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn {
+    min-height: 2.5rem;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-save {
+    border-color: #145968 !important;
+    background-color: #145968 !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-save:hover,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-save:focus,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-save:active {
+    border-color: #0d414d !important;
+    background-color: #0d414d !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-cancel {
+    border-color: #536773 !important;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-cancel:hover,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-cancel:focus,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn-cancel:active {
+    border-color: #182c36 !important;
+    background-color: #e4f0f1 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row textarea.description:focus,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn:focus,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row textarea.description:focus-visible,
+  html.oe-workbench-context body.oe-functional-cognitive-editor .btn-group .btn:focus-visible {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (width <= 600px) {
+  html.oe-workbench-context body.oe-functional-cognitive-editor .tb_row > .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 </head>
-<body>
+<body class="oe-functional-cognitive-editor">
     <div class="container mt-3">
         <div class="row">
             <div class="col-12">
