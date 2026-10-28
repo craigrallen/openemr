@@ -1,7 +1,7 @@
 'use strict';
 
-// Portable: node --test tests/clinical-ui/clinic-note-editor-contract.cjs
-// History guard: node --test tests/clinical-ui/clinic-note-editor-contract.cjs --history
+// Portable: node --test-reporter=tap tests/clinical-ui/clinic-note-editor-contract.cjs
+// History guard: node --test-reporter=tap tests/clinical-ui/clinic-note-editor-contract.cjs --history
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -92,16 +92,25 @@ const CSS = `<style>
     background-color: transparent;
   }
 
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr > td:last-child {
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table td {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-block: 0.35rem;
+    border: 0;
+    white-space: normal;
+    vertical-align: middle;
+  }
+
   html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:not(:first-child) > td:first-child {
     padding-block: 0 0.45rem;
     color: #182c36;
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.4;
-  }
-
-  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr > td:last-child {
-    padding: 0;
   }
 
   html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet textarea {
@@ -127,15 +136,6 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child tr {
     display: block;
     width: 100%;
-  }
-
-  html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table td {
-    box-sizing: border-box;
-    min-width: 0;
-    padding-block: 0.35rem;
-    border: 0;
-    white-space: normal;
-    vertical-align: middle;
   }
 
   html.oe-workbench-context body.oe-clinic-note-editor .oe-clinic-note-sheet > tbody > tr:last-child table tr:first-child {
