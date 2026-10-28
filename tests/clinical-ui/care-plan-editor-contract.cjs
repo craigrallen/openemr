@@ -110,6 +110,13 @@ const CSS = `<style>
   html.oe-workbench-context body.oe-care-plan-editor .reasonCodeContainer > .card {
     min-width: 0;
     width: 100%;
+    background-color: #fff;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .reasonCodeContainer > .card > .card-header {
+    background-color: #eef3f5;
+    color: #182c36;
   }
 
   html.oe-workbench-context body.oe-care-plan-editor .tb_row textarea.description {
@@ -218,6 +225,26 @@ function original() {
     return bytes;
 }
 
+function reasonRule(css, selector) {
+    const opening = `  html.oe-workbench-context body.oe-care-plan-editor ${selector} {`;
+    once(css, opening, `reason palette ${selector}`);
+    const start = css.indexOf(opening);
+    const end = css.indexOf('}', start + opening.length);
+    assert.notEqual(end, -1, `reason palette ${selector}: closing brace`);
+    return css.slice(start, end + 1);
+}
+
+function assertReasonPalette(css) {
+    for (const [selector, background] of [
+        ['.reasonCodeContainer > .card', '#fff'],
+        ['.reasonCodeContainer > .card > .card-header', '#eef3f5']
+    ]) {
+        const rule = reasonRule(css, selector);
+        assert.ok(rule.includes(`\n    background-color: ${background};\n`), `${selector}: background`);
+        assert.ok(rule.includes('\n    color: #182c36;\n'), `${selector}: foreground`);
+    }
+}
+
 const unchanged = [
     'interface/forms/care_plan/templates/partials/_care_plan_row.html.twig',
     'interface/forms/care_plan/templates/partials/_reason_row.html.twig',
@@ -305,6 +332,27 @@ test('CSS covers paper geometry, row widths, palette, focus and responsive actio
         assert.ok(CSS.includes(`${control}:focus-visible`), `focus visible: ${control}`);
     }
     assert.doesNotMatch(CSS, /@media print|<script|!important[^;]*font/);
+});
+
+test('reason card and header each keep a readable paired palette', () => {
+    assertReasonPalette(CSS);
+    for (const [selector, background] of [
+        ['.reasonCodeContainer > .card', '#fff'],
+        ['.reasonCodeContainer > .card > .card-header', '#eef3f5']
+    ]) {
+        const rule = reasonRule(CSS, selector);
+        for (const [declaration, replacement] of [
+            [`background-color: ${background};`, ''],
+            ['color: #182c36;', ''],
+            [`background-color: ${background};`, 'background-color: #000;'],
+            ['color: #182c36;', `color: ${background};`]
+        ]) {
+            const damagedRule = replaceOnce(rule, declaration, replacement, 'reason color declaration').toString();
+            const mutant = replaceOnce(CSS, rule, damagedRule, 'reason palette rule').toString();
+            assert.notEqual(mutant, CSS, `${selector}: mutant changes ${declaration}`);
+            assert.throws(() => assertReasonPalette(mutant), `${selector}: reject ${declaration}`);
+        }
+    }
 });
 
 test('synthetic proposal passes complete inverse before the actual template check', () => {
