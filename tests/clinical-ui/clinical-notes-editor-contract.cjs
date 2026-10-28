@@ -29,7 +29,7 @@ const CSS = `<style>
     border-radius: 7px;
     background-color: #fff;
     color: #182c36;
-    box-shadow: 0 8px 28px rgba(24, 44, 54, 0.08);
+    box-shadow: 0 8px 28px rgb(24 44 54 / 8%);
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor > legend {
@@ -91,16 +91,13 @@ const CSS = `<style>
     border-bottom: 1px solid #dbe4e7;
   }
 
-  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row > .col-12 {
-    flex: 0 0 33.333%;
-    max-width: 33.333%;
-    min-width: 0;
-  }
-
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author {
+    box-sizing: border-box;
     display: flex;
     flex: 0 0 100%;
     flex-wrap: wrap;
+    max-width: 100%;
+    min-width: 0;
     gap: 0.35rem 1.5rem;
     padding: 0 15px;
     color: #536773;
@@ -111,11 +108,25 @@ const CSS = `<style>
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author > .col-12 {
     flex: 0 1 auto;
     width: auto;
+    max-width: 100%;
+    min-width: 0;
     padding: 0;
+    overflow-wrap: anywhere;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .hide-author .text-muted {
     color: #536773 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row > .col-12 {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-8 > .row > .col-12 {
+    padding-right: 0;
+    padding-left: 0;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row label {
@@ -155,6 +166,7 @@ const CSS = `<style>
     display: inline-flex;
     align-items: center;
     max-width: 100%;
+    min-width: 0;
     padding: 0.4rem 0.55rem;
     background-color: #dbe9ec;
     color: #183b49;
@@ -162,10 +174,12 @@ const CSS = `<style>
     line-height: 1.4;
     white-space: normal;
     text-align: left;
+    overflow-wrap: anywhere;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-document,
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-close-result {
+    flex: 0 0 auto;
     min-width: 1.5rem;
     min-height: 1.5rem;
     border: 1px solid #426b78;
@@ -225,6 +239,15 @@ const CSS = `<style>
     color: #fff;
   }
 
+  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group button:disabled,
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:disabled {
+    border-color: #aebdc3;
+    background-color: #e4e9eb;
+    color: #536773;
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus,
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-save:focus-visible,
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row .btn-add:focus,
@@ -266,15 +289,6 @@ const CSS = `<style>
     outline-offset: 2px;
   }
 
-  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row button:disabled,
-  html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group button:disabled {
-    border-color: #aebdc3;
-    background-color: #e4e9eb;
-    color: #536773;
-    cursor: not-allowed;
-    opacity: 1;
-  }
-
   html.oe-workbench-context body form.oe-clinical-notes-editor > .container-fluid > .form-group .btn-group {
     display: flex;
     flex-wrap: wrap;
@@ -283,7 +297,7 @@ const CSS = `<style>
   }
 }
 
-@media screen and (max-width: 640px) {
+@media screen and (width <= 640px) {
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 > .row > .col-12 {
     flex-basis: 100%;
     max-width: 100%;
@@ -329,6 +343,16 @@ function verifySource(source, baseline = original()) {
     let inverse = Buffer.from(source);
     for (const [before, after] of additions) inverse = replaceOnce(inverse, after, before, 'exact proposed addition');
     assert.deepEqual(inverse, baseline, 'source must invert byte for byte to frozen original');
+}
+
+function assertNarrativeFullWidth(css) {
+    const selector = 'html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-8 > .row > .col-12';
+    once(Buffer.from(css), Buffer.from(`${selector} {`), 'narrative column selector');
+    const opening = css.indexOf('{', css.indexOf(selector));
+    const rule = css.slice(opening + 1, css.indexOf('}', opening));
+    assert.match(rule, /(?:^|\n)\s*padding-right: 0;/, 'narrative column removes right gutter');
+    assert.match(rule, /(?:^|\n)\s*padding-left: 0;/, 'narrative column removes left gutter');
+    assert.doesNotMatch(css, /> \.col-lg-4 > \.row > \.col-12 \{[^}]*padding-(?:right|left): 0;/, 'metadata gutters remain');
 }
 
 const unchanged = [
@@ -385,10 +409,14 @@ test('CSS supplies workbench paper, full narrative, metadata and narrowly scoped
     assert.match(CSS, /padding: clamp\(1rem, 4vw, 2\.25rem\);/);
     assert.match(CSS, /\.forms\.col-lg-4,[\s\S]*?\.forms\.col-lg-8 \{[\s\S]*?flex: 0 0 100%;/);
     assert.match(CSS, /\.col-lg-4 > \.row > \.col-12 \{[\s\S]*?flex: 0 0 33\.333%;/);
+    assertNarrativeFullWidth(CSS);
     assert.match(CSS, /\.hide-author \{[\s\S]*?display: flex;/);
+    assert.match(CSS, /\.hide-author > \.col-12 \{[^}]*max-width: 100%;[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;/);
     assert.match(CSS, /textarea\.description \{[\s\S]*?width: 100%;[\s\S]*?min-height: 12rem;[\s\S]*?line-height: 1\.7;[\s\S]*?resize: vertical;/);
     for (const item of ['.linked-documents-container', '.linked-results-container', '.document-item.badge', '.result-item.badge', '.btn-close-document', '.btn-close-result', '.btn-add-documents', '.btn-add-results', '.btn-add', '.btn-delete', '.btn-save', '.btn-cancel']) assert.ok(CSS.includes(item), `visible control: ${item}`);
-    assert.match(CSS, /@media screen and \(max-width: 640px\)/);
+    assert.match(CSS, /\.result-item\.badge \{[^}]*overflow-wrap: anywhere;/);
+    assert.match(CSS, /\.btn-close-result \{[^}]*flex: 0 0 auto;/);
+    assert.match(CSS, /@media screen and \(width <= 640px\)/);
     assert.doesNotMatch(CSS, /@media print|<script|display: none;[^}]*button/);
     assert.doesNotMatch(CSS, /document-search-dialog|results-search-dialog|document-item-template|result-item-template/);
     for (const selector of CSS.match(/^[^\n{}]+\{/gm) || []) {
@@ -441,6 +469,13 @@ test('specific semantic, geometry, palette and scope mutants are rejected', () =
     ]) {
         const changed = replaceOnce(candidate, before, after, 'negative mutant');
         assert.throws(() => verifySource(changed, baseline), `reject mutant: ${before}`);
+    }
+    for (const gutter of ['padding-right: 0;', 'padding-left: 0;']) {
+        const selector = 'html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-8 > .row > .col-12';
+        const opening = CSS.indexOf('{', CSS.indexOf(selector));
+        const closing = CSS.indexOf('}', opening);
+        const mutant = CSS.slice(0, opening) + CSS.slice(opening, closing).replace(gutter, '') + CSS.slice(closing);
+        assert.throws(() => assertNarrativeFullWidth(mutant), `reject missing narrative ${gutter}`);
     }
     assert.throws(() => verifySource(baseline, baseline), 'unedited source remains red');
 });
