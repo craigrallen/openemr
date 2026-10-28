@@ -49,6 +49,168 @@ if ($formId > 0) {
 <html><head>
 
 <?php Header::setupHeader('datetime-picker'); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-work-school-note-editor {
+    margin: 0;
+    background-color: #edf2f3 !important;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container,
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    margin-inline: auto;
+    background-color: #fff;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container {
+    margin-block: 1.5rem;
+    padding-block: 1.5rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container .row {
+    box-sizing: border-box;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container .col-sm-12 {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container .mt-5 {
+    margin-block-start: 0 !important;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form {
+    margin-block: 1.5rem;
+    padding-block: 1.5rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .container .oe-work-school-note-form {
+    margin-block: 1rem 0;
+    padding: 0;
+    border: 0;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor h1,
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > .title {
+    display: block;
+    margin-block: 0 0.75rem;
+    color: #182c36;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > div[style] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding-block: 0.75rem;
+    border-block-start: 1px solid #cbd6da;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > select,
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding-block: 0.65rem;
+    padding-inline: 0.75rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > textarea {
+    min-height: 12rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > b {
+    color: #182c36;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > table {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    border-collapse: separate;
+    background-color: #fff;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > table > tbody {
+    display: block;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > table > tbody > tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > table > tbody > tr > td {
+    display: block;
+    box-sizing: border-box;
+    flex: 1 1 16rem;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background-color: #fff;
+    color: #182c36;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form > table input {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding-inline: 0.65rem;
+    border: 1px solid #a9bbc3;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form select:focus,
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form textarea:focus,
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form input[type='text']:focus {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-work-school-note-editor .oe-work-school-note-form input[type='button'] {
+    min-height: 2.5rem;
+    padding-block: 0.5rem;
+    padding-inline: 1rem;
+  }
+}
+</style>
 
 <script>
 // required for textbox date verification
@@ -71,9 +233,9 @@ function PrintForm() {
 </script>
 
 </head>
-<body class="body_top">
+<body class="body_top oe-work-school-note-editor">
 
-<form method=post action="<?php echo $rootdir . "/forms/" . $form_name . "/save.php?mode=update&id=" . attr_url((string) $formId);?>" name="my_form" id="my_form">
+<form class="oe-work-school-note-form" method=post action="<?php echo $rootdir . "/forms/" . $form_name . "/save.php?mode=update&id=" . attr_url((string) $formId);?>" name="my_form" id="my_form">
 <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
 
 <span class="title"><?php echo xlt('Work/School Note'); ?></span><br /><br />
