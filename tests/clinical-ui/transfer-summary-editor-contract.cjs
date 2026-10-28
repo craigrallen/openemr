@@ -133,6 +133,20 @@ const CSS = `<style>
     padding-inline: 0;
   }
 
+  html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(.forms-data) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(.forms-data) > td {
+    display: block;
+    box-sizing: border-box;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
   html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(> td > textarea) > td:first-child {
     padding-block: 1rem 0.4rem;
     text-align: left;
@@ -145,7 +159,6 @@ const CSS = `<style>
     padding-block: 0 1rem;
   }
 
-  html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(.forms-data),
   html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(#transfer_to) {
     display: flex;
     flex-wrap: wrap;
@@ -153,7 +166,6 @@ const CSS = `<style>
     column-gap: 0.5rem;
   }
 
-  html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(.forms-data) > td,
   html.oe-workbench-context body.oe-transfer-summary-editor form tr:has(#transfer_to) > td {
     display: block;
     box-sizing: border-box;
