@@ -100,7 +100,7 @@ const CSS = `<style>
     box-shadow: 0 0 0 0.2rem rgb(20 89 104 / 22%);
   }
 
-  html.oe-workbench-context body form.oe-observation-editor textarea[name="observation"] {
+  html.oe-workbench-context body form.oe-observation-editor textarea[name='observation'] {
     width: 100%;
     min-height: 12rem;
     line-height: 1.7;
@@ -348,7 +348,7 @@ if (args.includes('--export-css')) {
     test('screen document, comments, metadata, linked state, sub-observations and actions are scoped', () => {
         assert.match(CSS, /^<style>\n@media screen \{/);
         assert.match(CSS, /max-width: 860px;/);
-        assert.match(CSS, /textarea\[name="observation"\] \{[^}]*min-height: 12rem;[^}]*line-height: 1\.7;[^}]*resize: vertical;/);
+        assert.match(CSS, /textarea\[name='observation'\] \{[^}]*min-height: 12rem;[^}]*line-height: 1\.7;[^}]*resize: vertical;/);
         for (const selector of ['.card-header.bg-light', '.card-body .row', '.form-label', '.questionnaire-linked.bg-light', '.questionnaire-unlinked.bg-light', '.sub-observation.bg-white', '.reasonCodeContainer .code-selector-text-display', '.action-bar.bg-light']) assert.ok(CSS.includes(selector), selector);
         assert.match(CSS, /\.action-bar\.bg-light \{[^}]*position: static !important;/);
         assert.match(CSS, /@media screen and \(width <= 640px\)/);
@@ -382,6 +382,7 @@ if (args.includes('--export-css')) {
         for (const [before, after] of [
             ['name="csrf_token_form"', 'name="other_token"'],
             ['name="observation"', 'name="other_observation"'],
+            ["textarea[name='observation']", "textarea[name='other_observation']"],
             ['{% for index,subObservation in observation.sub_observations %}', '{% for subObservation in observation.sub_observations %}'],
             ['max-width: 860px;', 'max-width: 1200px;'],
             ['min-height: 12rem;', 'min-height: 2rem;'],
