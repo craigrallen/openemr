@@ -64,6 +64,8 @@ $form_name = "note";
   }
 
   html.oe-workbench-context body.oe-work-school-note-editor .container .row {
+    box-sizing: border-box;
+    width: 100%;
     margin-inline: 0;
   }
 
