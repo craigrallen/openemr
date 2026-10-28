@@ -58,6 +58,8 @@ const CSS = `<style>
   }
 
   html.oe-workbench-context body.oe-work-school-note-editor .container .row {
+    box-sizing: border-box;
+    width: 100%;
     margin-inline: 0;
   }
 
@@ -255,7 +257,7 @@ test('screen rule requires paper geometry, field width, wrapping and scoped focu
     assert.match(CSS, /^<style>\n@media screen \{/);
     assert.match(CSS, /html\.oe-workbench-context body\.oe-work-school-note-editor/);
     assert.match(CSS, /max-width: 860px;/);
-    assert.match(CSS, /\.container \.row \{\n    margin-inline: 0;/);
+    assert.match(CSS, /\.container \.row \{\n    box-sizing: border-box;\n    width: 100%;\n    margin-inline: 0;\n  \}/);
     assert.match(CSS, /\.oe-work-school-note-form > textarea \{[\s\S]*?min-height: 12rem;/);
     assert.match(CSS, /\.oe-work-school-note-form > table > tbody > tr \{[\s\S]*?flex-wrap: wrap;/);
     assert.match(CSS, /\.oe-work-school-note-form > div\[style\] \{[\s\S]*?flex-wrap: wrap;/);
@@ -300,6 +302,13 @@ for (const [name, route] of Object.entries(routes)) {
             assert.ok(candidate.includes(before), 'negative mutation anchor exists');
             assert.throws(() => verifySource(candidate.replace(before, after), original, route));
         }
+        const rowRule = `html.oe-workbench-context body.oe-work-school-note-editor .container .row {
+    box-sizing: border-box;
+    width: 100%;
+    margin-inline: 0;
+  }`;
+        assert.ok(candidate.includes(rowRule), 'row width negative mutation anchor exists');
+        assert.throws(() => verifySource(candidate.replace(rowRule, rowRule.replace('    width: 100%;\n', '')), original, route));
     });
     test(`${name}: current route requires the exact presentation additions`, () => {
         verifySource(read(route.source), originalFor(route), route);
