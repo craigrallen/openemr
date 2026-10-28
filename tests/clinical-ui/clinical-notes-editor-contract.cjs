@@ -140,6 +140,11 @@ const CSS = `<style>
     display: none;
   }
 
+  html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row > .col-lg-4 .form-control {
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
   html.oe-workbench-context body form.oe-clinical-notes-editor .tb_row > fieldset > .form-row textarea.description {
     box-sizing: border-box;
     width: 100%;
@@ -222,13 +227,19 @@ const CSS = `<style>
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel {
     border-color: #9baeb8;
-    background-color: #e4ecef;
+    background-color: #e4ecef !important;
     color: #182c36 !important;
   }
 
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:hover {
     border-color: #7894a0;
-    background-color: #d2e0e5;
+    background-color: #d2e0e5 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:active {
+    border-color: #7894a0;
+    background-color: #d2e0e5 !important;
     color: #182c36 !important;
   }
 
@@ -257,7 +268,7 @@ const CSS = `<style>
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus,
   html.oe-workbench-context body form.oe-clinical-notes-editor .btn-cancel:focus-visible {
     border-color: #7894a0;
-    background-color: #e4ecef;
+    background-color: #e4ecef !important;
     color: #182c36 !important;
   }
 
@@ -393,8 +404,19 @@ function assertCascadeGuards(css) {
     const fieldset = ruleFor('.tb_row > fieldset');
     important(fieldset, 'background-color', '#fff');
     important(fieldset, 'color', '#182c36');
-    for (const selector of ['.btn-cancel', '.btn-cancel:hover', '.btn-cancel:focus', '.btn-cancel:focus-visible']) {
-        important(ruleFor(selector, 'color'), 'color', '#182c36');
+    const metadata = ruleFor('.tb_row > fieldset > .form-row > .col-lg-4 .form-control');
+    important(metadata, 'background-color', '#fff');
+    important(metadata, 'color', '#182c36');
+    for (const [selector, background] of [
+        ['.btn-cancel', '#e4ecef'],
+        ['.btn-cancel:hover', '#d2e0e5'],
+        ['.btn-cancel:active', '#d2e0e5'],
+        ['.btn-cancel:focus', '#e4ecef'],
+        ['.btn-cancel:focus-visible', '#e4ecef']
+    ]) {
+        const cancel = ruleFor(selector, 'background-color');
+        important(cancel, 'background-color', background);
+        important(cancel, 'color', '#182c36');
     }
     for (const container of ['.linked-documents-container', '.linked-results-container']) {
         important(ruleFor(`.tb_row > fieldset > .form-row ${container} .text-muted`), 'color', '#536773');
@@ -491,7 +513,7 @@ test('paired action palettes include hover, focus and disabled states', () => {
         assert.ok(at >= 0, `palette selector ${selector}`);
         const opening = CSS.indexOf('{', at);
         const rule = CSS.slice(opening, CSS.indexOf('}', opening));
-        assert.ok(rule.includes(`background-color: ${background};`), `${selector} background`);
+        assert.ok(rule.includes(`background-color: ${background}${selector === '.btn-cancel' ? ' !important' : ''};`), `${selector} background`);
         assert.ok(rule.includes(`color: ${ink}${selector === '.btn-cancel' ? ' !important' : ''};`), `${selector} ink`);
         assert.ok(CSS.includes(`${selector}:hover`), `${selector} hover`);
     }
@@ -535,8 +557,15 @@ test('specific semantic, geometry, palette and scope mutants are rejected', () =
     const cascadeMutants = [
         ['.tb_row > fieldset {', 'background-color: #fff !important;', 'background-color: #fff;'],
         ['.tb_row > fieldset {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.form-row > .col-lg-4 .form-control {', 'background-color: #fff !important;', 'background-color: #fff;'],
+        ['.form-row > .col-lg-4 .form-control {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel {', 'background-color: #e4ecef !important;', 'background-color: #e4ecef;'],
         ['.btn-cancel {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel:hover {', 'background-color: #d2e0e5 !important;', 'background-color: #d2e0e5;'],
         ['.btn-cancel:hover {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel:active {', 'background-color: #d2e0e5 !important;', 'background-color: #d2e0e5;'],
+        ['.btn-cancel:active {', 'color: #182c36 !important;', 'color: #182c36;'],
+        ['.btn-cancel:focus-visible {', 'background-color: #e4ecef !important;', 'background-color: #e4ecef;'],
         ['.btn-cancel:focus-visible {', 'color: #182c36 !important;', 'color: #182c36;'],
         ['.linked-documents-container .text-muted,', 'color: #536773 !important;', 'color: #536773;'],
         ['.linked-results-container .text-muted {', 'color: #536773 !important;', 'color: #536773;'],
@@ -551,6 +580,13 @@ test('specific semantic, geometry, palette and scope mutants are rejected', () =
         const mutant = CSS.slice(0, opening) + CSS.slice(opening, closing).replace(before, after) + CSS.slice(closing);
         assert.notEqual(mutant, CSS, `cascade mutant changed rule: ${anchor}`);
         assert.throws(() => assertCascadeGuards(mutant), `reject cascade mutant: ${anchor}`);
+    }
+    for (const [before, after] of [
+        ['.tb_row > fieldset > .form-row > .col-lg-4 .form-control {', '.tb_row > fieldset > .form-row .form-control {'],
+        ['.btn-cancel:active {', '.btn-cancel:visited {']
+    ]) {
+        const mutant = replaceOnce(CSS, before, after, 'palette selector mutant').toString();
+        assert.throws(() => assertCascadeGuards(mutant), `reject palette selector mutant: ${before}`);
     }
     for (const container of ['.linked-documents-container', '.linked-results-container']) {
         const selector = `.tb_row > fieldset > .form-row ${container} .text-muted`;
