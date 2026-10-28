@@ -25,7 +25,7 @@ node --test --test-reporter=tap tests/clinical-ui/aftercare-plan-editor-contract
 Direct history command, separately, for the five-path delivery scope on a checkout with its baseline history:
 
 ```sh
-node --test --test-reporter=tap tests/clinical-ui/aftercare-plan-editor-contract.cjs --history
+node --test-reporter=tap tests/clinical-ui/aftercare-plan-editor-contract.cjs --history
 ```
 
 The direct history check enforces the exact five-path changed-file boundary: the route, its original-source fixture, the portable contract, its Jest companion, and this document. The earlier four-path assertion that rejected this document was a test-harness scope regression and is fixed. The passing direct history result covers this five-path delivery, not completion of the original 22 feature rows. A hosted adapter without baseline Git history must use the portable command and omit `--history`.
