@@ -28,8 +28,21 @@ class PhysicalExamService extends AbstractObservationService implements QdmServi
 
     public function makeResult($record): Quantity
     {
+        $value = $record['ob_value'];
+        $number = is_numeric($value) ? $value + 0 : null;
+        if (is_int($number) || (
+            is_float($number)
+            && is_finite($number)
+            && $number >= (float)PHP_INT_MIN
+            && $number < PHP_INT_MAX + 1.0
+        )) {
+            $result = $number;
+        } else {
+            $result = (int)$value;
+        }
+
         return new Quantity([
-            'value' => (int)$record['ob_value'],
+            'value' => $result,
             'unit' => $record['ob_unit']
         ]);
     }
