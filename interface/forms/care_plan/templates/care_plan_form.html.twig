@@ -36,8 +36,167 @@
             $('[data-toggle="tooltip"]').tooltip();
         });
     </script>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-care-plan-editor {
+    margin: 0;
+    background-color: #edf2f3;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor > .container.mt-3 {
+    box-sizing: border-box;
+    width: calc(100% - 2rem);
+    max-width: 860px;
+    margin-block: 1.5rem;
+    margin-inline: auto;
+    padding-block: 1.5rem;
+    padding-inline: clamp(1rem, 4vw, 2.25rem);
+    border: 1px solid #cbd6da;
+    border-radius: 7px;
+    background-color: #fff;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor > .container.mt-3 > .row {
+    box-sizing: border-box;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor > .container.mt-3 > .row > .col-12 {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor h2 {
+    margin-block: 0 1rem;
+    color: #182c36;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor fieldset {
+    min-width: 0;
+    margin-block: 0 1rem;
+    padding: 0;
+    border: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor legend {
+    width: 100%;
+    margin-block: 0 0.75rem;
+    padding: 0;
+    border: 0;
+    background-color: #fff !important;
+    color: #182c36 !important;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor #care-plan-rows-container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row {
+    min-width: 0;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row .form-row {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row .forms {
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row .forms.col-md-12 {
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .reasonCodeContainer > .card {
+    min-width: 0;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row textarea.description {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 12rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-group .btn {
+    min-height: 2.5rem;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-save {
+    background-color: #175b7c;
+    border-color: #175b7c;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel {
+    background-color: #dce5e9;
+    border-color: #9baeb8;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-save:focus,
+  html.oe-workbench-context body.oe-care-plan-editor .btn-save:focus-visible {
+    background-color: #175b7c;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:focus,
+  html.oe-workbench-context body.oe-care-plan-editor .btn-cancel:focus-visible {
+    background-color: #dce5e9;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row textarea.description:focus,
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row input:focus,
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row select:focus,
+  html.oe-workbench-context body.oe-care-plan-editor .btn-group .btn:focus {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row textarea.description:focus-visible,
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row input:focus-visible,
+  html.oe-workbench-context body.oe-care-plan-editor .tb_row select:focus-visible,
+  html.oe-workbench-context body.oe-care-plan-editor .btn-group .btn:focus-visible {
+    outline: 2px solid #216a91;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
-<body>
+<body class="oe-care-plan-editor">
     <div class="container mt-3">
         <div class="row">
             <div class="col-12">
