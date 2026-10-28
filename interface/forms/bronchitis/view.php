@@ -70,41 +70,46 @@ $session = \OpenEMR\Common\Session\SessionWrapperFactory::getInstance()->getActi
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] table {
+    display: block;
+    box-sizing: border-box;
     width: 100%;
     max-width: 100%;
     margin: 0.5rem 0;
+    padding: 5px;
+    overflow-x: auto;
     border-collapse: collapse;
     font-size: 1rem;
   }
 
+  html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tbody {
+    display: table;
+    min-width: 100%;
+  }
+
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] tr {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.35rem;
-    padding: 0.3rem 0;
+    display: table-row;
     border-bottom: 1px solid #e5ecee;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] th {
-    display: block;
+    display: table-cell;
     padding: 0.5rem 0;
     color: #183b49;
-    text-align: left;
+    text-align: start;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td {
+    display: table-cell;
     box-sizing: border-box;
-    width: auto;
     max-width: 100%;
     padding: 0.2rem 0;
-    text-align: left;
+    text-align: start;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] td[align='right'] {
-    text-align: left;
+    text-align: start;
   }
 
   html.oe-workbench-context body.oe-bronchitis-editor form[name='my_form'] input[type='text'],
