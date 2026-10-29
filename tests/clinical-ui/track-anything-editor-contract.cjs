@@ -32,6 +32,7 @@ const support = new Map([
 const prefix = 'html.oe-workbench-context body.track-anything-document-editor';
 const sheet = `${prefix} #track_anything`;
 const table = `${sheet} table`;
+const selectionTable = `${sheet} > table`;
 const field = `${sheet} input[type='text']`;
 const select = `${sheet} select[name='procedure2track']`;
 
@@ -69,6 +70,22 @@ const CSS = `    <style>
 
       ${table}[border='1'] {
         min-width: 48rem;
+      }
+
+      ${selectionTable} {
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      ${selectionTable} th,
+      ${selectionTable} td {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      ${sheet} > form {
+        width: max-content;
+        min-width: 100%;
       }
 
       ${table} th,
@@ -114,6 +131,11 @@ const CSS = `    <style>
 
       ${select} {
         width: min(100%, 20rem) !important;
+      }
+
+      ${sheet} > table select {
+        min-width: 0;
+        max-width: 100%;
       }
 
       ${field}::placeholder {
@@ -226,18 +248,28 @@ function verifyCss(css) {
   assert.match(css, /^    <style>\n    @media screen \{/);
   assert.match(css, /    \}\n    <\/style>$/);
   assert.equal((css.match(/@media/g) || []).length, 1);
-  assert.doesNotMatch(css, /@media print|\bdisplay\s*:|\bposition\s*:\s*sticky|overflow-wrap\s*:\s*anywhere|table-layout\s*:\s*fixed/);
+  assert.doesNotMatch(css, /@media print|\bdisplay\s*:|\bposition\s*:\s*sticky|overflow-wrap\s*:\s*anywhere/);
   assert.doesNotMatch(css, /\boverflow-y\s*:|\boverflow-x\s*:\s*(?:hidden|clip)|(?:^|;)\s*(?:height|max-height)\s*:/m);
   for (const rule of rules(css)) for (const selector of rule.selectors) {
     assert.ok(selector === prefix || selector.startsWith(`${prefix} `), `unscoped: ${selector}`);
     assert.ok(!selector.includes(' input:not('), `overbroad control: ${selector}`);
   }
+  const layouts = rules(css).flatMap((rule) =>
+    [...rule.declarations.matchAll(/(?:^|;)\s*table-layout\s*:\s*([^;]+);/g)]
+      .map((match) => ({ selectors: rule.selectors, value: match[1].trim() })));
+  assert.deepEqual(layouts, [{ selectors: [selectionTable], value: 'fixed' }],
+    'fixed layout belongs only to the exact selection table');
   for (const [selector, property, expected] of [
     [prefix, 'background-color', '#e8eff0 !important'],
     [prefix, 'color', '#182c36 !important'],
     [sheet, 'max-width', '1000px'], [sheet, 'overflow-x', 'auto'],
     [sheet, 'padding', 'clamp(1rem, 2.5vw, 2rem)'],
     [table, 'min-width', '36rem'], [`${table}[border='1']`, 'min-width', '48rem'],
+    [selectionTable, 'min-width', '0'],
+    [`${selectionTable} th`, 'min-width', '0'], [`${selectionTable} td`, 'min-width', '0'],
+    [`${selectionTable} th`, 'white-space', 'normal'], [`${selectionTable} td`, 'white-space', 'normal'],
+    [`${sheet} > table select`, 'min-width', '0'], [`${sheet} > table select`, 'max-width', '100%'],
+    [`${sheet} > form`, 'width', 'max-content'], [`${sheet} > form`, 'min-width', '100%'],
     [`${table} th`, 'white-space', 'nowrap'], [`${table} td`, 'white-space', 'nowrap'],
     [`${table} th.time`, 'min-width', '12rem'], [`${table} td:first-child`, 'min-width', '12rem'],
     [`${table} th.value`, 'min-width', '12rem'], [`${table} td:not(:first-child)`, 'min-width', '12rem'],
@@ -322,6 +354,13 @@ test('fixture preserves the whole route and native clinical actions', () => {
 
 test('screen-only scoped proposal preserves native table and controls', () => verifyCss(CSS));
 
+test('keyboard layout contract checks the live source CSS and synthetic proposal', () => {
+  verifyCss(CSS);
+  const styles = read(source).toString().match(/    <style>\n    @media screen \{[\s\S]*?\n    \}\n    <\/style>/g) || [];
+  assert.equal(styles.length, 1, 'one live screen stylesheet');
+  verifyCss(styles[0]);
+});
+
 test('proposal builds and inverse restores every original byte', () => {
   const baseline = original();
   verifySource(proposed(baseline), baseline);
@@ -383,6 +422,29 @@ test('media, scope, table, scroll, width, palette, focus and placeholder mutants
   }
   rejectCssMutation(`${table} th,`, `${table} th { display: block; },`);
   rejectCssMutation(`${sheet} input[type='button'] {`, `${sheet} input[type='hidden'] {`);
+  for (const [before, after] of [
+    [`${selectionTable} {`, `${table} {`],
+    ['table-layout: fixed;', 'table-layout: auto;'],
+    [`${selectionTable} th,`, `${table} th,`],
+    ['white-space: normal;', 'white-space: nowrap;'],
+    [`${sheet} > table select {`, `${sheet} select {`],
+    ['max-width: 100%;', 'max-width: none;'],
+    [`${sheet} > form {`, `${sheet} form {`],
+    ['width: max-content;', 'width: 100%;'],
+    ['min-width: 100%;', 'min-width: 0;']
+  ]) {
+    rejectMutation(candidate, before, after, baseline);
+    rejectCssMutation(before, after);
+  }
+  for (const block of [
+    `      ${selectionTable} {\n        min-width: 0;\n        table-layout: fixed;\n      }\n\n`,
+    `      ${selectionTable} th,\n      ${selectionTable} td {\n        min-width: 0;\n        white-space: normal;\n      }\n\n`,
+    `      ${sheet} > table select {\n        min-width: 0;\n        max-width: 100%;\n      }\n\n`,
+    `      ${sheet} > form {\n        width: max-content;\n        min-width: 100%;\n      }\n\n`
+  ]) {
+    rejectMutation(candidate, block, '', baseline);
+    rejectCssMutation(block, '');
+  }
 });
 
 test('tests-only and final path oracles are distinct', () => {

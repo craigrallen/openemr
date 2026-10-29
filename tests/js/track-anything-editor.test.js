@@ -11,7 +11,7 @@ test('track anything portable source contract passes completely', () => {
         ['--test-reporter=tap', path.join(root, 'tests/clinical-ui/track-anything-editor-contract.cjs')],
         { cwd: root, encoding: 'utf8', timeout: 30000 });
     const output = `${child.stdout || ''}\n${child.stderr || ''}`;
-    const expected = 8;
+    const expected = 9;
     const plans = [...output.matchAll(/^1\.\.(\d+)$/gm)];
     const counts = [...output.matchAll(/^# tests (\d+)$/gm)];
     const passed = [...output.matchAll(/^# pass (\d+)$/gm)];
