@@ -196,6 +196,7 @@ const CSS = `<style>
   ${form} .btn-cancel {
     flex: 0 1 auto;
     min-height: 2.5rem;
+    transition-duration: 0s;
     white-space: normal;
   }
 
@@ -206,6 +207,24 @@ const CSS = `<style>
   }
 
   ${form} .btn-cancel {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
+    color: #183b49;
+  }
+
+  ${form} .btn-save:hover,
+  ${form} .btn-save:focus,
+  ${form} .btn-save:active {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  ${form} .btn-cancel:hover,
+  ${form} .btn-cancel:focus,
+  ${form} .btn-cancel:active {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
     color: #183b49;
   }
 
@@ -302,8 +321,17 @@ function verifyCss(css) {
   expectValue(css, `${form} .offset-sm-1`, 'margin-left', '0');
   assert.deepEqual(values(css, `${form} fieldset .offset-sm-1`, 'margin-left'), []);
   expectValue(css, `${form} .btn-group`, 'flex-wrap', 'wrap');
-  expectValue(css, `${form} .btn-save`, 'min-height', '2.5rem');
-  expectValue(css, `${form} .btn-cancel`, 'min-height', '2.5rem');
+  for (const action of ['save', 'cancel']) {
+    const base = `${form} .btn-${action}`;
+    expectValue(css, base, 'min-height', '2.5rem');
+    expectValue(css, base, 'transition-duration', '0s');
+    const pair = action === 'save'
+      ? { 'border-color': '#145968', 'background-color': '#145968', color: '#fff' }
+      : { 'border-color': '#91a8b1', 'background-color': '#eef3f4 !important', color: '#183b49' };
+    for (const state of ['', ':hover', ':focus', ':active']) {
+      for (const [property, value] of Object.entries(pair)) expectValue(css, `${base}${state}`, property, value);
+    }
+  }
   expectValue(css, `${form} fieldset`, 'background-color', '#fff !important');
   expectValue(css, `${form} legend`, 'background-color', '#fff !important');
   for (const selector of [`${form} input:focus-visible`, `${form} textarea:focus-visible`, `${form} button:focus-visible`]) expectValue(css, selector, 'outline', '3px solid #a84c22');
@@ -350,6 +378,26 @@ if (args.includes('--export-css')) {
   });
 
   test('proposed CSS keeps a responsive document and both checkbox structures coherent', () => verifyCss(CSS));
+
+  test('button state pairs and zero-duration transitions reject partial palette fixes', () => {
+    for (const [before, after] of [
+      ['transition-duration: 0s;', 'transition-duration: 0.15s;'],
+      ['background-color: #eef3f4 !important;', 'background-color: #eef3f4;'],
+      ['background-color: #eef3f4 !important;\n    color: #183b49;', 'background-color: #eef3f4 !important;\n    color: #fff;'],
+      ['background-color: #145968;', 'background-color: #468ac2;'],
+      ['    color: #fff;', '    color: #183b49;'],
+      [`${form} .btn-cancel:hover,`, `${form} .btn-cancel:disabled,`],
+      [`${form} .btn-cancel:focus,`, `${form} .btn-cancel:disabled,`],
+      [`${form} .btn-cancel:active {`, `${form} .btn-cancel:disabled {`],
+      [`${form} .btn-save:hover,`, `${form} .btn-save:disabled,`],
+      [`${form} .btn-save:focus,`, `${form} .btn-save:disabled,`],
+      [`${form} .btn-save:active {`, `${form} .btn-save:disabled {`]
+    ]) {
+      const mutant = CSS.replace(before, after);
+      assert.notEqual(mutant, CSS);
+      assert.throws(() => verifyCss(mutant), `palette mutant rejected: ${before}`);
+    }
+  });
 
   test('edit action offset outside fieldset requires the form-wide reset', () => {
     assert.match(original(files[1]).toString(), /<\/fieldset>\s*<div class="form-group clearfix">\s*<div class="col-sm-12 offset-sm-1 position-override">/);
