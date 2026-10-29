@@ -49,8 +49,160 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <head>
     <title><?php echo text($str_form_title); ?> </title>
     <?php Header::setupHeader(); ?>
+    <style>
+    @media screen {
+      html.oe-workbench-context body.phq9-document-editor {
+        box-sizing: border-box;
+        margin: 0;
+        padding: clamp(0.5rem, 2vw, 1.5rem);
+        background-color: #e8eff0 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor > .col-12 {
+        box-sizing: border-box;
+        max-width: 860px;
+        margin-inline: auto;
+        padding: 0;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor h3 {
+        margin-block: 0 0.75rem;
+        color: #183b49;
+        font-size: clamp(1.25rem, 3vw, 1.75rem);
+        line-height: 1.3;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 860px;
+        min-width: 0;
+        margin-inline: auto;
+        padding: clamp(0.75rem, 2.5vw, 1.75rem);
+        border: 1px solid #c7d5d9;
+        background-color: #fff;
+        color: #182c36;
+        font-size: 1rem;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] > .title {
+        color: #183b49;
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] table {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        border-collapse: collapse;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] td {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        padding-block: 0.5rem;
+        vertical-align: top;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] td > .label,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] td > i {
+        display: block;
+        color: #182c36;
+        font-size: 1rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] td > select {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        min-height: 2.75rem;
+        margin-block: 0.5rem 0;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #91a8b1;
+        border-radius: 4px;
+        background-color: #fff !important;
+        color: #182c36 !important;
+        font: inherit;
+        transition-duration: 0s;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] #q10_place,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] #show_phq9_score {
+        display: block;
+        color: #183b49;
+        font-weight: 600;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] #q10_place {
+        margin-block: 0.25rem;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit'],
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button'] {
+        box-sizing: border-box;
+        display: block;
+        width: min(100%, 20rem);
+        max-width: 100%;
+        min-height: 2.75rem;
+        margin-block: 0.5rem;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid #145968;
+        border-radius: 4px;
+        font: inherit;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        transition-duration: 0s;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit'] {
+        background-color: #145968 !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button'] {
+        border-color: #91a8b1;
+        background-color: #fff !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit']:hover,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit']:focus,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit']:active {
+        border-color: #104e5b;
+        background-color: #104e5b !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button']:hover,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button']:focus,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button']:active {
+        border-color: #145968;
+        background-color: #e4f0f1 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='submit']:focus-visible,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] button[type='button']:focus-visible,
+      html.oe-workbench-context body.phq9-document-editor form[name='my_form'] select:focus-visible {
+        outline: 3px solid #a84c22;
+        outline-offset: 2px;
+      }
+    }
+    </style>
 </head>
-<body class="body_top">
+<body class="body_top phq9-document-editor">
     <script>
         //var no_qs = 10; // number of questions in the form
         var phq9_score = 0; // total score
