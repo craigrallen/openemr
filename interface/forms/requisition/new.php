@@ -202,9 +202,15 @@ table, th, td {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
+    max-height: 70vh;
     margin: 0;
     padding: 0;
     overflow-x: auto;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .req:focus-visible {
+    outline: 3px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 3px;
   }
 
   html.oe-workbench-context body.requisition-document > .container .req table {
