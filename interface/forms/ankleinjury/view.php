@@ -90,6 +90,8 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
   }
 
   html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] table.oe-ankle-plan {
+    display: table;
+    table-layout: fixed;
     width: 100%;
   }
 
