@@ -30,15 +30,15 @@ const S = 'html.oe-workbench-context div.code-choices';
 // Every selector in the only appended screen block starts at the surviving
 // Knockout root. The native button colours, checkbox and warning hover stay native.
 const RULES = Object.freeze([
+    `${S} button:focus,\n  ${S} input[type='checkbox']:focus {\n    outline: 3px solid #086878;\n    outline-offset: 2px;\n  }`,
     `${S} {\n    box-sizing: border-box;\n    width: min(100%, 1000px);\n    min-width: 0;\n    margin: 20px auto;\n    padding: 20px 24px;\n    color: #17343b;\n    background-color: #fff;\n    border: 1px solid #d9e4e2;\n  }`,
-    `${S} > div[data-bind="foreach:categories"] {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));\n    gap: 12px;\n    min-width: 0;\n  }`,
+    `${S} > div[data-bind='foreach:categories'] {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));\n    gap: 12px;\n    min-width: 0;\n  }`,
     `${S} div.category-display {\n    float: none;\n    width: auto;\n    min-width: 0;\n    margin: 0;\n  }`,
     `${S} div.category-display > button {\n    box-sizing: border-box;\n    width: 100%;\n    max-width: 100%;\n    margin: 0;\n    white-space: normal;\n    overflow-wrap: break-word;\n  }`,
     `${S} .active-category {\n    box-sizing: border-box;\n    position: relative;\n    width: 100%;\n    min-width: 0;\n    margin-top: 20px;\n    padding: 20px;\n    color: #17343b;\n    background-color: #fff;\n    border: 1px solid #d9e4e2;\n  }`,
-    `${S} .active-category [data-bind="foreach:codes"] {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));\n    gap: 12px;\n    min-width: 0;\n  }`,
+    `${S} .active-category [data-bind='foreach:codes'] {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));\n    gap: 12px;\n    min-width: 0;\n  }`,
     `${S} div.code-choice {\n    display: flex;\n    align-items: flex-start;\n    gap: 8px;\n    float: none;\n    width: auto;\n    min-width: 0;\n  }`,
-    `${S} div.code-choice > span {\n    min-width: 0;\n    overflow-wrap: break-word;\n  }`,
-    `${S} button:focus,\n  ${S} input[type="checkbox"]:focus {\n    outline: 3px solid #086878;\n    outline-offset: 2px;\n  }`
+    `${S} div.code-choice > span {\n    min-width: 0;\n    overflow-wrap: break-word;\n  }`
 ]);
 const STYLE = `\n@media screen {\n  ${RULES.join('\n\n  ')}\n}\n`;
 
@@ -111,7 +111,7 @@ if (require.main === module) {
         mutants.push(candidate.replace('@media screen', '@media print'));
         mutants.push(candidate.replace('position: relative;\n    width: 100%', 'position: absolute;\n    width: 100%'));
         mutants.push(candidate.replace('width: 100%;\n    max-width: 100%', 'width: 25em;\n    max-width: 100%'));
-        mutants.push(candidate.replace('data-bind="foreach:codes"', 'data-bind="foreach:categories"'));
+        mutants.push(candidate.replace("data-bind='foreach:codes'", "data-bind='foreach:categories'"));
         for (const mutant of mutants) {
             assert.notEqual(mutant, candidate, 'each mutant must change the proposed CSS');
             assert.throws(() => assertCandidate(mutant));
