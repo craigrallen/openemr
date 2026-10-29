@@ -87,6 +87,22 @@ echo "<html><head>";
         min-width: 48rem;
       }
 
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table {
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table th,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table td {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > form {
+        width: max-content;
+        min-width: 100%;
+      }
+
       html.oe-workbench-context body.track-anything-document-editor #track_anything table th,
       html.oe-workbench-context body.track-anything-document-editor #track_anything table td {
         padding: 0.65rem 0.8rem;
@@ -130,6 +146,11 @@ echo "<html><head>";
 
       html.oe-workbench-context body.track-anything-document-editor #track_anything select[name='procedure2track'] {
         width: min(100%, 20rem) !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table select {
+        min-width: 0;
+        max-width: 100%;
       }
 
       html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='text']::placeholder {

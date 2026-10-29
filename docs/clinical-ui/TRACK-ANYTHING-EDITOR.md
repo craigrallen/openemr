@@ -19,7 +19,10 @@ The frozen `proposed()` transformation in
    `html.oe-workbench-context body.track-anything-document-editor`.
    It gives `#track_anything` a centered paper surface, keeps the native tables,
    provides horizontal scrolling for wide history, and styles native inputs,
-   selection list and action buttons with visible focus outlines.
+   selection list and action buttons with visible focus outlines. The keyboard
+   correction limits fixed table layout and wrapping to the direct selection
+   table, keeps its select within the cell, and gives the direct existing form
+   enough width for its fields.
 2. `track-anything-document-editor` on the existing `body_top` body class.
 
 The original route still renders the native track selection list, Select, Back and
@@ -34,10 +37,25 @@ works in a running application.
 
 ## Evidence and verification
 
-The controller captured genuine RED on the tests-only commit `f37367cb` before
-the production edit: portable **8 tests, 7 pass, 1 fail**; history **10 tests,
-9 pass, 1 fail**. Both failures were the expected missing presentation seam.
-The original fixture hash, unchanged support-file hashes and scope checks passed.
+The controller captured genuine RED before the initial production edit: portable
+**8 tests, 7 pass, 1 fail**; history **10 tests, 9 pass, 1 fail**. Both failures
+were the expected missing presentation seam. Those passing checks established
+only the tested source and scope properties, not browser acceptance. The original
+fixture hash, unchanged support-file hashes and scope checks passed.
+
+The initial production CSS introduced a keyboard regression. The original
+pre-fix five-theme browser comparison covered 160 cases and 480 legacy/print
+comparisons, with 25 Tab-hit failures. An independent Astra review confirmed
+P2. At baseline light 390 RTL, the original had 0 hits and the candidate had
+4; an external overlay of the proposed CSS corrected those 4/4 hits. That
+overlay result is limited to that scenario and is not full browser acceptance.
+
+The tests-first keyboard correction on commit `827b3e09` captured genuine RED
+against the unchanged production source: portable **9 tests, 7 pass, 2 fail**;
+history **11 tests, 9 pass, 2 fail**. The live CSS lacked the selection and form
+guards and did not match the exact strengthened proposal. This edit applies
+that proposal to the existing CSS block. The source inverse still restores the
+entire pinned original fixture byte for byte.
 The source has mutating SQL branches before and between rendering; do not execute
 the whole route as a verification shortcut.
 
@@ -48,21 +66,24 @@ node tests/clinical-ui/track-anything-editor-contract.cjs
 node tests/clinical-ui/track-anything-editor-contract.cjs --history
 ```
 
-The Jest wrapper is `tests/js/track-anything-editor.test.js`. No tests or
-application runtime were run during this implementation edit. Controller
-verification of the candidate is pending. There is no claim of native runtime,
-contrast, keyboard, Save or persistence acceptance.
+The Jest wrapper is `tests/js/track-anything-editor.test.js`. No tests,
+application runtime or browser checks were run during this correction edit.
+Final portable 9-test and history 11-test controller runs, the full browser
+comparison, and hosted gates are pending controller verification. There is no
+claim that the keyboard regression is fixed or that native runtime, contrast,
+Save or persistence acceptance has been achieved.
 
-The final change scope is exactly these five paths: the original fixture,
-portable contract, Jest wrapper, route source and this document. No test or
-frozen proposal was changed to make production pass.
+The cumulative change scope is exactly these five paths: the original fixture,
+portable contract, Jest wrapper, route source and this document. This correction
+touches only the route source and this document. No test or frozen proposal was
+changed to make production pass.
 
 ## Delivery states
 
 | State | Meaning |
 |---|---|
 | `ready` | Exact source transformation and documentation prepared for controller review. |
-| `awaitingQA` | **Current:** implementation is ready; controller verification has not been reported. |
+| `awaitingQA` | **Current:** keyboard correction is prepared; final controller and browser verification have not been reported. |
 | `needsapproval` | A controller result requires a decision or authorization outside this fixed presentation scope. |
 | `blocked` | The scheduled delivery limit is exhausted without acceptance or required external input prevents a decision. |
 
