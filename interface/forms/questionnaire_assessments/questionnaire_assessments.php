@@ -280,6 +280,66 @@ $formAction .= '&mode=' . urlencode($mode);
     <title id="main_title"><?php echo xlt('Questionnaire'); ?></title>
     <?php Header::setupHeader(['select2', 'bootstrap']); ?>
     <?php require __DIR__ . '/openemr_questionnaire_components.php'; ?>
+    <style media="screen">
+        html.oe-workbench-context body.oe-qa-document {
+          color: #182c36;
+          background-color: #edf2f3 !important;
+        }
+
+        html.oe-workbench-context body.oe-qa-document > .container,
+        html.oe-workbench-context body.oe-qa-document > .container-fluid {
+          width: calc(100% - 32px);
+          max-width: 1000px;
+          min-width: 0;
+          margin: 24px auto;
+          padding: 28px 36px;
+          color: #182c36;
+          background-color: #fff;
+          border: 1px solid #cbd6da;
+        }
+
+        html.oe-workbench-context body.oe-qa-document > .container > .title,
+        html.oe-workbench-context body.oe-qa-document > .container-fluid > .title {
+          margin-bottom: 24px;
+          padding: 0 0 12px;
+          color: #182c36 !important;
+          background-color: #fff !important;
+          border-bottom: 1px solid #cbd6da;
+        }
+
+        html.oe-workbench-context body.oe-qa-document > .container > .title h4,
+        html.oe-workbench-context body.oe-qa-document > .container-fluid > .title h4 {
+          margin-bottom: 0;
+        }
+
+        html.oe-workbench-context body.oe-qa-document #qa_form {
+          min-width: 0;
+        }
+
+        html.oe-workbench-context body.oe-qa-document #qa_form > .mb-3 .input-group {
+          min-width: 0;
+          flex-wrap: wrap;
+        }
+
+        html.oe-workbench-context body.oe-qa-document #qa_form #form_name,
+        html.oe-workbench-context body.oe-qa-document #qa_form #category,
+        html.oe-workbench-context body.oe-qa-document #qa_form #select_item,
+        html.oe-workbench-context body.oe-qa-document #qa_form .select2-container {
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        html.oe-workbench-context body.oe-qa-document #qa_form > .btn-group {
+          flex-wrap: wrap;
+        }
+
+        html.oe-workbench-context body.oe-qa-document #qa_form > .mb-3 input:focus-visible,
+        html.oe-workbench-context body.oe-qa-document #qa_form > .mb-3 select:focus-visible,
+        html.oe-workbench-context body.oe-qa-document #qa_form > .btn-group button:focus-visible {
+          outline: 3px solid #b65020;
+          outline-offset: 3px;
+        }
+    </style>
     <script>
         const questionnaire = <?php echo $questionnaireForJs ?: 'null'; ?>;
         const questionnaireResponse = <?php echo $responseForJs ?: 'null'; ?>;
@@ -369,7 +429,7 @@ $formAction .= '&mode=' . urlencode($mode);
         }
     </script>
 </head>
-<body class="bg-light" data-theme="<?php echo attr($theme); ?>">
+<body class="bg-light<?php echo ($isPortal ? '' : ' oe-qa-document'); ?>" data-theme="<?php echo attr($theme); ?>">
 <div class="<?php echo attr($container); ?>">
     <?php if (!$isPortal && !$isModule && !$isDashboard) { ?>
         <div class="title bg-light text-dark">
