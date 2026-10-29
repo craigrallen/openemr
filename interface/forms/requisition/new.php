@@ -137,9 +137,109 @@ table, th, td {
 
 </style>
     <title><?php echo xlt('Lab Requisition') . ' ' . text($lab); ?></title>
+<style>
+@media screen {
+  html.oe-workbench-context body.requisition-document {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-canvas, #f3f7f5);
+  }
+
+  html.oe-workbench-context body.requisition-document > .container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1000px;
+    min-width: 0;
+    margin-inline: auto;
+    padding: clamp(1rem, 3vw, 2.25rem);
+    border: 1px solid var(--oe-wb-line, #d9e4e2);
+    border-radius: 6px;
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container > .text-center {
+    margin-bottom: 1.25rem;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .reqHeader {
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 1.25rem;
+    padding: 0 0 1rem;
+    border-bottom: 1px solid var(--oe-wb-line, #d9e4e2);
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .reqHeader > p {
+    flex-basis: 100%;
+    margin: 0;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .reqHeader .cinfo {
+    float: none;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .reqHeader .pdata {
+    position: static;
+    right: auto;
+    z-index: auto;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .reqHeader .pdata p {
+    margin: 0;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .req {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+  }
+
+  html.oe-workbench-context body.requisition-document > .container .req table {
+    color: var(--oe-wb-ink, #17343b);
+    background-color: var(--oe-wb-paper, #fff);
+  }
+
+  html.oe-workbench-context body.requisition-document > #non-printable {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0.75rem auto 0;
+    padding: 0.75rem 0 0;
+    text-align: right;
+  }
+
+  html.oe-workbench-context body.requisition-document > #non-printable input[type='button'] {
+    min-height: 2.5rem;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--oe-wb-petrol, #086878);
+    border-radius: 4px;
+    color: var(--oe-wb-on-petrol, #fff);
+    background-color: var(--oe-wb-petrol, #086878);
+    cursor: pointer;
+  }
+
+  html.oe-workbench-context body.requisition-document > #non-printable input[type='button']:focus-visible {
+    outline: 3px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 3px;
+  }
+}
+</style>
 </head>
 
-<body>
+<body class="requisition-document">
 <div class="container">
     <?php
     if (empty($order)) {
