@@ -18,7 +18,7 @@ const testsOnly = new Set([
 ]);
 const finalPaths = new Set([...testsOnly, source, 'docs/clinical-ui/PHYSICAL-EXAM-EDITOR.md']);
 const support = new Map([
-  ['interface/forms/physical_exam/lines.php', '6c641b73ea21dc84b2874ae6c511bd12fe73f3f0e856043e0220b29463'],
+  ['interface/forms/physical_exam/lines.php', '6c641b73ea21dc84b2874ae6c511bd12fe73f3bb1bf3f0e856043e0220b29463'],
   ['interface/forms/physical_exam/view.php', '4f3e23d78fe30bc889510d74d2c28227177c67afe3a4ac81c4743af61223efd3'],
   ['interface/forms/physical_exam/edit_diagnoses.php', '48442d95d04d295a1e7c752198962b00b321873aba306423bd7cb6a4e27da6ac'],
   ['interface/clinical-workspace/popup.css', 'ea56e9f26990e843219a68f315c188f7e2b0581c20321bac4517dc4ba34e79a9'],
@@ -86,13 +86,6 @@ const CSS = `    <style>
         line-height: 1.45;
       }
 
-      ${table} tr:first-child td {
-        padding-block: 0.75rem;
-        background-color: #e8eff0;
-        color: #183b49;
-        font-weight: 600;
-      }
-
       ${table} td:nth-child(1),
       ${table} td:nth-child(2) {
         min-width: 4rem;
@@ -139,6 +132,13 @@ const CSS = `    <style>
 
       ${table} td[colspan='2'] ${comments.slice(table.length + 1)} {
         min-width: 16rem;
+      }
+
+      ${table} tr:first-child td {
+        padding-block: 0.75rem;
+        background-color: #e8eff0;
+        color: #183b49;
+        font-weight: 600;
       }
 
       ${center} > p:last-of-type {
@@ -289,7 +289,27 @@ function verifyCss(css) {
   assert.equal((css.match(/@media/g) || []).length, 1);
   assert.doesNotMatch(css, /@media print|\bdisplay\s*:\s*(?:none|grid|flex|block|table)|\bvisibility\s*:\s*hidden|\bopacity\s*:\s*0|overflow-wrap\s*:\s*anywhere|table-layout\s*:\s*fixed/);
   assert.doesNotMatch(css, /\boverflow-y\s*:\s*(?:auto|hidden|clip)|\boverflow-x\s*:\s*(?:hidden|clip)/);
-  for (const rule of rules(css)) for (const selector of rule.selectors) {
+  const cssRules = rules(css);
+  const firstRow = `${table} tr:first-child td`;
+  const firstRowIndex = cssRules.findIndex((rule) => rule.selectors.includes(firstRow));
+  assert.notEqual(firstRowIndex, -1, 'first-row rule exists');
+  for (const selector of [
+    `${table} td`,
+    ...[1, 2, 3, 4, 5, 6].map((column) => `${table} td:nth-child(${column})`),
+    `${table} td[colspan='6']`,
+    `${table} td[colspan='2']`,
+    `${table} td[colspan='2'] ${comments.slice(table.length + 1)}`
+  ]) {
+    const columnIndex = cssRules.findIndex((rule) => rule.selectors.includes(selector));
+    assert.ok(columnIndex >= 0 && columnIndex < firstRowIndex, `${selector} precedes first-row rule`);
+  }
+  for (const [property, expected] of [
+    ['padding-block', '0.75rem'],
+    ['background-color', '#e8eff0'],
+    ['color', '#183b49'],
+    ['font-weight', '600']
+  ]) expectValue(css, firstRow, property, expected);
+  for (const rule of cssRules) for (const selector of rule.selectors) {
     assert.ok(selector === prefix || selector.startsWith(`${prefix} `), `unscoped: ${selector}`);
     assert.ok(!/\b(?:table|tr|td)\b.*\bdisplay\s*:/.test(`${selector} {${rule.declarations}`));
     for (const declaration of rule.declarations.match(/[^;]+;/g) || []) {
@@ -389,6 +409,14 @@ test('original fixture is complete and retains clinical, CSRF, save and native a
 });
 
 test('screen-only scoped proposal keeps a document workspace and native table rows', () => verifyCss(CSS));
+
+test('first-row declarations follow every table column rule', () => {
+  const firstRowRule = `      ${table} tr:first-child td {\n        padding-block: 0.75rem;\n        background-color: #e8eff0;\n        color: #183b49;\n        font-weight: 600;\n      }\n\n`;
+  const withoutFirstRow = replaceOnce(Buffer.from(CSS), firstRowRule, '');
+  const firstColumn = `      ${table} td:nth-child(1),`;
+  const mutant = replaceOnce(withoutFirstRow, firstColumn, `${firstRowRule}${firstColumn}`);
+  assert.throws(() => verifyCss(mutant.toString()), /precedes first-row rule/);
+});
 
 test('proposal builds and full inverse restores original bytes', () => {
   const baseline = original();
