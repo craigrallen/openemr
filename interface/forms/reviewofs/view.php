@@ -202,6 +202,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel {
     flex: 0 1 auto;
     min-height: 2.5rem;
+    transition-duration: 0s;
     white-space: normal;
   }
 
@@ -212,6 +213,24 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
   }
 
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
+    color: #183b49;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:hover,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:focus,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:active {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:hover,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:focus,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:active {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
     color: #183b49;
   }
 

@@ -6,13 +6,13 @@ OPEMR-156 adds the exact screen-only CSS exported by `tests/clinical-ui/review-o
 
 The form pages otherwise retain every original byte, including the ten system groups, 107 checkboxes in each variant, labels, additional notes, checked values on edit, form actions, CSRF token, session handler, Save and Cancel controls, and legacy page markup. This change does not alter `save.php`, `report.php`, shared assets, schema, or tests and fixtures.
 
-The visual treatment uses a centered document sheet, responsive fieldset grids for the two existing checkbox structures, wrapping labels and actions, a wider notes area, and visible keyboard focus. The form-wide `.offset-sm-1` reset corrects the demonstrated 640px edit-page action overflow, including the Save and Cancel row outside the fieldset. The research page at `/Users/craig/artifacts/OpenEMR-Research/researched/index.html` is a partial questionnaire and document reference. It does not establish delivery of a full original design or all 22 systems.
+The visual treatment uses a centered document sheet, responsive fieldset grids for the two existing checkbox structures, wrapping labels and actions, a wider notes area, and visible keyboard focus. The form-wide `.offset-sm-1` reset corrects the demonstrated 640px edit-page action overflow, including the Save and Cancel row outside the fieldset. Save uses white text on a dark teal background in its base, hover, focus, and active states. Cancel uses dark text on a pale background in those same states; its pale background overrides the shared button theme. Both controls have zero-duration transitions. The research page at `/Users/craig/artifacts/OpenEMR-Research/researched/index.html` is a partial questionnaire and document reference. It does not establish delivery of a full original design or all 22 requested features.
 
 ## Verification handoff
 
-The controller verified a tests-only RED at `a23effe3`: portable contract 10 tests, 9 passed and 1 failed; history contract 11 tests, 10 passed and 1 failed. The sole failure in each was the live CSS's narrow `fieldset .offset-sm-1` selector, which missed the edit-page action row outside the fieldset. Evidence is in `/Users/craig/.hermes/projects/openemr/verification/review-of-systems-editor-20261029/red-offset.tap` and `red-offset-history.tap` in that directory.
+The controller verified a tests-only RED at `f88d7db2`: portable contract 11 tests, 10 passed and 1 failed; history contract 12 tests, 11 passed and 1 failed. The sole failure in each was the live CSS missing the updated button palette. Evidence is in `/Users/craig/.hermes/projects/openemr/verification/review-of-systems-editor-20261029/red-palette-corrected.tap` and `red-palette-corrected-history.tap` in that directory. The controller's corrected negative test indents the exact `color: #fff` declaration so it does not match the substring in `background-color: #fff`; the other negative cases remain in the contract.
 
-The controller owns the post-edit checks. Run once, with at most one correction run if needed:
+The controller owns the post-edit checks:
 
 ```sh
 node --test-reporter=tap tests/clinical-ui/review-of-systems-editor-contract.cjs
