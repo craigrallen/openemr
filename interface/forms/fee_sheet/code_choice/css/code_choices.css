@@ -53,3 +53,78 @@ div.code-choice {
 div.code-choice:hover {
   background-color: var(--warning);
 }
+
+@media screen {
+  html.oe-workbench-context div.code-choices button:focus,
+  html.oe-workbench-context div.code-choices input[type='checkbox']:focus {
+    outline: 3px solid #086878;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context div.code-choices {
+    box-sizing: border-box;
+    width: min(100%, 1000px);
+    min-width: 0;
+    margin: 20px auto;
+    padding: 20px 24px;
+    color: #17343b;
+    background-color: #fff;
+    border: 1px solid #d9e4e2;
+  }
+
+  html.oe-workbench-context div.code-choices > div[data-bind='foreach:categories'] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 12px;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context div.code-choices div.category-display {
+    float: none;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+  }
+
+  html.oe-workbench-context div.code-choices div.category-display > button {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  html.oe-workbench-context div.code-choices .active-category {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    margin-top: 20px;
+    padding: 20px;
+    color: #17343b;
+    background-color: #fff;
+    border: 1px solid #d9e4e2;
+  }
+
+  html.oe-workbench-context div.code-choices .active-category [data-bind='foreach:codes'] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 12px;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context div.code-choices div.code-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    float: none;
+    width: auto;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context div.code-choices div.code-choice > span {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+}
