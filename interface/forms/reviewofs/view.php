@@ -33,11 +33,220 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     <title><?php echo xlt("Review of Systems Checks"); ?></title>
 
     <?php Header::setupHeader();?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-review-of-systems-editor {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.5rem, 2vw, 1.5rem);
+    background-color: #e8eff0 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor > .container {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: clamp(0.75rem, 2.5vw, 1.75rem);
+    border: 1px solid #c7d5d9;
+    background-color: #fff;
+    color: #182c36;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor .row {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor .col-12,
+  html.oe-workbench-context body.oe-review-of-systems-editor .col-sm-12 {
+    min-width: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor h2 {
+    margin: 0 0 1.25rem;
+    color: #183b49;
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    line-height: 1.2;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    color: #182c36;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    margin: 0 0 1rem;
+    padding: 0.75rem clamp(0.75rem, 2vw, 1.25rem) 1rem;
+    border: 1px solid #c7d5d9;
+    background-color: #fff !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] legend {
+    width: auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 0.4rem;
+    background-color: #fff !important;
+    color: #183b49 !important;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset > .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset > .row > .col-12,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset > .container > .row > .col-12 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: 0.25rem 1.25rem;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset .col-sm-3 {
+    box-sizing: border-box;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    padding: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset .form-group {
+    min-width: 0;
+    margin: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .form-check,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .checkbox {
+    box-sizing: border-box;
+    min-width: 0;
+    margin: 0;
+    padding: 0.25rem 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .form-check,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .checkbox label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .form-check-input,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .checkbox input[type='checkbox'] {
+    position: static;
+    flex: 0 0 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0.12rem 0 0;
+    accent-color: #145968;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .form-check-label,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .checkbox label {
+    min-width: 0;
+    margin: 0;
+    color: #182c36;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] textarea[name='additional_notes'] {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-height: 7rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid #91a8b1;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .offset-sm-1 {
+    margin-left: 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+    margin: 0.5rem 0 0;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel {
+    flex: 0 1 auto;
+    min-height: 2.5rem;
+    transition-duration: 0s;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
+    color: #183b49 !important;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:hover,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:focus,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:active {
+    border-color: #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:hover,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:focus,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:active {
+    border-color: #91a8b1;
+    background-color: #eef3f4 !important;
+    color: #183b49 !important;
+  }
+
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] input:focus-visible,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] textarea:focus-visible,
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] button:focus-visible {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
 <?php
 $obj = formFetch("form_reviewofs", $_GET["id"]);
 ?>
-<body class="body_top">
+<body class="body_top oe-review-of-systems-editor">
     <div class="container">
         <div class="row">
             <div class="col-12">
