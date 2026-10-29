@@ -66,9 +66,207 @@ if ($form_id) {//If editing a form or the form already exists (inwhich case will
 
     <?php Header::setupHeader(['datatables', 'datatables-dt', 'datatables-bs']); ?>
 
+    <style>
+    @media screen {
+      html.oe-workbench-context body.group-attendance-document-editor {
+        box-sizing: border-box;
+        margin: 0;
+        padding: clamp(0.5rem, 2vw, 1.5rem);
+        background-color: #e8eff0 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor > .container-fluid {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 1000px;
+        margin-inline: auto;
+        padding: 0;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form {
+        box-sizing: border-box;
+        min-width: 0;
+        width: 100%;
+        padding: clamp(0.75rem, 2.5vw, 2rem);
+        border: 1px solid #c7d5d9;
+        background-color: #fff !important;
+        color: #182c36 !important;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .button_wrap {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-block-end: 1.25rem;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .title {
+        color: #183b49 !important;
+        font-size: clamp(1.35rem, 3vw, 1.8rem);
+        font-weight: 600;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #add_participant_element {
+        box-sizing: border-box;
+        max-width: 100%;
+        margin-block: 0 1.25rem;
+        padding: clamp(0.75rem, 2vw, 1.25rem);
+        border: 1px solid #c7d5d9;
+        background-color: #f3f7f5 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .patient_wrap,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .comment_wrap {
+        box-sizing: border-box;
+        min-width: 0;
+        width: 100%;
+        margin-block-end: 0.75rem;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .input_label {
+        display: block;
+        margin-block-end: 0.25rem;
+        color: #182c36 !important;
+        font-weight: 600;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .new_patient,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .new_comment {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 2.75rem;
+        color: #182c36 !important;
+        background-color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        max-width: 100%;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        overflow: auto visible;
+        margin-block: 0 1.25rem;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper .dataTables_length,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper .dataTables_info,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper .dataTables_paginate {
+        max-width: 100%;
+        float: none;
+        margin-block: 0.5rem;
+        white-space: normal;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper .dataTables_paginate .paginate_button {
+        display: inline-block;
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        margin: 0.125rem;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table {
+        width: 100% !important;
+        min-width: 760px;
+        border-collapse: collapse;
+        color: #182c36 !important;
+        background-color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table th,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table td {
+        box-sizing: border-box;
+        padding: 0.6rem;
+        color: #182c36 !important;
+        background-color: #fff !important;
+        vertical-align: middle;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table th {
+        background-color: #e8eff0 !important;
+        font-weight: 600;
+        white-space: normal;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table .status_select {
+        min-width: 11rem;
+        min-height: 2.75rem;
+        color: #182c36 !important;
+        background-color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table .comment {
+        min-width: 12rem;
+        min-height: 2.75rem;
+        color: #182c36 !important;
+        background-color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .action_buttons {
+        margin-block: 0.5rem 0;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn {
+        box-sizing: border-box;
+        min-width: 7rem;
+        max-width: 100%;
+        min-height: 2.75rem;
+        padding: 0.55rem 0.85rem;
+        white-space: normal;
+        transition-duration: 0s;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn:focus-visible,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .form-control:focus-visible,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form #group_attendance_form_table_wrapper .paginate_button:focus-visible {
+        outline: 3px solid #a84c22;
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-primary {
+        border-color: #145968 !important;
+        background-color: #145968 !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-primary:hover,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-primary:focus,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-primary:active {
+        border-color: #104e5b !important;
+        background-color: #104e5b !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-secondary {
+        border-color: #91a8b1 !important;
+        background-color: #fff !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-secondary:hover,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-secondary:focus,
+      html.oe-workbench-context body.group-attendance-document-editor #group_attendance_form .btn-secondary:active {
+        border-color: #145968 !important;
+        background-color: #e4f0f1 !important;
+        color: #182c36 !important;
+      }
+    }
+    </style>
 </head>
 
-<body class="body_top">
+<body class="body_top group-attendance-document-editor">
 <div class="container-fluid">
 <?php if ($form_id) { ?>
 <form id="group_attendance_form" method='post' onclick="top.restoreSession();" action="<?php echo $rootdir;?>/forms/group_attendance/save.php?mode=update&id=<?php echo attr_url($form_id) ;?>" name="my_form">
