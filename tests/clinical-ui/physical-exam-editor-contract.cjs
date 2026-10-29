@@ -29,7 +29,7 @@ const support = new Map([
 const prefix = 'html.oe-workbench-context body.physical-exam-document-editor';
 const form = `${prefix} > form`;
 const center = `${form} > center`;
-const table = `${center} > table`;
+const table = `${center} table`;
 const save = `${center} > p > input[type='submit'][name='bn_save']`;
 const cancel = `${center} > p > input[type='button'][onclick='parent.closeTab(window.name, false)']`;
 const diagnosis = `${table} select[name^='form_obs['][name$='[diagnosis]']`;
@@ -409,6 +409,14 @@ test('original fixture is complete and retains clinical, CSRF, save and native a
 });
 
 test('screen-only scoped proposal keeps a document workspace and native table rows', () => verifyCss(CSS));
+
+test('table proposal reaches the paragraph-nested native table, not a direct child', () => {
+  assert.equal(table, `${center} table`);
+  assert.notEqual(table, `${center} > table`);
+  assert.ok(rules(CSS).some((rule) => rule.selectors.includes(table)));
+  assert.ok(rules(CSS).every((rule) => !rule.selectors.some((selector) => selector.includes(`${center} > table`))));
+  rejectCssMutation(`${table} {`, `${center} > table {`);
+});
 
 test('first-row declarations follow every table column rule', () => {
   const firstRowRule = `      ${table} tr:first-child td {\n        padding-block: 0.75rem;\n        background-color: #e8eff0;\n        color: #183b49;\n        font-weight: 600;\n      }\n\n`;
