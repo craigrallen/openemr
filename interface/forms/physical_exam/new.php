@@ -241,13 +241,6 @@ if ($formid !== '') {
         line-height: 1.45;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table tr:first-child td {
-        padding-block: 0.75rem;
-        background-color: #e8eff0;
-        color: #183b49;
-        font-weight: 600;
-      }
-
       html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(1),
       html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(2) {
         min-width: 4rem;
@@ -278,6 +271,13 @@ if ($formid !== '') {
 
       html.oe-workbench-context body.physical-exam-document-editor > form > center > table td[colspan='2'] {
         padding-block: 0.7rem;
+      }
+
+      html.oe-workbench-context body.physical-exam-document-editor > form > center > table tr:first-child td {
+        padding-block: 0.75rem;
+        background-color: #e8eff0;
+        color: #183b49;
+        font-weight: 600;
       }
 
       html.oe-workbench-context body.physical-exam-document-editor > form > center > table select[name^='form_obs['][name$='[diagnosis]'],
