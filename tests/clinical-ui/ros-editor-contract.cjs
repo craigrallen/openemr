@@ -46,6 +46,14 @@ const CSS = `    <style>
         padding: 0;
       }
 
+      ${prefix} > .container > .row {
+        margin-inline: 0;
+      }
+
+      ${prefix} > .container > .row > .col-12 {
+        padding-inline: 0;
+      }
+
       ${prefix} h2 {
         margin-block: 0 1rem;
         color: #183b49;
@@ -252,6 +260,8 @@ function verifyCss(css) {
   for (const [selector, property, expected] of [
     [prefix, 'background-color', '#e8eff0 !important'],
     [`${prefix} > .container`, 'max-width', '860px'],
+    [`${prefix} > .container > .row`, 'margin-inline', '0'],
+    [`${prefix} > .container > .row > .col-12`, 'padding-inline', '0'],
     [form, 'width', '100%'], [form, 'min-width', '0'],
     [form, 'max-width', '860px'], [form, 'line-height', '1.6'],
     [`${form} fieldset`, 'background-color', '#fff !important'],
@@ -331,6 +341,22 @@ if (args.includes('--export-css')) {
   });
 
   test('screen-only scoped CSS covers document, native radios, actions and focus', () => verifyCss(CSS));
+
+  test('screen CSS neutralizes Bootstrap outer gutters at mobile width', () => {
+    const baseline = original();
+    const candidate = proposed(baseline);
+    for (const [before, after] of [
+      [`${prefix} > .container > .row {\n        margin-inline: 0;\n      }`, ''],
+      ['margin-inline: 0;', 'margin-inline: -15px;'],
+      [`${prefix} > .container > .row > .col-12 {\n        padding-inline: 0;\n      }`, ''],
+      [`${prefix} > .container > .row > .col-12 {\n        padding-inline: 0;`,
+        `${prefix} > .container > .row > .col-12 {\n        padding-inline: 15px;`]
+    ]) {
+      const mutatedCss = replaceOnce(Buffer.from(CSS), before, after).toString();
+      assert.throws(() => verifyCss(mutatedCss), `CSS rejected: ${before}`);
+      rejectMutation(candidate, before, after, baseline);
+    }
+  });
 
   test('exact proposal has a full inverse to the untouched original fixture', () => {
     const baseline = original();
