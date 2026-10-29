@@ -423,7 +423,7 @@ test('clinical, PHP, SQL, CSRF, field, value, JS and native action mutants fail'
     ["<input type='submit' name='bn_save' value='<?php echo xla('Save'); ?>' />", "<input type='submit' name='other' value='<?php echo xla('Save'); ?>' />"],
     ["<input type='button' value='<?php echo xla('Cancel'); ?>'", "<input type='submit' value='<?php echo xla('Cancel'); ?>'"],
     ['onclick="parent.closeTab(window.name, false)"', 'onclick="window.close()"'],
-    ["colspan='6'", "colspan='5'"],
+    ["<tr><td colspan='6'>&nbsp;", "<tr><td colspan='5'>&nbsp;"],
     ['echo $showTreatmentLine(', 'echo $showExamLine(']
   ]) rejectMutation(candidate, before, after, baseline);
 });
