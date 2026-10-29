@@ -4,7 +4,7 @@ Owner: Hermes. Allocation: 1 scheduled run of a maximum of 2, including QA. Inte
 
 ## Scope and intended files
 
-This is a partial adaptation of the researched document presentation at `/Users/craig/artifacts/OpenEMR-Research/researched/index.html`. It applies a staff workbench screen presentation to the existing shared Questionnaire assessment form. It is not an adaptation of all 22 researched views, a full design implementation, or authenticated or clinical acceptance.
+This is a partial adaptation of the researched document presentation at `/Users/craig/artifacts/OpenEMR-Research/researched/index.html`. It applies a staff workbench screen presentation to the existing shared Questionnaire assessment form. It does not complete the original 22 requested features or the full design, and it is not authenticated or clinical acceptance.
 
 The exact five intended files across the tests-only commit and this production change are:
 
