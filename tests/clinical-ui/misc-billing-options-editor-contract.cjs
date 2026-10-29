@@ -363,7 +363,10 @@ if (require.main === module) {
       ["$('.datepicker').datetimepicker({", "$('.datepicker').hide({"],
       ['$oemr_ui->pageHeading()', "xlt('Heading')"],
       ['$oemr_ui->oeBelowContainerDiv()', '']
-    ]) assert.throws(() => verifySource(replaceFirst(candidate, before, after), baseline), `rejected: ${before}`);
+    ]) {
+      const mutant = replaceFirst(candidate, before, after);
+      assert.throws(() => verifySource(mutant, baseline), `rejected: ${before}`);
+    }
   });
 
   test('constructed CSS mutations reject media, reach, layout, palette and keyboard regressions', () => {
@@ -379,8 +382,10 @@ if (require.main === module) {
       ['white-space: normal;', 'white-space: nowrap;'],
       ['outline: 3px solid #b65020;', 'outline: none;']
     ]) {
-      assert.throws(() => verifyCss(replaceFirst(Buffer.from(CSS), before, after).toString()), `rejected CSS: ${before}`);
-      assert.throws(() => verifySource(replaceFirst(proposed(original()), before, after), original()), `rejected source: ${before}`);
+      const cssMutant = replaceFirst(Buffer.from(CSS), before, after).toString();
+      const sourceMutant = replaceFirst(proposed(original()), before, after);
+      assert.throws(() => verifyCss(cssMutant), `rejected CSS: ${before}`);
+      assert.throws(() => verifySource(sourceMutant, original()), `rejected source: ${before}`);
     }
   });
 
@@ -388,7 +393,8 @@ if (require.main === module) {
     const before = `  ${fieldset} legend {\n    width: auto;\n    margin: 0;\n    padding: 0 0.35rem;\n    color: var(--oe-wb-petrol, #145968) !important;\n    background-color: var(--oe-wb-paper, #fff) !important;`;
     for (const replacement of ['', 'background-color: #d1d5db !important;']) {
       const after = before.replace('background-color: var(--oe-wb-paper, #fff) !important;', replacement);
-      assert.throws(() => verifyCss(replaceOnce(Buffer.from(CSS), before, after).toString()));
+      const mutant = replaceOnce(Buffer.from(CSS), before, after).toString();
+      assert.throws(() => verifyCss(mutant));
     }
   });
 
