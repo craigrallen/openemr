@@ -125,8 +125,7 @@ const CSS = `    <style>
         box-sizing: border-box;
         width: 100%;
         max-width: 100%;
-        overflow-x: auto;
-        overflow-y: visible;
+        overflow: auto visible;
         margin-block: 0 1.25rem;
       }
 
@@ -293,7 +292,8 @@ function verifyCss(css) {
   assert.match(css, /    \}\n    <\/style>$/);
   assert.equal((css.match(/@media/g) || []).length, 1);
   assert.doesNotMatch(css, /@media print|\bdisplay\s*:\s*(?:none|grid|table)\s*;|\bvisibility\s*:\s*hidden\b|\bopacity\s*:\s*0\s*;/);
-  assert.doesNotMatch(css, /\b(?:overflow|overflow-y)\s*:\s*(?:hidden|clip|auto)\b|position\s*:\s*(?:fixed|absolute)|table-layout\s*:\s*fixed/);
+  assert.doesNotMatch(css, /\boverflow\s*:\s*(?:[^;]*\b(?:hidden|clip)\b|auto\s*;)|\boverflow-y\s*:\s*(?:hidden|clip|auto)\b|position\s*:\s*(?:fixed|absolute)|table-layout\s*:\s*fixed/);
+  assert.doesNotMatch(css, /\boverflow-[xy]\s*:/);
   assert.doesNotMatch(css, /(?:thead|tbody|\btr\b|\btd\b)\s*\{[^}]*\bdisplay\s*:/);
   for (const rule of rules(css)) for (const selector of rule.selectors) {
     assert.ok(selector === prefix || selector.startsWith(`${prefix} `), `unscoped: ${selector}`);
@@ -310,7 +310,7 @@ function verifyCss(css) {
     [`${form} .new_patient`, 'width', '100%'],
     [`${form} .new_comment`, 'width', '100%'],
     [`${form} .btn-group`, 'flex-wrap', 'wrap'],
-    [wrapper, 'overflow-x', 'auto'], [wrapper, 'width', '100%'],
+    [wrapper, 'overflow', 'auto visible'], [wrapper, 'width', '100%'],
     [`${wrapper} .dataTables_paginate`, 'white-space', 'normal'],
     [table, 'min-width', '760px'], [table, 'width', '100% !important'],
     [`${table} .status_select`, 'min-width', '11rem'],
@@ -459,7 +459,7 @@ test('presentation, scope, print, mobile, scroll, focus and palette mutants fail
     [`${prefix} {`, 'body {'],
     ['max-width: 1000px;', 'max-width: 1400px;'],
     ['flex-wrap: wrap;', 'flex-wrap: nowrap;'],
-    ['overflow-x: auto;', 'overflow-x: hidden;'],
+    ['overflow: auto visible;', 'overflow: hidden visible;'],
     ['min-width: 760px;', 'min-width: 1000px;'],
     ['min-width: 11rem;', 'min-width: 2rem;'],
     ['min-width: 12rem;', 'min-width: 2rem;'],
@@ -467,14 +467,17 @@ test('presentation, scope, print, mobile, scroll, focus and palette mutants fail
     ['transition-duration: 0s;', 'transition-duration: 1s;'],
     ['background-color: #145968 !important;', 'background-color: #145968;'],
     ['color: #fff !important;', 'color: #182c36 !important;'],
-    ['overflow-y: visible;', 'overflow-y: hidden;'],
+    ['overflow: auto visible;', 'overflow: auto hidden;'],
+    ['overflow: auto visible;', 'overflow-x: auto;\n        overflow-y: visible;'],
     [`${form} #add_participant_element {`, `${form} #add_participant_element {\n        display: grid;`]
   ]) rejectMutation(candidate, before, after, baseline);
   for (const [before, after] of [
     ['@media screen {', '@media print {'],
     [`${prefix} {`, 'body {'],
     ['max-width: 1000px;', 'max-width: 1400px;'],
-    ['overflow-x: auto;', 'overflow-x: hidden;'],
+    ['overflow: auto visible;', 'overflow: hidden visible;'],
+    ['overflow: auto visible;', 'overflow: auto hidden;'],
+    ['overflow: auto visible;', 'overflow-x: auto;\n        overflow-y: visible;'],
     ['min-width: 760px;', 'min-width: 1000px;'],
     ['outline: 3px solid #a84c22;', 'outline: none;'],
     ['background-color: #145968 !important;', 'background-color: #145968;'],
