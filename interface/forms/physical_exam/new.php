@@ -226,7 +226,7 @@ if ($formid !== '') {
         margin: 0;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table {
         width: 100%;
         min-width: 1020px;
         border-collapse: collapse;
@@ -234,47 +234,47 @@ if ($formid !== '') {
         background-color: #fff;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td {
         padding: 0.55rem 0.6rem;
         border-bottom: 1px solid #d9e4e2;
         vertical-align: middle;
         line-height: 1.45;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(1),
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(2) {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(1),
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(2) {
         min-width: 4rem;
         text-align: center;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(3) {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(3) {
         min-width: 5rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(4) {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(4) {
         min-width: 19rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(5) {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(5) {
         min-width: 13rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td:nth-child(6) {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td:nth-child(6) {
         min-width: 16rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td[colspan='6'] {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td[colspan='6'] {
         padding-block: 1.1rem 0.6rem;
         color: #183b49;
         background-color: #f3f7f5;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td[colspan='2'] {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td[colspan='2'] {
         padding-block: 0.7rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table select[name^='form_obs['][name$='[diagnosis]'],
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table input[type='text'][name^='form_obs['][name$='[comments]'] {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table select[name^='form_obs['][name$='[diagnosis]'],
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table input[type='text'][name^='form_obs['][name$='[comments]'] {
         box-sizing: border-box;
         min-width: 12rem;
         min-height: 2.65rem;
@@ -285,11 +285,11 @@ if ($formid !== '') {
         color: #182c36;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table td[colspan='2'] input[type='text'][name^='form_obs['][name$='[comments]'] {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table td[colspan='2'] input[type='text'][name^='form_obs['][name$='[comments]'] {
         min-width: 16rem;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table tr:first-child td {
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table tr:first-child td {
         padding-block: 0.75rem;
         background-color: #e8eff0;
         color: #183b49;
@@ -343,18 +343,18 @@ if ($formid !== '') {
         color: #182c36 !important;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table select[name^='form_obs['][name$='[diagnosis]']:focus,
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table input[type='text'][name^='form_obs['][name$='[comments]']:focus,
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table input[type='checkbox']:focus,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table select[name^='form_obs['][name$='[diagnosis]']:focus,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table input[type='text'][name^='form_obs['][name$='[comments]']:focus,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table input[type='checkbox']:focus,
       html.oe-workbench-context body.physical-exam-document-editor > form > center > p > input[type='submit'][name='bn_save']:focus,
       html.oe-workbench-context body.physical-exam-document-editor > form > center > p > input[type='button'][onclick='parent.closeTab(window.name, false)']:focus {
         outline: 2px solid #a84c22;
         outline-offset: 2px;
       }
 
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table select[name^='form_obs['][name$='[diagnosis]']:focus-visible,
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table input[type='text'][name^='form_obs['][name$='[comments]']:focus-visible,
-      html.oe-workbench-context body.physical-exam-document-editor > form > center > table input[type='checkbox']:focus-visible,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table select[name^='form_obs['][name$='[diagnosis]']:focus-visible,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table input[type='text'][name^='form_obs['][name$='[comments]']:focus-visible,
+      html.oe-workbench-context body.physical-exam-document-editor > form > center table input[type='checkbox']:focus-visible,
       html.oe-workbench-context body.physical-exam-document-editor > form > center > p > input[type='submit'][name='bn_save']:focus-visible,
       html.oe-workbench-context body.physical-exam-document-editor > form > center > p > input[type='button'][onclick='parent.closeTab(window.name, false)']:focus-visible {
         outline: 3px solid #a84c22;
