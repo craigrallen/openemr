@@ -46,8 +46,9 @@ fixture hash, unchanged support-file hashes and scope checks passed.
 The initial production CSS introduced a keyboard regression. The original
 pre-fix five-theme browser comparison covered 160 cases and 480 legacy/print
 comparisons, with 25 Tab-hit failures. An independent Astra review confirmed
-P2. At baseline light 390 RTL, the original had 0 hits and the candidate had
-4; an external overlay of the proposed CSS corrected those 4/4 hits. That
+P2. In the light-theme 390px RTL comparison, the original had 0 Tab-hit failures
+and the candidate had 4; an external overlay of the proposed CSS corrected all
+4 failures. That
 overlay result is limited to that scenario and is not full browser acceptance.
 
 The tests-first keyboard correction on commit `827b3e09` captured genuine RED
@@ -84,8 +85,8 @@ changed to make production pass.
 |---|---|
 | `ready` | Exact source transformation and documentation prepared for controller review. |
 | `awaitingQA` | **Current:** keyboard correction is prepared; final controller and browser verification have not been reported. |
-| `needsapproval` | A controller result requires a decision or authorization outside this fixed presentation scope. |
-| `blocked` | The scheduled delivery limit is exhausted without acceptance or required external input prevents a decision. |
+| `needsapproval` | Ordinary GitHub approving review is required; no standing bypass is authorized. |
+| `blocked` | Any failed required check, failed acceptance, denied-action boundary or external prerequisite remains blocking. Rotation never clears it. |
 
 The schedule permits **at most two consecutive delivery runs including QA**;
 it is not a budget of two test retries. This is run 1. If the limit is reached
