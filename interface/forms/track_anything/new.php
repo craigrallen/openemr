@@ -52,6 +52,158 @@ echo "<html><head>";
 ?>
 <?php Header::setupHeader(['datetime-picker', 'track-anything']); ?>
 
+    <style>
+    @media screen {
+      html.oe-workbench-context body.track-anything-document-editor {
+        box-sizing: border-box;
+        margin: 0;
+        padding: clamp(0.75rem, 2vw, 1.5rem);
+        background-color: #e8eff0 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 1000px;
+        margin-inline: auto;
+        padding: clamp(1rem, 2.5vw, 2rem);
+        overflow-x: auto;
+        border: 1px solid #c7d5d9;
+        background-color: #fff;
+        color: #182c36;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table {
+        width: 100%;
+        min-width: 36rem;
+        border-collapse: collapse;
+        background-color: #fff;
+        color: #182c36;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table[border='1'] {
+        min-width: 48rem;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table {
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table th,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table td {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > form {
+        width: max-content;
+        min-width: 100%;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table th,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table td {
+        padding: 0.65rem 0.8rem;
+        border-bottom: 1px solid #d9e4e2;
+        vertical-align: middle;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table th {
+        background-color: #f3f7f5;
+        color: #183b49;
+        font-weight: 600;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table th.time,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table td:first-child {
+        min-width: 12rem;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table th.value,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything table td:not(:first-child) {
+        min-width: 12rem;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='text'],
+      html.oe-workbench-context body.track-anything-document-editor #track_anything select[name='procedure2track'] {
+        box-sizing: border-box;
+        min-width: 11rem;
+        min-height: 2.65rem;
+        padding: 0.45rem 0.6rem;
+        border: 1px solid #91a8b1;
+        border-radius: 3px;
+        background-color: #fff !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input.datetimepicker {
+        min-width: 13rem;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything select[name='procedure2track'] {
+        width: min(100%, 20rem) !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything > table select {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='text']::placeholder {
+        color: #526a70;
+        opacity: 1;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='submit'],
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='button'] {
+        box-sizing: border-box;
+        min-width: 7rem;
+        min-height: 2.75rem;
+        margin: 0.35rem 0.4rem 0.35rem 0;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid #91a8b1;
+        border-radius: 3px;
+        background-color: #fff !important;
+        color: #182c36 !important;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='submit']:hover,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='button']:hover {
+        border-color: #145968;
+        background-color: #e4f0f1 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='submit']:focus,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='button']:focus {
+        border-color: #145968;
+        background-color: #e4f0f1 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='text']:focus,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything select[name='procedure2track']:focus,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='submit']:focus,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='button']:focus {
+        outline: 2px solid #a84c22;
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='text']:focus-visible,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything select[name='procedure2track']:focus-visible,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='submit']:focus-visible,
+      html.oe-workbench-context body.track-anything-document-editor #track_anything input[type='button']:focus-visible {
+        outline: 3px solid #a84c22;
+        outline-offset: 2px;
+      }
+    }
+    </style>
 <script>
 $(function () {
     $('.datetimepicker').datetimepicker({
@@ -65,7 +217,7 @@ $(function () {
 </script>
 
 <?php
-echo "</head><body class='body_top'>";
+echo "</head><body class='body_top track-anything-document-editor'>";
 echo "<div id='track_anything'>";
 
 // check if this Track is new
