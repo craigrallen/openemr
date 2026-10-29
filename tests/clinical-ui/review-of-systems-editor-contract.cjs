@@ -209,7 +209,7 @@ const CSS = `<style>
   ${form} .btn-cancel {
     border-color: #91a8b1;
     background-color: #eef3f4 !important;
-    color: #183b49;
+    color: #183b49 !important;
   }
 
   ${form} .btn-save:hover,
@@ -225,7 +225,7 @@ const CSS = `<style>
   ${form} .btn-cancel:active {
     border-color: #91a8b1;
     background-color: #eef3f4 !important;
-    color: #183b49;
+    color: #183b49 !important;
   }
 
   ${form} input:focus-visible,
@@ -327,7 +327,7 @@ function verifyCss(css) {
     expectValue(css, base, 'transition-duration', '0s');
     const pair = action === 'save'
       ? { 'border-color': '#145968', 'background-color': '#145968', color: '#fff' }
-      : { 'border-color': '#91a8b1', 'background-color': '#eef3f4 !important', color: '#183b49' };
+      : { 'border-color': '#91a8b1', 'background-color': '#eef3f4 !important', color: '#183b49 !important' };
     for (const state of ['', ':hover', ':focus', ':active']) {
       for (const [property, value] of Object.entries(pair)) expectValue(css, `${base}${state}`, property, value);
     }
@@ -383,7 +383,7 @@ if (args.includes('--export-css')) {
     for (const [before, after] of [
       ['transition-duration: 0s;', 'transition-duration: 0.15s;'],
       ['background-color: #eef3f4 !important;', 'background-color: #eef3f4;'],
-      ['background-color: #eef3f4 !important;\n    color: #183b49;', 'background-color: #eef3f4 !important;\n    color: #fff;'],
+      ['background-color: #eef3f4 !important;\n    color: #183b49 !important;', 'background-color: #eef3f4 !important;\n    color: #fff !important;'],
       ['background-color: #145968;', 'background-color: #468ac2;'],
       ['    color: #fff;', '    color: #183b49;'],
       [`${form} .btn-cancel:hover,`, `${form} .btn-cancel:disabled,`],
@@ -397,6 +397,14 @@ if (args.includes('--export-css')) {
       assert.notEqual(mutant, CSS);
       assert.throws(() => verifyCss(mutant), `palette mutant rejected: ${before}`);
     }
+  });
+
+  test('Cancel foreground needs importance beside its pale background', () => {
+    const paired = 'background-color: #eef3f4 !important;\n    color: #183b49 !important;';
+    const ordinaryInk = 'background-color: #eef3f4 !important;\n    color: #183b49;';
+    const mutant = CSS.replaceAll(paired, ordinaryInk);
+    assert.notEqual(mutant, CSS);
+    assert.throws(() => verifyCss(mutant), 'Cancel foreground importance removed');
   });
 
   test('edit action offset outside fieldset requires the form-wide reset', () => {
