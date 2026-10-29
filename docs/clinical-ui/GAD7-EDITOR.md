@@ -14,7 +14,7 @@ From the repository root, the controller can run the direct portable and history
 
 ```sh
 node --test --test-reporter=tap tests/clinical-ui/gad7-editor-contract.cjs
-node --test --test-reporter=tap tests/clinical-ui/gad7-editor-contract.cjs --history
+node tests/clinical-ui/gad7-editor-contract.cjs --history
 ```
 
 The hosted adapter is `tests/js/gad7-editor.test.js`. It invokes the portable contract and checks its reported plan and enumerated results dynamically, requiring every reported test to pass with no failures, skips, or todos. The contract's narrow DOM doubles exercise the unchanged shared scoring and optional difficulty scripts offline with synthetic helpers. That evidence is not clinical acceptance.
