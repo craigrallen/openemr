@@ -32,8 +32,159 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 ?>
 <html><head>
     <?php Header::setupHeader(); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-ankle-injury-editor {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.75rem, 3vw, 1.5rem);
+    background-color: #e8eff0 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border: 1px solid #c7d5d9;
+    background-color: #fff;
+    color: #182c36;
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] .title {
+    display: block;
+    margin: 0 0 1rem;
+    color: #183b49;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] .text,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] th {
+    color: #183b49;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] table {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] th,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] td {
+    padding: 0.35rem 0.5rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] table.oe-ankle-plan {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] table.oe-ankle-plan td {
+    width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] input[type='text'],
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] select,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+    border: 1px solid #91a8b1;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] input[type='text'],
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] select {
+    min-height: 2.4rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] input[type='radio'],
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] input[type='checkbox'] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0 0.35rem;
+    accent-color: #145968;
+    vertical-align: middle;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea[name='ankle_how_did_injury_occur'],
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea[name='ankle_plan'] {
+    display: block;
+    width: 100%;
+    min-height: 12rem;
+    padding: 0.75rem;
+    line-height: 1.7;
+    resize: vertical;
+    white-space: pre-wrap;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea[name='ankle_additional_x_ray_notes'],
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea[name='ankle_additional_diagnisis'] {
+    display: block;
+    width: 15rem;
+    min-height: 4.5rem;
+    padding: 0.5rem;
+    line-height: 1.45;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] a.link_submit,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] a.link {
+    display: inline-block;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 2.4rem;
+    margin: 0.35rem 0;
+    padding: 0.5rem 0.85rem;
+    border-radius: 3px;
+    font-weight: 600;
+    text-decoration: none;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] a.link_submit {
+    border: 1px solid #145968;
+    background-color: #145968;
+    color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] a.link {
+    border: 1px solid #91a8b1;
+    background-color: #eef3f4 !important;
+    color: #183b49 !important;
+  }
+
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] a:focus,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] input:focus,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] select:focus,
+  html.oe-workbench-context body.oe-ankle-injury-editor form[name='my_form'] textarea:focus {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-ankle-injury-editor">
 <?php
 $obj = formFetch("form_ankleinjury", $_GET["id"]);
 ?>
@@ -191,7 +342,7 @@ attr($obj["ankle_diagnosis4"]); ?>" size="50"></td>
 </tr>
 </table>
 
-<table><tr><th><?php echo xlt('Plan:'); ?></th><tr>
+<table class="oe-ankle-plan"><tr><th><?php echo xlt('Plan:'); ?></th><tr>
 <tr><td>
 <textarea name="ankle_plan" rows="4" cols="67" wrap="virtual name">
 <?php echo text($obj["ankle_plan"]); ?></textarea>
