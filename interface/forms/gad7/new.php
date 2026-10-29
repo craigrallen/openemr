@@ -25,8 +25,123 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
 <head>
     <title><?php echo text($str_form_title); ?> </title>
     <?php Header::setupHeader(); ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-gad7-editor {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.5rem, 2vw, 1.5rem);
+    background-color: #e8eff0 !important;
+    color: #182c36 !important;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 860px;
+    min-width: 0;
+    margin-inline: auto;
+    padding: clamp(0.75rem, 2.5vw, 1.75rem);
+    border: 1px solid #c7d5d9;
+    background-color: #fff;
+    color: #182c36;
+    font-size: 1rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] h2 {
+    margin-block: 0 1rem;
+    color: #183b49;
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+    line-height: 1.3;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] table {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] td {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-block: 0.4rem;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] td > .text,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] td > small {
+    display: block;
+    color: #182c36;
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] td > select {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-height: 2.5rem;
+    margin-block: 0.35rem 0;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #91a8b1;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #182c36;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] #q8_place,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] #show_gad7_score {
+    display: block;
+    color: #183b49;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='submit'],
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='button'] {
+    box-sizing: border-box;
+    display: block;
+    width: min(100%, 20rem);
+    max-width: 100%;
+    min-height: 2.5rem;
+    margin-block: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #145968;
+    border-radius: 4px;
+    background-color: #145968 !important;
+    color: #fff !important;
+    font: inherit;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='submit']:hover,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='submit']:focus,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='submit']:active,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='button']:hover,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='button']:focus,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='button']:active {
+    border-color: #104e5b;
+    background-color: #104e5b !important;
+    color: #fff !important;
+  }
+
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='submit']:focus-visible,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] input[type='button']:focus-visible,
+  html.oe-workbench-context body.oe-gad7-editor form[name='my_form'] select:focus-visible {
+    outline: 3px solid #a84c22;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
-<body class="body_top">
+<body class="body_top oe-gad7-editor">
 
 <script>
 var no_qs = 8; // number of questions in the form
