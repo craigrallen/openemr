@@ -186,7 +186,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
     resize: vertical;
   }
 
-  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] fieldset .offset-sm-1 {
+  html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .offset-sm-1 {
     margin-left: 0;
   }
 
