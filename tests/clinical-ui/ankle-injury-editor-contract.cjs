@@ -81,6 +81,8 @@ const CSS = `<style>
   }
 
   ${form} table.oe-ankle-plan {
+    display: table;
+    table-layout: fixed;
     width: 100%;
   }
 
@@ -243,6 +245,8 @@ function verifyCss(css) {
   expectValue(css, form, 'overflow-wrap', 'anywhere');
   expectValue(css, `${form} table`, 'overflow-x', 'auto');
   expectValue(css, `${form} table`, 'max-width', '100%');
+  expectValue(css, `${form} table.oe-ankle-plan`, 'display', 'table');
+  expectValue(css, `${form} table.oe-ankle-plan`, 'table-layout', 'fixed');
   expectValue(css, `${form} th`, 'white-space', 'nowrap');
   expectValue(css, `${form} td`, 'white-space', 'nowrap');
   expectValue(css, `${form} table.oe-ankle-plan td`, 'width', '100%');
@@ -310,6 +314,19 @@ if (args.includes('--export-css')) {
   });
 
   test('proposal is screen scoped, readable, compact where needed, and leaves cells native', () => verifyCss(CSS));
+
+  test('Plan uses full-width native table layout', () => {
+    verifyCss(CSS);
+    const planRule = `  ${form} table.oe-ankle-plan {\n    display: table;\n    table-layout: fixed;\n    width: 100%;\n  }`;
+    for (const alteredRule of [
+      `  ${form} table.oe-ankle-plan {\n    display: block;\n    table-layout: fixed;\n    width: 100%;\n  }`,
+      `  ${form} table.oe-ankle-plan {\n    display: table;\n    table-layout: auto;\n    width: 100%;\n  }`
+    ]) {
+      const mutant = replaceOnce(CSS, planRule, alteredRule).toString();
+      assert.notEqual(mutant, CSS);
+      assert.throws(() => verifyCss(mutant), 'Plan layout mutant rejected');
+    }
+  });
 
   test('synthetic new and view proposals invert to entire frozen originals', () => {
     for (const file of files) {
