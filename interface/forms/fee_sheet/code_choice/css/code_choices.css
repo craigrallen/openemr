@@ -55,6 +55,12 @@ div.code-choice:hover {
 }
 
 @media screen {
+  html.oe-workbench-context div.code-choices button:focus,
+  html.oe-workbench-context div.code-choices input[type='checkbox']:focus {
+    outline: 3px solid #086878;
+    outline-offset: 2px;
+  }
+
   html.oe-workbench-context div.code-choices {
     box-sizing: border-box;
     width: min(100%, 1000px);
@@ -66,7 +72,7 @@ div.code-choice:hover {
     border: 1px solid #d9e4e2;
   }
 
-  html.oe-workbench-context div.code-choices > div[data-bind="foreach:categories"] {
+  html.oe-workbench-context div.code-choices > div[data-bind='foreach:categories'] {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
     gap: 12px;
@@ -101,7 +107,7 @@ div.code-choice:hover {
     border: 1px solid #d9e4e2;
   }
 
-  html.oe-workbench-context div.code-choices .active-category [data-bind="foreach:codes"] {
+  html.oe-workbench-context div.code-choices .active-category [data-bind='foreach:codes'] {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     gap: 12px;
@@ -120,11 +126,5 @@ div.code-choice:hover {
   html.oe-workbench-context div.code-choices div.code-choice > span {
     min-width: 0;
     overflow-wrap: break-word;
-  }
-
-  html.oe-workbench-context div.code-choices button:focus,
-  html.oe-workbench-context div.code-choices input[type="checkbox"]:focus {
-    outline: 3px solid #086878;
-    outline-offset: 2px;
   }
 }

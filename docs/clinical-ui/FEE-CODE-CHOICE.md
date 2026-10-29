@@ -1,12 +1,18 @@
 # Fee code choice presentation (OPEMR-171)
 
-Owner: Hermes. This is one scheduled allocation of a maximum of two for this
-work item; the count includes QA and internal phases, not scheduler runs.
+Owner: Hermes. Scheduled allocation 1/max2 for this surface, counting both
+implementation and QA delivery runs. Internal worker phases do not consume
+additional scheduled-run allocations.
 The slice is a partial researched UI treatment of the existing fee sheet code
 chooser. The exhaustive popup body remains backlog. This does not complete the
 full reference or any of the 22 clinical features in `ACCEPTANCE.md`.
 
 ## Source scope
+
+Exact five changed paths: `interface/forms/fee_sheet/code_choice/css/code_choices.css`,
+`tests/clinical-ui/fee-code-choice-contract.cjs`,
+`tests/clinical-ui/fixtures/fee-code-choices-original.css.txt`,
+`tests/js/fee-code-choice.test.js`, and `docs/clinical-ui/FEE-CODE-CHOICE.md`.
 
 The only production change is an appended `@media screen` block in
 `interface/forms/fee_sheet/code_choice/css/code_choices.css`. It applies when
