@@ -50,10 +50,30 @@ tests-only history check allows descendants of the bound base. Its five source
 digests and complete 1082-byte original CSS fixture passed. The RED record is
 `/Users/craig/.hermes/projects/openemr/verification/fee-code-choice-20261029/red.tap`.
 
-Native Knockout browser, theme, keyboard, print and authenticated billing
-acceptance have not run. The CSS change therefore has no runtime or clinical
-acceptance claim. Ordinary approval, complete final exact-head CI and
-independent review are still required. The prior denials remain in effect,
+Actual offline Chrome QA exercised 80 cases across five compiled themes,
+four widths (1366/640/390/320), computed LTR/RTL and short/long labels;
+240 complete original-body DOM/computed-style/geometry inactive/print
+comparisons and 2639 real forward/reverse Tab center-hit checks passed.
+Actual Knockout 3.5.3, jQuery 3.7.1, template bindings and unchanged view model
+ran against synthetic legacy SELECT data. Candidate category/description/
+Cancel/OK pointer sequences retained selection/value behavior. Original
+interaction parity used programmatic native events: its narrow category
+buttons overlap, so original pointer acceptance failed and remains unaccepted.
+Only two template PHP translations were replaced by English fixture labels;
+`codeselect` recorded calls without submission. Fonts are omitted and RTL is
+forced direction, not translated-theme acceptance. Center-hit checks are not
+full outline or accessibility clearance. Authenticated billing, PHP bootstrap,
+ACL/CSRF/session, persistence, full contrast/a11y, older engines and OS printing
+remain untested. Initial pointer-failure evidence is retained separately.
+
+The first CSS proposal failed single-quote and descending-specificity lint.
+Tests-only `4dc37bcb` froze the corrected proposal before a second genuine
+RED (7 tests, 6 pass, 1 fail); the minimal CSS correction then passed all
+7 history contracts and nonignored scoped CSS lint with zero warnings.
+Documentation-only rotation/scope corrections are a reviewed TDD exception;
+no executable behavior was changed by those prose edits.
+Ordinary approval, complete final exact-head CI and independent review
+remain required. The prior denials remain in effect,
 including Swedish publication, installed124, local Jest/cache/combined ESLint
 and reviewer byte comparison. The related ledger remains 55 parked and 47
 settled. There are no merge, deployment, database or cron changes in this slice.
