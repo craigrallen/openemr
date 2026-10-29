@@ -23,8 +23,170 @@
     }
 </style>
 
+    <style>
+    @media screen {
+      html.oe-workbench-context body.ros-document-editor {
+        box-sizing: border-box;
+        margin: 0;
+        padding: clamp(0.5rem, 2vw, 1.5rem);
+        background-color: #e8eff0 !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.ros-document-editor > .container {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 860px;
+        margin-inline: auto;
+        padding: 0;
+      }
+
+      html.oe-workbench-context body.ros-document-editor h2 {
+        margin-block: 0 1rem;
+        color: #183b49;
+        font-size: clamp(1.35rem, 3vw, 1.8rem);
+        line-height: 1.3;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 860px;
+        margin-inline: auto;
+        padding: clamp(0.75rem, 2.5vw, 2rem);
+        border: 1px solid #c7d5d9;
+        background-color: #fff;
+        color: #182c36;
+        font-size: 1rem;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] fieldset {
+        box-sizing: border-box;
+        min-width: 0;
+        margin-block: 0 1.5rem;
+        padding: 0.5rem 0 0;
+        border: 0;
+        border-top: 1px solid #cbd6da;
+        background-color: #fff !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] legend {
+        width: auto;
+        max-width: 100%;
+        margin-block: 0 0.5rem;
+        padding-inline: 0 0.75rem;
+        background-color: #fff !important;
+        color: #183b49 !important;
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] fieldset > .col-sm-12 {
+        padding-inline: 0;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .form-group {
+        min-width: 0;
+        margin-block: 0 0.75rem;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .form-group > .col-form-label {
+        display: block;
+        width: 100%;
+        margin-block: 0 0.25rem;
+        padding: 0 !important;
+        color: #182c36;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .form-group > label:not(.col-form-label) {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        max-width: 100%;
+        min-height: 2.5rem;
+        margin: 0.2rem 0.75rem 0.2rem 0;
+        padding: 0.35rem 0.55rem !important;
+        border: 1px solid #cbd6da;
+        border-radius: 4px;
+        background-color: #fff;
+        color: #182c36;
+        line-height: 1.4;
+        white-space: normal;
+        cursor: pointer;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .form-group input[type='radio'] {
+        flex: 0 0 auto;
+        margin: 0 0.25rem 0 0;
+        accent-color: #145968;
+        transition-duration: 0s;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .form-group > label:not(.col-form-label):focus-within,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn:focus-visible {
+        outline: 3px solid #a84c22;
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        max-width: 100%;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-save,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-cancel {
+        box-sizing: border-box;
+        min-width: 8rem;
+        max-width: 100%;
+        min-height: 2.75rem;
+        padding: 0.55rem 0.85rem;
+        border-radius: 4px;
+        font: inherit;
+        white-space: normal;
+        transition-duration: 0s;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-save {
+        border-color: #145968;
+        background-color: #145968 !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-save:hover,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-save:focus,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-save:active {
+        border-color: #104e5b;
+        background-color: #104e5b !important;
+        color: #fff !important;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-cancel {
+        border-color: #91a8b1;
+        background-color: #fff !important;
+        color: #182c36 !important;
+      }
+
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-cancel:hover,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-cancel:focus,
+      html.oe-workbench-context body.ros-document-editor form[name='ros'] .btn-cancel:active {
+        border-color: #145968;
+        background-color: #e4f0f1 !important;
+        color: #182c36 !important;
+      }
+    }
+    </style>
 </head>
-<body>
+<body class="ros-document-editor">
     <div class="container mt-3">
         <div class="row">
             <div class="col-12">
