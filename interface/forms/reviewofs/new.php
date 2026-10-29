@@ -215,7 +215,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel {
     border-color: #91a8b1;
     background-color: #eef3f4 !important;
-    color: #183b49;
+    color: #183b49 !important;
   }
 
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-save:hover,
@@ -231,7 +231,7 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] .btn-cancel:active {
     border-color: #91a8b1;
     background-color: #eef3f4 !important;
-    color: #183b49;
+    color: #183b49 !important;
   }
 
   html.oe-workbench-context body.oe-review-of-systems-editor form[name='my_form'] input:focus-visible,
