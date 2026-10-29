@@ -421,7 +421,7 @@ test('clinical, PHP, SQL, CSRF, field, value, JS and native action mutants fail'
     ["f.form_refresh.value = '1'", "f.form_refresh.value = ''"],
     ['f.submit()', 'void 0'],
     ["<input type='submit' name='bn_save' value='<?php echo xla('Save'); ?>' />", "<input type='submit' name='other' value='<?php echo xla('Save'); ?>' />"],
-    ["type='button'", "type='submit'"],
+    ["<input type='button' value='<?php echo xla('Cancel'); ?>'", "<input type='submit' value='<?php echo xla('Cancel'); ?>'"],
     ['parent.closeTab(window.name, false)', 'window.close()'],
     ["colspan='6'", "colspan='5'"],
     ['echo $showTreatmentLine(', 'echo $showExamLine(']
