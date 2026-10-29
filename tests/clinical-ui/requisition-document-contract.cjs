@@ -85,9 +85,15 @@ const CSS = `<style>
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
+    max-height: 70vh;
     margin: 0;
     padding: 0;
     overflow-x: auto;
+  }
+
+  ${requisition}:focus-visible {
+    outline: 3px solid var(--oe-wb-petrol, #086878);
+    outline-offset: 3px;
   }
 
   ${requisition} table {
@@ -197,7 +203,10 @@ function verifyCss(css) {
     [`${header} .pdata`, 'z-index', 'auto'],
     [requisition, 'width', '100%'],
     [requisition, 'min-width', '0'],
+    [requisition, 'max-height', '70vh'],
     [requisition, 'overflow-x', 'auto'],
+    [`${requisition}:focus-visible`, 'outline', '3px solid var(--oe-wb-petrol, #086878)'],
+    [`${requisition}:focus-visible`, 'outline-offset', '3px'],
     [`${requisition} table`, 'color', 'var(--oe-wb-ink, #17343b)'],
     [`${requisition} table`, 'background-color', 'var(--oe-wb-paper, #fff)'],
     [footer, 'max-width', '1000px'],
@@ -286,6 +295,15 @@ if (require.main === module) {
       const mutant = replaceFirst(Buffer.from(CSS), before, after).toString();
       assert.throws(() => verifyCss(mutant), `CSS mutant: ${before}`);
     }
+  });
+
+  test('constructed CSS mutations reject an unbounded or invisible keyboard scroller', () => {
+    const unbounded = replaceFirst(Buffer.from(CSS), '    max-height: 70vh;\n', '').toString();
+    const missingOutline = replaceFirst(Buffer.from(CSS),
+      `${requisition}:focus-visible {\n    outline: 3px solid var(--oe-wb-petrol, #086878);\n    outline-offset: 3px;\n  }`,
+      `${requisition}:focus-visible {\n    outline-offset: 3px;\n  }`).toString();
+    assert.throws(() => verifyCss(unbounded), 'unbounded scroller mutant');
+    assert.throws(() => verifyCss(missingOutline), 'missing scroller outline mutant');
   });
 
   test('paired paper and action colors reject either half changing', () => {
