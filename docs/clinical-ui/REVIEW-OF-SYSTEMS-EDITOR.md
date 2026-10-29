@@ -10,7 +10,9 @@ The visual treatment uses a centered document sheet, responsive fieldset grids f
 
 ## Verification handoff
 
-The controller verified a tests-only RED at `f88d7db2`: portable contract 11 tests, 10 passed and 1 failed; history contract 12 tests, 11 passed and 1 failed. The sole failure in each was the live CSS missing the updated button palette. Evidence is in `/Users/craig/.hermes/projects/openemr/verification/review-of-systems-editor-20261029/red-palette-corrected.tap` and `red-palette-corrected-history.tap` in that directory. The controller's corrected negative test indents the exact `color: #fff` declaration so it does not match the substring in `background-color: #fff`; the other negative cases remain in the contract.
+The final theme-foreground correction followed tests-only RED at `728b1d49`: portable 12 tests, 11 passed and 1 failed; history 13 tests, 12 passed and 1 failed. Only the updated live CSS was missing. Evidence: `verification/review-of-systems-editor-20261029/red-ink.tap` and `red-ink-history.tap` in the controller project. Final portable 12/12 and history 13/13, PHP syntax, whitespace and nonignored route CSS lint passed. Earlier tests-only phases cover the missing workspace, edit-row overflow and state palettes; their initial path/mutant setup errors remain recorded separately. The controller corrected the exact foreground-mutant indentation to avoid matching `background-color`; all negative cases remain.
+
+Both Cancel foreground and background use route-scoped important declarations because Solar and Cobalt theme rules otherwise override the intended ink. Browser verification and independent review are tracked in the controller delivery evidence; native authenticated acceptance remains open.
 
 The controller owns the post-edit checks:
 
