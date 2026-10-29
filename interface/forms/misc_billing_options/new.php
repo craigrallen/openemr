@@ -93,8 +93,155 @@ $obj = is_array($fetched) ? $fetched : [];
     ];
     $oemr_ui = new OemrUI($arrOeUiSettings);
     ?>
+<style>
+@media screen {
+  html.oe-workbench-context body.misc-billing-options-document-editor {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    background-color: var(--oe-wb-canvas, #edf2f3) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div {
+    box-sizing: border-box;
+    width: min(100%, 1000px);
+    max-width: 1000px;
+    margin-inline: auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border: 1px solid var(--oe-wb-line, #cbd6da);
+    border-radius: 7px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div > .row {
+    margin-inline: 0;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div > .row > .col-sm-12,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] > .form-group > .col-sm-12 {
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] fieldset {
+    min-width: 0;
+    margin: 0 0 1.5rem;
+    padding: 1rem clamp(0.75rem, 2vw, 1.5rem) 1.25rem;
+    border: 1px solid var(--oe-wb-line, #cbd6da);
+    border-radius: 6px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] fieldset legend {
+    width: auto;
+    margin: 0;
+    padding: 0 0.35rem;
+    color: var(--oe-wb-petrol, #145968) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] fieldset > .container {
+    width: 100%;
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] fieldset .form-row {
+    margin-inline: 0;
+    row-gap: 0.9rem;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] fieldset .form-row > [class^='col-'] {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] label:not(.btn) {
+    margin-bottom: 0.35rem;
+    color: var(--oe-wb-ink, #182c36) !important;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .form-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.55rem;
+    border: 1px solid #91a8b1;
+    border-radius: 4px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .form-control::placeholder {
+    color: var(--oe-wb-muted, #536773) !important;
+    opacity: 1;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] #comments {
+    width: 100%;
+    min-height: 5.5rem;
+    max-height: 8rem;
+    line-height: 1.7;
+    resize: vertical;
+    overflow-y: auto;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn-group > .btn {
+    min-width: 7rem;
+    min-height: 2.7rem;
+    height: auto;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn-save {
+    border-color: var(--oe-wb-petrol, #145968);
+    background-color: var(--oe-wb-petrol, #145968) !important;
+    color: var(--oe-wb-on-petrol, #fff) !important;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn-cancel {
+    border-color: #91a8b1;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .form-control:focus,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn:focus,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] input[type='checkbox']:focus,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] input[type='radio']:focus {
+    outline: 2px solid var(--oe-wb-petrol, #145968);
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .form-control:focus-visible,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] .btn:focus-visible,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] input[type='checkbox']:focus-visible,
+  html.oe-workbench-context body.misc-billing-options-document-editor #container_div form[name='my_form'] input[type='radio']:focus-visible {
+    outline: 3px solid #b65020;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
-<body>
+<body class="misc-billing-options-document-editor">
     <div id="container_div" class="<?php echo attr($oemr_ui->oeContainer()); ?> mt-3">
         <div class="row">
             <div class="col-sm-12">
