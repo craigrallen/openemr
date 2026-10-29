@@ -180,7 +180,7 @@ const CSS = `<style>
     resize: vertical;
   }
 
-  ${form} fieldset .offset-sm-1 {
+  ${form} .offset-sm-1 {
     margin-left: 0;
   }
 
@@ -299,6 +299,8 @@ function verifyCss(css) {
   expectValue(css, `${form} .form-check-label`, 'overflow-wrap', 'anywhere');
   expectValue(css, `${form} textarea[name='additional_notes']`, 'min-height', '7rem');
   expectValue(css, `${form} textarea[name='additional_notes']`, 'max-width', '100%');
+  expectValue(css, `${form} .offset-sm-1`, 'margin-left', '0');
+  assert.deepEqual(values(css, `${form} fieldset .offset-sm-1`, 'margin-left'), []);
   expectValue(css, `${form} .btn-group`, 'flex-wrap', 'wrap');
   expectValue(css, `${form} .btn-save`, 'min-height', '2.5rem');
   expectValue(css, `${form} .btn-cancel`, 'min-height', '2.5rem');
@@ -348,6 +350,14 @@ if (args.includes('--export-css')) {
   });
 
   test('proposed CSS keeps a responsive document and both checkbox structures coherent', () => verifyCss(CSS));
+
+  test('edit action offset outside fieldset requires the form-wide reset', () => {
+    assert.match(original(files[1]).toString(), /<\/fieldset>\s*<div class="form-group clearfix">\s*<div class="col-sm-12 offset-sm-1 position-override">/);
+    assert.doesNotThrow(() => verifyCss(CSS));
+    const narrow = CSS.replace(`${form} .offset-sm-1 {`, `${form} fieldset .offset-sm-1 {`);
+    assert.notEqual(narrow, CSS);
+    assert.throws(() => verifyCss(narrow), /offset-sm-1: margin-left/);
+  });
 
   test('exact proposals invert to every original byte in both variants', () => {
     for (const file of files) {
