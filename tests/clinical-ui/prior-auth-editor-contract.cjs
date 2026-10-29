@@ -87,6 +87,7 @@ const CSS = `<style>
     margin: 0;
     padding: 0 0.35rem;
     color: var(--oe-wb-petrol, #145968) !important;
+    background-color: var(--oe-wb-paper, #fff) !important;
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.4;
@@ -250,6 +251,7 @@ function verifyCss(css) {
     [fieldset, 'margin', '0 0 1.5rem'],
     [fieldset, 'background-color', 'var(--oe-wb-paper, #fff) !important'],
     [`${fieldset} legend`, 'color', 'var(--oe-wb-petrol, #145968) !important'],
+    [`${fieldset} legend`, 'background-color', 'var(--oe-wb-paper, #fff) !important'],
     [`${fieldset} .row`, 'margin-inline', '0'], [`${fieldset} .row`, 'row-gap', '1rem'],
     [`${form} label`, 'color', 'var(--oe-wb-ink, #182c36) !important'],
     [`${form} input.form-control`, 'width', '100%'],
@@ -319,6 +321,12 @@ if (require.main === module) {
     const baseline = original();
     verifySource(proposed(baseline), baseline);
   });
+  test('proposal gives the scoped legend a paper background', () => {
+    const baseline = original();
+    const candidate = proposed(baseline);
+    assert.deepEqual(values(CSS, `${fieldset} legend`, 'background-color'), ['var(--oe-wb-paper, #fff) !important']);
+    verifySource(candidate, baseline);
+  });
   test('original lacks only the presentation additions', () => {
     const baseline = original();
     assert.throws(() => verifySource(baseline, baseline), /missing seam: <body class/);
@@ -375,6 +383,19 @@ if (require.main === module) {
       const mutant = replaceFirst(Buffer.from(CSS), before, after).toString();
       assert.throws(() => verifyCss(mutant), `rejected CSS: ${before}`);
       assert.throws(() => verifySource(replaceFirst(proposed(original()), before, after), original()), `rejected source: ${before}`);
+    }
+  });
+
+  test('legend background mutants reject at the scoped source rule', () => {
+    const baseline = original();
+    const candidate = proposed(baseline);
+    const before = `  ${fieldset} legend {\n    width: auto;\n    margin: 0;\n    padding: 0 0.35rem;\n    color: var(--oe-wb-petrol, #145968) !important;\n    background-color: var(--oe-wb-paper, #fff) !important;\n`;
+    for (const replacement of ['', '    background-color: #d1d5db !important;\n']) {
+      const after = before.replace('    background-color: var(--oe-wb-paper, #fff) !important;\n', replacement);
+      const sourceMutant = replaceOnce(candidate, before, after);
+      const cssMutant = replaceOnce(Buffer.from(CSS), before, after).toString();
+      assert.throws(() => verifySource(sourceMutant, baseline));
+      assert.throws(() => verifyCss(cssMutant));
     }
   });
 
