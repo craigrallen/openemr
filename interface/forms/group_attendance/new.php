@@ -157,8 +157,7 @@ if ($form_id) {//If editing a form or the form already exists (inwhich case will
         box-sizing: border-box;
         width: 100%;
         max-width: 100%;
-        overflow-x: auto;
-        overflow-y: visible;
+        overflow: auto visible;
         margin-block: 0 1.25rem;
       }
 
