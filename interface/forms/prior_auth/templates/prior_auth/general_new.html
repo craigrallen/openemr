@@ -25,8 +25,151 @@
 	});
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.prior-auth-document-editor {
+    box-sizing: border-box;
+    margin: 0;
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    background-color: var(--oe-wb-canvas, #edf2f3) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container {
+    box-sizing: border-box;
+    width: min(100%, 860px);
+    max-width: 860px;
+    margin-inline: auto;
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    border: 1px solid var(--oe-wb-line, #cbd6da);
+    border-radius: 7px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+    line-height: 1.5;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container > .row,
+  html.oe-workbench-context body.prior-auth-document-editor > .container > .row > .col-12,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] > .form-group > .col-sm-12 {
+    margin-inline: 0;
+    padding-inline: 0;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container h2 {
+    margin: 0 0 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--oe-wb-line, #cbd6da);
+    color: var(--oe-wb-ink, #182c36) !important;
+    font-size: clamp(1.4rem, 2vw, 1.65rem);
+    font-weight: 650;
+    line-height: 1.25;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] fieldset {
+    min-width: 0;
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.25rem 1.25rem;
+    border: 1px solid var(--oe-wb-line, #cbd6da);
+    border-radius: 6px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] fieldset legend {
+    width: auto;
+    margin: 0;
+    padding: 0 0.35rem;
+    color: var(--oe-wb-petrol, #145968) !important;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] fieldset .form-group {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] fieldset .row {
+    margin-inline: 0;
+    row-gap: 1rem;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] fieldset .row > [class^='col-'] {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--oe-wb-ink, #182c36) !important;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] input.form-control,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] textarea[name='comments'] {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #91a8b1;
+    border-radius: 4px;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+    font: inherit;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] input.form-control {
+    min-height: 2.65rem;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] textarea[name='comments'] {
+    min-height: 12rem;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.25rem;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-save,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-cancel {
+    min-width: 7rem;
+    min-height: 2.7rem;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-save {
+    border-color: var(--oe-wb-petrol, #145968);
+    background-color: var(--oe-wb-petrol, #145968) !important;
+    color: var(--oe-wb-on-petrol, #fff) !important;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-cancel {
+    border-color: #91a8b1;
+    background-color: var(--oe-wb-paper, #fff) !important;
+    color: var(--oe-wb-ink, #182c36) !important;
+  }
+
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] input.form-control:focus-visible,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] textarea[name='comments']:focus-visible,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-save:focus-visible,
+  html.oe-workbench-context body.prior-auth-document-editor > .container form[name='prior_auth'] .btn-cancel:focus-visible {
+    outline: 3px solid #b65020;
+    outline-offset: 2px;
+  }
+}
+</style>
 </head>
-<body>
+<body class="prior-auth-document-editor">
 	<div class="container mt-3">
         <div class="row">
             <div class="col-12">
