@@ -296,8 +296,81 @@ $form_regdate = $_POST['regdate'] ?? '' ? trim((string) $_POST['regdate']) : dat
             document.forms[0].submit();
         }
     </script>
+    <style>
+    @media screen {
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup {
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-canvas, #f3f7f5);
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 860px;
+        margin: 16px auto 24px;
+        padding: 20px 24px 24px;
+        padding-inline: 24px;
+        color: var(--oe-wb-ink, #17343b);
+        background-color: var(--oe-wb-paper, #fff);
+        border: 1px solid var(--oe-wb-line, #d9e4e2);
+        border-radius: 8px;
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > .title {
+        margin: 0 0 20px;
+        padding: 0 0 14px;
+        border-bottom: 1px solid var(--oe-wb-line, #d9e4e2);
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form {
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form > .form-group.col {
+        box-sizing: border-box;
+        min-width: 0;
+        padding-right: 0;
+        padding-left: 0;
+        padding-inline: 0;
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form .form-control {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form .form-control:focus,
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form .form-control:focus-visible,
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form .form-check-input:focus,
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form .form-check-input:focus-visible,
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form > .float-right > .btn:focus,
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form > .float-right > .btn:focus-visible {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid > form.form > .float-right {
+        float: none !important;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        clear: both;
+      }
+
+      @media (width <= 600px) {
+        html.oe-workbench-context body.body_top.oe-fax-patient-popup > .container-fluid {
+          margin: 8px auto 16px;
+          padding: 16px;
+          padding-inline: 16px;
+        }
+      }
+    }
+    </style>
 </head>
-<body class="body_top" onload="javascript:document.new_patient.fname.focus();">
+<body class="body_top oe-fax-patient-popup" onload="javascript:document.new_patient.fname.focus();">
     <div class="container-fluid">
         <div class='title'><?php echo $title; ?></div>
         <form class="form" name='new_patient' method='post' action="" onsubmit='return validate()'>
