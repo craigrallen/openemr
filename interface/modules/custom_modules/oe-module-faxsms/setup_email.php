@@ -104,6 +104,9 @@ if (empty($credentials['email_message'] ?? '') || strlen((string) $credentials['
         max-width: 100%;
         white-space: normal;
         overflow-wrap: anywhere;
+        color: var(--oe-wb-petrol, #086878);
+        background-color: var(--oe-wb-paper, #fff);
+        border-color: var(--oe-wb-petrol, #086878);
       }
 
       html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex > .dropdown > .dropdown-menu {
