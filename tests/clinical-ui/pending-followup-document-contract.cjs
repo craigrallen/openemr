@@ -10,6 +10,7 @@ const SOURCE = 'interface/orders/pending_followup.php';
 const FIXTURE = 'tests/clinical-ui/fixtures/pending-followup-original.php.txt';
 const HISTORY_REF = '09b29da7771aea334ed5745e058751157af980d7';
 const SCOPE = 'html.oe-workbench-context body.oe-pending-followup-document';
+const TABLE_SELECTOR = `${SCOPE} > center > form table`;
 const BODY_BEFORE = "<body leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>";
 const BODY_AFTER = "<body class='oe-pending-followup-document' leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>";
 const HEAD_END = '\n</head>';
@@ -36,6 +37,11 @@ const ADDED_STYLE = `
 
   ${SCOPE} > center > form {
     max-width: 100%;
+  }
+
+  ${TABLE_SELECTOR} {
+    color: #243c43;
+    background-color: #fff;
   }
 }
 </style>`;
@@ -82,9 +88,19 @@ function verifyStyle(style) {
     assert.match(style, /^\n<style>\n@media screen \{\n/);
     assert.match(style, /\n\}\n<\/style>$/);
     const rules = [...style.matchAll(/^  ([^{}\n]+) \{\n([^{}]+)^  \}$/gm)];
-    assert.equal(rules.length, 3, 'exactly the center, heading, and form rules');
+    assert.equal(rules.length, 4, 'exactly the center, heading, form, and table rules');
+    assert.deepEqual(rules.map(([, selector]) => selector), [
+        `${SCOPE} > center`,
+        `${SCOPE} > center > h2`,
+        `${SCOPE} > center > form`,
+        TABLE_SELECTOR,
+    ], 'only the declared document selectors are allowed');
     const center = rules.find(([, selector]) => selector === `${SCOPE} > center`);
     assert.ok(center, 'document center rule must exist');
+    const table = rules.find(([, selector]) => selector === TABLE_SELECTOR);
+    assert.ok(table, 'native document table rule must exist');
+    assert.equal(table[2], '    color: #243c43;\n    background-color: #fff;\n',
+        'native tables must pair the document ink with its white surface');
     assert.equal(count(center[2], '    overflow-x: auto;\n'), 1,
         'document center must contain horizontal overflow exactly once');
     for (const [, selector, declarations] of rules) {
@@ -93,7 +109,8 @@ function verifyStyle(style) {
             ? declarations.replace('    overflow-x: auto;\n', '') : declarations;
         assert.doesNotMatch(checked, /(?:display|visibility|overflow(?:-[\w-]+)?|font(?:-family|-size|-weight)?|pointer-events|opacity)\s*:/i);
     }
-    assert.doesNotMatch(style, /@media\s+print|!important|\b(?:table|thead|tbody|tr|td|th|input|select|button)\b/i);
+    assert.doesNotMatch(style.replace(`${TABLE_SELECTOR} {`, ''),
+        /@media\s+print|!important|\b(?:table|thead|tbody|tr|td|th|input|select|button)\b/i);
     assert.match(style, /max-width: 1100px;/);
     assert.match(style, /width: calc\(100% - 32px\);/);
     assert.match(style, /margin: 16px auto;/);
@@ -202,6 +219,24 @@ test('unscoped, print, hiding, and font style mutations are rejected', () => {
     ];
     for (const [label, before, after] of mutations) {
         rejectMutation(valid, original, label, before, after);
+    }
+});
+
+test('missing or mismatched native table ink and background are rejected', () => {
+    const valid = insertPresentation(original);
+    const tableRule = `  ${TABLE_SELECTOR} {\n    color: #243c43;\n    background-color: #fff;\n  }`;
+    const mutations = [
+        ['missing table ink', '    color: #243c43;\n', ''],
+        ['mismatched table ink', '    color: #243c43;\n', '    color: #f8f9fa;\n'],
+        ['missing table background', '    background-color: #fff;\n', ''],
+        ['mismatched table background', '    background-color: #fff;\n', '    background-color: #243c43;\n'],
+    ];
+    for (const [label, before, after] of mutations) {
+        const mutantRule = tableRule.replace(before, after);
+        assert.notEqual(mutantRule, tableRule, `${label} mutation must change the table rule`);
+        assert.throws(() => verifyStyle(ADDED_STYLE.replace(tableRule, mutantRule)),
+            undefined, `${label} must fail the style contract`);
+        rejectMutation(valid, original, label, tableRule, mutantRule);
     }
 });
 
