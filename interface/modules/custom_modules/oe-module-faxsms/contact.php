@@ -265,8 +265,70 @@ $session = SessionWrapperFactory::getInstance()->getActiveSession();
         overflow: hidden;
       }
     </style>
+    <style>
+    /* OPEMR-179 contact popup presentation */
+    @media screen {
+      html.oe-workbench-context body.oe-contact-document > .container-fluid {
+        width: calc(100% - 24px);
+        max-width: 860px;
+        margin: 12px auto;
+        padding: clamp(12px, 2vw, 24px);
+        box-sizing: border-box;
+        border: 1px solid var(--oe-wb-line, #d9e4e2);
+        border-radius: 8px;
+        background-color: var(--oe-wb-paper, #fff);
+        color: var(--oe-wb-ink, #17343b);
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form,
+      html.oe-workbench-context body.oe-contact-document #contact-form .row,
+      html.oe-workbench-context body.oe-contact-document #contact-form [class*='col-'] {
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form .row {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form .form-control {
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form textarea {
+        margin-top: 4px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form label,
+      html.oe-workbench-context body.oe-contact-document #contact-form .forwardExclude.smsExclude {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form > .row:last-child > .col-md-12 > .mt-2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form > .row:last-child > .col-md-12 > .mt-2 > .btn {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        float: none !important;
+      }
+
+      html.oe-workbench-context body.oe-contact-document #contact-form :focus-visible {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+    }
+    </style>
 </head>
-<body>
+<body class="oe-contact-document">
     <div class="container-fluid">
         <form class="form" id="contact-form" method="post" action="contact.php" role="form">
             <input type="hidden" name="csrf_token_form" id="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken($session, 'contact-form'); ?>" />
