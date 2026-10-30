@@ -94,8 +94,75 @@
 
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-prescription-editor-document > .container-xl {
+    width: calc(100% - 24px);
+    max-width: 1000px;
+    margin: 12px auto;
+    padding: clamp(12px, 2vw, 24px);
+    box-sizing: border-box;
+    border: 1px solid #d6e1e4;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #243c43;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe .row {
+    margin-left: 0;
+    margin-right: 0;
+    margin-inline: 0;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe .form-group.row > .col {
+    flex: 1 1 10rem;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe .form-control {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document .prescription-controls {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document .prescription-controls tr > td:first-child {
+    width: 3rem;
+    vertical-align: top;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document .prescription-controls tr > td:nth-child(2) {
+    white-space: normal;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document .prescription-controls .btn,
+  html.oe-workbench-context body.oe-prescription-editor-document #prescribe > .row > .col-12 > .btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-prescription-editor-document #druglookup {
+    color: #086878;
+  }
+}
+</style>
 </head>
-<body id="prescription_edit">
+<body id="prescription_edit" class="oe-prescription-editor-document">
 <div class="container-xl">
     <form name="prescribe" id="prescribe"  method="post" action="{{ webroot }}/controller.php?prescription&edit&id={{ prescription.id|attr_url }}&pid={{ prescription.patient.id|attr_url }}" >
         <table class="prescription-controls">
