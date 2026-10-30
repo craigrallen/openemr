@@ -289,9 +289,39 @@ $(function () {
 });
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-procedure-statistics-document > center {
+    max-width: 1100px;
+    width: calc(100% - 32px);
+    margin: 16px auto;
+    padding: clamp(12px, 2vw, 28px);
+    border: 1px solid #d6e1e4;
+    border-radius: 8px;
+    background: #fff;
+    color: #243c43;
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  html.oe-workbench-context body.oe-procedure-statistics-document > center > h2 {
+    text-align: left;
+    margin: 0 0 16px;
+  }
+
+  html.oe-workbench-context body.oe-procedure-statistics-document > center > form {
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-procedure-statistics-document > center > form > table.table {
+    color: #243c43;
+    background-color: #fff;
+  }
+}
+</style>
 </head>
 
-<body class='m-0'>
+<body class='m-0 oe-procedure-statistics-document'>
 
 <center>
 
