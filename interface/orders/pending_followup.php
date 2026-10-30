@@ -146,6 +146,11 @@ if ($_POST['form_csvexport']) {
   html.oe-workbench-context body.oe-pending-followup-document > center > form {
     max-width: 100%;
   }
+
+  html.oe-workbench-context body.oe-pending-followup-document > center > form table {
+    color: #243c43;
+    background-color: #fff;
+  }
 }
 </style>
 </head>
