@@ -134,8 +134,95 @@ echo "<script>var pid=" . js_escape($pid) . "</script>";
                 });
         }
     </script>
+    <style>
+    /* OPEMR-183 voice setup popup presentation */
+    @media screen {
+      html.oe-workbench-context body.oe-faxsms-voice-setup > .container-fluid {
+        width: calc(100% - 24px);
+        max-width: 860px;
+        margin: 12px auto;
+        padding: clamp(12px, 2vw, 24px);
+        box-sizing: border-box;
+        border: 1px solid var(--oe-wb-line, #d9e4e2);
+        border-radius: 8px;
+        background-color: var(--oe-wb-paper, #fff);
+        color: var(--oe-wb-ink, #17343b);
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup > .container-fluid > h4 {
+        margin: 0 0 16px;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form {
+        display: flow-root;
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form > .row {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form > .row > [class*='col-'] {
+        min-width: 0;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form .form-group {
+        margin-bottom: 12px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form label,
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form .form-group > span {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form .form-control,
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form .input-group {
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form textarea {
+        margin-top: 4px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form button {
+        max-width: calc(100% - 16px);
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form button[onclick='registerVoiceWebhook()'] {
+        color: var(--oe-wb-petrol, #086878);
+        background-color: var(--oe-wb-paper, #fff);
+        border-color: var(--oe-wb-petrol, #086878);
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup #setup-form button[onclick='openJwtWindow()'] {
+        color: var(--oe-wb-on-petrol, #fff);
+        background-color: var(--oe-wb-petrol, #086878);
+        border-color: var(--oe-wb-petrol, #086878);
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup :focus {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-voice-setup :focus-visible {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+    }
+    </style>
 </head>
-<body>
+<body class="oe-faxsms-voice-setup">
     <div class="container-fluid">
         <?php if ($module_config) { ?>
             <h4><?php echo xlt("Setup Credentials") ?></h4>
