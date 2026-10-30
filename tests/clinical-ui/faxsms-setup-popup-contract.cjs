@@ -68,6 +68,10 @@ const ADDITIVE_CSS = `    <style>
         box-sizing: border-box;
       }
 
+      ${SCOPE} #setup-form .form-group {
+        margin-bottom: 12px;
+      }
+
       ${SCOPE} #setup-form textarea {
         margin-top: 4px;
         margin-bottom: 8px;
@@ -229,6 +233,13 @@ test('every frozen declaration and media, scope, and body seams are required', (
   assert.ok(selectors.every((match) => match[1].startsWith(SCOPE)));
   assert.doesNotMatch(ADDITIVE_CSS, /\b(?:display:\s*none|visibility:\s*hidden|overflow:\s*hidden|@media print)\b/);
   assert.doesNotMatch(ADDITIVE_CSS, /(?:background(?:-color)?|color|border-color):[^;]*(?:danger|success|disabled|invalid|valid)/i);
+});
+
+test('compact setup form group spacing is scoped and rejects the inherited gap', () => {
+  const rule = `      ${SCOPE} #setup-form .form-group {\n        margin-bottom: 12px;\n      }`;
+  assert.ok(ADDITIVE_CSS.includes(rule), 'frozen style must include the scoped 12px group gap');
+  const valid = applyPresentation(read(FIXTURE));
+  rejectMutation(valid, 'form group spacing', rule, rule.replace('12px', '16px'));
 });
 
 if (process.argv.includes('--history')) {
