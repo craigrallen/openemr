@@ -232,8 +232,75 @@ $(function () {
 </script>
 
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-prescription-list-document > .container-fluid {
+    max-width: 1100px;
+    width: calc(100% - 24px);
+    margin: 12px auto;
+    padding: clamp(12px, 2vw, 24px);
+    box-sizing: border-box;
+    border: 1px solid #d6e1e4;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #243c43;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document > .container-fluid > .row {
+    min-width: 0;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document #prescription-btn-navbar {
+    align-items: center;
+    padding-block: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document #prescription-btn-navbar > .btn-group {
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document #prescription-btn-navbar .btn-group > .btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document .prescription_list {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document .prescription_list .table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document .prescription_list .table-responsive > table.table.table-hover {
+    min-width: 64rem;
+    color: #243c43;
+    background-color: #fff;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document .prescription_list .table-responsive > table.table.table-hover > tbody > tr:hover > td {
+    color: #243c43;
+    background-color: #eaf2f2;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document #prescription-btn-navbar .small {
+    color: #086878;
+  }
+
+  html.oe-workbench-context body.oe-prescription-list-document > .container-fluid > .row:last-child > .col-12.d-flex.justify-content-end {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+</style>
 </head>
-<body id="prescription_list">
+<body id="prescription_list" class="oe-prescription-list-document">
     <div class="container-fluid">
         <div class="row">
             {% if prescriptions %}
