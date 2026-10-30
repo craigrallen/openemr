@@ -69,8 +69,97 @@ if (empty($credentials['email_message'] ?? '') || strlen((string) $credentials['
             dlgopen(ppath, '_blank', 1240, 900, true, msg1);
         };
     </script>
+    <style>
+    /* OPEMR-182 email reminder setup popup presentation */
+    @media screen {
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container {
+        width: calc(100% - 24px);
+        max-width: 860px;
+        margin: 12px auto;
+        padding: clamp(12px, 2vw, 24px);
+        box-sizing: border-box;
+        border: 1px solid var(--oe-wb-line, #d9e4e2);
+        border-radius: 8px;
+        background-color: var(--oe-wb-paper, #fff);
+        color: var(--oe-wb-ink, #17343b);
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex {
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-bottom: 16px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex > h4 {
+        margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex > .dropdown {
+        margin-left: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex > .dropdown > #dropdownMenuButton {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup > .container > .d-flex > .dropdown > .dropdown-menu {
+        max-width: 100%;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form {
+        display: flow-root;
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form > .row {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form > .row > [class*='col-'] {
+        min-width: 0;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form .form-group {
+        margin-bottom: 12px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form label,
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form .form-group > span {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form textarea {
+        margin-top: 4px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup #setup-form > button[type='submit'] {
+        max-width: calc(100% - 16px);
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup :focus {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-email-setup :focus-visible {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+    }
+    </style>
 </head>
-<body>
+<body class="oe-faxsms-email-setup">
     <div class="container">
         <div class="alert alert-info">
             <?php echo xlt("Use Config Notifications to setup SMTP. Setup here is work in progress for a secondary client. Sending Email reminders is still available from Reminder Actions dropdown. However, the Message Template and Email Notification Hours below are used for reminders.") ?>
