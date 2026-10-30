@@ -135,6 +135,7 @@ if ($_POST['form_csvexport']) {
     background: #fff;
     color: #243c43;
     box-sizing: border-box;
+    overflow-x: auto;
   }
 
   html.oe-workbench-context body.oe-pending-followup-document > center > h2 {
