@@ -98,8 +98,83 @@ $mode = $_REQUEST['mode'] ?? null;
             show.forEach(s => $(s).show());
         });
     </script>
+    <style>
+    /* OPEMR-180 fax/SMS setup popup presentation */
+    @media screen {
+      html.oe-workbench-context body.oe-faxsms-setup-document > .container-fluid {
+        width: calc(100% - 24px);
+        max-width: 860px;
+        margin: 12px auto;
+        padding: clamp(12px, 2vw, 24px);
+        box-sizing: border-box;
+        border: 1px solid var(--oe-wb-line, #d9e4e2);
+        border-radius: 8px;
+        background-color: var(--oe-wb-paper, #fff);
+        color: var(--oe-wb-ink, #17343b);
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document > .container-fluid > h4 {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form,
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form > .row,
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form > .row > .col {
+        min-width: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form > .row {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form label,
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form small,
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form .form-group > span,
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form .text-muted {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form .form-control {
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form .form-group {
+        margin-bottom: 12px;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form textarea {
+        margin-top: 4px;
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form > .row > .col > div:last-child {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        clear: both;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form > .row > .col > div:last-child > .btn {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        float: none !important;
+      }
+
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form :focus-visible {
+        outline: 3px solid var(--oe-wb-petrol, #086878);
+        outline-offset: 2px;
+      }
+    }
+    </style>
 </head>
-<body>
+<body class="oe-faxsms-setup-document">
     <div class="container-fluid">
         <?php if ($module_config) { ?>
             <h4><?php echo xlt("Setup Credentials") . ' ' . $title ?></h4>
