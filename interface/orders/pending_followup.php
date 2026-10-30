@@ -123,9 +123,33 @@ if ($_POST['form_csvexport']) {
     });
 </script>
 
+<style>
+@media screen {
+  html.oe-workbench-context body.oe-pending-followup-document > center {
+    max-width: 1100px;
+    width: calc(100% - 32px);
+    margin: 16px auto;
+    padding: clamp(12px, 2vw, 28px);
+    border: 1px solid #d6e1e4;
+    border-radius: 8px;
+    background: #fff;
+    color: #243c43;
+    box-sizing: border-box;
+  }
+
+  html.oe-workbench-context body.oe-pending-followup-document > center > h2 {
+    text-align: left;
+    margin: 0 0 16px;
+  }
+
+  html.oe-workbench-context body.oe-pending-followup-document > center > form {
+    max-width: 100%;
+  }
+}
+</style>
 </head>
 
-<body leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>
+<body class='oe-pending-followup-document' leftmargin='0' topmargin='0' marginwidth='0' marginheight='0'>
 <center>
 
 <h2><?php echo xlt('Pending Followup from Results')?></h2>
