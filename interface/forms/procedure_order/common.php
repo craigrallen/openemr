@@ -1239,6 +1239,31 @@ if (!empty($row['lab_id'])) {
       .lfont1 {
         font-size: 1.25rem;
       }
+
+      @media screen {
+        html.oe-workbench-context body.oe-procedure-order-document {
+          margin: 16px;
+          color: #243c43;
+        }
+
+        html.oe-workbench-context body.oe-procedure-order-document > .container-fluid {
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: clamp(12px, 2vw, 28px);
+          color: #243c43;
+          background-color: #fff;
+          border: 1px solid #d6e1e4;
+          border-radius: 8px;
+        }
+
+        html.oe-workbench-context body.oe-procedure-order-document .page-header {
+          margin-bottom: 16px;
+        }
+
+        html.oe-workbench-context body.oe-procedure-order-document .form.form-horizontal {
+          margin-top: 16px;
+        }
+      }
     </style>
 </head>
 <?php
@@ -1249,7 +1274,7 @@ $title = [xl('Order for'), $name, $formid ? xl('Order Id') . ' ' . text($formid)
 $reasonCodeStatii = ReasonStatusCodes::getCodesWithDescriptions();
 $reasonCodeStatii[ReasonStatusCodes::NONE]['description'] = xl("Select a status code");
 ?>
-<body class="body_top" onsubmit="doWait(event)">
+<body class="body_top oe-procedure-order-document" onsubmit="doWait(event)">
     <div class="container-fluid">
         <div class="page-header text-center">
             <h4><?php echo text(implode(" ", $title)); ?></h4>
