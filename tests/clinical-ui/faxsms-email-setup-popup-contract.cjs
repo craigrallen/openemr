@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, '../..');
 const SOURCE = 'interface/modules/custom_modules/oe-module-faxsms/setup_email.php';
 const LAUNCHER = 'interface/modules/custom_modules/oe-module-faxsms/library/setup_services.php';
 const POPUP_CSS = 'interface/clinical-workspace/popup.css';
+const DARK_THEME = 'interface/themes/oe-styles/style_dark.scss';
 const FIXTURE = 'tests/clinical-ui/fixtures/faxsms-email-setup-original.php.txt';
 const BASE = '09b29da7771aea334ed5745e058751157af980d7';
 const ALLOWED = Object.freeze([
@@ -23,6 +24,12 @@ const BODY_BEFORE = '<body>';
 const BODY_AFTER = '<body class="oe-faxsms-email-setup">';
 const HEAD_END = '</head>';
 const MARKER = '/* OPEMR-182 email reminder setup popup presentation */';
+const BUTTON_SELECTOR = `${SCOPE} > .container > .d-flex > .dropdown > #dropdownMenuButton`;
+const BUTTON_PAINT = Object.freeze({
+  color: 'var(--oe-wb-petrol, #086878)',
+  'background-color': 'var(--oe-wb-paper, #fff)',
+  'border-color': 'var(--oe-wb-petrol, #086878)',
+});
 
 const ADDITIVE_CSS = `    <style>
     ${MARKER}
@@ -55,10 +62,13 @@ const ADDITIVE_CSS = `    <style>
         margin-left: 0;
       }
 
-      ${SCOPE} > .container > .d-flex > .dropdown > #dropdownMenuButton {
+      ${BUTTON_SELECTOR} {
         max-width: 100%;
         white-space: normal;
         overflow-wrap: anywhere;
+        color: var(--oe-wb-petrol, #086878);
+        background-color: var(--oe-wb-paper, #fff);
+        border-color: var(--oe-wb-petrol, #086878);
       }
 
       ${SCOPE} > .container > .d-flex > .dropdown > .dropdown-menu {
@@ -156,6 +166,22 @@ function rejectMutation(valid, label, before, after) {
   assert.throws(() => verifySource(mutant), undefined, `${label} must be rejected`);
 }
 
+function verifyButtonPaint(candidate) {
+  const opening = `${BUTTON_SELECTOR} {`;
+  once(candidate, opening, 'route-specific Reminder Actions selector');
+  const start = candidate.indexOf(opening) + opening.length;
+  const end = candidate.indexOf('}', start);
+  assert.ok(end > start, 'Reminder Actions rule must close');
+  const rule = candidate.slice(start, end);
+  const declarations = [...rule.matchAll(/^        ([\w-]+): ([^;\n]+);$/gm)];
+  for (const [property, value] of Object.entries(BUTTON_PAINT)) {
+    const matches = declarations.filter((entry) => entry[1] === property);
+    assert.equal(matches.length, 1, `${property} must occur once in the scoped button rule`);
+    assert.equal(matches[0][2], value, `${property} must pair petrol ink with white paper`);
+  }
+  return true;
+}
+
 function git(args) {
   const run = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   assert.ifError(run.error);
@@ -206,6 +232,39 @@ test('native route, saving, escaping, fields, and reminder links are pinned inde
   assert.ok(/if \(id === 'set-email'\) \{[\s\S]*?url: '\.\/\.\.\/setup_email\.php\?type=email&module_config=-1'[\s\S]*?dlgopen\('', '', 'modal-lg'/.test(launcher), 'email dialog launcher');
   assert.ok(launcher.includes('<iframe src="<?php echo attr(\'./../setup_email.php?type=email&module_config=1&mode=flat\'); ?>"'), 'email iframe launcher');
   assert.match(read(POPUP_CSS), /@media screen \{[\s\S]*?html\.oe-workbench-context[\s\S]*?--oe-wb-paper: #fff;[\s\S]*?--oe-wb-petrol: #086878;/);
+});
+
+test('Reminder Actions paint stays paired across dark theme button states', () => {
+  const darkTheme = read(DARK_THEME);
+  assert.match(darkTheme, /^\$black: #fff;$/m, 'dark theme makes $black white');
+  assert.match(darkTheme, /\.btn-outline-primary \{\s*color: \$black;\s*\}/,
+    'dark theme gives the native outline button white ink');
+  const original = read(FIXTURE);
+  assert.ok(original.includes('class="btn btn-outline-primary dropdown-toggle" type="button" id="dropdownMenuButton"'));
+  assert.equal((BUTTON_SELECTOR.match(/#/g) || []).length, 1,
+    'the route-specific ID outranks the theme class selector, including hover, focus, and active');
+  assert.doesNotMatch(BUTTON_SELECTOR, /:(?:hover|focus|active)\b/,
+    'the same paired paint must apply in every button state');
+
+  const valid = applyPresentation(original);
+  assert.equal(verifyButtonPaint(valid), true);
+  const opening = `${BUTTON_SELECTOR} {`;
+  const rule = valid.slice(valid.indexOf(opening), valid.indexOf('}', valid.indexOf(opening)) + 1);
+  once(valid, rule, 'complete Reminder Actions rule');
+  for (const [label, before, after] of [
+    ['foreground removal', '        color: var(--oe-wb-petrol, #086878);\n', ''],
+    ['background removal', '        background-color: var(--oe-wb-paper, #fff);\n', ''],
+    ['border removal', '        border-color: var(--oe-wb-petrol, #086878);\n', ''],
+    ['white foreground', '        color: var(--oe-wb-petrol, #086878);', '        color: #fff;'],
+    ['petrol background', '        background-color: var(--oe-wb-paper, #fff);', '        background-color: var(--oe-wb-petrol, #086878);'],
+  ]) {
+    once(rule, before, `${label} within button rule`);
+    const changedRule = rule.replace(before, after);
+    assert.notEqual(changedRule, rule, `${label} must change the button rule`);
+    const mutant = valid.replace(rule, changedRule);
+    assert.throws(() => verifyButtonPaint(mutant), undefined, `${label} must be rejected`);
+  }
+  verifyButtonPaint(read(SOURCE));
 });
 
 test('behavior and rendering mutations are rejected with unique anchors', () => {
