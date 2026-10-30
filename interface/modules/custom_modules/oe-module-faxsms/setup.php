@@ -142,6 +142,10 @@ $mode = $_REQUEST['mode'] ?? null;
         box-sizing: border-box;
       }
 
+      html.oe-workbench-context body.oe-faxsms-setup-document #setup-form .form-group {
+        margin-bottom: 12px;
+      }
+
       html.oe-workbench-context body.oe-faxsms-setup-document #setup-form textarea {
         margin-top: 4px;
         margin-bottom: 8px;
