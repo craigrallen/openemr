@@ -26,6 +26,7 @@ const ADDED_STYLE = `
     background: #fff;
     color: #243c43;
     box-sizing: border-box;
+    overflow-x: auto;
   }
 
   ${SCOPE} > center > h2 {
@@ -82,9 +83,15 @@ function verifyStyle(style) {
     assert.match(style, /\n\}\n<\/style>$/);
     const rules = [...style.matchAll(/^  ([^{}\n]+) \{\n([^{}]+)^  \}$/gm)];
     assert.equal(rules.length, 3, 'exactly the center, heading, and form rules');
+    const center = rules.find(([, selector]) => selector === `${SCOPE} > center`);
+    assert.ok(center, 'document center rule must exist');
+    assert.equal(count(center[2], '    overflow-x: auto;\n'), 1,
+        'document center must contain horizontal overflow exactly once');
     for (const [, selector, declarations] of rules) {
         assert.ok(selector.startsWith(SCOPE), `unscoped selector: ${selector}`);
-        assert.doesNotMatch(declarations, /(?:display|visibility|overflow|font(?:-family|-size|-weight)?|pointer-events|opacity)\s*:/i);
+        const checked = selector === `${SCOPE} > center`
+            ? declarations.replace('    overflow-x: auto;\n', '') : declarations;
+        assert.doesNotMatch(checked, /(?:display|visibility|overflow(?:-[\w-]+)?|font(?:-family|-size|-weight)?|pointer-events|opacity)\s*:/i);
     }
     assert.doesNotMatch(style, /@media\s+print|!important|\b(?:table|thead|tbody|tr|td|th|input|select|button)\b/i);
     assert.match(style, /max-width: 1100px;/);
@@ -187,6 +194,7 @@ test('SQL binds, ACL, CSRF, and CSV safety mutations are rejected', () => {
 test('unscoped, print, hiding, and font style mutations are rejected', () => {
     const valid = insertPresentation(original);
     const mutations = [
+        ['missing containment', '    overflow-x: auto;\n', ''],
         ['scope', `${SCOPE} > center {`, 'body > center {'],
         ['print', '@media screen {', '@media print {'],
         ['hiding', 'text-align: left;', 'text-align: left;\n    display: none;'],
