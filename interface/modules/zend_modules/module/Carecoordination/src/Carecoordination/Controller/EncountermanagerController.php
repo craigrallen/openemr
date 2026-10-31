@@ -261,7 +261,6 @@ class EncountermanagerController extends AbstractActionController
                     Response::HTTP_NOT_FOUND,
                 ));
             }
-            $content = $document->get_data();
 
             $ccdaGlobalsConfiguration = new CcdaGlobalsConfiguration();
             $ccdaUserPreferencesTransformer = new CcdaUserPreferencesTransformer(
