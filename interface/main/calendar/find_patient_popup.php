@@ -111,6 +111,28 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
         background-color: #336699;
         color: var(--white);
       }
+
+      #searchResults .patient-select {
+        color: inherit;
+        font: inherit;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+        white-space: normal;
+        cursor: pointer;
+      }
+
+      #searchResults .patient-select:focus {
+        outline: 2px solid currentcolor;
+        outline-offset: 2px;
+      }
+
+      #searchResults .patient-select:focus-visible {
+        outline: 2px solid currentcolor;
+        outline-offset: 2px;
+      }
     </style>
 
     <!-- ViSolve: Verify the noresult parameter -->
@@ -213,7 +235,9 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
 
                         echo " <tr class='" . $trClass . "' id='" .
                             attr($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob) . "'>";
-                        echo "  <td class='srName'>" . text($iterlname . ", " . $iterfname . " " . $itermname);
+                        echo "  <td class='srName'><button type='button' class='patient-select'>";
+                        echo text($iterlname . ", " . $iterfname . " " . $itermname);
+                        echo "</button>";
                         if (!empty($iter['billing_note'])) {
                             echo "<br />" . text($iter['billing_note']);
                         }
@@ -248,6 +272,19 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
                 });
                 $(".oneresult").click(function () {
                     SelectPatient(this);
+                });
+                $(".patient-select").keydown(function (event) {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                        return;
+                    }
+                    event.preventDefault();
+                    if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
+                        return;
+                    }
+                    var row = $(this).closest(".oneresult")[0];
+                    if (row) {
+                        SelectPatient(row);
+                    }
                 });
                 //ViSolve
                 $(".noresult").click(function () {

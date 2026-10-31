@@ -23,7 +23,7 @@ const BASELINE_SHA256 = {
     twig: '1e3f64fb5844392fc190a6d394cd111529331123dd60853d75abdb9fa5628f90',
 };
 
-// Every presentation change this redesign makes to each file, as exact {old, new} string
+// Every presentation change and the authorized popup keyboard changes, as exact {old, new} string
 // pairs. Reversing all of them (new -> old) must reconstruct the 0ac49dcd original byte for
 // byte: this is a whole-file invariant, not a snippet sample, so any unlisted drift anywhere
 // in the file (a changed query, a renamed callback, a different escaping call, an extra
@@ -37,6 +37,10 @@ const POPUP_PAIRS = [
         "<title><?php echo xlt('Patient Finder'); ?></title>\n\n    <style>",
         "<title><?php echo xlt('Patient Finder'); ?></title>\n\n    <?php $clinicalAssets = new ClinicalWorkspaceAssets(); ?>\n    <link rel=\"stylesheet\" media=\"screen\" href=\"<?php echo attr(OEGlobalsBag::getInstance()->getWebRoot()); ?>/interface/clinical-workspace/patient-search.css?v=<?php echo attr_url($clinicalAssets->version('patient-search.css')); ?>\">\n\n    <style>",
     ],
+    [
+        '    </style>',
+        '\n      #searchResults .patient-select {\n        color: inherit;\n        font: inherit;\n        background: transparent;\n        border: 0;\n        padding: 0;\n        margin: 0;\n        text-align: left;\n        white-space: normal;\n        cursor: pointer;\n      }\n\n      #searchResults .patient-select:focus {\n        outline: 2px solid currentcolor;\n        outline-offset: 2px;\n      }\n\n      #searchResults .patient-select:focus-visible {\n        outline: 2px solid currentcolor;\n        outline-offset: 2px;\n      }\n    </style>',
+    ],
     ['<body class="body_top">', '<body class="body_top oe-patient-search">'],
     ['<div id="searchCriteria" class="bg-light p-2 pt-3">', '<div id="searchCriteria" class="bg-light p-2 pt-3 oe-search-criteria">'],
     ['<div class="form-row">', '<div class="form-row oe-search-controls">'],
@@ -47,6 +51,14 @@ const POPUP_PAIRS = [
     [
         '</tbody>\n            </table>\n\n        <?php endif; ?>',
         '</tbody>\n            </table>\n            </div>\n\n        <?php endif; ?>',
+    ],
+    [
+        '                        echo "  <td class=\'srName\'>" . text($iterlname . ", " . $iterfname . " " . $itermname);',
+        '                        echo "  <td class=\'srName\'><button type=\'button\' class=\'patient-select\'>";\n                        echo text($iterlname . ", " . $iterfname . " " . $itermname);\n                        echo "</button>";',
+    ],
+    [
+        '                //ViSolve',
+        '                $(".patient-select").keydown(function (event) {\n                    if (event.key !== "Enter" && event.key !== " ") {\n                        return;\n                    }\n                    event.preventDefault();\n                    if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {\n                        return;\n                    }\n                    var row = $(this).closest(".oneresult")[0];\n                    if (row) {\n                        SelectPatient(row);\n                    }\n                });\n                //ViSolve',
     ],
 ];
 const FINDER_PAIRS = [
@@ -71,7 +83,7 @@ const FILES = {
     twig: { path: path.join(repo, 'templates/patient_finder/finder.html.twig'), pairs: TWIG_PAIRS },
 };
 
-describe('whole-source preservation: reversing the enumerated presentation changes reconstructs the exact 0ac49dcd baseline', () => {
+describe('whole-source preservation: reversing presentation and authorized popup keyboard changes reconstructs the exact 0ac49dcd baseline', () => {
     test.each(Object.keys(FILES))('%s reconstructs byte-for-byte to its pinned baseline hash', (name) => {
         const current = fs.readFileSync(FILES[name].path, 'utf8');
         const reconstructed = reverseAll(current, FILES[name].pairs);
@@ -100,5 +112,24 @@ describe('whole-source preservation: reversing the enumerated presentation chang
         const current = fs.readFileSync(FILES.popup.path, 'utf8');
         const withoutOneChange = current.replace('oe-patient-search', 'oe-patient-search-x');
         expect(() => reverseAll(withoutOneChange, FILES.popup.pairs)).toThrow();
+    });
+
+    test('negative mutations: keyboard name escaping and selection callback cannot vanish through reversal', () => {
+        const current = fs.readFileSync(FILES.popup.path, 'utf8');
+        for (const [before, after] of [
+            ['echo text($iterlname . ", " . $iterfname . " " . $itermname);', 'echo $iterlname . ", " . $iterfname . " " . $itermname;'],
+            ['SelectPatient(row);', 'SelectPatient(this);'],
+        ]) {
+            expect(current).toContain(before);
+            expect(() => reverseAll(current.replace(before, after), FILES.popup.pairs)).toThrow();
+        }
+    });
+
+    test('negative mutation: changing the keyboard row payload escaping breaks the pinned baseline', () => {
+        const current = fs.readFileSync(FILES.popup.path, 'utf8');
+        const before = 'attr($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob)';
+        expect(current).toContain(before);
+        const mutated = current.replace(before, 'text($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob)');
+        expect(sha256(reverseAll(mutated, FILES.popup.pairs))).not.toBe(BASELINE_SHA256.popup);
     });
 });
