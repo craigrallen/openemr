@@ -216,7 +216,7 @@ final readonly class CalendarRenderDataBuilder
                 $loopcount++;
 
                 $dateTs = strtotime($date);
-                $datePlusFourTs = $dateTs !== false ? $dateTs + (4 * 86400) : false;
+                $datePlusFourTs = $dateTs !== false ? strtotime('+4 days', $dateTs) : false;
                 $datePlusFour = $datePlusFourTs !== false ? date('Y-m-d', $datePlusFourTs) : '';
 
                 $leftEvents = $this->decorateWeekPrintEventsForDay($events, $date, $providerId, $calendarApptStyle, $tplImagePath);
