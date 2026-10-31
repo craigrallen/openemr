@@ -321,7 +321,7 @@ namespace {
             genericFailure($output, $errors, CcdaUserPreferencesTransformer::$sentinel);
         },
         'non-ASCII first bytes are transformed exactly' => static function (): void {
-            $bytes = "SYNTHETIC caf\u{00E9} \u{03BB} \u{1F642}";
+            $bytes = "SYNTHETIC text \u{00E9} \u{03BB} \u{1F642}";
             [$output, $errors, $renders] = runPreview(true, false, [$bytes, 'replacement']);
             same([$bytes], CcdaUserPreferencesTransformer::$inputs, 'exact UTF-8 transform input');
             same(1, Document::$readCount, 'reads');
