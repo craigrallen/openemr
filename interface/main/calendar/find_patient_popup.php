@@ -125,12 +125,12 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
       }
 
       #searchResults .patient-select:focus {
-        outline: 2px solid currentColor;
+        outline: 2px solid currentcolor;
         outline-offset: 2px;
       }
 
       #searchResults .patient-select:focus-visible {
-        outline: 2px solid currentColor;
+        outline: 2px solid currentcolor;
         outline-offset: 2px;
       }
     </style>
@@ -235,7 +235,9 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
 
                         echo " <tr class='" . $trClass . "' id='" .
                             attr($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob) . "'>";
-                        echo "  <td class='srName'><button type='button' class='patient-select'>" . text($iterlname . ", " . $iterfname . " " . $itermname) . "</button>";
+                        echo "  <td class='srName'><button type='button' class='patient-select'>";
+                        echo text($iterlname . ", " . $iterfname . " " . $itermname);
+                        echo "</button>";
                         if (!empty($iter['billing_note'])) {
                             echo "<br />" . text($iter['billing_note']);
                         }
