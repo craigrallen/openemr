@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../interface/main/calendar/find_patient_popup.php'), 'utf8');
 
 function assertPickerPaint(document) {
-    const button = document.match(/<button type='button' class='([^']*)'>" \. text\(\$iterlname/);
+    const button = document.match(/echo "  <td class='srName'><button type='button' class='([^']*)'>";/);
     assert.ok(button, 'patient name keeps its native button');
     assert.deepEqual(button[1].split(/\s+/), ['patient-select'], 'theme button classes must not override row colors');
 
@@ -23,8 +23,12 @@ function assertPickerPaint(document) {
         assert.equal(base.get(property), value, `${property} must preserve the row's text and paint`);
     }
     for (const selector of ['#searchResults .patient-select:focus', '#searchResults .patient-select:focus-visible']) {
-        assert.equal(declarations(selector).get('outline'), '2px solid currentColor', `${selector} needs a visible inherited-color outline`);
+        assert.equal(declarations(selector).get('outline'), '2px solid currentcolor', `${selector} needs a visible inherited-color outline`);
     }
+}
+
+function assertPatientNameEchoes(document) {
+    assert.match(document, /echo "  <td class='srName'><button type='button' class='patient-select'>";\s*echo text\(\$iterlname \. ", " \. \$iterfname \. " " \. \$itermname\);\s*echo "<\/button>";/);
 }
 
 function runPopup(ids) {
@@ -90,7 +94,7 @@ test('source emits a native Name-cell button with original escaped name and bill
     assert.match(source, /<table class="table table-sm">[\s\S]*?<tbody id="searchResults">/);
     assert.equal((source.match(/<th class="sr(?:Name|Phone|CellPhone|Email|SS|DOB|ID)">/g) ?? []).length, 7);
     assert.match(source, /<tr class='" \. \$trClass \. "' id='" \.\s*attr\(\$iterpid \. "~" \. \$iterlname \. "~" \. \$iterfname \. "~" \. \$iterdob\)/);
-    assert.match(source, /<td class='srName'>[\s\S]*?<button type='button' class='[^']*patient-select[^']*'>" \. text\(\$iterlname \. ", " \. \$iterfname \. " " \. \$itermname\) \. "<\/button>"/);
+    assertPatientNameEchoes(source);
     assert.match(source, /echo "<br \/>" \. text\(\$iter\['billing_note'\]\)/);
     assert.doesNotMatch(source, /<tr[^>]*role=['"]button/);
 });
@@ -99,11 +103,17 @@ test('popup-local patient button preserves inherited row paint and has old and n
     assertPickerPaint(source);
 });
 
+test('name echo contract rejects removal of text escaping', () => {
+    const changed = source.replace('echo text($iterlname . ", " . $iterfname . " " . $itermname);', 'echo $iterlname . ", " . $iterfname . " " . $itermname;');
+    assert.notEqual(changed, source, 'mutation must remove name escaping');
+    assert.throws(() => assertPatientNameEchoes(changed));
+});
+
 test('paint contract rejects conflicting theme classes and changed local declarations', () => {
     for (const changed of [
         source.replace("class='patient-select'", "class='btn-link patient-select'"),
         source.replace('color: inherit;', 'color: var(--gray);'),
-        source.replace('outline: 2px solid currentColor;', 'outline: none;'),
+        source.replace('outline: 2px solid currentcolor;', 'outline: none;'),
     ]) {
         assert.ok(changed !== source, 'mutation must change the popup source');
         assert.throws(() => assertPickerPaint(changed));
