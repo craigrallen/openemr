@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+// Dependency-only loading: no Composer, application bootstrap, service constructor, or I/O.
+$root = dirname(__DIR__, 2);
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require_once $path;
+    }
+});
+
+set_error_handler(static function (int $severity, string $message): never {
+    throw new ErrorException($message, 0, $severity);
+});
+
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCondition;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRCoding;
+use OpenEMR\Services\FHIR\Condition\Trait\FhirConditionTrait;
+
+try {
+    foreach ([FHIRCondition::class, FHIRCodeableConcept::class, FHIRCoding::class] as $class) {
+        if (!class_exists($class)) {
+            throw new RuntimeException('missing native model: ' . $class);
+        }
+    }
+    if (!trait_exists(FhirConditionTrait::class)) {
+        throw new RuntimeException('missing native Condition trait');
+    }
+} catch (Throwable $error) {
+    echo json_encode([
+        'expected' => 17, 'passed' => 0,
+        'failed' => [['name' => 'native loader', 'message' => $error->getMessage()]],
+        'loader_failed' => true,
+    ], JSON_THROW_ON_ERROR), "\n";
+    exit(2);
+}
+
+// The production trait also composes VersionedProfileTrait; its declaration is loaded
+// as a dependency, but this harness invokes only the native populateCode method.
+final class FhirConditionCodingHarness
+{
+    use FhirConditionTrait;
+
+    public function code(array $record): FHIRCondition
+    {
+        $condition = new FHIRCondition();
+        $this->populateCode($record, $condition, 'Problem');
+        return $condition;
+    }
+}
+
+$expected = 17;
+$passed = 0;
+$failed = [];
+$loaderFailed = false;
+$check = static function (string $name, callable $assertion) use (&$passed, &$failed): void {
+    try {
+        if (!$assertion()) {
+            throw new RuntimeException('expected value or shape differs');
+        }
+        ++$passed;
+    } catch (Throwable $error) {
+        $failed[] = ['name' => $name, 'message' => $error->getMessage()];
+    }
+};
+
+try {
+    $native = [
+        FHIRCondition::class => '/src/FHIR/R4/FHIRDomainResource/FHIRCondition.php',
+        FHIRCodeableConcept::class => '/src/FHIR/R4/FHIRElement/FHIRCodeableConcept.php',
+        FHIRCoding::class => '/src/FHIR/R4/FHIRElement/FHIRCoding.php',
+    ];
+    foreach ($native as $class => $suffix) {
+        if ((new ReflectionClass($class))->getFileName() !== $root . $suffix) {
+            throw new RuntimeException('non-native model: ' . $class);
+        }
+    }
+    $method = new ReflectionMethod(FhirConditionCodingHarness::class, 'populateCode');
+    if ($method->getFileName() !== $root . '/src/Services/FHIR/Condition/Trait/FhirConditionTrait.php') {
+        throw new RuntimeException('populateCode is not the native trait method');
+    }
+} catch (Throwable $error) {
+    $loaderFailed = true;
+    $failed[] = ['name' => 'native loader and provenance', 'message' => $error->getMessage()];
+}
+
+if (!$loaderFailed) {
+    $check('native trait and R4 provenance', static fn(): bool => true);
+    $harness = new FhirConditionCodingHarness();
+    $twoInput = ['diagnosis' => [
+        'E11.9' => ['system' => 'http://hl7.org/fhir/sid/icd-10-cm', 'description' => 'Type 2 diabetes'],
+        '44054006' => ['system' => 'http://snomed.info/sct', 'description' => 'Diabetes mellitus type 2'],
+    ], 'title' => 'Diabetes'];
+    $twoSnapshot = $twoInput;
+    $two = $harness->code($twoInput);
+    $twoCodings = $two->getCode()->getCoding();
+    $twoExpected = [
+        ['code' => 'E11.9', 'display' => 'Type 2 diabetes', 'system' => 'http://hl7.org/fhir/sid/icd-10-cm'],
+        ['code' => '44054006', 'display' => 'Diabetes mellitus type 2', 'system' => 'http://snomed.info/sct'],
+    ];
+    $check('two native coding values in input order', static fn(): bool => $two->getCode() instanceof FHIRCodeableConcept
+        && count($twoCodings) === 2 && $twoCodings[0] instanceof FHIRCoding && $twoCodings[1] instanceof FHIRCoding
+        && array_map(static fn(FHIRCoding $coding): array => [
+            'code' => $coding->getCode(), 'display' => $coding->getDisplay(), 'system' => $coding->getSystem(),
+        ], $twoCodings) === $twoExpected);
+    $check('two coding object identities differ', static fn(): bool => $twoCodings[0] !== $twoCodings[1]);
+    $check('two coding full serialized Condition shape', static fn(): bool => json_decode(json_encode($two), true, 512, JSON_THROW_ON_ERROR)
+        == ['resourceType' => 'Condition', 'code' => ['coding' => $twoExpected]]);
+    $check('two coding input is unchanged', static fn(): bool => $twoInput === $twoSnapshot);
+
+    $threeInput = ['diagnosis' => [
+        'A01' => ['system' => 'urn:system:a', 'description' => 'Alpha'],
+        'B02' => ['system' => 'urn:system:b', 'description' => 'Beta'],
+        'C03' => ['system' => 'urn:system:c', 'description' => 'Gamma'],
+    ]];
+    $threeSnapshot = $threeInput;
+    $three = $harness->code($threeInput);
+    $threeCodings = $three->getCode()->getCoding();
+    $threeExpected = [
+        ['code' => 'A01', 'display' => 'Alpha', 'system' => 'urn:system:a'],
+        ['code' => 'B02', 'display' => 'Beta', 'system' => 'urn:system:b'],
+        ['code' => 'C03', 'display' => 'Gamma', 'system' => 'urn:system:c'],
+    ];
+    $check('three native coding values in input order', static fn(): bool => count($threeCodings) === 3
+        && array_map(static fn(FHIRCoding $coding): array => [
+            'code' => $coding->getCode(), 'display' => $coding->getDisplay(), 'system' => $coding->getSystem(),
+        ], $threeCodings) === $threeExpected);
+    $check('three coding object identities differ', static fn(): bool => count(array_unique(array_map('spl_object_id', $threeCodings))) === 3);
+    $check('three coding full serialized Condition shape', static fn(): bool => json_decode(json_encode($three), true, 512, JSON_THROW_ON_ERROR)
+        == ['resourceType' => 'Condition', 'code' => ['coding' => $threeExpected]]);
+    $check('three coding input is unchanged', static fn(): bool => $threeInput === $threeSnapshot);
+    $threeCodings[0]->setDisplay('Changed');
+    $check('mutating first coding preserves siblings', static fn(): bool => $threeCodings[1]->getDisplay() === 'Beta'
+        && $threeCodings[2]->getDisplay() === 'Gamma');
+
+    $numeric = $harness->code(['diagnosis' => [123 => ['system' => 'urn:system:n', 'description' => 'Numeric']]]);
+    $check('numeric key becomes string code', static fn(): bool => $numeric->getCode()->getCoding()[0]->getCode() === '123'
+        && json_decode(json_encode($numeric), true, 512, JSON_THROW_ON_ERROR) == [
+            'resourceType' => 'Condition', 'code' => ['coding' => [
+                ['code' => '123', 'display' => 'Numeric', 'system' => 'urn:system:n'],
+            ]],
+        ]);
+    $single = $harness->code(['diagnosis' => ['Q1' => ['system' => 'urn:system:q', 'description' => 'Single']]]);
+    $check('one coded diagnosis retains one coding', static fn(): bool => json_decode(json_encode($single), true, 512, JSON_THROW_ON_ERROR)
+        == ['resourceType' => 'Condition', 'code' => ['coding' => [
+            ['code' => 'Q1', 'display' => 'Single', 'system' => 'urn:system:q'],
+        ]]]);
+    $check('empty array uses title fallback', static fn(): bool => json_decode(json_encode($harness->code(['diagnosis' => [], 'title' => 'Titled problem'])), true, 512, JSON_THROW_ON_ERROR)
+        === ['resourceType' => 'Condition', 'code' => ['text' => 'Titled problem']]);
+    $check('missing diagnosis uses title fallback', static fn(): bool => json_decode(json_encode($harness->code(['title' => 'Named problem'])), true, 512, JSON_THROW_ON_ERROR)
+        === ['resourceType' => 'Condition', 'code' => ['text' => 'Named problem']]);
+    $check('null diagnosis uses title fallback', static fn(): bool => json_decode(json_encode($harness->code(['diagnosis' => null, 'title' => 'Null diagnosis'])), true, 512, JSON_THROW_ON_ERROR)
+        === ['resourceType' => 'Condition', 'code' => ['text' => 'Null diagnosis']]);
+    $check('missing title uses Problem fallback', static fn(): bool => json_decode(json_encode($harness->code([])), true, 512, JSON_THROW_ON_ERROR)
+        === ['resourceType' => 'Condition', 'code' => ['text' => 'Problem']]);
+    $check('null title uses Problem fallback', static fn(): bool => json_decode(json_encode($harness->code(['diagnosis' => null, 'title' => null])), true, 512, JSON_THROW_ON_ERROR)
+        == ['resourceType' => 'Condition', 'code' => ['text' => 'Problem']]);
+}
+
+echo json_encode(['expected' => $expected, 'passed' => $passed, 'failed' => $failed, 'loader_failed' => $loaderFailed], JSON_THROW_ON_ERROR), "\n";
+exit($loaderFailed ? 2 : ($failed === [] && $passed === $expected ? 0 : 1));
