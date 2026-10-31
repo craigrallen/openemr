@@ -1,0 +1,347 @@
+<?php
+
+declare(strict_types=1);
+
+// Standalone synthetic boundary test of the complete native controller file.
+// No application bootstrap, storage, stylesheet, or clinical document is loaded.
+namespace {
+    final class PreviewStop extends \RuntimeException
+    {
+        public function __construct(public readonly \Symfony\Component\HttpFoundation\Response $response)
+        {
+            parent::__construct('synthetic terminator marker');
+        }
+    }
+
+    final class Document
+    {
+        public static bool $allowed = true;
+        public static bool $deleted = false;
+        public static array $reads = [];
+        public static array $events = [];
+        public static int $readCount = 0;
+
+        public function __construct(public readonly mixed $id)
+        {
+            self::$events[] = 'construct';
+        }
+
+        public function can_access(): bool
+        {
+            self::$events[] = 'access';
+            return self::$allowed;
+        }
+
+        public function is_deleted(): bool
+        {
+            self::$events[] = 'deleted';
+            return self::$deleted;
+        }
+
+        public function get_data(): mixed
+        {
+            self::$events[] = 'read';
+            $index = self::$readCount++;
+            if (!array_key_exists($index, self::$reads)) {
+                throw new \LogicException('Unexpected document read');
+            }
+            $value = self::$reads[$index];
+            if ($value instanceof \Throwable) {
+                throw $value;
+            }
+            return $value;
+        }
+    }
+
+    function text(mixed $value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+namespace Laminas\Mvc\Controller {
+    class AbstractActionController
+    {
+        public static object $request;
+
+        public function getRequest(): object
+        {
+            return self::$request;
+        }
+    }
+}
+
+namespace Laminas\View\Model {
+    class ViewModel
+    {
+        private bool $terminal = false;
+
+        public function setTerminal(bool $terminal): void
+        {
+            $this->terminal = $terminal;
+        }
+
+        public function isTerminal(): bool
+        {
+            return $this->terminal;
+        }
+    }
+}
+
+namespace Symfony\Component\HttpFoundation {
+    class Response
+    {
+        public const HTTP_UNAUTHORIZED = 401;
+        public const HTTP_NOT_FOUND = 404;
+
+        public function __construct(public readonly string $content, public readonly int $statusCode)
+        {
+        }
+    }
+}
+
+namespace OpenEMR\Common\Http {
+    class RequestTerminator
+    {
+        public function respond(\Symfony\Component\HttpFoundation\Response $response): never
+        {
+            \Document::$events[] = 'respond';
+            throw new \PreviewStop($response);
+        }
+    }
+}
+
+namespace OpenEMR\BC {
+    final class SyntheticTwig
+    {
+        public array $renders = [];
+
+        public function render(string $template, array $arguments = []): string
+        {
+            $this->renders[] = [$template, $arguments];
+            return 'synthetic rendered error';
+        }
+    }
+
+    final class SyntheticLogger
+    {
+        public array $errors = [];
+
+        public function error(string $message, array $context): void
+        {
+            $this->errors[] = [$message, $context];
+        }
+    }
+
+    class ServiceContainer
+    {
+        public static SyntheticTwig $twig;
+        public static SyntheticLogger $logger;
+
+        public static function getTwig(): SyntheticTwig
+        {
+            return self::$twig;
+        }
+
+        public static function getLogger(): SyntheticLogger
+        {
+            return self::$logger;
+        }
+    }
+}
+
+namespace Carecoordination\Model {
+    class CcdaGlobalsConfiguration
+    {
+        public function getMaxSections(): array
+        {
+            return [];
+        }
+
+        public function getSectionDisplayOrder(): array
+        {
+            return [];
+        }
+    }
+
+    class CcdaUserPreferencesTransformer
+    {
+        public static array $inputs = [];
+        public static \RuntimeException $sentinel;
+
+        public function __construct(mixed $maxSections, mixed $displayOrder)
+        {
+        }
+
+        public function transform(mixed $content): never
+        {
+            self::$inputs[] = $content;
+            throw self::$sentinel;
+        }
+    }
+}
+
+namespace {
+    use Carecoordination\Controller\EncountermanagerController;
+    use Carecoordination\Model\CcdaUserPreferencesTransformer;
+    use Laminas\Mvc\Controller\AbstractActionController;
+    use Laminas\View\Model\ViewModel;
+    use OpenEMR\BC\ServiceContainer;
+    use OpenEMR\BC\SyntheticLogger;
+    use OpenEMR\BC\SyntheticTwig;
+
+    require dirname(__DIR__, 2) . '/interface/modules/zend_modules/module/Carecoordination/src/Carecoordination/Controller/EncountermanagerController.php';
+
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    function same(mixed $expected, mixed $actual, string $label): void
+    {
+        if ($expected !== $actual) {
+            throw new \RuntimeException($label . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function runPreview(bool $allowed, bool $deleted, array $reads): array
+    {
+        Document::$allowed = $allowed;
+        Document::$deleted = $deleted;
+        Document::$reads = $reads;
+        Document::$readCount = 0;
+        Document::$events = [];
+        CcdaUserPreferencesTransformer::$inputs = [];
+        CcdaUserPreferencesTransformer::$sentinel = new \RuntimeException('synthetic transformer sentinel');
+        ServiceContainer::$twig = new SyntheticTwig();
+        ServiceContainer::$logger = new SyntheticLogger();
+        AbstractActionController::$request = new class {
+            public function getQuery(string $key): string
+            {
+                same('docId', $key, 'query key');
+                return 'synthetic-192';
+            }
+        };
+
+        $controller = (new \ReflectionClass(EncountermanagerController::class))->newInstanceWithoutConstructor();
+        ob_start();
+        try {
+            $view = $controller->previewDocumentAction();
+            $output = ob_get_clean();
+        } catch (\Throwable $error) {
+            ob_end_clean();
+            throw $error;
+        }
+        same(true, $view instanceof ViewModel && $view->isTerminal(), 'terminal ViewModel');
+        return [$output, ServiceContainer::$logger->errors, ServiceContainer::$twig->renders];
+    }
+
+    function genericFailure(string $output, array $errors, \Throwable $exception): void
+    {
+        same('Failed to generate preview for docId synthetic-192', $output, 'generic output');
+        same(1, count($errors), 'log count');
+        same('Failed to generate preview for ccda document', $errors[0][0], 'log message');
+        same(['exception', 'docId'], array_keys($errors[0][1]), 'log context keys');
+        same($exception, $errors[0][1]['exception'], 'logged exception identity');
+        same('synthetic-192', $errors[0][1]['docId'], 'logged document id');
+    }
+
+    $cases = [
+        'access denied stops before reading' => static function (): void {
+            [$output, $errors, $renders] = runPreview(false, false, []);
+            same(['construct', 'access', 'respond'], Document::$events, 'events');
+            same(0, Document::$readCount, 'reads');
+            same([], CcdaUserPreferencesTransformer::$inputs, 'transform inputs');
+            same([['templates/error/400.html.twig', ['statusCode' => 401, 'errorMessage' => 'Access Denied']]], $renders, 'Twig render');
+            $stop = $errors[0][1]['exception'] ?? null;
+            same(true, $stop instanceof PreviewStop, 'terminator marker');
+            same(401, $stop->response->statusCode, 'response status');
+            same('synthetic rendered error', $stop->response->content, 'response body');
+            genericFailure($output, $errors, $stop);
+        },
+        'deleted document stops before reading' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, true, []);
+            same(['construct', 'access', 'deleted', 'respond'], Document::$events, 'events');
+            same(0, Document::$readCount, 'reads');
+            same([], CcdaUserPreferencesTransformer::$inputs, 'transform inputs');
+            same([['templates/error/404.html.twig', []]], $renders, 'Twig render');
+            $stop = $errors[0][1]['exception'] ?? null;
+            same(true, $stop instanceof PreviewStop, 'terminator marker');
+            same(404, $stop->response->statusCode, 'response status');
+            genericFailure($output, $errors, $stop);
+        },
+        'empty string aborts before transform' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, false, ['']);
+            same(['construct', 'access', 'deleted', 'read', 'respond'], Document::$events, 'events');
+            same(1, Document::$readCount, 'reads');
+            same([], CcdaUserPreferencesTransformer::$inputs, 'transform inputs');
+            same([['templates/error/404.html.twig', []]], $renders, 'Twig render');
+            $stop = $errors[0][1]['exception'] ?? null;
+            same(true, $stop instanceof PreviewStop, 'terminator marker');
+            same(404, $stop->response->statusCode, 'response status');
+            genericFailure($output, $errors, $stop);
+        },
+        'false content aborts before transform' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, false, [false]);
+            same(1, Document::$readCount, 'reads');
+            same([], CcdaUserPreferencesTransformer::$inputs, 'transform inputs');
+            same([['templates/error/404.html.twig', []]], $renders, 'Twig render');
+            $stop = $errors[0][1]['exception'] ?? null;
+            same(true, $stop instanceof PreviewStop, 'terminator marker');
+            genericFailure($output, $errors, $stop);
+        },
+        'read exception has generic output and log' => static function (): void {
+            $failure = new \RuntimeException('synthetic secret read failure');
+            [$output, $errors, $renders] = runPreview(true, false, [$failure]);
+            same(['construct', 'access', 'deleted', 'read'], Document::$events, 'events');
+            same(1, Document::$readCount, 'reads');
+            same([], $renders, 'Twig renders');
+            same([], CcdaUserPreferencesTransformer::$inputs, 'transform inputs');
+            genericFailure($output, $errors, $failure);
+            same(false, str_contains($output, 'secret'), 'no content leak');
+        },
+        'first nonempty then hypothetical empty' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, false, ['first bytes', '']);
+            same(1, Document::$readCount, 'reads');
+            same(['first bytes'], CcdaUserPreferencesTransformer::$inputs, 'transform input');
+            same([], $renders, 'Twig renders');
+            genericFailure($output, $errors, CcdaUserPreferencesTransformer::$sentinel);
+        },
+        'first nonempty then hypothetical different' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, false, ['first bytes', 'different bytes']);
+            same(['first bytes'], CcdaUserPreferencesTransformer::$inputs, 'transform input');
+            same(1, Document::$readCount, 'reads');
+            same([], $renders, 'Twig renders');
+            genericFailure($output, $errors, CcdaUserPreferencesTransformer::$sentinel);
+        },
+        'first nonempty then hypothetical throw' => static function (): void {
+            [$output, $errors, $renders] = runPreview(true, false, ['first bytes', new \RuntimeException('second read must not happen')]);
+            same(1, Document::$readCount, 'reads');
+            same(['first bytes'], CcdaUserPreferencesTransformer::$inputs, 'transform input');
+            same([], $renders, 'Twig renders');
+            genericFailure($output, $errors, CcdaUserPreferencesTransformer::$sentinel);
+        },
+        'non-ASCII first bytes are transformed exactly' => static function (): void {
+            $bytes = "SYNTHETIC text \u{00E9} \u{03BB} \u{1F642}";
+            [$output, $errors, $renders] = runPreview(true, false, [$bytes, 'replacement']);
+            same([$bytes], CcdaUserPreferencesTransformer::$inputs, 'exact UTF-8 transform input');
+            same(1, Document::$readCount, 'reads');
+            same([], $renders, 'Twig renders');
+            genericFailure($output, $errors, CcdaUserPreferencesTransformer::$sentinel);
+        },
+    ];
+
+    $failures = 0;
+    echo '1..' . count($cases) . "\n";
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+            echo 'ok - ' . $name . "\n";
+        } catch (\Throwable $failure) {
+            $failures++;
+            echo 'not ok - ' . $name . "\n";
+            echo '# ' . get_class($failure) . ': ' . str_replace("\n", ' ', $failure->getMessage()) . "\n";
+        }
+    }
+    echo '# cases=' . count($cases) . ' passed=' . (count($cases) - $failures) . ' failed=' . $failures . "\n";
+    exit($failures === 0 ? 0 : 1);
+}
