@@ -11,7 +11,7 @@ test('native FHIR Appointment end-date contract', () => {
     expect(result.error).toBeUndefined();
     expect(result.signal).toBeNull();
     expect(result.status).toBe(0);
-    const success = '{"ok":true,"count":16}\n';
+    const success = '{"ok":true,"count":24}\n';
     expect(result.stdout).toBe(success);
     expect(JSON.parse(result.stdout).count).toBeGreaterThan(0);
     expect(result.stderr).toBe('');
