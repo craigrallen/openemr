@@ -101,7 +101,7 @@ test('popup-local patient button preserves inherited row paint and has old and n
 
 test('paint contract rejects conflicting theme classes and changed local declarations', () => {
     for (const changed of [
-        source.replace("class='btn btn-link btn-sm p-0 patient-select'", "class='btn-link patient-select'"),
+        source.replace("class='patient-select'", "class='btn-link patient-select'"),
         source.replace('color: inherit;', 'color: var(--gray);'),
         source.replace('outline: 2px solid currentColor;', 'outline: none;'),
     ]) {

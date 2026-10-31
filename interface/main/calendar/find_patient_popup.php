@@ -111,6 +111,28 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
         background-color: #336699;
         color: var(--white);
       }
+
+      #searchResults .patient-select {
+        color: inherit;
+        font: inherit;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+        white-space: normal;
+        cursor: pointer;
+      }
+
+      #searchResults .patient-select:focus {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
+
+      #searchResults .patient-select:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
     </style>
 
     <!-- ViSolve: Verify the noresult parameter -->
@@ -213,7 +235,7 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
 
                         echo " <tr class='" . $trClass . "' id='" .
                             attr($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob) . "'>";
-                        echo "  <td class='srName'><button type='button' class='btn btn-link btn-sm p-0 patient-select'>" . text($iterlname . ", " . $iterfname . " " . $itermname) . "</button>";
+                        echo "  <td class='srName'><button type='button' class='patient-select'>" . text($iterlname . ", " . $iterfname . " " . $itermname) . "</button>";
                         if (!empty($iter['billing_note'])) {
                             echo "<br />" . text($iter['billing_note']);
                         }
