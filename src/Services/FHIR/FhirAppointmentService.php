@@ -277,7 +277,27 @@ class FhirAppointmentService extends FhirServiceBase implements IPatientCompartm
 
         // if we have a start date and and end time we will use that
         if (!empty($dataRecord['pc_eventDate']) && !empty($dataRecord['pc_endTime'])) {
-            $concatenatedDate = $dataRecord['pc_eventDate'] . ' ' . $dataRecord['pc_endTime'];
+            $endDate = $dataRecord['pc_eventDate'];
+            $duration = $dataRecord['pc_duration'] ?? null;
+            if (!empty($dataRecord['pc_startTime']) && is_numeric($duration)) {
+                $durationSeconds = (float) $duration;
+                // The writer stores whole seconds. Bound the calculation so malformed
+                // numeric values cannot overflow date arithmetic or cast to an int.
+                if (is_finite($durationSeconds) && $durationSeconds >= 0
+                    && $durationSeconds <= 3155760000 && floor($durationSeconds) === $durationSeconds) {
+                    $utc = new \DateTimeZone('UTC');
+                    $startClock = new \DateTimeImmutable($dataRecord['pc_eventDate'] . ' ' . $dataRecord['pc_startTime'], $utc);
+                    $storedEndClock = new \DateTimeImmutable($dataRecord['pc_eventDate'] . ' ' . $dataRecord['pc_endTime'], $utc);
+                    $calculatedEnd = $startClock->modify('+' . (int) $durationSeconds . ' seconds');
+                    // A matching clock identifies the occurrence's calendar day,
+                    // including spans longer than a day. On inconsistent records,
+                    // keep the existing event-date and stored-clock behavior.
+                    if ($calculatedEnd !== false && $calculatedEnd->format('H:i:s') === $storedEndClock->format('H:i:s')) {
+                        $endDate = $calculatedEnd->format('Y-m-d');
+                    }
+                }
+            }
+            $concatenatedDate = $endDate . ' ' . $dataRecord['pc_endTime'];
             $endInstant = UtilsService::getLocalDateAsUTC($concatenatedDate);
             $appt->setEnd(new FHIRInstant($endInstant));
         } elseif (!empty($dataRecord['pc_endDate']) && !empty($dataRecord['pc_endTime'])) {
