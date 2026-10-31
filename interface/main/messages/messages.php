@@ -498,7 +498,7 @@ if (!empty($_REQUEST['go'])) { ?>
                                         <div class="row">
                                             <?php if (OEGlobalsBag::getInstance()->getBoolean('messages_due_date')) { ?>
                                             <div class="col-6 col-sm-2">
-                                                <label for="form_note_type"><?php echo xlt('Due date'); ?>:</label>
+                                                <label for="form_datetime"><?php echo xlt('Due date'); ?>:</label>
                                                 <?php generate_form_field(['data_type' => 4, 'field_id' => 'datetime', 'edit_options' => 'F'], empty($datetime) ? date('Y-m-d H:i') : $datetime) ?>
                                             </div>
                                             <?php } ?>

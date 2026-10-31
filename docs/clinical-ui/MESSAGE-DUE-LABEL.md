@@ -1,0 +1,7 @@
+# Message Due date label
+
+The translated `Due date` label in `interface/main/messages/messages.php` uses `for="form_datetime"`. Its adjacent `generate_form_field(['data_type' => 4, 'field_id' => 'datetime', 'edit_options' => 'F'], ...)` call selects the date/time branch in `library/options.inc.php`. That branch emits a native input with `id='form_$field_id_esc'` and `name='form_$field_id_esc'`; for the configured `datetime` field ID, both resolve to `form_datetime`.
+
+The portable 17-case static contract checks that the native route differs from the complete original fixture by exactly this label target: reversing the change must reproduce every fixture byte. It also checks the adjacent generator configuration and source emission. Synthetic mutations verify that the checks reject a wrong label target, missing or altered generator configuration, altered translation, altered emitted ID or name, and changes to JavaScript, save logic, or CSRF source. These checks establish source consistency for this change; synthetic rejection does not establish runtime behavior.
+
+`node --check` checks contract syntax, `php -l` checks PHP syntax only, and `git diff --check` checks patch whitespace. Native PHP execution, rendered DOM, label-click and keyboard behavior, widget operation, roles, security, persistence, clinical behavior, design, and all-22 completion have not been validated here. Native authenticated acceptance, ordinary approval, and full exact-head hosted CI remain outstanding. This change has not been merged or deployed.
