@@ -6,7 +6,7 @@ test('portable calendar patient picker keyboard contract passes', () => {
     const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', contract], { encoding: 'utf8' });
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/# pass 7/);
+    expect(result.stdout).toMatch(/# pass 8/);
     expect(result.stdout).toMatch(/# fail 0/);
     expect(result.stdout).not.toMatch(/^not ok /m);
 });
