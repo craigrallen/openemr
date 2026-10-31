@@ -213,7 +213,7 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
 
                         echo " <tr class='" . $trClass . "' id='" .
                             attr($iterpid . "~" . $iterlname . "~" . $iterfname . "~" . $iterdob) . "'>";
-                        echo "  <td class='srName'>" . text($iterlname . ", " . $iterfname . " " . $itermname);
+                        echo "  <td class='srName'><button type='button' class='btn btn-link btn-sm p-0 patient-select'>" . text($iterlname . ", " . $iterfname . " " . $itermname) . "</button>";
                         if (!empty($iter['billing_note'])) {
                             echo "<br />" . text($iter['billing_note']);
                         }
@@ -248,6 +248,19 @@ if (!empty($_REQUEST['searchby']) && !empty($_REQUEST['searchparm'])) {
                 });
                 $(".oneresult").click(function () {
                     SelectPatient(this);
+                });
+                $(".patient-select").keydown(function (event) {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                        return;
+                    }
+                    event.preventDefault();
+                    if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
+                        return;
+                    }
+                    var row = $(this).closest(".oneresult")[0];
+                    if (row) {
+                        SelectPatient(row);
+                    }
                 });
                 //ViSolve
                 $(".noresult").click(function () {
