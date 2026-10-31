@@ -1,0 +1,166 @@
+<?php
+
+declare(strict_types=1);
+
+// The native print event decorator calls only these escaping boundaries for
+// the synthetic, non-patient events below.
+function text(mixed $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function attr(mixed $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+$root = dirname(__DIR__, 2);
+require_once $root . '/src/PostCalendar/ViewModel/ViewType.php';
+require_once $root . '/src/PostCalendar/ViewModel/CalendarViewModel.php';
+require_once $root . '/src/Common/Assets/ClinicalWorkspaceAssets.php';
+require_once $root . '/src/PostCalendar/ViewModel/CalendarRenderDataBuilder.php';
+
+use OpenEMR\Common\Assets\ClinicalWorkspaceAssets;
+use OpenEMR\PostCalendar\ViewModel\CalendarRenderDataBuilder;
+use OpenEMR\PostCalendar\ViewModel\CalendarViewModel;
+use OpenEMR\PostCalendar\ViewModel\ViewType;
+
+function insist(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+/** @param list<array{0: string, 1: string, 2: string}> $headings */
+function runCase(array $spec): void
+{
+    $originalTimezone = date_default_timezone_get();
+    try {
+        date_default_timezone_set($spec['timezone']);
+        $events = [];
+        foreach ($spec['dates'] as $index => $date) {
+            if ($date === 'not-a-date') {
+                $events[$date] = [];
+                continue;
+            }
+            $events[$date] = [[
+                'eid' => 100 + $index,
+                'aid' => 7,
+                'catid' => 5,
+                'catname' => 'Marker ' . $index,
+                'startTime' => '09:00:00',
+                'pid' => 0,
+            ], [
+                'eid' => 900 + $index,
+                'aid' => 99,
+                'catid' => 5,
+                'catname' => 'Other provider',
+                'startTime' => '09:00:00',
+                'pid' => 0,
+            ]];
+        }
+        $providers = [['id' => 7, 'fname' => 'Test', 'lname' => 'Provider']];
+        $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $beforeEvents = $events;
+        $beforeProviders = $providers;
+        $beforeDays = $days;
+        $builder = new CalendarRenderDataBuilder(
+            new CalendarViewModel(ViewType::WeekPrint, 0),
+            new ClinicalWorkspaceAssets()
+        );
+        $result = $builder->buildWeekPrintRenderData(
+            $events,
+            $providers,
+            $spec['dateYmd'],
+            $days,
+            0,
+            '/synthetic-images'
+        );
+        insist($events === $beforeEvents && $providers === $beforeProviders && $days === $beforeDays, 'input arrays changed');
+        insist(count($result['providers']) === 1, 'provider count');
+        $provider = $result['providers'][0];
+        insist($provider['id'] === 7, 'provider identity');
+        $pairs = $provider['dayPairs'];
+        insist(count($pairs) === count($spec['left']), 'row count or four-row cap');
+        foreach ($spec['left'] as $row => $expected) {
+            $left = $pairs[$row]['left'];
+            insist([$left['weekdayLabel'], $left['dateMD']] === [$expected[0], $expected[1]], "left heading row {$row}");
+            insist(count($left['events']) === $expected[2], "left event count row {$row}");
+            if ($expected[2] === 1) {
+                insist($left['events'][0]['eid'] === 100 + $row, "left event identity row {$row}");
+                insist($left['events'][0]['eventDate'] === str_replace('-', '', $spec['dates'][$row]), "left event date row {$row}");
+            }
+            $right = $pairs[$row]['right'];
+            $expectedRight = $spec['right'][$row];
+            if ($expectedRight === null) {
+                insist($right === null, "right should be absent row {$row}");
+                continue;
+            }
+            insist(is_array($right), "right missing row {$row}");
+            insist([$right['weekdayLabel'], $right['dateMD']] === [$expectedRight[0], $expectedRight[1]], "right heading row {$row}");
+            insist(count($right['events']) === 1, "right event count row {$row}");
+            insist($right['events'][0]['eid'] === 100 + $expectedRight[2], "right event identity row {$row}");
+            insist($right['events'][0]['eventDate'] === str_replace('-', '', $spec['dates'][$expectedRight[2]]), "right event date row {$row}");
+        }
+    } finally {
+        date_default_timezone_set($originalTimezone);
+    }
+}
+
+$cases = [
+    ['name' => 'stockholm_fall', 'timezone' => 'Europe/Stockholm', 'dateYmd' => '20261025',
+        'dates' => ['2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31'],
+        'left' => [['Sun', '10/25', 1], ['Mon', '10/26', 1], ['Tue', '10/27', 1], ['Wed', '10/28', 1]],
+        'right' => [['Thu', '10/29', 4], ['Fri', '10/30', 5], ['Sat', '10/31', 6], null]],
+    ['name' => 'new_york_fall', 'timezone' => 'America/New_York', 'dateYmd' => '20261101',
+        'dates' => ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'],
+        'left' => [['Sun', '11/01', 1], ['Mon', '11/02', 1], ['Tue', '11/03', 1], ['Wed', '11/04', 1]],
+        'right' => [['Thu', '11/05', 4], ['Fri', '11/06', 5], ['Sat', '11/07', 6], null]],
+    ['name' => 'stockholm_spring', 'timezone' => 'Europe/Stockholm', 'dateYmd' => '20260329',
+        'dates' => ['2026-03-29', '2026-03-30', '2026-03-31', '2026-04-01', '2026-04-02', '2026-04-03', '2026-04-04'],
+        'left' => [['Sun', '03/29', 1], ['Mon', '03/30', 1], ['Tue', '03/31', 1], ['Wed', '04/01', 1]],
+        'right' => [['Thu', '04/02', 4], ['Fri', '04/03', 5], ['Sat', '04/04', 6], null]],
+    ['name' => 'new_york_spring', 'timezone' => 'America/New_York', 'dateYmd' => '20260308',
+        'dates' => ['2026-03-08', '2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14'],
+        'left' => [['Sun', '03/08', 1], ['Mon', '03/09', 1], ['Tue', '03/10', 1], ['Wed', '03/11', 1]],
+        'right' => [['Thu', '03/12', 4], ['Fri', '03/13', 5], ['Sat', '03/14', 6], null]],
+    ['name' => 'utc_no_dst', 'timezone' => 'UTC', 'dateYmd' => '20260705',
+        'dates' => ['2026-07-05', '2026-07-06', '2026-07-07', '2026-07-08', '2026-07-09', '2026-07-10', '2026-07-11'],
+        'left' => [['Sun', '07/05', 1], ['Mon', '07/06', 1], ['Tue', '07/07', 1], ['Wed', '07/08', 1]],
+        'right' => [['Thu', '07/09', 4], ['Fri', '07/10', 5], ['Sat', '07/11', 6], null]],
+    ['name' => 'leap_day', 'timezone' => 'UTC', 'dateYmd' => '20240225',
+        'dates' => ['2024-02-25', '2024-02-26', '2024-02-27', '2024-02-28', '2024-02-29', '2024-03-01', '2024-03-02'],
+        'left' => [['Sun', '02/25', 1], ['Mon', '02/26', 1], ['Tue', '02/27', 1], ['Wed', '02/28', 1]],
+        'right' => [['Thu', '02/29', 4], ['Fri', '03/01', 5], ['Sat', '03/02', 6], null]],
+    ['name' => 'month_rollover', 'timezone' => 'UTC', 'dateYmd' => '20260830',
+        'dates' => ['2026-08-30', '2026-08-31', '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05'],
+        'left' => [['Sun', '08/30', 1], ['Mon', '08/31', 1], ['Tue', '09/01', 1], ['Wed', '09/02', 1]],
+        'right' => [['Thu', '09/03', 4], ['Fri', '09/04', 5], ['Sat', '09/05', 6], null]],
+    ['name' => 'year_rollover_four_row_cap', 'timezone' => 'UTC', 'dateYmd' => '20261227',
+        'dates' => ['2026-12-27', '2026-12-28', '2026-12-29', '2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03'],
+        'left' => [['Sun', '12/27', 1], ['Mon', '12/28', 1], ['Tue', '12/29', 1], ['Wed', '12/30', 1]],
+        'right' => [['Thu', '12/31', 4], ['Fri', '01/01', 5], ['Sat', '01/02', 6], ['Sun', '01/03', 7]]],
+    ['name' => 'missing_right_date', 'timezone' => 'UTC', 'dateYmd' => '20260705',
+        'dates' => ['2026-07-05', '2026-07-06', '2026-07-07', '2026-07-08', '2026-07-10', '2026-07-11'],
+        'left' => [['Sun', '07/05', 1], ['Mon', '07/06', 1], ['Tue', '07/07', 1], ['Wed', '07/08', 1]],
+        'right' => [null, ['Fri', '07/10', 4], ['Sat', '07/11', 5], null]],
+    ['name' => 'invalid_date_fallback', 'timezone' => 'UTC', 'dateYmd' => '20260705',
+        'dates' => ['not-a-date'], 'left' => [['', '', 0]], 'right' => [null]],
+];
+
+$results = [];
+foreach ($cases as $case) {
+    $timezoneBeforeCase = date_default_timezone_get();
+    try {
+        runCase($case);
+        insist(date_default_timezone_get() === $timezoneBeforeCase, 'timezone not restored');
+        $results[] = ['name' => $case['name'], 'status' => 'pass'];
+    } catch (Throwable $error) {
+        $results[] = ['name' => $case['name'], 'status' => 'fail', 'error' => $error->getMessage()];
+    }
+}
+$passed = count(array_filter($results, static fn (array $case): bool => $case['status'] === 'pass'));
+$failed = count($results) - $passed;
+echo json_encode(['cases' => $results, 'total' => count($results), 'pass' => $passed, 'fail' => $failed], JSON_THROW_ON_ERROR), PHP_EOL;
+exit($failed === 0 ? 0 : 1);
