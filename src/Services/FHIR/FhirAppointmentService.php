@@ -282,9 +282,9 @@ class FhirAppointmentService extends FhirServiceBase implements IPatientCompartm
             $eventDate = $dataRecord['pc_eventDate'];
             $startTime = $dataRecord['pc_startTime'] ?? null;
             $endTime = $dataRecord['pc_endTime'];
-            if (is_string($eventDate) && $eventDate !== '' && $eventDate !== '0'
+            if (is_string($eventDate)
                 && is_string($startTime) && $startTime !== '' && $startTime !== '0'
-                && is_string($endTime) && $endTime !== '' && $endTime !== '0'
+                && is_string($endTime)
                 && is_numeric($duration)) {
                 $durationSeconds = (float) $duration;
                 // The writer stores whole seconds. Bound the calculation so malformed
