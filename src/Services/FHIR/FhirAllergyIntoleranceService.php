@@ -154,9 +154,12 @@ class FhirAllergyIntoleranceService extends FhirServiceBase implements IResource
                 "fatal" => ["code" => "high", "display" => "High Risk"],
                 "unassigned" => ["code" => "unable-to-assess", "display" => "Unable to Assess Risk"],
             ];
-            $criticality = new FHIRAllergyIntoleranceCriticality();
-            $criticality->setValue($criticalityCode[$dataRecord['severity_al']]['code']);
-            $allergyIntoleranceResource->setCriticality($criticality);
+            $severity = $dataRecord['severity_al'];
+            if (is_string($severity) && isset($criticalityCode[$severity])) {
+                $criticality = new FHIRAllergyIntoleranceCriticality();
+                $criticality->setValue($criticalityCode[$severity]['code']);
+                $allergyIntoleranceResource->setCriticality($criticality);
+            }
         }
 
         if (isset($dataRecord['puuid'])) {
