@@ -6,6 +6,27 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '../../interface/main/calendar/find_patient_popup.php'), 'utf8');
 
+function assertPickerPaint(document) {
+    const button = document.match(/<button type='button' class='([^']*)'>" \. text\(\$iterlname/);
+    assert.ok(button, 'patient name keeps its native button');
+    assert.deepEqual(button[1].split(/\s+/), ['patient-select'], 'theme button classes must not override row colors');
+
+    const style = document.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? '';
+    function declarations(selector) {
+        const rules = [...style.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+        const rule = rules.find((match) => match[1].trim() === selector);
+        assert.ok(rule, `missing popup-local ${selector} rule`);
+        return new Map([...rule[2].matchAll(/([\w-]+)\s*:\s*([^;]+);/g)].map((match) => [match[1], match[2].trim()]));
+    }
+    const base = declarations('#searchResults .patient-select');
+    for (const [property, value] of Object.entries({ color: 'inherit', font: 'inherit', background: 'transparent', border: '0', 'text-align': 'left', 'white-space': 'normal' })) {
+        assert.equal(base.get(property), value, `${property} must preserve the row's text and paint`);
+    }
+    for (const selector of ['#searchResults .patient-select:focus', '#searchResults .patient-select:focus-visible']) {
+        assert.equal(declarations(selector).get('outline'), '2px solid currentColor', `${selector} needs a visible inherited-color outline`);
+    }
+}
+
 function runPopup(ids) {
     const scripts = [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)];
     const inline = scripts.at(-1)[1]
@@ -72,6 +93,21 @@ test('source emits a native Name-cell button with original escaped name and bill
     assert.match(source, /<td class='srName'>[\s\S]*?<button type='button' class='[^']*patient-select[^']*'>" \. text\(\$iterlname \. ", " \. \$iterfname \. " " \. \$itermname\) \. "<\/button>"/);
     assert.match(source, /echo "<br \/>" \. text\(\$iter\['billing_note'\]\)/);
     assert.doesNotMatch(source, /<tr[^>]*role=['"]button/);
+});
+
+test('popup-local patient button preserves inherited row paint and has old and new focus selectors', () => {
+    assertPickerPaint(source);
+});
+
+test('paint contract rejects conflicting theme classes and changed local declarations', () => {
+    for (const changed of [
+        source.replace("class='btn btn-link btn-sm p-0 patient-select'", "class='btn-link patient-select'"),
+        source.replace('color: inherit;', 'color: var(--gray);'),
+        source.replace('outline: 2px solid currentColor;', 'outline: none;'),
+    ]) {
+        assert.ok(changed !== source, 'mutation must change the popup source');
+        assert.throws(() => assertPickerPaint(changed));
+    }
 });
 
 test('native ready callbacks register and mouse or assistive click selects exactly once via row payload', () => {
