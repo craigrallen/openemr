@@ -136,10 +136,10 @@ trait FhirConditionTrait
     protected function populateCode($dataRecord, FHIRCondition $conditionResource, string $defaultText)
     {
         if (!empty($dataRecord['diagnosis']) && is_array($dataRecord['diagnosis'])) {
-            $diagnosisCoding = new FHIRCoding();
             $diagnosisCode = new FHIRCodeableConcept();
 
             foreach ($dataRecord['diagnosis'] as $code => $codeValues) {
+                $diagnosisCoding = new FHIRCoding();
                 if (!is_string($code)) {
                     $code = "$code"; // FHIR expects a string
                 }
