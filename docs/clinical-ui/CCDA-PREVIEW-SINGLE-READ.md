@@ -8,7 +8,9 @@
 
 At tests-only HEAD `634b5955c7dddb6c956c6aa90073a1ce7197a977`, the standalone synthetic PHP test produced `cases=9 passed=5 failed=4` before the controller edit. The four failures covered a hypothetical empty second value, different second bytes, a second-read exception, and replacement of non-ASCII first bytes. The controller-managed RED record is `controller-red.log` under `/Users/craig/.hermes/projects/openemr/verification/ccda-preview-single-read-20261031/`.
 
-After the edit, `php tests/clinical-ui/ccda-preview-single-read.php` produced `cases=9 passed=9 failed=0`. `php -l` passed for the controller and standalone PHP test, `node --check` passed for `tests/js/ccda-preview-single-read.test.js`, and `git diff --check` passed.
+After the edit, the standalone PHP test produced `cases=9 passed=9 failed=0`. `php -l` passed for the controller and standalone PHP test, `node --check` passed for `tests/js/ccda-preview-single-read.test.js`, and `git diff --check` passed. At that historical GREEN run, the test file was named `tests/clinical-ui/ccda-preview-single-read.php`.
+
+The final standalone command is `php tests/clinical-ui/ccda-preview-single-read.php.fixture`. PHP executes the fixture by explicit path. Its `.fixture` suffix keeps the synthetic declarations outside default `.php` static discovery, including level-10 PHPStan scanning; the Jest adapter invokes the same path.
 
 ## Test seam and limits
 

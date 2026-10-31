@@ -6,7 +6,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const repo = path.join(__dirname, '../..');
-const harness = path.join(repo, 'tests/clinical-ui/ccda-preview-single-read.php');
+const harness = path.join(repo, 'tests/clinical-ui/ccda-preview-single-read.php.fixture');
 
 test('native CCDA preview reads and transforms the checked document bytes once', () => {
     const result = spawnSync('php', [harness], {
