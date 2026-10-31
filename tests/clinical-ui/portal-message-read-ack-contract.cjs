@@ -161,6 +161,7 @@ test('already Read single and bulk are no-ops', async () => {
 
 test('bulk exact ok updates unread caches only', async () => {
     const f = fixture(['New', 'Read', 'New']);
+    f.api.state.selected = f.inbox[1];
     f.responses.push(reply('ok'), reply('ok'));
     f.api.readAll();
     await settle();
@@ -169,16 +170,19 @@ test('bulk exact ok updates unread caches only', async () => {
     request(f, 0, 1);
     request(f, 1, 3);
     assert.equal(f.errors.length, 0);
+    assert.equal(f.api.state.selected, f.inbox[1]);
 });
 
 for (const body of ['missing note id', '', '<html>disabled</html>', '{"ok":true}', '"ok"']) {
     test(`bulk rejects mixed HTTP 200 body ${JSON.stringify(body)}`, async () => {
         const f = fixture(['New', 'New']);
+        f.api.state.selected = f.inbox[0];
         f.responses.push(reply('ok'), reply(body));
         f.api.readAll();
         await settle();
         assert.deepEqual(statuses(f), [['New', 'New'], ['New', 'New'], ['New', 'New']]);
         assert.equal(f.requests.length, 2);
+        assert.equal(f.api.state.selected, f.inbox[0]);
         genericError(f, 'Error marking all as read:', body);
     });
 }
