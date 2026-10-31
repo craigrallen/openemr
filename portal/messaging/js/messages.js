@@ -127,7 +127,7 @@
         };
     }
 
-    async function postForm(url, params) {
+    async function postForm(url, params, expectedText) {
         const response = await fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
@@ -141,6 +141,9 @@
         // strings for write endpoints. Parse JSON when possible, fall back to
         // the raw text so write callers don't crash on a non-JSON success body.
         const text = await response.text();
+        if (expectedText !== undefined && text !== expectedText) {
+            throw new Error('Request failed');
+        }
         try {
             return JSON.parse(text);
         } catch {
@@ -342,9 +345,11 @@
                 task: 'setread',
                 noteid: item.id,
                 csrf_token_form: state.csrf
-            })).then(() => {
+            }), 'ok').then(() => {
                 markReadById(item.id);
                 renderAll();
+            }).catch(e => {
+                console.error('Error marking message as read:', e);
             });
         }
         state.selected = item;
@@ -368,7 +373,7 @@
             task: 'setread',
             noteid: item.id,
             csrf_token_form: state.csrf
-        })))).then(() => {
+        }), 'ok'))).then(() => {
             unread.forEach(item => markReadById(item.id));
             renderAll();
         }).catch(e => {
