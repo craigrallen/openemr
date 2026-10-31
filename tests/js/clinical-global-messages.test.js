@@ -72,8 +72,8 @@ const merged = (selector) => {
     return Object.assign({}, ...matching.map(({ declarations }) => declarations));
 };
 
-describe('messages.php: workbench assets are the only change', () => {
-    test('removing exactly the import, asset block, body class and selection-class lines restores the baseline byte for byte', () => {
+describe('messages.php: workbench changes and Due date label correction', () => {
+    test('reversing the workbench changes and Due date label correction restores the baseline byte for byte', () => {
         const source = php();
         expect(count(source, USE_LINE)).toBe(1);
         expect(count(source, ASSET_BLOCK)).toBe(1);
@@ -84,6 +84,12 @@ describe('messages.php: workbench assets are the only change', () => {
             expect([added, count(restored, after + added)]).toEqual([added, 1]);
             restored = restored.replace(after + added, after);
         }
+        // The baseline used form_note_type for this label; reverse only the corrected complete label.
+        const dueDateLabel = '<label for="form_datetime"><?php echo xlt(\'Due date\'); ?>:</label>';
+        const baselineDueDateLabel = '<label for="form_note_type"><?php echo xlt(\'Due date\'); ?>:</label>';
+        expect(count(restored, dueDateLabel)).toBe(1);
+        expect(count(restored, baselineDueDateLabel)).toBe(0);
+        restored = restored.replace(dueDateLabel, baselineDueDateLabel);
         expect(crypto.createHash('sha256').update(restored).digest('hex')).toBe(BASELINE_SHA256);
     });
 
