@@ -1,0 +1,164 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Synthetic framework parent for this no-I/O fixture only. The service
+    // constructor is bypassed; the native service, traits, interfaces, models,
+    // helpers, and parser remain loaded from this checkout.
+    abstract class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+// Dependency-only loader: the service and every model/helper come from this checkout.
+// No OpenEMR bootstrap, database, service constructor, or UUID constructor is used.
+$root = dirname(__DIR__, 2);
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require_once $path;
+    }
+});
+
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRAllergyIntolerance;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRAllergyIntoleranceCriticality;
+use OpenEMR\Services\FHIR\FhirAllergyIntoleranceService;
+use OpenEMR\Services\FHIR\UtilsService;
+
+function emitResult(array $result, int $exitCode): never
+{
+    echo json_encode($result, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+    exit($exitCode);
+}
+
+try {
+    foreach ([FhirAllergyIntoleranceService::class, FHIRAllergyIntolerance::class, FHIRAllergyIntoleranceCriticality::class, UtilsService::class] as $class) {
+        $actual = (new ReflectionClass($class))->getFileName();
+        $expected = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
+        if ($actual !== $expected) {
+            throw new RuntimeException("non-native class: $class");
+        }
+    }
+    $method = new ReflectionMethod(FhirAllergyIntoleranceService::class, 'parseOpenEMRRecord');
+    if ($method->getFileName() !== $root . '/src/Services/FHIR/FhirAllergyIntoleranceService.php') {
+        throw new RuntimeException('parseOpenEMRRecord is not the native method');
+    }
+    $service = (new ReflectionClass(FhirAllergyIntoleranceService::class))->newInstanceWithoutConstructor();
+} catch (Throwable $error) {
+    emitResult(['expected' => 28, 'passed' => 0, 'failed' => [['case' => 'setup', 'error' => $error->getMessage()]]], 2);
+}
+
+// Explicit UTC date avoids the parser's wall-clock fallback. Only varchar-shaped
+// severity values are tested because lists.severity_al is VARCHAR(50).
+date_default_timezone_set('UTC');
+$base = [
+    'uuid' => '11111111-1111-4111-8111-111111111111',
+    'puuid' => '22222222-2222-4222-8222-222222222222',
+    'date' => '2024-01-02 03:04:05',
+    'modifydate' => '2024-01-03 04:05:06',
+    'outcome' => '0',
+    'title' => 'Penicillin allergy',
+    'diagnosis' => [],
+    'reaction' => '',
+    'verification' => '',
+];
+$mapped = [
+    'mild' => 'low',
+    'mild_to_moderate' => 'low',
+    'moderate' => 'low',
+    'moderate_to_severe' => 'high',
+    'severe' => 'high',
+    'life_threatening_severity' => 'high',
+    'fatal' => 'high',
+    'unassigned' => 'unable-to-assess',
+];
+$cases = ['omitted' => [false, null], 'null' => [true, null]];
+foreach ($mapped as $severity => $criticality) {
+    $cases[$severity] = [true, $severity, $criticality];
+}
+foreach (['empty' => '', 'site_defined' => 'site_defined', 'case_changed' => 'Mild', 'whitespace_changed' => ' mild '] as $name => $severity) {
+    $cases[$name] = [true, $severity];
+}
+
+$failures = [];
+$passed = 0;
+$expectedCount = 28;
+set_error_handler(static function (int $level, string $message): never {
+    throw new ErrorException($message, 0, $level);
+});
+
+try {
+    $baseline = [];
+    foreach ([false, true] as $encode) {
+        $label = $encode ? 'encoded' : 'object';
+        $plain = $service->parseOpenEMRRecord($base, $encode);
+        if (!$encode && !($plain instanceof FHIRAllergyIntolerance)) {
+            throw new RuntimeException('object mode did not return native AllergyIntolerance');
+        }
+        if ($encode && !is_string($plain)) {
+            throw new RuntimeException('encode mode did not return JSON string');
+        }
+        $baseline[$label] = json_decode($encode ? $plain : json_encode($plain, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $expectedFields = [
+            'id' => $base['uuid'],
+            'patient' => ['reference' => 'Patient/' . $base['puuid']],
+        ];
+        foreach ($expectedFields as $key => $value) {
+            if (($baseline[$label][$key] ?? null) !== $value) {
+                throw new RuntimeException("baseline $key changed");
+            }
+        }
+        if (($baseline[$label]['meta']['lastUpdated'] ?? null) !== '2024-01-03T04:05:06+00:00'
+            || ($baseline[$label]['clinicalStatus']['coding'][0]['code'] ?? null) !== 'active'
+            || ($baseline[$label]['text']['div'] ?? null) !== "<div xmlns='http://www.w3.org/1999/xhtml'>Penicillin allergy</div>"
+            || array_key_exists('criticality', $baseline[$label])) {
+            throw new RuntimeException('baseline meta/status/narrative/criticality changed');
+        }
+    }
+} catch (Throwable $error) {
+    emitResult(['expected' => $expectedCount, 'passed' => 0, 'failed' => [['case' => 'baseline', 'error' => $error->getMessage()]]], 2);
+}
+
+foreach ($cases as $name => $spec) {
+    foreach ([false, true] as $encode) {
+        $label = $name . ':' . ($encode ? 'encoded' : 'object');
+        $record = $base;
+        if ($spec[0]) {
+            $record['severity_al'] = $spec[1];
+        }
+        $before = serialize($record);
+        try {
+            $result = $service->parseOpenEMRRecord($record, $encode);
+            if ($encode ? !is_string($result) : !($result instanceof FHIRAllergyIntolerance)) {
+                throw new RuntimeException('wrong return type');
+            }
+            $actual = json_decode($encode ? $result : json_encode($result, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $criticality = $spec[2] ?? null;
+            if ($criticality === null) {
+                if (array_key_exists('criticality', $actual)) {
+                    throw new RuntimeException('optional criticality was emitted');
+                }
+            } elseif (($actual['criticality'] ?? null) !== $criticality) {
+                throw new RuntimeException('criticality mismatch: expected ' . $criticality);
+            }
+            unset($actual['criticality']);
+            if (serialize($actual) !== serialize($baseline[$encode ? 'encoded' : 'object'])) {
+                throw new RuntimeException('unrelated serialized resource changed');
+            }
+            if (serialize($record) !== $before) {
+                throw new RuntimeException('source record mutated');
+            }
+            ++$passed;
+        } catch (Throwable $error) {
+            $failures[] = ['case' => $label, 'error' => $error->getMessage()];
+        }
+    }
+}
+emitResult(['expected' => $expectedCount, 'passed' => $passed, 'failed' => $failures], $failures === [] && $passed === $expectedCount ? 0 : 1);
+}
