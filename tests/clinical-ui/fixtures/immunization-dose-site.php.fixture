@@ -1,0 +1,201 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only framework boundary for this no-I/O fixture. The native
+    // complete service class, traits, interfaces, helpers, and models are loaded.
+    abstract class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRImmunization;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRImmunizationStatusCodes;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRMeta;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRQuantity;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRReference;
+use OpenEMR\Services\FHIR\FhirImmunizationService;
+use OpenEMR\Services\FHIR\UtilsService;
+
+const EXPECTED_CASES = 24;
+
+function emitResult(array $failures, int $passed, int $exitCode): never
+{
+    echo json_encode(['expected' => EXPECTED_CASES, 'passed' => $passed, 'failed' => $failures], JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+    exit($exitCode);
+}
+
+set_error_handler(static function (int $level, string $message): never {
+    throw new ErrorException($message, 0, $level);
+});
+date_default_timezone_set('UTC');
+$root = dirname(__DIR__, 3);
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require_once $path;
+    }
+});
+
+try {
+    foreach ([
+        FhirImmunizationService::class,
+        FHIRImmunization::class,
+        FHIRQuantity::class,
+        FHIRCodeableConcept::class,
+        FHIRImmunizationStatusCodes::class,
+        FHIRMeta::class,
+        FHIRReference::class,
+        UtilsService::class,
+    ] as $class) {
+        $actual = (new ReflectionClass($class))->getFileName();
+        $expected = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
+        if ($actual !== $expected) {
+            throw new RuntimeException("non-native class: $class");
+        }
+    }
+    $method = new ReflectionMethod(FhirImmunizationService::class, 'parseOpenEMRRecord');
+    if ($method->getFileName() !== $root . '/src/Services/FHIR/FhirImmunizationService.php') {
+        throw new RuntimeException('parseOpenEMRRecord is not the native method');
+    }
+    $service = (new ReflectionClass(FhirImmunizationService::class))->newInstanceWithoutConstructor();
+} catch (Throwable $error) {
+    emitResult([['case' => 'setup', 'error' => $error->getMessage()]], 0, 2);
+}
+
+$base = [
+    'uuid' => '11111111-1111-4111-8111-111111111111',
+    'puuid' => '22222222-2222-4222-8222-222222222222',
+    'update_date' => '2024-01-03 04:05:06',
+    'create_date' => '2024-01-02T03:04:05+00:00',
+    'administered_date' => '2024-01-02T12:00:00+00:00',
+    'expiration_date' => '2025-01-02',
+    'added_erroneously' => '0',
+    'completion_status' => 'Completed',
+    'primarySource' => true,
+    'cvx_code' => '140',
+    'cvx_code_text' => 'Influenza vaccine',
+    'lot_number' => 'LOT-202',
+    'note' => 'Dose record',
+    'amount_administered_unit' => 'mL',
+];
+
+function decodeResource(FhirImmunizationService $service, array $record, bool $encode): array
+{
+    $resource = $service->parseOpenEMRRecord($record, $encode);
+    if ($encode ? !is_string($resource) : !($resource instanceof FHIRImmunization)) {
+        throw new RuntimeException('wrong native parser return type');
+    }
+    return json_decode($encode ? $resource : json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+}
+
+try {
+    $baseline = [];
+    foreach ([false, true] as $encode) {
+        $label = $encode ? 'encoded' : 'object';
+        $baseline[$label] = decodeResource($service, $base, $encode);
+        $resource = $baseline[$label];
+        if (($resource['id'] ?? null) !== $base['uuid']
+            || ($resource['meta']['versionId'] ?? null) !== '1'
+            || ($resource['meta']['lastUpdated'] ?? null) !== '2024-01-03T04:05:06+00:00'
+            || ($resource['status'] ?? null) !== 'completed'
+            || ($resource['primarySource'] ?? null) !== true
+            || ($resource['patient']['reference'] ?? null) !== 'Patient/' . $base['puuid']
+            || ($resource['vaccineCode']['coding'][0]['code'] ?? null) !== $base['cvx_code']
+            || ($resource['occurrenceDateTime'] ?? null) !== $base['administered_date']
+            || ($resource['recorded'] ?? null) !== $base['create_date']
+            || ($resource['expirationDate'] ?? null) !== $base['expiration_date']
+            || ($resource['lotNumber'] ?? null) !== $base['lot_number']
+            || ($resource['note'][0]['text'] ?? null) !== $base['note']
+            || array_key_exists('site', $resource)
+            || array_key_exists('doseQuantity', $resource)) {
+            throw new RuntimeException("baseline metadata/status/patient/vaccine/date/lot changed: $label");
+        }
+    }
+} catch (Throwable $error) {
+    emitResult([['case' => 'baseline', 'error' => $error->getMessage()]], 0, 2);
+}
+
+// Integers reflect the current native producer's intval conversion. Fractional
+// and numeric-string cases exercise only direct mapper inputs, not producer precision.
+$cases = [
+    'integer_site_missing' => ['amount' => 2],
+    'integer_site_blank' => ['amount' => 2, 'site' => ''],
+    'integer_site_null' => ['amount' => 2, 'site' => null],
+    'integer_with_site' => ['amount' => 2, 'site' => 'left-arm'],
+    'zero_site_missing' => ['amount' => 0],
+    'zero_with_site' => ['amount' => 0, 'site' => 'left-arm'],
+    'missing_amount_with_site' => ['site' => 'left-arm'],
+    'null_amount_with_site' => ['amount' => null, 'site' => 'left-arm'],
+    'missing_amount_no_site' => [],
+    'null_amount_no_site' => ['amount' => null],
+    'fractional_direct_no_site' => ['amount' => 0.5],
+    'numeric_string_direct_no_site' => ['amount' => '2'],
+];
+$failures = [];
+$passed = 0;
+foreach ($cases as $name => $spec) {
+    foreach ([false, true] as $encode) {
+        $mode = $encode ? 'encoded' : 'object';
+        $record = $base;
+        if (array_key_exists('amount', $spec)) {
+            $record['amount_administered'] = $spec['amount'];
+        }
+        if (array_key_exists('site', $spec)) {
+            $record['administration_site'] = $spec['site'];
+        }
+        if (!empty($spec['site'])) {
+            $record['site_code'] = 'LA';
+            $record['site_display'] = 'Left arm';
+        }
+        $before = serialize($record);
+        try {
+            $actual = decodeResource($service, $record, $encode);
+            $hasSite = !empty($spec['site']);
+            if ($hasSite) {
+                $expectedSite = ['coding' => [[
+                    'system' => 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+                    'code' => 'LA',
+                    'display' => 'Left arm',
+                ]]];
+                if (($actual['site'] ?? null) !== $expectedSite) {
+                    throw new RuntimeException('site coding changed');
+                }
+            } elseif (array_key_exists('site', $actual)) {
+                throw new RuntimeException('optional site emitted');
+            }
+            $hasAmount = array_key_exists('amount', $spec) && $spec['amount'] !== null;
+            if ($hasAmount) {
+                $expectedDose = [
+                    'value' => $spec['amount'],
+                    'system' => 'http://unitsofmeasure.org',
+                    'code' => $base['amount_administered_unit'],
+                ];
+                if (($actual['doseQuantity'] ?? null) !== $expectedDose) {
+                    throw new RuntimeException('doseQuantity differs: ' . json_encode($actual['doseQuantity'] ?? null));
+                }
+            } elseif (array_key_exists('doseQuantity', $actual)) {
+                throw new RuntimeException('optional doseQuantity emitted');
+            }
+            unset($actual['site'], $actual['doseQuantity']);
+            if (serialize($actual) !== serialize($baseline[$mode])) {
+                throw new RuntimeException('unrelated resource fields changed');
+            }
+            if (serialize($record) !== $before) {
+                throw new RuntimeException('source record mutated');
+            }
+            ++$passed;
+        } catch (Throwable $error) {
+            $failures[] = ['case' => "$name:$mode", 'error' => $error->getMessage()];
+        }
+    }
+}
+emitResult($failures, $passed, $failures === [] && $passed === EXPECTED_CASES ? 0 : 1);
+}
