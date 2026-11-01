@@ -722,6 +722,7 @@ class CarePlanService extends BaseService
             'codetext',
             'description',  // ONLY this row's description
             'date',
+            'date_end',
             'moodCode',
             'note_issues',
             'proposed_date',
