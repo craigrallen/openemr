@@ -739,6 +739,9 @@ class CarePlanService extends BaseService
                 unset($record[$key]);
             }
         }
+        if (isset($record['date_end'])) {
+            $details['date_end'] = $record['date_end'];
+        }
 
         // Single detail in array (will be aggregated by search method)
         $record['details'] = [$details];
