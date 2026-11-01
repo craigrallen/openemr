@@ -1,0 +1,283 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services {
+    // Explicit dependency boundary: native BaseService requires code_types.inc.php,
+    // which loads site SQL configuration even in static-analysis mode. These two
+    // methods are the only parent behavior reached by the native target mapper.
+    // UUID-bearing input columns are omitted, so native UUID conversion is not tested.
+    class BaseService
+    {
+        public function getUuidFields(): array
+        {
+            return [];
+        }
+
+        protected function createResultRecordFromDatabaseResult($row)
+        {
+            return $row;
+        }
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only framework boundary; the complete native FHIR target loads.
+    abstract class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCarePlan;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRPeriod;
+use OpenEMR\FHIR\R4\FHIRResource\FHIRCarePlan\FHIRCarePlanActivity;
+use OpenEMR\FHIR\R4\FHIRResource\FHIRCarePlan\FHIRCarePlanDetail;
+use OpenEMR\Services\CarePlanService;
+use OpenEMR\Services\FHIR\FhirCarePlanService;
+use OpenEMR\Services\FHIR\UtilsService;
+
+// Synthetic HTML text-node helper boundary. Narrative escaping is not an
+// acceptance claim here; loading the app helper would require app bootstrap.
+function text($value): string
+{
+    return htmlspecialchars($value ?? '', ENT_NOQUOTES);
+}
+
+const EXPECTED_CASES = 20;
+
+function emitResult(array $failed, int $passed, int $status): never
+{
+    echo json_encode(
+        ['expected' => EXPECTED_CASES, 'passed' => $passed, 'failed' => $failed],
+        JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE
+    ), "\n";
+    exit($status);
+}
+
+set_error_handler(static function (int $level, string $message): never {
+    throw new \ErrorException($message, 0, $level);
+});
+date_default_timezone_set('UTC');
+$root = dirname(__DIR__, 3);
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($file)) {
+        require_once $file;
+    }
+});
+
+try {
+    foreach ([
+        CarePlanService::class,
+        FhirCarePlanService::class,
+        UtilsService::class,
+        FHIRCarePlan::class,
+        FHIRPeriod::class,
+        FHIRCarePlanActivity::class,
+        FHIRCarePlanDetail::class,
+    ] as $class) {
+        $native = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
+        if ((new \ReflectionClass($class))->getFileName() !== $native) {
+            throw new \RuntimeException("non-native class: $class");
+        }
+    }
+    $mapper = new \ReflectionMethod(CarePlanService::class, 'createResultRecordFromDatabaseResult');
+    if ($mapper->getFileName() !== $root . '/src/Services/CarePlanService.php') {
+        throw new \RuntimeException('mapper is not the native method');
+    }
+    $parser = new \ReflectionMethod(FhirCarePlanService::class, 'parseOpenEMRRecord');
+    if ($parser->getFileName() !== $root . '/src/Services/FHIR/FhirCarePlanService.php') {
+        throw new \RuntimeException('parser is not the native method');
+    }
+    $mapperService = (new \ReflectionClass(CarePlanService::class))->newInstanceWithoutConstructor();
+    $fhirService = (new \ReflectionClass(FhirCarePlanService::class))->newInstanceWithoutConstructor();
+} catch (\Throwable $error) {
+    emitResult([['case' => 'setup', 'error' => $error->getMessage()]], 0, 2);
+}
+
+function assertSameValue($expected, $actual, string $message): void
+{
+    if ($expected !== $actual) {
+        throw new \RuntimeException($message . ': expected ' . json_encode($expected) . ', got ' . json_encode($actual));
+    }
+}
+
+function utc(?string $value): ?string
+{
+    return $value === null ? null : (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->format(DATE_ATOM);
+}
+
+function row(array $changes = []): array
+{
+    return array_replace([
+        'form_id' => 42,
+        'creation_timestamp' => 1700000000,
+        'creation_date' => '2024-01-02 03:04:05',
+        'plan_status' => 'active',
+        'careplan_category' => 'assess-plan',
+        'provider_npi' => '1234567890',
+        'provider_username' => 'clinician',
+        'provenance_updated_by' => 7,
+        'forms_record_id' => 91,
+        'code' => 'LOINC:1234-5',
+        'codetext' => 'Care activity',
+        'description' => 'Care activity',
+        'moodCode' => 'pln',
+        'note_issues' => 'note',
+        'proposed_date' => '2024-03-01',
+        'reason_code' => 'ICD10:E11.9',
+        'reason_description' => 'Reason',
+        'reason_date_low' => '2024-01-01',
+        'reason_date_high' => '2024-12-31',
+        'reason_status' => 'active',
+        'unknown_column' => 'preserve-me',
+    ], $changes);
+}
+
+function mapRows(\ReflectionMethod $mapper, CarePlanService $service, array $rows): array
+{
+    $mapped = [];
+    foreach ($rows as $row) {
+        $mapped[] = $mapper->invoke($service, $row);
+    }
+    // Test seam matching the native search loop's per-form detail append. No SQL
+    // or search method runs; every individual row is mapped by the native method.
+    $combined = array_shift($mapped);
+    foreach ($mapped as $next) {
+        assertSameValue($combined['uuid'], $next['uuid'], 'surrogate key differs across form rows');
+        $combined['details'][] = $next['details'][0];
+    }
+    return $combined;
+}
+
+function decoded(FhirCarePlanService $service, array $record, bool $encode): array
+{
+    $resource = $service->parseOpenEMRRecord($record, $encode);
+    if ($encode ? !is_string($resource) : !($resource instanceof FHIRCarePlan)) {
+        throw new \RuntimeException('wrong native parser return type');
+    }
+    return json_decode($encode ? $resource : json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+}
+
+$scenarios = [
+    'single_row' => [
+        'rows' => [row(['date' => '2024-01-10', 'date_end' => '2024-02-10'])],
+        'starts' => ['2024-01-10'], 'ends' => ['2024-02-10'],
+    ],
+    'two_distinct_ends' => [
+        'rows' => [row(['date' => '2024-01-10', 'date_end' => '2024-02-10']), row(['date' => '2024-01-20', 'date_end' => '2024-04-20', 'description' => 'Second activity'])],
+        'starts' => ['2024-01-10', '2024-01-20'], 'ends' => ['2024-02-10', '2024-04-20'],
+    ],
+    'reversed_ends' => [
+        'rows' => [row(['date' => '2024-01-20', 'date_end' => '2024-04-20']), row(['date' => '2024-01-10', 'date_end' => '2024-02-10', 'description' => 'Second activity'])],
+        'starts' => ['2024-01-20', '2024-01-10'], 'ends' => ['2024-04-20', '2024-02-10'],
+    ],
+    'end_only' => [
+        'rows' => [row(['date_end' => '2024-05-05'])],
+        'starts' => [null], 'ends' => ['2024-05-05'],
+    ],
+    'start_only' => [
+        'rows' => [row(['date' => '2024-06-06'])],
+        'starts' => ['2024-06-06'], 'ends' => [null],
+    ],
+    'null_end' => [
+        'rows' => [row(['date' => '2024-07-07', 'date_end' => null])],
+        'starts' => ['2024-07-07'], 'ends' => [null],
+    ],
+];
+
+$failed = [];
+$passed = 0;
+foreach ($scenarios as $name => $spec) {
+    $original = serialize($spec['rows']);
+    try {
+        $record = mapRows($mapper, $mapperService, $spec['rows']);
+        assertSameValue($original, serialize($spec['rows']), 'input rows mutated');
+        assertSameValue('-SK-42', $record['uuid'], 'surrogate key');
+        assertSameValue(42, $record['form_id'], 'form ID');
+        assertSameValue(1700000000, $record['creation_timestamp'], 'creation timestamp');
+        assertSameValue('2024-01-02 03:04:05', $record['creation_date'], 'creation date');
+        assertSameValue('active', $record['plan_status'], 'plan status');
+        assertSameValue('1234567890', $record['provider_npi'], 'provider NPI');
+        assertSameValue(7, $record['provenance_updated_by'], 'provenance');
+        assertSameValue('preserve-me', $record['unknown_column'], 'unknown field');
+        assertSameValue(count($spec['rows']), count($record['details']), 'detail count');
+        foreach ($spec['rows'] as $index => $source) {
+            $detail = $record['details'][$index];
+            assertSameValue($source['description'], $detail['description'], 'row description');
+            foreach (['code', 'codetext', 'moodCode', 'note_issues', 'proposed_date', 'reason_code', 'reason_description', 'reason_date_low', 'reason_date_high', 'reason_status'] as $key) {
+                assertSameValue($source[$key], $detail[$key] ?? null, "detail $key");
+            }
+            foreach (['date', 'date_end'] as $key) {
+                $expected = $spec[$key === 'date' ? 'starts' : 'ends'][$index];
+                assertSameValue($expected, $detail[$key] ?? null, "detail $key");
+                assertSameValue($expected !== null, array_key_exists($key, $detail), "detail $key presence");
+            }
+            if ($spec['ends'][$index] !== null) {
+                assertSameValue(false, array_key_exists('date_end', $record), 'row end leaked to plan level');
+            }
+        }
+        if ($name === 'null_end') {
+            // Native isset() ignores null; this is an input-shape boundary, not
+            // a claim that SQL yields null for every absent database date.
+            assertSameValue(true, array_key_exists('date_end', $record), 'top-level null lost');
+            assertSameValue(null, $record['date_end'], 'top-level null changed');
+        }
+        ++$passed;
+    } catch (\Throwable $error) {
+        $failed[] = ['case' => "$name:mapping", 'error' => $error->getMessage()];
+    }
+
+    foreach ([false, true] as $encode) {
+        $mode = $encode ? 'encoded' : 'object';
+        try {
+            $record = mapRows($mapper, $mapperService, $spec['rows']);
+            $before = serialize($record);
+            $actual = decoded($fhirService, $record, $encode);
+            assertSameValue($before, serialize($record), 'mapped record mutated');
+            assertSameValue($record['uuid'], $actual['id'] ?? null, 'FHIR ID');
+            assertSameValue('1', $actual['meta']['versionId'] ?? null, 'FHIR version');
+            assertSameValue(utc($record['creation_date']), $actual['meta']['lastUpdated'] ?? null, 'FHIR update time');
+            assertSameValue('active', $actual['status'] ?? null, 'FHIR status');
+            assertSameValue('plan', $actual['intent'] ?? null, 'FHIR intent');
+            assertSameValue(count($spec['rows']), count($actual['activity'] ?? []), 'FHIR activity count');
+            foreach ($spec['rows'] as $index => $source) {
+                $period = $actual['activity'][$index]['detail']['scheduledPeriod'] ?? null;
+                $start = $spec['starts'][$index];
+                $end = $spec['ends'][$index];
+                assertSameValue(utc($start), $period['start'] ?? null, 'activity scheduled start');
+                assertSameValue(utc($end), $period['end'] ?? null, 'activity scheduled end');
+            }
+            $starts = array_values(array_filter($spec['starts'], static fn ($value) => $value !== null));
+            $ends = array_values(array_filter($spec['ends'], static fn ($value) => $value !== null));
+            assertSameValue(utc($starts === [] ? null : min($starts)), $actual['period']['start'] ?? null, 'plan earliest start');
+            assertSameValue(utc($ends === [] ? null : max($ends)), $actual['period']['end'] ?? null, 'plan latest end');
+            ++$passed;
+        } catch (\Throwable $error) {
+            $failed[] = ['case' => "$name:$mode", 'error' => $error->getMessage()];
+        }
+    }
+}
+
+// Presence and null assertions above are separate from these two preservation
+// checks, keeping the expected count stable and the failure report specific.
+foreach (['missing_end', 'top_level_first_end'] as $name) {
+    try {
+        $record = mapRows($mapper, $mapperService, $scenarios[$name === 'missing_end' ? 'start_only' : 'two_distinct_ends']['rows']);
+        if ($name === 'missing_end') {
+            assertSameValue(false, array_key_exists('date_end', $record), 'missing end appeared');
+        } else {
+            assertSameValue(false, array_key_exists('date_end', $record), 'first row end stayed top-level');
+        }
+        ++$passed;
+    } catch (\Throwable $error) {
+        $failed[] = ['case' => $name, 'error' => $error->getMessage()];
+    }
+}
+emitResult($failed, $passed, $failed === [] && $passed === EXPECTED_CASES ? 0 : 1);
+}
