@@ -1,0 +1,163 @@
+<?php
+
+declare(strict_types=1);
+
+// OPEMR-204: run with `php tests/clinical-ui/fixtures/medication-request-dose.php.fixture`.
+// Only the I/O-bearing base declaration is synthetic. The service method and every
+// model/helper it invokes are loaded from the complete source files below.
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRMedicationRequest;
+    use OpenEMR\Services\FHIR\FhirMedicationRequestService;
+
+    $root = dirname(__DIR__, 3);
+    $source = $root . '/src/Services/FHIR/FhirMedicationRequestService.php';
+    $results = [];
+    $errors = [];
+
+    try {
+        if (PHP_INT_SIZE !== 8) {
+            throw new RuntimeException('The exact integer case requires PHP64');
+        }
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        });
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new ErrorException($message, 0, $severity);
+        });
+        $service = (new ReflectionClass(FhirMedicationRequestService::class))->newInstanceWithoutConstructor();
+        $hash = hash_file('sha256', $source);
+        if ($hash === false) {
+            throw new RuntimeException('Cannot hash native service');
+        }
+
+        // "skip" means the original guard must omit doseAndRate. Other expected
+        // values are compared after native MedicationRequest JSON serialization.
+        $cases = [
+            ['fraction string .5', '.5', 0.5],
+            ['fraction string 1.25', '1.25', 1.25],
+            ['fraction float', 0.5, 0.5],
+            ['ordinary integer string', '2', 2],
+            ['ordinary integer', 2, 2],
+            ['exact PHP64 integer', '9007199254740993', 9007199254740993],
+            ['leading zero integer', '007', 7],
+            ['whitespace integer', ' 7 ', 7],
+            ['empty', '', 'skip'],
+            ['null', null, 'skip'],
+            ['missing', null, 'skip', false],
+            ['non numeric', 'one', 'skip'],
+            ['unit suffixed', '1.25 mg', 'skip'],
+            ['zero string', '0', 'skip'],
+            ['zero integer', 0, 'skip'],
+            ['negative integer', '-2', -2],
+            ['negative fraction', '-1.25', -1.25],
+            ['finite scientific', '1.25e1', 12.5],
+            ['overflowing exponent', '1e309', 0],
+            ['INF float legacy', INF, 0],
+        ];
+
+        foreach ($cases as $case) {
+            [$name, $size, $expected] = $case;
+            try {
+                $record = [
+                    'drug_dosage_instructions' => 'Take as directed',
+                    'dosage' => '1',
+                    'prescription_route' => 'oral',
+                    'interval_notes' => 'Every morning',
+                    'route_title' => 'Oral',
+                    'unit_title' => 'tablet',
+                ];
+                if (($case[3] ?? true) !== false) {
+                    $record['prescription_drug_size'] = $size;
+                }
+                $before = $record;
+                $resource = new FHIRMedicationRequest();
+                $resource->setId('dose-fixture');
+                $resource->setStatus('active');
+
+                // PHP's legacy INF-to-int conversion can warn on some versions.
+                // Permit only that warning in this one case and restore immediately.
+                if ($name === 'INF float legacy') {
+                    set_error_handler(static function (int $severity, string $message): void {
+                        if ($severity !== E_WARNING || !str_contains($message, 'INF')) {
+                            throw new ErrorException($message, 0, $severity);
+                        }
+                    });
+                }
+                try {
+                    $service->populateDosageInstruction($resource, $record);
+                } finally {
+                    if ($name === 'INF float legacy') {
+                        restore_error_handler();
+                    }
+                }
+
+                $json = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+                $dose = $json['dosageInstruction'][0] ?? null;
+                $actual = $dose['doseAndRate'][0]['doseQuantity']['value'] ?? null;
+                $quantity = $dose['doseAndRate'][0]['doseQuantity'] ?? null;
+                $check = static function (bool $ok, string $why): void {
+                    if (!$ok) {
+                        throw new RuntimeException($why);
+                    }
+                };
+                $check($record === $before, 'input record changed');
+                $check(($json['resourceType'] ?? null) === 'MedicationRequest'
+                    && ($json['id'] ?? null) === 'dose-fixture'
+                    && ($json['status'] ?? null) === 'active', 'resource identity changed');
+                $check(($dose['text'] ?? null) === 'Take as directed', 'dosage text changed');
+                $check(($dose['timing']['code']['text'] ?? null) === 'Every morning', 'timing changed');
+                $check(($dose['route']['text'] ?? null) === 'Oral', 'route changed');
+                $check(!isset($dose['resourceType']) && !isset($json['dispenseRequest']), 'unexpected resource field');
+                if ($expected === 'skip') {
+                    $check(!isset($dose['doseAndRate']), 'dose should be absent');
+                } else {
+                    $check(is_int($actual) || is_float($actual), 'dose is not a JSON number');
+                    $check($name === 'exact PHP64 integer' ? $actual === $expected : (float) $actual === (float) $expected,
+                        'dose value ' . var_export($actual, true) . ' expected ' . var_export($expected, true));
+                    $check(count($dose['doseAndRate']) === 1, 'doseAndRate count changed');
+                    $check(($quantity['unit'] ?? null) === 'tablet' && ($quantity['code'] ?? null) === 'tablet'
+                        && ($quantity['system'] ?? null) === 'http://unitsofmeasure.org', 'quantity units changed');
+                }
+                $results[] = ['name' => $name, 'pass' => true];
+            } catch (Throwable $error) {
+                $results[] = ['name' => $name, 'pass' => false, 'error' => $error->getMessage()];
+            }
+        }
+
+        // The existing outer guard still suppresses dosage when all three
+        // prerequisites are absent, even if size itself is numeric.
+        $resource = new FHIRMedicationRequest();
+        $service->populateDosageInstruction($resource, ['prescription_drug_size' => '1.25']);
+        $guard = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $results[] = ['name' => 'outer guard', 'pass' => !isset($guard['dosageInstruction'])];
+    } catch (Throwable $error) {
+        $errors[] = $error->getMessage();
+    }
+
+    restore_error_handler();
+
+    $failed = count(array_filter($results, static fn(array $result): bool => !$result['pass'])) + count($errors);
+    echo json_encode([
+        'jira' => 'OPEMR-204',
+        'native_service_sha256' => $hash ?? null,
+        'count' => count($results),
+        'passed' => count($results) - count(array_filter($results, static fn(array $result): bool => !$result['pass'])),
+        'failed' => $failed,
+        'cases' => $results,
+        'errors' => $errors,
+    ], JSON_THROW_ON_ERROR) . "\n";
+    exit($failed === 0 ? 0 : 1);
+}
