@@ -722,7 +722,6 @@ class CarePlanService extends BaseService
             'codetext',
             'description',  // ONLY this row's description
             'date',
-            'date_end',
             'moodCode',
             'note_issues',
             'proposed_date',
@@ -739,6 +738,9 @@ class CarePlanService extends BaseService
                 $details[$key] = $record[$key];
                 unset($record[$key]);
             }
+        }
+        if (isset($record['date_end'])) {
+            $details['date_end'] = $record['date_end'];
         }
 
         // Single detail in array (will be aggregated by search method)
