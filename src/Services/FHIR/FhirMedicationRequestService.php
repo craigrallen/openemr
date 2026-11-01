@@ -644,7 +644,11 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
         }
 
         if (!empty($dataRecord['prescription_drug_size']) && is_numeric($dataRecord['prescription_drug_size'])) {
-            $quantity = intval($dataRecord['prescription_drug_size']); // should be an integer value for dosage
+            $quantity = $dataRecord['prescription_drug_size'] + 0;
+            // Retain the prior integer conversion where the numeric value cannot be represented as a finite in-range dose.
+            if (is_float($quantity) && (!is_finite($quantity) || $quantity >= PHP_INT_MAX || $quantity <= PHP_INT_MIN)) {
+                $quantity = intval($dataRecord['prescription_drug_size']);
+            }
             $doseQuantity = UtilsService::createQuantity($quantity, $dataRecord['unit_title'] ?? '', $dataRecord['unit_title'] ?? '');
             $doseAndRate = new FHIRDosageDoseAndRate();
             $doseAndRate->setDoseQuantity($doseQuantity);
