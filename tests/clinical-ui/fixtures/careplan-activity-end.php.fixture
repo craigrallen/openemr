@@ -30,11 +30,15 @@ namespace OpenEMR\Services\FHIR {
 
 namespace {
 use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCarePlan;
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRGoal;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRPeriod;
 use OpenEMR\FHIR\R4\FHIRResource\FHIRCarePlan\FHIRCarePlanActivity;
 use OpenEMR\FHIR\R4\FHIRResource\FHIRCarePlan\FHIRCarePlanDetail;
+use OpenEMR\FHIR\R4\FHIRResource\FHIRGoal\FHIRGoalTarget;
 use OpenEMR\Services\CarePlanService;
+use OpenEMR\Services\CodeTypesService;
 use OpenEMR\Services\FHIR\FhirCarePlanService;
+use OpenEMR\Services\FHIR\FhirGoalService;
 use OpenEMR\Services\FHIR\UtilsService;
 
 // Synthetic HTML text-node helper boundary. Narrative escaping is not an
@@ -44,7 +48,7 @@ function text($value): string
     return htmlspecialchars($value ?? '', ENT_NOQUOTES);
 }
 
-const EXPECTED_CASES = 20;
+const EXPECTED_CASES = 32;
 
 function emitResult(array $failed, int $passed, int $status): never
 {
@@ -59,6 +63,9 @@ set_error_handler(static function (int $level, string $message): never {
     throw new \ErrorException($message, 0, $level);
 });
 date_default_timezone_set('UTC');
+// Native CodeTypesService only reads this global in its constructor. Goal
+// fixtures omit codes, so its database-backed lookup methods are not reached.
+$code_types = [];
 $root = dirname(__DIR__, 3);
 spl_autoload_register(static function (string $class) use ($root): void {
     $prefix = 'OpenEMR\\';
@@ -74,12 +81,16 @@ spl_autoload_register(static function (string $class) use ($root): void {
 try {
     foreach ([
         CarePlanService::class,
+        CodeTypesService::class,
         FhirCarePlanService::class,
+        FhirGoalService::class,
         UtilsService::class,
         FHIRCarePlan::class,
+        FHIRGoal::class,
         FHIRPeriod::class,
         FHIRCarePlanActivity::class,
         FHIRCarePlanDetail::class,
+        FHIRGoalTarget::class,
     ] as $class) {
         $native = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
         if ((new \ReflectionClass($class))->getFileName() !== $native) {
@@ -94,8 +105,14 @@ try {
     if ($parser->getFileName() !== $root . '/src/Services/FHIR/FhirCarePlanService.php') {
         throw new \RuntimeException('parser is not the native method');
     }
+    $goalParser = new \ReflectionMethod(FhirGoalService::class, 'parseOpenEMRRecord');
+    if ($goalParser->getFileName() !== $root . '/src/Services/FHIR/FhirGoalService.php') {
+        throw new \RuntimeException('Goal parser is not the native method');
+    }
     $mapperService = (new \ReflectionClass(CarePlanService::class))->newInstanceWithoutConstructor();
     $fhirService = (new \ReflectionClass(FhirCarePlanService::class))->newInstanceWithoutConstructor();
+    // Both native service constructors would bootstrap dependencies or UUID writes.
+    $goalService = (new \ReflectionClass(FhirGoalService::class))->newInstanceWithoutConstructor();
 } catch (\Throwable $error) {
     emitResult([['case' => 'setup', 'error' => $error->getMessage()]], 0, 2);
 }
@@ -164,6 +181,15 @@ function decoded(FhirCarePlanService $service, array $record, bool $encode): arr
     return json_decode($encode ? $resource : json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
 }
 
+function decodedGoal(FhirGoalService $service, array $record, bool $encode): array
+{
+    $resource = $service->parseOpenEMRRecord($record, $encode);
+    if ($encode ? !is_string($resource) : !($resource instanceof FHIRGoal)) {
+        throw new \RuntimeException('wrong native Goal parser return type');
+    }
+    return json_decode($encode ? $resource : json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+}
+
 $scenarios = [
     'single_row' => [
         'rows' => [row(['date' => '2024-01-10', 'date_end' => '2024-02-10'])],
@@ -218,15 +244,11 @@ foreach ($scenarios as $name => $spec) {
                 assertSameValue($expected, $detail[$key] ?? null, "detail $key");
                 assertSameValue($expected !== null, array_key_exists($key, $detail), "detail $key presence");
             }
-            if ($spec['ends'][$index] !== null) {
-                assertSameValue(false, array_key_exists('date_end', $record), 'row end leaked to plan level');
-            }
         }
-        if ($name === 'null_end') {
-            // Native isset() ignores null; this is an input-shape boundary, not
-            // a claim that SQL yields null for every absent database date.
-            assertSameValue(true, array_key_exists('date_end', $record), 'top-level null lost');
-            assertSameValue(null, $record['date_end'], 'top-level null changed');
+        $first = $spec['rows'][0];
+        assertSameValue(array_key_exists('date_end', $first), array_key_exists('date_end', $record), 'first row top-level end presence');
+        if (array_key_exists('date_end', $first)) {
+            assertSameValue($first['date_end'], $record['date_end'], 'first row top-level end value');
         }
         ++$passed;
     } catch (\Throwable $error) {
@@ -265,18 +287,68 @@ foreach ($scenarios as $name => $spec) {
 }
 
 // Presence and null assertions above are separate from these two preservation
-// checks, keeping the expected count stable and the failure report specific.
+// checks, keeping failures specific to the missing and first-row shapes.
 foreach (['missing_end', 'top_level_first_end'] as $name) {
     try {
         $record = mapRows($mapper, $mapperService, $scenarios[$name === 'missing_end' ? 'start_only' : 'two_distinct_ends']['rows']);
         if ($name === 'missing_end') {
             assertSameValue(false, array_key_exists('date_end', $record), 'missing end appeared');
         } else {
-            assertSameValue(false, array_key_exists('date_end', $record), 'first row end stayed top-level');
+            assertSameValue(true, array_key_exists('date_end', $record), 'first row end missing at top level');
+            assertSameValue('2024-02-10', $record['date_end'], 'first row top-level end changed');
         }
         ++$passed;
     } catch (\Throwable $error) {
         $failed[] = ['case' => $name, 'error' => $error->getMessage()];
+    }
+}
+
+// Goal shares the native CarePlan mapper. Its target parser consumes the first
+// row's top-level date_end, including when the detail also carries that date.
+$goalScenarios = [
+    'distinct_end' => ['row' => row(['careplan_category' => 'goal', 'code' => null, 'codetext' => null, 'date' => '2024-01-10 00:00:00', 'date_end' => '2024-02-10 00:00:00']), 'due' => '2024-02-10'],
+    'end_only' => ['row' => row(['careplan_category' => 'goal', 'code' => null, 'codetext' => null, 'date_end' => '2024-05-05 00:00:00']), 'due' => '2024-05-05'],
+    'missing_end' => ['row' => row(['careplan_category' => 'goal', 'code' => null, 'codetext' => null, 'date' => '2024-06-06 00:00:00']), 'due' => '2024-06-06'],
+    'null_end' => ['row' => row(['careplan_category' => 'goal', 'code' => null, 'codetext' => null, 'date' => '2024-07-07 00:00:00', 'date_end' => null]), 'due' => '2024-07-07'],
+];
+foreach ($goalScenarios as $name => $spec) {
+    try {
+        $source = $spec['row'];
+        $before = serialize($source);
+        $record = mapRows($mapper, $mapperService, [$source]);
+        assertSameValue($before, serialize($source), 'Goal source row mutated');
+        assertSameValue(array_key_exists('date_end', $source), array_key_exists('date_end', $record), 'Goal top-level end presence');
+        if (array_key_exists('date_end', $source)) {
+            assertSameValue($source['date_end'], $record['date_end'], 'Goal top-level end value');
+        }
+        assertSameValue(isset($source['date_end']), array_key_exists('date_end', $record['details'][0]), 'Goal detail end presence');
+        if (isset($source['date_end'])) {
+            assertSameValue($source['date_end'], $record['details'][0]['date_end'], 'Goal detail end value');
+        }
+        assertSameValue('goal', $record['careplan_category'], 'Goal category');
+        assertSameValue('active', $record['plan_status'], 'Goal plan status');
+        assertSameValue('preserve-me', $record['unknown_column'], 'Goal unknown field');
+        ++$passed;
+    } catch (\Throwable $error) {
+        $failed[] = ['case' => "goal_$name:mapping", 'error' => $error->getMessage()];
+    }
+    foreach ([false, true] as $encode) {
+        try {
+            $record = mapRows($mapper, $mapperService, [$spec['row']]);
+            $before = serialize($record);
+            $actual = decodedGoal($goalService, $record, $encode);
+            assertSameValue($before, serialize($record), 'mapped Goal mutated');
+            assertSameValue($record['uuid'], $actual['id'] ?? null, 'Goal FHIR ID');
+            assertSameValue('1', $actual['meta']['versionId'] ?? null, 'Goal FHIR version');
+            assertSameValue(utc($record['creation_date']), $actual['meta']['lastUpdated'] ?? null, 'Goal FHIR update time');
+            assertSameValue([FhirGoalService::USCGI_PROFILE_URI], $actual['meta']['profile'] ?? null, 'Goal profile');
+            assertSameValue('active', $actual['lifecycleStatus'] ?? null, 'Goal lifecycle status');
+            assertSameValue(1, count($actual['target'] ?? []), 'Goal target count');
+            assertSameValue($spec['due'], $actual['target'][0]['dueDate'] ?? null, 'Goal target dueDate');
+            ++$passed;
+        } catch (\Throwable $error) {
+            $failed[] = ['case' => 'goal_' . $name . ':' . ($encode ? 'encoded' : 'object'), 'error' => $error->getMessage()];
+        }
     }
 }
 emitResult($failed, $passed, $failed === [] && $passed === EXPECTED_CASES ? 0 : 1);
