@@ -195,7 +195,7 @@ class FhirImmunizationService extends FhirServiceBase implements IResourceUSCIGP
             $immunizationResource->setLotNumber($dataRecord['lot_number']);
         }
 
-        if (!empty($dataRecord['administration_site'])) {
+        if (isset($dataRecord['amount_administered'])) {
             $doseQuantity = new FHIRQuantity();
             $doseQuantity->setValue($dataRecord['amount_administered']);
             $doseQuantity->setSystem(FhirCodeSystemConstants::UNITS_OF_MEASURE);
