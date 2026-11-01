@@ -41,7 +41,7 @@ function manage_question_10(value)
         var menu = document.createElement("select");  // create 'select' element, to hold the menu
         // set some of the parameters
         menu.name = "difficulty";
-        menu.onchange = "record_score_q10(my_form.difficulty.value);";
+        menu.onchange = function () { record_score_q10(this.value); };
         menu.length = 5;
         create_q10(question, menu); // populate question 10 and menu - do in main page as it requires php
         // set the default value - if new it's 'select answer', else it's previous value
