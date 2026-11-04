@@ -65,8 +65,6 @@ class FhirLocationService extends FhirServiceBase implements IFhirExportableReso
      */
     private $patientUuid;
 
-    private FhirOrganizationService $organizationService;
-
     public function __construct()
     {
         parent::__construct();
@@ -93,7 +91,7 @@ class FhirLocationService extends FhirServiceBase implements IFhirExportableReso
      */
     public function setOrganizationService(FhirOrganizationService $organizationService): void
     {
-        $this->organizationService = $organizationService;
+        $this->fhirOrganizationService = $organizationService;
     }
 
     /**

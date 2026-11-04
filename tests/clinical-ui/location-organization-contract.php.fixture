@@ -1,0 +1,214 @@
+<?php
+declare(strict_types=1);
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (str_starts_with($class, $prefix)) {
+            $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        }
+    });
+}
+
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase {}
+
+    class FhirOrganizationService
+    {
+        public static int $constructions = 0;
+        public int $calls = 0;
+        public ?\OpenEMR\FHIR\R4\FHIRElement\FHIRReference $reference;
+
+        public function __construct(?\OpenEMR\FHIR\R4\FHIRElement\FHIRReference $reference = null)
+        {
+            self::$constructions++;
+            $this->reference = $reference ?? new \OpenEMR\FHIR\R4\FHIRElement\FHIRReference([
+                'reference' => new \OpenEMR\FHIR\R4\FHIRElement\FHIRString('Organization/lazy-default'),
+            ]);
+        }
+
+        public function getPrimaryBusinessEntityReference(): ?\OpenEMR\FHIR\R4\FHIRElement\FHIRReference
+        {
+            $this->calls++;
+            return $this->reference;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRLocation;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRReference;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRString;
+    use OpenEMR\Services\FHIR\FhirLocationService;
+    use OpenEMR\Services\FHIR\FhirOrganizationService;
+
+    $cases = [];
+    $errors = [];
+    $sourceHash = '';
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $case = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $e) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $e->getMessage()];
+        }
+    };
+    $fresh = static function (): FhirLocationService {
+        return (new \ReflectionClass(FhirLocationService::class))->newInstanceWithoutConstructor();
+    };
+    $ref = static function (string $id): FHIRReference {
+        return new FHIRReference(['reference' => new FHIRString('Organization/' . $id)]);
+    };
+    $record = [
+        'uuid' => '123e4567-e89b-12d3-a456-426614174000',
+        'last_updated' => '2024-01-02 03:04:05',
+        'type' => 'facility', 'name' => 'North Clinic',
+        'identifier' => 'LOC-7', 'identifier_type' => 'none',
+        'location_role_type' => 11,
+        'line1' => '10 Main Street', 'city' => 'Stockholm',
+        'state' => 'Stockholm', 'postal_code' => '111 22',
+        'period_start' => '2024-01-01 00:00:00',
+        'phone' => '+46800003456', 'email' => 'clinic@example.test',
+    ];
+
+    try {
+        $source = $root . '/src/Services/FHIR/FhirLocationService.php';
+        $contents = file_get_contents($source);
+        $check($contents !== false, 'Location source unreadable');
+        $sourceHash = hash('sha256', $contents);
+        $case('source binding', static function () use ($contents, $sourceHash, $check): void {
+            $original = 'a98e53b0c75e35385bc2471d348483fa7978947f771ed0fce15a048a25f4ceb2';
+            $old = '$this->organizationService = $organizationService;';
+            $new = '$this->fhirOrganizationService = $organizationService;';
+            $declaration = 'class FhirLocationService extends FhirServiceBase implements IFhirExportableResourceService, IResourceUSCIGProfileService, INonPatientCompartmentResourceService';
+            $check(substr_count($contents, $declaration) === 1, 'Location declaration changed');
+            $obsolete = "    private FhirOrganizationService \$organizationService;\n\n";
+            $anchor = "    public function __construct()\n";
+            $check(substr_count($contents, $old) + substr_count($contents, $new) === 1, 'Setter assignment count changed');
+            $check(substr_count($contents, $obsolete) <= 1, 'Obsolete declaration count changed');
+            $check(substr_count($contents, $anchor) === 1, 'Constructor anchor count changed');
+            $inverse = str_replace($new, $old, $contents);
+            if (substr_count($contents, $obsolete) === 0) {
+                $inverse = str_replace($anchor, $obsolete . $anchor, $inverse);
+            }
+            $check(hash('sha256', $inverse) === $original, 'Location source differs beyond the setter assignment and obsolete declaration');
+        });
+        $case('obsolete organization dependency removed', static function () use ($contents, $check): void {
+            $check(substr_count($contents, "    private FhirOrganizationService \$organizationService;\n\n") === 0, 'Obsolete organization dependency remains');
+        });
+        $case('native service and model', static function () use ($root, $check): void {
+            $check((new \ReflectionClass(FhirLocationService::class))->getFileName() === $root . '/src/Services/FHIR/FhirLocationService.php', 'Service is not native');
+            $check((new \ReflectionClass(FHIRLocation::class))->getFileName() === $root . '/src/FHIR/R4/FHIRDomainResource/FHIRLocation.php', 'Location model is not native');
+            $check((new \ReflectionClass(FHIRReference::class))->getFileName() === $root . '/src/FHIR/R4/FHIRElement/FHIRReference.php', 'Reference model is not native');
+        });
+        $case('setter and repeated getter identity', static function () use ($fresh, $ref, $check): void {
+            $service = $fresh(); $org = new FhirOrganizationService($ref('one'));
+            $before = FhirOrganizationService::$constructions;
+            $service->setOrganizationService($org);
+            $check($service->getOrganizationService() === $org, 'Injected organization not returned');
+            $check($service->getOrganizationService() === $org, 'Repeated getter changed identity');
+            $check(FhirOrganizationService::$constructions === $before, 'Getter constructed fallback');
+        });
+        $case('replacement before getter', static function () use ($fresh, $ref, $check): void {
+            $service = $fresh(); $service->setOrganizationService(new FhirOrganizationService($ref('one')));
+            $second = new FhirOrganizationService($ref('two'));
+            $service->setOrganizationService($second);
+            $check($service->getOrganizationService() === $second, 'Replacement before getter ignored');
+        });
+        $case('replacement after getter', static function () use ($fresh, $ref, $check): void {
+            $service = $fresh(); $first = new FhirOrganizationService($ref('one'));
+            $service->setOrganizationService($first);
+            $check($service->getOrganizationService() === $first, 'First injected organization lost');
+            $second = new FhirOrganizationService($ref('two'));
+            $service->setOrganizationService($second);
+            $check($service->getOrganizationService() === $second, 'Replacement after getter ignored');
+        });
+        $case('replacement after lazy default', static function () use ($fresh, $ref, $check): void {
+            $service = $fresh(); $lazy = $service->getOrganizationService();
+            $replacement = new FhirOrganizationService($ref('replacement'));
+            $service->setOrganizationService($replacement);
+            $check($lazy !== $replacement && $service->getOrganizationService() === $replacement, 'Lazy default retained');
+        });
+        $case('distinct location instances', static function () use ($fresh, $ref, $check): void {
+            $a = $fresh(); $b = $fresh();
+            $one = new FhirOrganizationService($ref('one')); $two = new FhirOrganizationService($ref('two'));
+            $a->setOrganizationService($one); $b->setOrganizationService($two);
+            $check($a->getOrganizationService() === $one && $b->getOrganizationService() === $two, 'Organization leaked between instances');
+        });
+        $case('lazy getter constructs once', static function () use ($fresh, $check): void {
+            $service = $fresh(); $before = FhirOrganizationService::$constructions;
+            $first = $service->getOrganizationService();
+            $check($first === $service->getOrganizationService(), 'Lazy identity changed');
+            $check(FhirOrganizationService::$constructions === $before + 1, 'Lazy constructor count differs');
+        });
+        $case('parsed managing organization and encoded JSON', static function () use ($fresh, $ref, $record, $check): void {
+            $service = $fresh(); $reference = $ref('injected');
+            $org = new FhirOrganizationService($reference); $service->setOrganizationService($org);
+            $location = $service->parseOpenEMRRecord($record);
+            $check($location instanceof FHIRLocation && $location->getManagingOrganization() === $reference, 'Native reference differs');
+            $check($org->calls === 1, 'Native parse did not call boundary once');
+            $encoded = $service->parseOpenEMRRecord($record, true);
+            $json = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+            $check($json['managingOrganization']['reference'] === 'Organization/injected', 'Encoded reference differs');
+            $check($org->calls === 2, 'Encoded parse did not call boundary once');
+        });
+        $case('null organization reference omitted', static function () use ($fresh, $record, $check): void {
+            $service = $fresh(); $org = new FhirOrganizationService(); $org->reference = null;
+            $service->setOrganizationService($org);
+            $location = $service->parseOpenEMRRecord($record);
+            $json = json_decode(json_encode($location, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check($location->getManagingOrganization() === null && !array_key_exists('managingOrganization', $json), 'Null reference was emitted');
+            $check($org->calls === 1, 'Null boundary call count differs');
+        });
+        $case('switching dependency changes parsed reference', static function () use ($fresh, $ref, $record, $check): void {
+            $service = $fresh(); $one = new FhirOrganizationService($ref('one'));
+            $two = new FhirOrganizationService($ref('two'));
+            $service->setOrganizationService($one);
+            $first = $service->parseOpenEMRRecord($record);
+            $service->setOrganizationService($two);
+            $second = $service->parseOpenEMRRecord($record);
+            $check($first->getManagingOrganization() === $one->reference && $second->getManagingOrganization() === $two->reference, 'Parsed reference did not switch');
+            $check($one->calls === 1 && $two->calls === 1, 'Boundary call counts differ');
+        });
+        $case('native location fields and unchanged input', static function () use ($fresh, $ref, $record, $check): void {
+            $before = $record; $service = $fresh();
+            $service->setOrganizationService(new FhirOrganizationService($ref('fields')));
+            $location = $service->parseOpenEMRRecord($record);
+            $json = json_decode(json_encode($location, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check($record === $before, 'Input record mutated');
+            $check($location->getId()->getValue() === $record['uuid'], 'Native id differs');
+            $check($location->getName()->getValue() === $record['name'], 'Native name differs');
+            $check($location->getStatus() === 'active', 'Native status differs');
+            $check($location->getMeta()->getVersionId() === '1', 'Native meta version differs');
+            $check($location->getMeta()->getLastUpdated() !== null, 'Native updated time absent');
+            $check($json['id'] === $record['uuid'] && $json['name'] === $record['name'] && $json['status'] === 'active', 'Encoded basic fields differ');
+            $check($json['identifier'][0]['value'] === 'LOC-7', 'Identifier differs');
+            $check($json['type'][0]['coding'][0]['code'] === '11', 'Place of service type differs');
+            $check($json['address']['line'][0] === '10 Main Street' && $json['address']['city'] === 'Stockholm', 'Address differs');
+            $check($json['telecom'][0]['system'] === 'phone' && $json['telecom'][0]['value'] === '+46800003456', 'Phone differs');
+            $check($json['telecom'][1]['system'] === 'email' && $json['telecom'][1]['value'] === 'clinic@example.test', 'Email differs');
+            $check(isset($json['meta']['lastUpdated']) && $json['meta']['versionId'] === '1', 'Encoded meta differs');
+        });
+    } catch (\Throwable $e) {
+        $errors[] = $e->getMessage();
+    }
+    $failed = count($errors) + count(array_filter($cases, static fn(array $result): bool => !$result['ok']));
+    echo json_encode(['cases' => $cases, 'errors' => $errors, 'failed' => $failed, 'total' => count($cases), 'source_sha256' => $sourceHash], JSON_THROW_ON_ERROR);
+    exit($failed === 0 ? 0 : 1);
+}
