@@ -83,7 +83,7 @@ class FhirRelatedPersonService extends FhirServiceBase implements IResourceUSCIG
 
     public function populateActive(FHIRRelatedPerson $fhirRelatedPerson, $dataRecord): void
     {
-        if (1 === $dataRecord['active']) {
+        if (1 === $dataRecord['active'] || '1' === $dataRecord['active']) {
             $fhirRelatedPerson->setActive(true);
         } else {
             $fhirRelatedPerson->setActive(false);
