@@ -59,7 +59,8 @@ function inspectSource() {
         assert.equal(prefix, `${saveMarker}\n`, 'pinned baseline must have an empty save prefix');
     } else {
         assert.match(prefix, /getOneCalendarCategory\s*\(/, 'changed source must query the native category service in save prefix');
-        assert.match(prefix, /\$_POST\['form_category'\]/, 'changed source must use posted category');
+        assert.match(prefix, /getOneCalendarCategory\s*\(\s*filter_input\s*\(\s*INPUT_POST\s*,\s*'form_category'\s*\)\s*\)/, 'changed source must pass the native filtered POST category to the service');
+        assert.doesNotMatch(prefix, /\$_POST\b/, 'changed save prefix must not access POST directly');
         for (const field of ['pc_active', 'pc_cattype', 'pc_constant_id']) {
             assert.ok(prefix.includes(field), `changed source must inspect ${field}`);
         }
@@ -78,6 +79,7 @@ function runCase(testCase) {
     if (testCase.queries) {
         assert.deepEqual(actual.queries, [testCase.post.form_category ?? null], `${testCase.name}: requested category`);
     }
+    assert.deepEqual(actual.inputCalls, testCase.action === 'save' ? [['INPUT_POST', 'form_category']] : [], `${testCase.name}: synthetic input boundary calls`);
     assert.deepEqual(actual.post, testCase.post, `${testCase.name}: POST unchanged`);
     assert.equal(actual.output.startsWith('Error:'), testCase.outcome === 'rejected', `${testCase.name}: rejection message`);
     return actual;

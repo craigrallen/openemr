@@ -15,8 +15,12 @@ namespace OpenEMR\Services {
     }
 }
 
-namespace {
-    use OpenEMR\Services\AppointmentService;
+namespace PortalCategoryEligibilityFixture {
+    final class InputBoundary
+    {
+        public static array $post = [];
+        public static array $calls = [];
+    }
 
     final class FixtureExit extends \RuntimeException
     {
@@ -26,6 +30,18 @@ namespace {
     {
     }
 
+    function filter_input(int $type, string $key): string|false|null
+    {
+        if ($type !== INPUT_POST || $key !== 'form_category') {
+            throw new \InvalidArgumentException('Unexpected synthetic input request');
+        }
+        InputBoundary::$calls[] = ['INPUT_POST', $key];
+        $value = InputBoundary::$post[$key] ?? null;
+        return $value === null ? null : (is_scalar($value) ? (string) $value : false);
+    }
+}
+
+namespace {
     function xlt(string $message): string
     {
         return $message;
@@ -53,7 +69,7 @@ namespace {
             $exitTokens++;
         }
     }
-    $instrumented = preg_replace('/\bexit\s*(?:\(\s*\))?\s*;/', 'throw new \\FixtureExit();', $prefix, -1, $replacements);
+    $instrumented = preg_replace('/\bexit\s*(?:\(\s*\))?\s*;/', 'throw new \\PortalCategoryEligibilityFixture\\FixtureExit();', $prefix, -1, $replacements);
     if ($instrumented === null || $replacements !== $exitTokens || $exitTokens > 1) {
         throw new \RuntimeException('Expected zero or one exact exit termination in native prefix');
     }
@@ -68,6 +84,8 @@ namespace {
     }
     $_POST = $case['post'];
     $originalPost = $_POST;
+    \PortalCategoryEligibilityFixture\InputBoundary::$post = $case['post'];
+    \PortalCategoryEligibilityFixture\InputBoundary::$calls = [];
     $form_action = $case['action'];
     \OpenEMR\Services\AppointmentService::$rows = $case['rows'];
     \OpenEMR\Services\AppointmentService::$queries = [];
@@ -76,14 +94,14 @@ namespace {
     });
     ob_start();
     try {
-        // Execute only the trusted repository source prefix, never request/case text as code.
-        // eval has its own import scope, so reproduce the route's existing class import here.
+        // Execute only the trusted repository source prefix with a synthetic function input boundary.
+        // eval has its own namespace and import scope; reproduce the route's class import here.
         // The sentinel is the first operation at the native $formDate boundary.
-        eval("use OpenEMR\\Services\\AppointmentService;\n" . $instrumented . "\nthrow new \\FixtureBoundary();\n}");
+        eval("namespace PortalCategoryEligibilityFixture;\nuse OpenEMR\\Services\\AppointmentService;\n" . $instrumented . "\nthrow new \\PortalCategoryEligibilityFixture\\FixtureBoundary();\n}");
         $outcome = 'none';
-    } catch (FixtureExit) {
+    } catch (\PortalCategoryEligibilityFixture\FixtureExit) {
         $outcome = 'rejected';
-    } catch (FixtureBoundary) {
+    } catch (\PortalCategoryEligibilityFixture\FixtureBoundary) {
         $outcome = 'boundary';
     } finally {
         $output = ob_get_clean();
@@ -95,6 +113,7 @@ namespace {
     echo json_encode([
         'outcome' => $outcome,
         'queries' => \OpenEMR\Services\AppointmentService::$queries,
+        'inputCalls' => \PortalCategoryEligibilityFixture\InputBoundary::$calls,
         'post' => (object) $_POST,
         'output' => $output,
         'exitTerminations' => $exitTokens,
