@@ -11,7 +11,7 @@ Product Registration modal
 @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
 #}
 
-<div class="product-registration-modal modal fade">
+<div class="product-registration-modal modal fade" role="dialog" aria-label="{{ 'Product Registration' | xla }}">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header"></div>
@@ -21,7 +21,7 @@ Product Registration modal
                         <p class="context">
                             {{ "We kindly ask you to take a moment to register your installation by providing an email. This ensures you receive timely updates, security alerts, and critical announcements from the OpenEMR Foundation. You can opt out of this by simply leaving this field blank."|xlt }}
                         </p>
-                        <input placeholder="{{ "email"|xla }}" type="email" id="email" class="email w-100 text-body form-control" value="" />
+                        <input aria-label="{{ 'email' | xla }}" placeholder="{{ "email"|xla }}" type="email" id="email" class="email w-100 text-body form-control" value="" />
                         <p class="message font-italic"></p>
                     </div>
                     <span class="font-italic"><small>{{ "Registration is not required for Anonymous Telemetry Opt-In" | xlt }}</small></span>
