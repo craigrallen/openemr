@@ -1,0 +1,122 @@
+<?php
+
+namespace OpenEMR\Services {
+    final class AppointmentService
+    {
+        public const CATEGORY_CONSTANT_NO_SHOW = 'no_show';
+        public static array $rows = [];
+        public static array $queries = [];
+
+        public function getOneCalendarCategory($categoryId): array
+        {
+            self::$queries[] = $categoryId;
+            return self::$rows;
+        }
+    }
+}
+
+namespace PortalCategoryEligibilityFixture {
+    final class InputBoundary
+    {
+        public static array $post = [];
+        public static array $calls = [];
+    }
+
+    final class FixtureExit extends \RuntimeException
+    {
+    }
+
+    final class FixtureBoundary extends \RuntimeException
+    {
+    }
+
+    function filter_input(int $type, string $key): string|false|null
+    {
+        if ($type !== INPUT_POST || $key !== 'form_category') {
+            throw new \InvalidArgumentException('Unexpected synthetic input request');
+        }
+        InputBoundary::$calls[] = ['INPUT_POST', $key];
+        $value = InputBoundary::$post[$key] ?? null;
+        return $value === null ? null : (is_scalar($value) ? (string) $value : false);
+    }
+}
+
+namespace {
+    function xlt(string $message): string
+    {
+        return $message;
+    }
+
+    if ($argc !== 3) {
+        throw new \InvalidArgumentException('Expected native route path and encoded case');
+    }
+
+    $source = file_get_contents($argv[1]);
+    if ($source === false) {
+        throw new \RuntimeException('Cannot read native route');
+    }
+    $saveMarker = 'if ($form_action === "save") {';
+    $saveAt = strpos($source, $saveMarker);
+    $formDateAt = $saveAt === false ? false : strpos($source, '    $formDate =', $saveAt);
+    if ($saveAt === false || $formDateAt === false) {
+        throw new \RuntimeException('Cannot extract complete native save prefix');
+    }
+    $prefix = substr($source, $saveAt, $formDateAt - $saveAt);
+
+    $exitTokens = 0;
+    foreach (token_get_all("<?php\n" . $prefix) as $token) {
+        if (is_array($token) && $token[0] === T_EXIT) {
+            $exitTokens++;
+        }
+    }
+    $instrumented = preg_replace('/\bexit\s*(?:\(\s*\))?\s*;/', 'throw new \\PortalCategoryEligibilityFixture\\FixtureExit();', $prefix, -1, $replacements);
+    if ($instrumented === null || $replacements !== $exitTokens || $exitTokens > 1) {
+        throw new \RuntimeException('Expected zero or one exact exit termination in native prefix');
+    }
+
+    $encoded = base64_decode($argv[2], true);
+    if ($encoded === false) {
+        throw new \InvalidArgumentException('Invalid case encoding');
+    }
+    $case = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($case) || !isset($case['action'], $case['post'], $case['rows'])) {
+        throw new \InvalidArgumentException('Invalid case data');
+    }
+    $_POST = $case['post'];
+    $originalPost = $_POST;
+    \PortalCategoryEligibilityFixture\InputBoundary::$post = $case['post'];
+    \PortalCategoryEligibilityFixture\InputBoundary::$calls = [];
+    $form_action = $case['action'];
+    $eid = $case['eid'] ?? 0;
+    \OpenEMR\Services\AppointmentService::$rows = $case['rows'];
+    \OpenEMR\Services\AppointmentService::$queries = [];
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    ob_start();
+    try {
+        // Execute only the trusted repository source prefix with a synthetic function input boundary.
+        // eval has its own namespace and import scope; reproduce the route's class import here.
+        // The sentinel is the first operation at the native $formDate boundary.
+        eval("namespace PortalCategoryEligibilityFixture;\nuse OpenEMR\\Services\\AppointmentService;\n" . $instrumented . "\nthrow new \\PortalCategoryEligibilityFixture\\FixtureBoundary();\n}");
+        $outcome = 'none';
+    } catch (\PortalCategoryEligibilityFixture\FixtureExit) {
+        $outcome = 'rejected';
+    } catch (\PortalCategoryEligibilityFixture\FixtureBoundary) {
+        $outcome = 'boundary';
+    } finally {
+        $output = ob_get_clean();
+        restore_error_handler();
+    }
+    if ($_POST !== $originalPost) {
+        throw new \RuntimeException('Native prefix mutated POST');
+    }
+    echo json_encode([
+        'outcome' => $outcome,
+        'queries' => \OpenEMR\Services\AppointmentService::$queries,
+        'inputCalls' => \PortalCategoryEligibilityFixture\InputBoundary::$calls,
+        'post' => (object) $_POST,
+        'output' => $output,
+        'exitTerminations' => $exitTokens,
+    ], JSON_THROW_ON_ERROR);
+}
