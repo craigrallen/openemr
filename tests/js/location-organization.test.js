@@ -4,6 +4,7 @@ const path = require('node:path');
 const fixture = path.resolve(__dirname, '../clinical-ui/location-organization-contract.php.fixture');
 const expected = [
   'source binding',
+  'obsolete organization dependency removed',
   'native service and model',
   'setter and repeated getter identity',
   'replacement before getter',

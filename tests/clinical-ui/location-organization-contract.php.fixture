@@ -98,12 +98,19 @@ namespace {
             $new = '$this->fhirOrganizationService = $organizationService;';
             $declaration = 'class FhirLocationService extends FhirServiceBase implements IFhirExportableResourceService, IResourceUSCIGProfileService, INonPatientCompartmentResourceService';
             $check(substr_count($contents, $declaration) === 1, 'Location declaration changed');
+            $obsolete = "    private FhirOrganizationService \$organizationService;\n\n";
+            $anchor = "    public function __construct()\n";
             $check(substr_count($contents, $old) + substr_count($contents, $new) === 1, 'Setter assignment count changed');
-            $check(
-                $sourceHash === $original ||
-                (substr_count($contents, $new) === 1 && hash('sha256', str_replace($new, $old, $contents)) === $original),
-                'Location source differs beyond the single setter assignment'
-            );
+            $check(substr_count($contents, $obsolete) <= 1, 'Obsolete declaration count changed');
+            $check(substr_count($contents, $anchor) === 1, 'Constructor anchor count changed');
+            $inverse = str_replace($new, $old, $contents);
+            if (substr_count($contents, $obsolete) === 0) {
+                $inverse = str_replace($anchor, $obsolete . $anchor, $inverse);
+            }
+            $check(hash('sha256', $inverse) === $original, 'Location source differs beyond the setter assignment and obsolete declaration');
+        });
+        $case('obsolete organization dependency removed', static function () use ($contents, $check): void {
+            $check(substr_count($contents, "    private FhirOrganizationService \$organizationService;\n\n") === 0, 'Obsolete organization dependency remains');
         });
         $case('native service and model', static function () use ($root, $check): void {
             $check((new \ReflectionClass(FhirLocationService::class))->getFileName() === $root . '/src/Services/FHIR/FhirLocationService.php', 'Service is not native');
