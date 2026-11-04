@@ -120,6 +120,10 @@ class FhirDeviceService extends FhirServiceBase implements IResourceUSCIGProfile
             $device->addUdiCarrier($udiCarrier);
         }
 
+        if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
+            $device->setManufacturer($dataRecord['manufacturer']);
+        }
+
         if (!empty($dataRecord['manufactureDate'])) {
             $manufactureDate = new FHIRDateTime();
             $manufactureDate->setValue($dataRecord['manufactureDate']);
