@@ -102,9 +102,6 @@ function getAuthPortalUsers(): array
         while ($row = sqlFetchArray($authusers)) {
             $resultpd[] = $row;
         }
-        if (count($resultpd ?? []) === 0) {
-            $resultpd[] = sqlQuery("SELECT users.username as userid, CONCAT(users.fname,' ',users.lname) as username FROM users WHERE id = 1");
-        }
     }
 
     return $resultpd;
