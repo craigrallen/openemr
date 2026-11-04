@@ -61,7 +61,7 @@ namespace {
             'state' => 'Stockholm',
             'postal_code' => '111 20',
             'country_code' => 'SE',
-            'period_start' => '2020-01-01',
+            'period_start' => '2020-01-01 00:00:00',
             'phone' => '+46 8 123 456',
             'email' => 'facility@example.test',
             'fax' => '+46 8 123 457',
