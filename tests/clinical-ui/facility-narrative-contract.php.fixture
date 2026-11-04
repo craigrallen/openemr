@@ -1,0 +1,232 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only: the native service constructor is bypassed.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Services\FHIR\FhirCodeSystemConstants;
+    use OpenEMR\Services\FHIR\Organization\FhirOrganizationFacilityService;
+
+    $root = dirname(__DIR__, 2);
+    $source = $root . '/src/Services/FHIR/Organization/FhirOrganizationFacilityService.php';
+    $results = [];
+    $errors = [];
+    $sourceHash = null;
+    $bootstrapFailed = false;
+
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+
+    try {
+        date_default_timezone_set('UTC');
+        $GLOBALS['gbl_time_zone'] = 'UTC';
+
+        $check(is_file($source), 'Native service source is unavailable');
+        $sourceHash = hash_file('sha256', $source);
+        $check(is_string($sourceHash), 'Cannot hash native service source');
+        $check(class_exists(\DOMDocument::class), 'DOM extension is unavailable');
+
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        });
+
+        $reflection = new \ReflectionClass(FhirOrganizationFacilityService::class);
+        $method = $reflection->getMethod('parseOpenEMRRecord');
+        $check(realpath($method->getFileName()) === realpath($source), 'Method is not from the native service source');
+        $service = $reflection->newInstanceWithoutConstructor();
+
+        $baseRecord = [
+            'uuid' => '20900000-0000-4000-8000-000000000209',
+            'last_updated' => '2020-01-02 03:04:05',
+            'facility_npi' => '1234567890',
+            'domain_identifier' => '2.16.840.1.113883.3.209',
+            'line1' => '10 Main Street',
+            'city' => 'Stockholm',
+            'state' => 'Stockholm',
+            'postal_code' => '111 20',
+            'country_code' => 'SE',
+            'period_start' => '2020-01-01',
+            'phone' => '+46 8 123 456',
+            'email' => 'facility@example.test',
+            'fax' => '+46 8 123 457',
+        ];
+
+        // Expected fragments are literal contract examples, independent of the service implementation.
+        $cases = [
+            ['ordinary', 'Ordinary Clinic', 'Ordinary Clinic', true],
+            ['ampersand', 'A & B Clinic', 'A &amp; B Clinic', true],
+            ['angle brackets', 'North <tag> Clinic', 'North &lt;tag&gt; Clinic', true],
+            ['closing paragraph and injected sibling', 'Clinic</p><script>alert(1)</script><p>West', 'Clinic&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;p&gt;West', true],
+            ['both quotes', 'The "Doctor\'s" Clinic', 'The &quot;Doctor&apos;s&quot; Clinic', true],
+            ['Swedish Unicode', 'Södermalms vårdcentral – ÅÄÖ', 'Södermalms vårdcentral – ÅÄÖ', true],
+            ['literal entity-looking text', 'A &amp; B', 'A &amp;amp; B', true],
+            ['trimmed narrative', "  Padded Clinic \t", 'Padded Clinic', true],
+            ['absent name', null, null, false],
+            ['null name', null, null, true],
+            ['empty name', '', null, true],
+            ['whitespace name', " \t \n ", null, true],
+            ['string zero name', '0', null, true],
+        ];
+
+        $baselineNonText = null;
+        foreach ($cases as [$caseName, $name, $expectedParagraph, $includeName]) {
+            try {
+                $record = $baseRecord;
+                if ($includeName) {
+                    $record['name'] = $name;
+                }
+                $before = $record;
+                $resource = $service->parseOpenEMRRecord($record, false);
+                $check($record === $before, 'Input record changed');
+                $check($resource instanceof \OpenEMR\FHIR\R4\FHIRDomainResource\FHIROrganization, 'Native Organization object was not returned');
+
+                $objectJson = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+                $encoded = $service->parseOpenEMRRecord($record, true);
+                $check(is_string($encoded), 'Encoded mode did not return JSON');
+                $encodedJson = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+                $check($objectJson === $encodedJson, 'Object and encoded modes differ');
+
+                $check(($objectJson['resourceType'] ?? null) === 'Organization', 'Resource type changed');
+                $check(($objectJson['id'] ?? null) === $baseRecord['uuid'], 'UUID changed');
+                $check(($objectJson['active'] ?? null) === true, 'Active state changed');
+                $check(($objectJson['meta']['versionId'] ?? null) === '1', 'Meta version changed');
+                $check(($objectJson['meta']['lastUpdated'] ?? null) === '2020-01-02T03:04:05+00:00', 'Meta timestamp changed');
+                $check(($objectJson['identifier'][0]['system'] ?? null) === FhirCodeSystemConstants::PROVIDER_NPI, 'NPI system changed');
+                $check(($objectJson['identifier'][0]['value'] ?? null) === '1234567890', 'NPI value changed');
+                $check(($objectJson['identifier'][1]['system'] ?? null) === FhirCodeSystemConstants::OID_CLINICAL_LABORATORY_IMPROVEMENT_ACT_NUMBER, 'Domain identifier system changed');
+                $check(($objectJson['identifier'][1]['value'] ?? null) === '2.16.840.1.113883.3.209', 'Domain identifier value changed');
+                $check(($objectJson['address'][0]['line'][0] ?? null) === '10 Main Street', 'Address line changed');
+                $check(($objectJson['address'][0]['city'] ?? null) === 'Stockholm', 'Address city changed');
+                $check(($objectJson['address'][0]['postalCode'] ?? null) === '111 20', 'Address postal code changed');
+                $check(($objectJson['address'][0]['country'] ?? null) === 'SE', 'Address country changed');
+                $check(($objectJson['telecom'][0]['system'] ?? null) === 'phone' && ($objectJson['telecom'][0]['value'] ?? null) === '+46 8 123 456', 'Phone changed');
+                $check(($objectJson['telecom'][1]['system'] ?? null) === 'email' && ($objectJson['telecom'][1]['value'] ?? null) === 'facility@example.test', 'Email changed');
+                $check(($objectJson['telecom'][2]['system'] ?? null) === 'fax' && ($objectJson['telecom'][2]['value'] ?? null) === '+46 8 123 457', 'Fax changed');
+                $check(($objectJson['type'][0]['coding'][0]['code'] ?? null) === 'prov', 'Organization type changed');
+                $check(($objectJson['type'][0]['coding'][0]['system'] ?? null) === FhirCodeSystemConstants::HL7_ORGANIZATION_TYPE, 'Organization type system changed');
+
+                $nonText = $objectJson;
+                unset($nonText['name'], $nonText['_name'], $nonText['text']);
+                if ($baselineNonText === null) {
+                    $baselineNonText = $nonText;
+                } else {
+                    $check($nonText === $baselineNonText, 'Non-text resource fields differ from baseline');
+                }
+
+                if ($includeName && $name !== null) {
+                    $check(($objectJson['name'] ?? null) === $name, 'Structured name changed');
+                } else {
+                    $nativeName = $resource->getName();
+                    $check($nativeName instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRExtension, 'Native missing-name extension is absent');
+                    $nestedExtensions = $nativeName->getExtension();
+                    $check(is_array($nestedExtensions) && count($nestedExtensions) === 1, 'Native missing-name extension wrapper changed');
+                    $innerExtension = $nestedExtensions[0];
+                    $check($innerExtension instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRExtension, 'Native missing-name inner extension changed');
+                    $check((string) $innerExtension->getUrl() === FhirCodeSystemConstants::DATA_ABSENT_REASON_EXTENSION, 'Native missing-name extension URL changed');
+                    $check((string) $innerExtension->getValueCode() === 'unknown', 'Native missing-name reason changed');
+                }
+
+                if ($expectedParagraph === null) {
+                    $check(!array_key_exists('text', $objectJson), 'Narrative should be absent');
+                } else {
+                    $check(($objectJson['text']['status'] ?? null) === 'generated', 'Narrative status changed');
+                    $expectedDiv = '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . $expectedParagraph . '</p></div>';
+                    $actualDiv = $objectJson['text']['div'] ?? null;
+                    $check($actualDiv === $expectedDiv, 'Narrative escaping differs from the literal expected fragment');
+                    $check(is_string($actualDiv), 'Narrative div is not a string');
+                    $dom = new \DOMDocument();
+                    $check($dom->loadXML($actualDiv, LIBXML_NONET) === true, 'Narrative is not XML');
+                    $div = $dom->documentElement;
+                    $check($div !== null && $div->localName === 'div' && $div->namespaceURI === 'http://www.w3.org/1999/xhtml', 'Narrative root is not one XHTML div');
+                    $check($div->attributes->length === 0 && $div->getAttribute('xmlns') === 'http://www.w3.org/1999/xhtml', 'Narrative div has unexpected attributes');
+                    $elements = $dom->getElementsByTagName('*');
+                    $check($elements->length === 2, 'Narrative contains extra elements');
+                    $paragraph = $elements->item(1);
+                    $check($paragraph !== null && $paragraph->parentNode === $div && $paragraph->localName === 'p' && $paragraph->namespaceURI === 'http://www.w3.org/1999/xhtml', 'Narrative does not contain exactly one XHTML paragraph');
+                    $check($paragraph->attributes->length === 0, 'Paragraph has unexpected attributes');
+                    $check($paragraph->textContent === trim($name), 'Paragraph text differs from trimmed source name');
+                    $check(trim($div->textContent) === trim($name), 'Div contains text outside the paragraph');
+                }
+                $results[] = ['name' => $caseName, 'passed' => true, 'error' => null];
+            } catch (\Throwable $error) {
+                $results[] = ['name' => $caseName, 'passed' => false, 'error' => $error->getMessage()];
+            }
+        }
+
+        try {
+            $record = $baseRecord;
+            $record['name'] = "Bad\xC3(";
+            $before = $record;
+            $resource = $service->parseOpenEMRRecord($record, false);
+            $check($record === $before, 'Input record changed');
+            $check((string) $resource->getName() === $record['name'], 'Structured name bytes changed');
+            $text = $resource->getText();
+            $check(is_array($text), 'Native narrative shape changed');
+            $check(($text['status'] ?? null) === 'generated', 'Narrative status changed');
+            $expectedDiv = '<div xmlns="http://www.w3.org/1999/xhtml"> <p>Bad�(</p></div>';
+            $check(($text['div'] ?? null) === $expectedDiv, 'Invalid UTF-8 was not substituted in the narrative');
+            $dom = new \DOMDocument();
+            $check($dom->loadXML($text['div'], LIBXML_NONET) === true, 'Substituted narrative is not XML');
+            $check($dom->getElementsByTagName('*')->length === 2, 'Substituted narrative contains extra elements');
+            $check($dom->getElementsByTagName('p')->item(0)?->textContent === 'Bad�(', 'Substituted paragraph text changed');
+            $results[] = ['name' => 'invalid UTF-8 narrative substitution', 'passed' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $results[] = ['name' => 'invalid UTF-8 narrative substitution', 'passed' => false, 'error' => $error->getMessage()];
+        }
+
+        try {
+            $originalHash = 'b6951379595f3e17518b375e6410ba273b7f5232da4ab2761231b96873cec988';
+            $originalLine = "                'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
+            $replacementLine = "                'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'";
+            $contents = file_get_contents($source);
+            $check(is_string($contents), 'Cannot read native service source');
+            if ($sourceHash === $originalHash) {
+                $check(substr_count($contents, $originalLine) === 1, 'Approved original narrative line is not unique');
+                $check(substr_count($contents, $replacementLine) === 0, 'Replacement narrative line is unexpectedly present');
+            } else {
+                $check(substr_count($contents, $originalLine) === 0, 'Approved original narrative line remains');
+                $check(substr_count($contents, $replacementLine) === 1, 'Approved replacement narrative line is not unique');
+                $restored = str_replace($replacementLine, $originalLine, $contents, $replacements);
+                $check($replacements === 1, 'Approved replacement was not reversed exactly once');
+                $check(hash('sha256', $restored) === $originalHash, 'Source differs beyond the approved narrative operand');
+            }
+            $results[] = ['name' => 'strict source preservation', 'passed' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $results[] = ['name' => 'strict source preservation', 'passed' => false, 'error' => $error->getMessage()];
+        }
+    } catch (\Throwable $error) {
+        $bootstrapFailed = true;
+        $errors[] = $error->getMessage();
+    }
+
+    $failed = count($errors);
+    foreach ($results as $result) {
+        if (!$result['passed']) {
+            ++$failed;
+        }
+    }
+    echo json_encode([
+        'cases' => $results,
+        'errors' => $errors,
+        'total' => count($results),
+        'failed' => $failed,
+        'source_sha256' => $sourceHash,
+    ], JSON_THROW_ON_ERROR) . "\n";
+    exit($bootstrapFailed ? 2 : ($failed === 0 ? 0 : 1));
+}
