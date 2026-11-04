@@ -1,0 +1,194 @@
+<?php
+declare(strict_types=1);
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    });
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only boundary: the native service, traits, interfaces, models and
+    // UtilsService are loaded from src. Its parent constructor is never invoked.
+    class FhirServiceBase {}
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRRelatedPerson;
+    use OpenEMR\Services\FHIR\FhirRelatedPersonService;
+    use OpenEMR\Services\FHIR\UtilsService;
+
+    $cases = [];
+    $errors = [];
+    $sourceHash = '';
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $runCase = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    };
+    $fresh = static function (): FhirRelatedPersonService {
+        return (new \ReflectionClass(FhirRelatedPersonService::class))->newInstanceWithoutConstructor();
+    };
+    $serialized = static function (FHIRRelatedPerson $person): array {
+        return json_decode(json_encode($person, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    };
+    $record = [
+        'uuid' => '123e4567-e89b-12d3-a456-426614174000',
+        'puuid' => '123e4567-e89b-12d3-a456-426614174001',
+        'active' => 1,
+        'last_updated' => '2024-01-02 03:04:05',
+        'relationship_code' => 'MTH',
+        'relationship_code_title' => 'Mother',
+        'title' => 'Dr',
+        'fname' => 'Ada',
+        'mname' => 'Marie',
+        'lname' => 'Example',
+        'telecom' => [
+            ['value' => 'synthetic-phone', 'system' => 'phone', 'use' => 'home'],
+            ['value' => 'ada@example.test', 'system' => 'email', 'use' => 'work'],
+        ],
+        'addresses' => [[
+            'line1' => '10 Main Street',
+            'line2' => 'Floor 2',
+            'city' => 'Stockholm',
+            'state' => 'Stockholm',
+            'postal_code' => '111 22',
+            'country_code' => 'SE',
+            'use' => 'home',
+            'type' => 'physical',
+            'period_start' => '2024-01-01 00:00:00',
+        ]],
+    ];
+
+    try {
+        $sourcePath = $root . '/src/Services/FHIR/FhirRelatedPersonService.php';
+        $source = file_get_contents($sourcePath);
+        $check($source !== false, 'RelatedPerson source unreadable');
+        $sourceHash = hash('sha256', $source);
+
+        $runCase('single-expression source boundary', static function () use ($source, $check): void {
+            $old = "if (1 === \$dataRecord['active']) {";
+            $new = "if (1 === \$dataRecord['active'] || '1' === \$dataRecord['active']) {";
+            $check(substr_count($source, $old) + substr_count($source, $new) === 1, 'Active expression must occur exactly once');
+            $inverse = str_replace($new, $old, $source);
+            $check(hash('sha256', $inverse) === '2897441609d9ab3489003b6143cb722910691b43059bbb97a8d0e68f03b7c267', 'Complete source differs beyond the proposed active expression');
+        });
+
+        $runCase('source producer observations', static function () use ($root, $check): void {
+            $contact = file_get_contents($root . '/src/Services/ContactRelationService.php');
+            $base = file_get_contents($root . '/src/Services/BaseService.php');
+            $check($contact !== false && $base !== false, 'Producer source unreadable');
+            $check(str_contains($contact, 'cr.active'), 'ContactRelationService does not select cr.active');
+            $check(str_contains($base, 'uuidToString'), 'BaseService UUID conversion not observed');
+        });
+
+        $runCase('native service and dependency provenance', static function () use ($root, $check): void {
+            $service = new \ReflectionClass(FhirRelatedPersonService::class);
+            $check($service->getFileName() === $root . '/src/Services/FHIR/FhirRelatedPersonService.php', 'Service is not native');
+            foreach (['populateActive', 'parseOpenEMRRecord'] as $method) {
+                $reflection = $service->getMethod($method);
+                $check($reflection->getDeclaringClass()->getName() === FhirRelatedPersonService::class, $method . ' is not declared by the native service');
+                $check($reflection->getFileName() === $service->getFileName(), $method . ' has different source provenance');
+            }
+            foreach (['FhirServiceBaseEmptyTrait', 'BulkExportSupportAllOperationsTrait', 'FhirBulkExportDomainResourceTrait', 'VersionedProfileTrait'] as $trait) {
+                $name = 'OpenEMR\\Services\\FHIR\\Traits\\' . $trait;
+                $check($service->hasMethod('parseOpenEMRRecord') && in_array($name, $service->getTraitNames(), true), $trait . ' is absent');
+                $check((new \ReflectionClass($name))->getFileName() === $root . '/src/Services/FHIR/Traits/' . $trait . '.php', $trait . ' is not native');
+            }
+            foreach (['IResourceUSCIGProfileService', 'IPatientCompartmentResourceService', 'IFhirExportableResourceService'] as $interface) {
+                $name = 'OpenEMR\\Services\\FHIR\\' . $interface;
+                $check($service->implementsInterface($name), $interface . ' is absent');
+                $check((new \ReflectionClass($name))->getFileName() === $root . '/src/Services/FHIR/' . $interface . '.php', $interface . ' is not native');
+            }
+            $check((new \ReflectionClass(FHIRRelatedPerson::class))->getFileName() === $root . '/src/FHIR/R4/FHIRDomainResource/FHIRRelatedPerson.php', 'FHIR model is not native');
+            $check((new \ReflectionClass(UtilsService::class))->getFileName() === $root . '/src/Services/FHIR/UtilsService.php', 'UtilsService is not native');
+        });
+
+        $runCase('direct canonical active values', static function () use ($fresh, $serialized, $check): void {
+            foreach ([1, '1'] as $value) {
+                $input = ['active' => $value];
+                $before = $input;
+                $person = new FHIRRelatedPerson();
+                $fresh()->populateActive($person, $input);
+                $check($input === $before, 'Direct input mutated');
+                $check(($serialized($person)['active'] ?? null) === true, 'Canonical active value did not serialize as true: ' . var_export($value, true));
+            }
+        });
+
+        $runCase('direct legacy false values', static function () use ($fresh, $serialized, $check): void {
+            foreach ([0, '0', true, 1.0, '01', '1.0', ' 1', '1 ', null, [], [1]] as $value) {
+                $input = ['active' => $value];
+                $before = $input;
+                $person = new FHIRRelatedPerson();
+                $fresh()->populateActive($person, $input);
+                $check($input === $before, 'Direct input mutated');
+                $check(($serialized($person)['active'] ?? null) === false, 'Legacy false value changed: ' . var_export($value, true));
+            }
+        });
+
+        $runCase('full native parse and unchanged fields', static function () use ($fresh, $serialized, $record, $check): void {
+            $integerRecord = $record;
+            $stringRecord = array_replace($record, ['active' => '1']);
+            $integerBefore = $integerRecord;
+            $stringBefore = $stringRecord;
+            $integerPerson = $fresh()->parseOpenEMRRecord($integerRecord);
+            $stringPerson = $fresh()->parseOpenEMRRecord($stringRecord, true);
+            $check($integerPerson instanceof FHIRRelatedPerson && $stringPerson instanceof FHIRRelatedPerson, 'Native parse did not return RelatedPerson objects');
+            $check($integerRecord === $integerBefore && $stringRecord === $stringBefore, 'Full parse mutated an input record');
+            $integer = $serialized($integerPerson);
+            $string = $serialized($stringPerson);
+            $check(($integer['active'] ?? null) === true && ($string['active'] ?? null) === true, 'Canonical active values did not both serialize as true');
+            unset($integer['active'], $string['active']);
+            $check($integer === $string, 'A non-active serialized field changed with active representation');
+            $check(($integer['id'] ?? null) === $record['uuid'], 'Resource id differs');
+            $check(($integer['patient']['reference'] ?? null) === 'Patient/' . $record['puuid'], 'Patient reference differs');
+            $check(($integer['relationship'][0]['coding'][0]['code'] ?? null) === 'MTH', 'Relationship code differs');
+            $check(($integer['relationship'][0]['coding'][0]['display'] ?? null) === 'Mother', 'Relationship display differs');
+            $check(($integer['name'][0]['family'] ?? null) === 'Example', 'Family name differs');
+            $check(($integer['name'][0]['given'] ?? null) === ['Ada', 'Marie'], 'Given names differ');
+            $check(($integer['telecom'][0]['value'] ?? null) === 'synthetic-phone' && ($integer['telecom'][1]['value'] ?? null) === 'ada@example.test', 'Telecom differs');
+            $check(($integer['address'][0]['line'] ?? null) === ['10 Main Street', 'Floor 2'], 'Address lines differ');
+            $check(($integer['address'][0]['city'] ?? null) === 'Stockholm' && ($integer['address'][0]['postalCode'] ?? null) === '111 22', 'Address locality differs');
+            $check(str_starts_with((string) ($integer['address'][0]['period']['start'] ?? ''), '2024-01-01T00:00:00'), 'Address period start differs');
+            $check(($integer['meta']['versionId'] ?? null) === '1', 'Meta version differs');
+            $check(str_starts_with((string) ($integer['meta']['lastUpdated'] ?? ''), '2024-01-02T03:04:05'), 'Meta timestamp differs');
+            $check(count($integer['meta']['profile'] ?? []) === 3, 'Meta profiles differ');
+        });
+    } catch (\Throwable $error) {
+        $errors[] = $error->getMessage();
+    }
+
+    $failed = count($errors) + count(array_filter($cases, static fn(array $result): bool => !$result['ok']));
+    try {
+        echo json_encode(['cases' => $cases, 'errors' => $errors, 'total' => count($cases), 'failed' => $failed, 'source_sha256' => $sourceHash], JSON_THROW_ON_ERROR);
+    } catch (\Throwable $error) {
+        fwrite(STDERR, $error->getMessage());
+        exit(1);
+    }
+    exit($failed === 0 && count($cases) > 0 ? 0 : 1);
+}
