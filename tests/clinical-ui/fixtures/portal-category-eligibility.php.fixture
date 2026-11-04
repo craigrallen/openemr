@@ -1,0 +1,100 @@
+<?php
+
+namespace OpenEMR\Services {
+    final class AppointmentService
+    {
+        public const CATEGORY_CONSTANT_NO_SHOW = 'no_show';
+        public static array $rows = [];
+        public static array $queries = [];
+
+        public function getOneCalendarCategory($categoryId): array
+        {
+            self::$queries[] = $categoryId;
+            return self::$rows;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\Services\AppointmentService;
+
+    final class FixtureExit extends \RuntimeException
+    {
+    }
+
+    final class FixtureBoundary extends \RuntimeException
+    {
+    }
+
+    function xlt(string $message): string
+    {
+        return $message;
+    }
+
+    if ($argc !== 3) {
+        throw new \InvalidArgumentException('Expected native route path and encoded case');
+    }
+
+    $source = file_get_contents($argv[1]);
+    if ($source === false) {
+        throw new \RuntimeException('Cannot read native route');
+    }
+    $saveMarker = 'if ($form_action === "save") {';
+    $saveAt = strpos($source, $saveMarker);
+    $formDateAt = $saveAt === false ? false : strpos($source, '    $formDate =', $saveAt);
+    if ($saveAt === false || $formDateAt === false) {
+        throw new \RuntimeException('Cannot extract complete native save prefix');
+    }
+    $prefix = substr($source, $saveAt, $formDateAt - $saveAt);
+
+    $exitTokens = 0;
+    foreach (token_get_all("<?php\n" . $prefix) as $token) {
+        if (is_array($token) && $token[0] === T_EXIT) {
+            $exitTokens++;
+        }
+    }
+    $instrumented = preg_replace('/\bexit\s*(?:\(\s*\))?\s*;/', 'throw new \\FixtureExit();', $prefix, -1, $replacements);
+    if ($instrumented === null || $replacements !== $exitTokens || $exitTokens > 1) {
+        throw new \RuntimeException('Expected zero or one exact exit termination in native prefix');
+    }
+
+    $encoded = base64_decode($argv[2], true);
+    if ($encoded === false) {
+        throw new \InvalidArgumentException('Invalid case encoding');
+    }
+    $case = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($case) || !isset($case['action'], $case['post'], $case['rows'])) {
+        throw new \InvalidArgumentException('Invalid case data');
+    }
+    $_POST = $case['post'];
+    $originalPost = $_POST;
+    $form_action = $case['action'];
+    \OpenEMR\Services\AppointmentService::$rows = $case['rows'];
+    \OpenEMR\Services\AppointmentService::$queries = [];
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    ob_start();
+    try {
+        // The sentinel is the first operation at the native $formDate boundary.
+        eval($instrumented . "\nthrow new \\FixtureBoundary();\n}");
+        $outcome = 'none';
+    } catch (FixtureExit) {
+        $outcome = 'rejected';
+    } catch (FixtureBoundary) {
+        $outcome = 'boundary';
+    } finally {
+        $output = ob_get_clean();
+        restore_error_handler();
+    }
+    if ($_POST !== $originalPost) {
+        throw new \RuntimeException('Native prefix mutated POST');
+    }
+    echo json_encode([
+        'outcome' => $outcome,
+        'queries' => \OpenEMR\Services\AppointmentService::$queries,
+        'post' => (object) $_POST,
+        'output' => $output,
+        'exitTerminations' => $exitTokens,
+    ], JSON_THROW_ON_ERROR);
+}
