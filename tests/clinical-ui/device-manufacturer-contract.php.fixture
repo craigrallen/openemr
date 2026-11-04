@@ -138,14 +138,19 @@ PATCH;
     });
     runCase('writer projected roundtrip', static function (): void {
         $record = row(); $record['manufacturer'] = 'Müller & Sons <A>';
-        $mapper = service(); $device = $mapper->parseOpenEMRRecord($record);
+        $mapper = service();
+        // Native inbound constructor receives decoded JSON arrays, not nested model objects.
+        // Patient resolution is outside this no-Composer contract; retained by the synthetic row boundary.
+        $payload = deviceJson($record);
+        unset($payload['patient']);
+        $device = new \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRDevice($payload);
         $parsed = $mapper->parseFhirResource($device);
         $elements = $parsed['udi_data']['standard_elements'] ?? [];
         check(($elements['companyName'] ?? null) === $record['manufacturer'], 'native writer lost companyName');
         check(($parsed['diagnosis'] ?? null) === 'SNOMED-CT:49062001', 'native writer lost type');
         // Explicit synthetic projection of the stored row, NOT DeviceService/SQL execution.
         $projected = [
-            'uuid' => $parsed['uuid'], 'puuid' => $parsed['puuid'], 'modifydate' => $record['modifydate'],
+            'uuid' => $parsed['uuid'], 'puuid' => $record['puuid'], 'modifydate' => $record['modifydate'],
             'code' => ['49062001' => ['description' => $parsed['title']]],
             'udi_di' => $elements['di'], 'udi' => $parsed['udi'], 'manufacturer' => $elements['companyName'],
             'manufactureDate' => $elements['manufacturingDate'], 'expirationDate' => $elements['expirationDate'],
