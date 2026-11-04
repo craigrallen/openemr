@@ -30,6 +30,10 @@ const cases = [
     { name: 'missing posted category', action: 'save', post: {}, rows: [], outcome: 'rejected', queries: 1 },
     { name: 'non-save empty action', action: '', post: { form_category: '5' }, rows: [{ ...eligible, pc_active: 0 }], outcome: 'none', queries: 0 },
     { name: 'non-save delete action', action: 'delete', post: { form_category: '5' }, rows: [{ ...eligible, pc_active: 0 }], outcome: 'none', queries: 0 },
+    { name: 'existing inactive category cancellation', action: 'save', eid: 42, post: { form_category: '5', form_apptstatus: 'x' }, rows: [{ ...eligible, pc_active: 0 }], outcome: 'boundary', queries: 0 },
+    { name: 'existing inactive category ordinary edit', action: 'save', eid: 42, post: { form_category: '5' }, rows: [{ ...eligible, pc_active: 0 }], outcome: 'boundary', queries: 0 },
+    { name: 'existing eligible category ordinary edit', action: 'save', eid: 42, post: { form_category: '5' }, rows: [eligible], outcome: 'boundary', queries: 0 },
+    { name: 'new inactive category with cancelled status', action: 'save', eid: 0, post: { form_category: '5', form_apptstatus: 'x' }, rows: [{ ...eligible, pc_active: 0 }], outcome: 'rejected', queries: 1 },
 ];
 
 function inspectSource() {
@@ -79,7 +83,7 @@ function runCase(testCase) {
     if (testCase.queries) {
         assert.deepEqual(actual.queries, [testCase.post.form_category ?? null], `${testCase.name}: requested category`);
     }
-    assert.deepEqual(actual.inputCalls, testCase.action === 'save' ? [['INPUT_POST', 'form_category']] : [], `${testCase.name}: synthetic input boundary calls`);
+    assert.deepEqual(actual.inputCalls, testCase.action === 'save' && (testCase.eid ?? 0) === 0 ? [['INPUT_POST', 'form_category']] : [], `${testCase.name}: synthetic input boundary calls`);
     assert.deepEqual(actual.post, testCase.post, `${testCase.name}: POST unchanged`);
     assert.equal(actual.output.startsWith('Error:'), testCase.outcome === 'rejected', `${testCase.name}: rejection message`);
     return actual;

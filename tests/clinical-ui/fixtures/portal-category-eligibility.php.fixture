@@ -87,6 +87,7 @@ namespace {
     \PortalCategoryEligibilityFixture\InputBoundary::$post = $case['post'];
     \PortalCategoryEligibilityFixture\InputBoundary::$calls = [];
     $form_action = $case['action'];
+    $eid = $case['eid'] ?? 0;
     \OpenEMR\Services\AppointmentService::$rows = $case['rows'];
     \OpenEMR\Services\AppointmentService::$queries = [];
     set_error_handler(static function (int $severity, string $message): never {
