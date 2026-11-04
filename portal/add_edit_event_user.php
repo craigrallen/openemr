@@ -161,7 +161,7 @@ if ($form_action !== '') {
 }
 
 if ($form_action === "save") {
-    $categoryRows = (new AppointmentService())->getOneCalendarCategory($_POST['form_category'] ?? null);
+    $categoryRows = (new AppointmentService())->getOneCalendarCategory(filter_input(INPUT_POST, 'form_category'));
     $category = $categoryRows[0] ?? null;
     if (!is_array($category) ||
         !in_array($category['pc_active'] ?? null, [1, '1'], true) ||
