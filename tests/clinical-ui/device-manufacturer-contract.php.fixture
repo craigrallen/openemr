@@ -72,18 +72,26 @@ namespace {
     runCase('source inverse', static function () use (&$source, $sourcePath): void {
         $source = file_get_contents($sourcePath);
         check(is_string($source), 'source unavailable');
-        $insertion = <<<'PATCH'
+        $rawInsertion = <<<'PATCH'
         if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
             $device->setManufacturer($dataRecord['manufacturer']);
         }
 PATCH;
-        $insertion .= "\n\n";
+        $rawInsertion .= "\n\n";
+        $typedInsertion = <<<'PATCH'
+        if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
+            $device->setManufacturer(new \OpenEMR\FHIR\R4\FHIRElement\FHIRString($dataRecord['manufacturer']));
+        }
+PATCH;
+        $typedInsertion .= "\n\n";
         $anchor = '        if (!empty($dataRecord[\'manufactureDate\'])) {';
-        $count = substr_count($source, $insertion);
-        check($count <= 1, 'approved insertion occurs more than once');
+        $rawCount = substr_count($source, $rawInsertion);
+        $typedCount = substr_count($source, $typedInsertion);
+        check($rawCount + $typedCount <= 1, 'approved insertion occurs more than once');
         check(substr_count($source, $anchor) === 1, 'manufactureDate anchor is not unique');
-        check($count === 0 || str_contains($source, $insertion . $anchor), 'insertion location differs');
-        $original = $count === 1 ? str_replace($insertion, '', $source) : $source;
+        check($rawCount === 0 || str_contains($source, $rawInsertion . $anchor), 'raw insertion location differs');
+        check($typedCount === 0 || str_contains($source, $typedInsertion . $anchor), 'typed insertion location differs');
+        $original = $rawCount === 1 ? str_replace($rawInsertion, '', $source) : ($typedCount === 1 ? str_replace($typedInsertion, '', $source) : $source);
         check(hash('sha256', $original) === '3b766f89ffbad5a8f3e2260b5eaf62cf2f8a7083036bc2414a49160456b604f4', 'original source SHA mismatch');
     });
     runCase('native provenance', static function () use ($root): void {
@@ -110,6 +118,8 @@ PATCH;
     runCase('nonempty manufacturers', static function (): void {
         foreach (['Acme', '0', 'Müller & Sons <A> / "B"', "  Acme \t"] as $manufacturer) {
             $record = row(); $record['manufacturer'] = $manufacturer;
+            $device = service()->parseOpenEMRRecord($record);
+            check($device->getManufacturer() instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRString, 'manufacturer is not a native FHIRString: ' . $manufacturer);
             check((deviceJson($record)['manufacturer'] ?? null) === $manufacturer, 'manufacturer changed or omitted: ' . $manufacturer);
         }
     });
