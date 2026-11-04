@@ -121,7 +121,7 @@ class FhirDeviceService extends FhirServiceBase implements IResourceUSCIGProfile
         }
 
         if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
-            $device->setManufacturer($dataRecord['manufacturer']);
+            $device->setManufacturer(new \OpenEMR\FHIR\R4\FHIRElement\FHIRString($dataRecord['manufacturer']));
         }
 
         if (!empty($dataRecord['manufactureDate'])) {
