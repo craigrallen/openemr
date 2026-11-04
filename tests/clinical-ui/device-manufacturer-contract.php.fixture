@@ -1,0 +1,175 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only boundary; no application parent constructor is invoked.
+    class FhirServiceBase {}
+}
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/FhirDeviceService.php';
+    $source = null;
+    $cases = [];
+    $errors = [];
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    });
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+    function runCase(string $name, callable $test): void
+    {
+        global $cases;
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+    function service(): \OpenEMR\Services\FHIR\FhirDeviceService
+    {
+        return (new \ReflectionClass(\OpenEMR\Services\FHIR\FhirDeviceService::class))->newInstanceWithoutConstructor();
+    }
+    function row(): array
+    {
+        return [
+            'uuid' => '11111111-1111-4111-8111-111111111111',
+            'puuid' => '22222222-2222-4222-8222-222222222222',
+            'modifydate' => '2024-02-03 04:05:06',
+            'code' => ['49062001' => ['description' => 'Implantable device']],
+            'udi_di' => 'synthetic-di', 'udi' => 'synthetic-hrf',
+            'manufactureDate' => '2024-01-02T03:04:05+00:00',
+            'expirationDate' => '2028-01-02T03:04:05+00:00',
+            'lotNumber' => 'LOT-42', 'serialNumber' => 'SER-84', 'distinctIdentifier' => 'DONOR-21',
+        ];
+    }
+    function deviceJson(array $record): array
+    {
+        $device = service()->parseOpenEMRRecord($record);
+        check($device instanceof \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRDevice, 'reader did not return native FHIRDevice');
+        return json_decode(json_encode($device, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    }
+    runCase('source inverse', static function () use (&$source, $sourcePath): void {
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'source unavailable');
+        $rawInsertion = <<<'PATCH'
+        if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
+            $device->setManufacturer($dataRecord['manufacturer']);
+        }
+PATCH;
+        $rawInsertion .= "\n\n";
+        $typedInsertion = <<<'PATCH'
+        if (isset($dataRecord['manufacturer']) && is_string($dataRecord['manufacturer']) && $dataRecord['manufacturer'] !== '') {
+            $device->setManufacturer(new \OpenEMR\FHIR\R4\FHIRElement\FHIRString($dataRecord['manufacturer']));
+        }
+PATCH;
+        $typedInsertion .= "\n\n";
+        $anchor = '        if (!empty($dataRecord[\'manufactureDate\'])) {';
+        $rawCount = substr_count($source, $rawInsertion);
+        $typedCount = substr_count($source, $typedInsertion);
+        check($rawCount + $typedCount <= 1, 'approved insertion occurs more than once');
+        check(substr_count($source, $anchor) === 1, 'manufactureDate anchor is not unique');
+        check($rawCount === 0 || str_contains($source, $rawInsertion . $anchor), 'raw insertion location differs');
+        check($typedCount === 0 || str_contains($source, $typedInsertion . $anchor), 'typed insertion location differs');
+        $original = $rawCount === 1 ? str_replace($rawInsertion, '', $source) : ($typedCount === 1 ? str_replace($typedInsertion, '', $source) : $source);
+        check(hash('sha256', $original) === '3b766f89ffbad5a8f3e2260b5eaf62cf2f8a7083036bc2414a49160456b604f4', 'original source SHA mismatch');
+    });
+    runCase('native provenance', static function () use ($root): void {
+        $native = [
+            \OpenEMR\Services\FHIR\FhirDeviceService::class => 'Services/FHIR/FhirDeviceService.php',
+            \OpenEMR\Services\FHIR\UtilsService::class => 'Services/FHIR/UtilsService.php',
+            \OpenEMR\Services\FHIR\FhirPayloadReader::class => 'Services/FHIR/FhirPayloadReader.php',
+            \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRDevice::class => 'FHIR/R4/FHIRDomainResource/FHIRDevice.php',
+        ];
+        foreach (['FhirServiceBaseEmptyTrait', 'BulkExportSupportAllOperationsTrait', 'FhirBulkExportDomainResourceTrait', 'VersionedProfileTrait'] as $trait) {
+            $native['OpenEMR\\Services\\FHIR\\Traits\\' . $trait] = 'Services/FHIR/Traits/' . $trait . '.php';
+        }
+        foreach (['IResourceUSCIGProfileService', 'IFhirExportableResourceService', 'IPatientCompartmentResourceService'] as $interface) {
+            $native['OpenEMR\\Services\\FHIR\\' . $interface] = 'Services/FHIR/' . $interface . '.php';
+        }
+        foreach ($native as $class => $path) {
+            check((new \ReflectionClass($class))->getFileName() === realpath($root . '/src/' . $path), 'non-native declaration: ' . $class);
+        }
+        foreach (['parseOpenEMRRecord', 'parseFhirResource'] as $method) {
+            check((new \ReflectionMethod(\OpenEMR\Services\FHIR\FhirDeviceService::class, $method))->getFileName() === realpath($root . '/src/Services/FHIR/FhirDeviceService.php'), 'non-native method');
+        }
+        check(get_parent_class(service()) === 'OpenEMR\\Services\\FHIR\\FhirServiceBase', 'unexpected parent');
+    });
+    runCase('nonempty manufacturers', static function (): void {
+        foreach (['Acme', '0', 'Müller & Sons <A> / "B"', "  Acme \t"] as $manufacturer) {
+            $record = row(); $record['manufacturer'] = $manufacturer;
+            $device = service()->parseOpenEMRRecord($record);
+            check($device->getManufacturer() instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRString, 'manufacturer is not a native FHIRString: ' . $manufacturer);
+            check((deviceJson($record)['manufacturer'] ?? null) === $manufacturer, 'manufacturer changed or omitted: ' . $manufacturer);
+        }
+    });
+    runCase('omitted manufacturers', static function (): void {
+        check(!array_key_exists('manufacturer', deviceJson(row())), 'missing manufacturer emitted');
+        foreach ([null, '', 0, false, []] as $manufacturer) {
+            $record = row(); $record['manufacturer'] = $manufacturer;
+            check(!array_key_exists('manufacturer', deviceJson($record)), 'empty or nonstring manufacturer emitted');
+        }
+    });
+    runCase('other fields preserved', static function (): void {
+        $baseline = deviceJson(row()); $record = row(); $record['manufacturer'] = 'Acme';
+        $with = deviceJson($record);
+        check(($with['manufacturer'] ?? null) === 'Acme', 'manufacturer absent');
+        unset($with['manufacturer']);
+        check($with === $baseline, 'non-manufacturer JSON changed');
+        check(($baseline['id'] ?? null) === $record['uuid'], 'id changed');
+        check(($baseline['patient']['reference'] ?? null) === 'Patient/' . $record['puuid'], 'patient changed');
+        check(($baseline['type']['coding'][0]['code'] ?? null) === '49062001', 'type changed');
+        check(($baseline['udiCarrier'][0]['deviceIdentifier'] ?? null) === $record['udi_di'], 'UDI DI changed');
+        check(($baseline['udiCarrier'][0]['carrierHRF'] ?? null) === $record['udi'], 'UDI HRF changed');
+        foreach (['manufactureDate', 'expirationDate', 'lotNumber', 'serialNumber', 'distinctIdentifier'] as $field) {
+            check(($baseline[$field] ?? null) === $record[$field], $field . ' changed');
+        }
+        check(($baseline['meta']['lastUpdated'] ?? null) === '2024-02-03T04:05:06+00:00', 'modifydate changed');
+    });
+    runCase('writer projected roundtrip', static function (): void {
+        $record = row(); $record['manufacturer'] = 'Müller & Sons <A>';
+        $mapper = service();
+        // Native inbound constructor receives decoded JSON arrays, not nested model objects.
+        // Patient resolution is outside this no-Composer contract; retained by the synthetic row boundary.
+        $payload = deviceJson($record);
+        unset($payload['patient']);
+        $device = new \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRDevice($payload);
+        $parsed = $mapper->parseFhirResource($device);
+        $elements = $parsed['udi_data']['standard_elements'] ?? [];
+        check(($elements['companyName'] ?? null) === $record['manufacturer'], 'native writer lost companyName');
+        check(($parsed['diagnosis'] ?? null) === 'SNOMED-CT:49062001', 'native writer lost type');
+        // Explicit synthetic projection of the stored row, NOT DeviceService/SQL execution.
+        $projected = [
+            'uuid' => $parsed['uuid'], 'puuid' => $record['puuid'], 'modifydate' => $record['modifydate'],
+            'code' => ['49062001' => ['description' => $parsed['title']]],
+            'udi_di' => $elements['di'], 'udi' => $parsed['udi'], 'manufacturer' => $elements['companyName'],
+            'manufactureDate' => $elements['manufacturingDate'], 'expirationDate' => $elements['expirationDate'],
+            'lotNumber' => $elements['lotNumber'], 'serialNumber' => $elements['serialNumber'],
+            'distinctIdentifier' => $elements['donationId'],
+        ];
+        check(deviceJson($projected) === deviceJson($record), 'projected row did not reproduce JSON');
+    });
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    echo json_encode(['cases' => $cases, 'errors' => $errors, 'total' => count($cases), 'failed' => $failed, 'source_sha256' => hash('sha256', is_string($source) ? $source : '')], JSON_THROW_ON_ERROR), "\n";
+    exit($failed === 0 && $errors === [] && count($cases) === 6 ? 0 : 1);
+}
