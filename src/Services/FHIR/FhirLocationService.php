@@ -93,7 +93,7 @@ class FhirLocationService extends FhirServiceBase implements IFhirExportableReso
      */
     public function setOrganizationService(FhirOrganizationService $organizationService): void
     {
-        $this->organizationService = $organizationService;
+        $this->fhirOrganizationService = $organizationService;
     }
 
     /**
