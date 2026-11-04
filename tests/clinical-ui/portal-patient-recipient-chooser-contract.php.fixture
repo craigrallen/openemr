@@ -1,0 +1,203 @@
+<?php
+
+/**
+ * Standalone contract for the native getAuthPortalUsers() route function.
+ * Run: php tests/clinical-ui/portal-patient-recipient-chooser-contract.php.fixture patient|dashboard
+ */
+
+declare(strict_types=1);
+
+$mode = $argv[1] ?? '';
+if (!in_array($mode, ['patient', 'dashboard'], true)) {
+    fwrite(STDERR, "Expected patient or dashboard mode\n");
+    exit(2);
+}
+
+define('IS_DASHBOARD', $mode === 'dashboard');
+
+$route = dirname(__DIR__, 2) . '/portal/messaging/messages.php';
+$source = file_get_contents($route);
+if ($source === false) {
+    fwrite(STDERR, "Cannot read messaging route\n");
+    exit(2);
+}
+
+// Token offsets find the function's own closing brace, including every nested
+// branch. Nothing before or after the function is evaluated.
+$tokens = token_get_all($source);
+$offset = 0;
+$start = null;
+$end = null;
+$depth = 0;
+$opened = false;
+foreach ($tokens as $token) {
+    $text = is_array($token) ? $token[1] : $token;
+    if ($start === null && is_array($token) && $token[0] === T_FUNCTION) {
+        $tail = substr($source, $offset);
+        if (preg_match('/^function\s+getAuthPortalUsers\s*\(/', $tail) === 1) {
+            $start = $offset;
+        }
+    }
+    if ($start !== null) {
+        if ($text === '{') {
+            $opened = true;
+            ++$depth;
+        } elseif ($text === '}' && $opened) {
+            --$depth;
+            if ($depth === 0) {
+                $end = $offset + strlen($text);
+                break;
+            }
+        }
+    }
+    $offset += strlen($text);
+}
+if ($start === null || $end === null || $end <= $start) {
+    fwrite(STDERR, "Cannot isolate native getAuthPortalUsers function\n");
+    exit(2);
+}
+$function = substr($source, $start, $end - $start);
+if (preg_match('/^function\s+getAuthPortalUsers\s*\(\s*\)\s*:\s*array\s*\{/', $function) !== 1) {
+    fwrite(STDERR, "Unexpected function signature\n");
+    exit(2);
+}
+
+$case = [];
+$queries = [];
+
+function sqlStatement(string $query): object
+{
+    global $case, $queries;
+    $queries[] = ['kind' => 'statement', 'sql' => $query];
+    if (str_contains($query, 'FROM users')) {
+        $rows = [];
+        foreach ($case['users'] as $user) {
+            if ($user['active'] !== 1 || $user['portal_user'] !== 1) {
+                continue;
+            }
+            $row = ['userid' => $user['username'], 'username' => $user['fname'] . ' ' . $user['lname']];
+            if (IS_DASHBOARD) {
+                $row['type'] = 'user';
+            }
+            $rows[] = $row;
+        }
+        return (object) ['rows' => $rows, 'index' => 0];
+    }
+    if (str_contains($query, 'FROM patient_data')) {
+        return (object) ['rows' => $case['patients'], 'index' => 0];
+    }
+    throw new RuntimeException('Unexpected statement: ' . $query);
+}
+
+function sqlFetchArray(object $cursor): array|false
+{
+    if ($cursor->index >= count($cursor->rows)) {
+        return false;
+    }
+    return $cursor->rows[$cursor->index++];
+}
+
+function sqlQuery(string $query): array|false
+{
+    global $case, $queries;
+    $queries[] = ['kind' => 'query', 'sql' => $query];
+    if (!str_contains($query, 'FROM users WHERE id = 1')) {
+        throw new RuntimeException('Unexpected fallback query: ' . $query);
+    }
+    foreach ($case['users'] as $user) {
+        if ($user['id'] === 1) {
+            $row = ['userid' => $user['username'], 'username' => $user['fname'] . ' ' . $user['lname']];
+            if (IS_DASHBOARD) {
+                $row['type'] = 'user';
+            }
+            return $row;
+        }
+    }
+    return false;
+}
+
+eval($function);
+
+$failures = [];
+$passed = 0;
+function check(bool $condition, string $scenario, string $expectation): void
+{
+    global $failures, $passed;
+    if ($condition) {
+        ++$passed;
+    } else {
+        $failures[] = $scenario . ': ' . $expectation;
+    }
+}
+
+function runCase(string $name, array $users, array $patients = []): array
+{
+    global $case, $queries;
+    $case = ['users' => $users, 'patients' => $patients];
+    $queries = [];
+    return [getAuthPortalUsers(), $queries];
+}
+
+function staffQueryIsEligible(array $queries): bool
+{
+    return isset($queries[0])
+        && $queries[0]['kind'] === 'statement'
+        && preg_match('/FROM\s+users\s+WHERE\s+active\s*=\s*1\s+AND\s+portal_user\s*=\s*1\b/i', $queries[0]['sql']) === 1;
+}
+
+function fallbackQueries(array $queries): array
+{
+    return array_values(array_filter($queries, static fn (array $query): bool =>
+        $query['kind'] === 'query' && str_contains($query['sql'], 'FROM users WHERE id = 1')));
+}
+
+$disabledOne = ['id' => 1, 'username' => 'disabled.one', 'fname' => 'Disabled', 'lname' => 'One', 'active' => 0, 'portal_user' => 0];
+$alice = ['id' => 8, 'username' => 'alice', 'fname' => 'Alice', 'lname' => 'Able', 'active' => 1, 'portal_user' => 1];
+$bob = ['id' => 9, 'username' => 'bob', 'fname' => 'Bob', 'lname' => 'Baker', 'active' => 1, 'portal_user' => 1];
+$patientRows = [
+    ['userid' => 'patient.20', 'username' => 'Pat Twenty', 'type' => 'p', 'pid' => 20],
+    ['userid' => 'patient.21', 'username' => 'Pat Twenty One', 'type' => 'p', 'pid' => 21],
+];
+
+if ($mode === 'patient') {
+    [$result, $queries] = runCase('ineligible user 1', [$disabledOne]);
+    check($result === [], 'ineligible user 1', 'recipient list must be empty');
+    check(staffQueryIsEligible($queries), 'ineligible user 1', 'staff query must require active portal users');
+    check(fallbackQueries($queries) === [], 'ineligible user 1', 'must not look up user 1');
+
+    [$result, $queries] = runCase('no users', []);
+    check($result === [], 'no users', 'recipient list must be [] rather than [false] or [null]');
+    check(staffQueryIsEligible($queries), 'no users', 'staff query must require active portal users');
+    check(fallbackQueries($queries) === [], 'no users', 'must not look up user 1');
+
+    [$result, $queries] = runCase('eligible order', [$alice, $disabledOne, $bob]);
+    check($result === [
+        ['userid' => 'alice', 'username' => 'Alice Able'],
+        ['userid' => 'bob', 'username' => 'Bob Baker'],
+    ], 'eligible order', 'eligible rows, shape, and order must remain intact');
+    check(staffQueryIsEligible($queries), 'eligible order', 'staff query must require active portal users');
+    check(fallbackQueries($queries) === [], 'eligible order', 'must not look up user 1');
+} else {
+    [$result, $queries] = runCase('dashboard combined', [$alice, $disabledOne, $bob], $patientRows);
+    check($result === [
+        ['userid' => 'alice', 'username' => 'Alice Able', 'type' => 'user'],
+        ['userid' => 'bob', 'username' => 'Bob Baker', 'type' => 'user'],
+        ...$patientRows,
+    ], 'dashboard combined', 'eligible staff then patient rows must retain shape and order');
+    check(staffQueryIsEligible($queries), 'dashboard combined', 'staff query must require active portal users');
+    check(count($queries) === 2 && str_contains($queries[1]['sql'], 'FROM patient_data'), 'dashboard combined', 'patient list query must remain');
+    check(fallbackQueries($queries) === [], 'dashboard combined', 'staff fallback must not run when eligible staff exist');
+
+    [$result, $queries] = runCase('dashboard fallback', [$disabledOne], $patientRows);
+    check($result === [
+        ['userid' => 'disabled.one', 'username' => 'Disabled One', 'type' => 'user'],
+        ...$patientRows,
+    ], 'dashboard fallback', 'existing user 1 fallback and patient list must remain');
+    check(staffQueryIsEligible($queries), 'dashboard fallback', 'staff query must require active portal users');
+    check(count(fallbackQueries($queries)) === 1, 'dashboard fallback', 'existing user 1 lookup must run once');
+    check(count($queries) === 3 && str_contains($queries[2]['sql'], 'FROM patient_data'), 'dashboard fallback', 'patient list query must remain after fallback');
+}
+
+$report = ['mode' => $mode, 'passed' => $passed, 'failed' => count($failures), 'failures' => $failures];
+echo json_encode($report, JSON_THROW_ON_ERROR) . "\n";
+exit($failures === [] ? 0 : 1);
