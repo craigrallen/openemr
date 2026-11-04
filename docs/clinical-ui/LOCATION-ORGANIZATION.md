@@ -26,6 +26,10 @@ The fixture supplies declaration-only synthetic `FhirServiceBase` and a syntheti
 
 For a native facility record, the contract checks the injected managing reference and encoded JSON, omission when that reference is null, replacement before and after lookup, replacement after lazy lookup, and independence between Location instances. It also checks native Location fields and unchanged input.
 
+## Hosted baseline correction
+
+After declaration removal, hosted PHPStan41896473419 passed Analyze but failed baseline stability. Official artifact13356950621 was compared across all 170 baseline files: the sole difference deletes the obsolete five-line Location `property.onlyWritten` entry. The fifth scoped path `.phpstan/baseline/property.onlyWritten.php` matches that artifact exactly; no suppression is added. Jira75073 extended scope before this mechanical generated-artifact correction, a nonproduction TDD exception backed by hosted RED and independently reviewed with all five changed files. Product and regression-fixture behavior are unchanged.
+
 ## Remaining validation
 
 Authenticated role and security checks, persistence and clinical QA, full hosted CI coverage, and ordinary approval remain open. This delivery includes no merge, deploy, install, national integration, vendor or cron work, or denied-path retry.
