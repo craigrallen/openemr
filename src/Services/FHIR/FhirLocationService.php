@@ -65,8 +65,6 @@ class FhirLocationService extends FhirServiceBase implements IFhirExportableReso
      */
     private $patientUuid;
 
-    private FhirOrganizationService $organizationService;
-
     public function __construct()
     {
         parent::__construct();

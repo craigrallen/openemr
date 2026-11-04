@@ -4,13 +4,13 @@
 
 `FhirLocationService::setOrganizationService()` previously assigned the supplied service to `$organizationService`, while `getOrganizationService()` reads `$fhirOrganizationService`. The setter therefore did not affect the dependency used by `parseOpenEMRRecord()`.
 
-Only the setter assignment changes to `$this->fhirOrganizationService = $organizationService;`. The unused property and every other product byte remain unchanged. The original source SHA-256 is `a98e53b0c75e35385bc2471d348483fa7978947f771ed0fce15a048a25f4ceb2`; replacing the corrected assignment with the old one must reproduce that hash.
+The product correction has two exact deltas: the setter assigns `$this->fhirOrganizationService = $organizationService;`, and the unused `private FhirOrganizationService $organizationService;` declaration is removed. Every other product byte remains unchanged. The original source SHA-256 is `a98e53b0c75e35385bc2471d348483fa7978947f771ed0fce15a048a25f4ceb2`; reversing the setter assignment and restoring that declaration at its original constructor anchor must reproduce the hash.
 
 This corrects an existing public injection contract. No existing production caller of the setter was found. Direct setter use and the connected parser support the interoperability behavior tested here; they do not establish completion of the original feature or a UI redesign. This is a dependency gap, not evidence of production data corruption.
 
 ## TDD evidence
 
-The tests-only commit `b853b5b24b39d4f0983ae93b3d2a9aa08cef4154` received a genuine controller semantic RED: 12 cases, 4 passed, 8 failed, `errors: []`. The reported source hash remained the original hash above. The failures cover injected identity, replacement, instance independence, parsed references, and null omission. GREEN is recorded separately after materialization, not inferred from the author handoff.
+The tests-only commit `b853b5b24b39d4f0983ae93b3d2a9aa08cef4154` received a genuine controller semantic RED: 12 cases, 4 passed, 8 failed, `errors: []`. The reported source hash remained the original hash above. The failures cover injected identity, replacement, instance independence, parsed references, and null omission. Controller evidence then recorded 12 passing cases with the setter corrected and the unused declaration still present. Hosted PHPStan41895004404 at `3a7bfb75bc60de277c4a41bed63bfcc645ea5da7` reported a genuine RED for the unused `FhirLocationService::$organizationService` property. Tests-only `630388c3` added a precise source check requiring its absence: 13 cases, 12 passed and that check failed before removal. The new 13-case GREEN is recorded separately after materialization, not inferred from authorship.
 
 The CLI contract fixture is `tests/clinical-ui/location-organization-contract.php.fixture`; its hosted Jest wrapper is `tests/js/location-organization.test.js`.
 
