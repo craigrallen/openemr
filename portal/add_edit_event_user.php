@@ -161,6 +161,18 @@ if ($form_action !== '') {
 }
 
 if ($form_action === "save") {
+    $categoryRows = (new AppointmentService())->getOneCalendarCategory($_POST['form_category'] ?? null);
+    $category = $categoryRows[0] ?? null;
+    if (!is_array($category) ||
+        !in_array($category['pc_active'] ?? null, [1, '1'], true) ||
+        !in_array($category['pc_cattype'] ?? null, [0, '0'], true) ||
+        !array_key_exists('pc_constant_id', $category) ||
+        $category['pc_constant_id'] === AppointmentService::CATEGORY_CONSTANT_NO_SHOW
+    ) {
+        echo xlt("Error: Invalid appointment category");
+        exit();
+    }
+
     $formDate = is_string($_POST['form_date'] ?? null) ? $_POST['form_date'] : null;
     $formEnddate = is_string($_POST['form_enddate'] ?? null) ? $_POST['form_enddate'] : null;
     $event_date = fixDate($formDate);

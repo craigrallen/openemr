@@ -76,8 +76,10 @@ namespace {
     });
     ob_start();
     try {
+        // Execute only the trusted repository source prefix, never request/case text as code.
+        // eval has its own import scope, so reproduce the route's existing class import here.
         // The sentinel is the first operation at the native $formDate boundary.
-        eval($instrumented . "\nthrow new \\FixtureBoundary();\n}");
+        eval("use OpenEMR\\Services\\AppointmentService;\n" . $instrumented . "\nthrow new \\FixtureBoundary();\n}");
         $outcome = 'none';
     } catch (FixtureExit) {
         $outcome = 'rejected';
