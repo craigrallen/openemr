@@ -266,8 +266,97 @@ $total = $_GET['total'] ?? null;
             return json
         }
     </script>
+<style>
+  @media screen {
+    html.oe-workbench-context body.oe-terminal-payment-popup {
+      --oe-wb-ink: #17343b;
+      --oe-wb-paper: #fff;
+      --oe-wb-line: #d9e4e2;
+      --oe-wb-canvas: #f3f7f5;
+      --oe-wb-petrol: #086878;
+      color: var(--oe-wb-ink);
+      background-color: var(--oe-wb-canvas);
+      padding: 8px;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup > .container-fluid {
+      width: 100%;
+      max-width: 720px;
+      min-width: 0;
+      margin: 0 auto;
+      padding: 16px;
+      color: var(--oe-wb-ink);
+      background-color: var(--oe-wb-paper);
+      border: 1px solid var(--oe-wb-line);
+      border-radius: 8px;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup .col-sm-6.offset-sm-3 {
+      flex: 0 0 100%;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup h4 {
+      color: var(--oe-wb-ink);
+      overflow-wrap: anywhere;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup .btn:focus {
+      outline: 3px solid var(--oe-wb-petrol);
+      outline-offset: 2px;
+      scroll-margin: 6px;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup .btn:focus-visible {
+      outline: 3px solid var(--oe-wb-petrol);
+      outline-offset: 2px;
+      scroll-margin: 6px;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup .row.m-1 {
+      flex-wrap: wrap;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup .row.m-1 .btn {
+      max-width: calc(100% - 0.5rem);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup hr {
+      border-color: var(--oe-wb-line);
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup h5 {
+      color: var(--oe-wb-ink);
+    }
+
+    /* Bootstrap's bg-secondary utility is important; this one override pairs the log surface with readable ink. */
+    html.oe-workbench-context body.oe-terminal-payment-popup #logs.bg-secondary {
+      min-width: 0;
+      color: var(--oe-wb-ink);
+      background-color: var(--oe-wb-canvas) !important;
+      border: 1px solid var(--oe-wb-line);
+      border-radius: 6px;
+      overflow-wrap: anywhere;
+    }
+
+    html.oe-workbench-context body.oe-terminal-payment-popup #logs pre,
+    html.oe-workbench-context body.oe-terminal-payment-popup #logs code {
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+      color: var(--oe-wb-ink);
+      background-color: var(--oe-wb-canvas);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+  }
+</style>
 </head>
-<body>
+<body class="oe-terminal-payment-popup">
     <div class="container-fluid ">
         <div class="row">
             <div class="col-sm-6 offset-sm-3">
