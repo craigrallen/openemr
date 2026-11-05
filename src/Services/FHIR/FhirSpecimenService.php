@@ -323,7 +323,7 @@ class FhirSpecimenService extends FhirServiceBase implements IPatientCompartment
         }
 
         // Set collection details
-        if (!empty($dataRecord['collected_date']) || !empty($dataRecord['collection_start']) || !empty($dataRecord['collection_end']) || !empty($dataRecord['method']) || !empty($dataRecord['location'])) {
+        if (!empty($dataRecord['collected_date']) || !empty($dataRecord['collection_start']) || !empty($dataRecord['collection_end']) || !empty($dataRecord['method_code']) || !empty($dataRecord['method']) || !empty($dataRecord['location_code']) || !empty($dataRecord['location'])) {
             $collection = new FHIRSpecimenCollection();
 
             // Collection time
