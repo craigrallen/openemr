@@ -343,6 +343,11 @@ $total = $_GET['total'] ?? null;
       overflow-wrap: anywhere;
     }
 
+    html.oe-workbench-context body.oe-terminal-payment-popup #logs > .row {
+      margin-right: 0;
+      margin-left: 0;
+    }
+
     html.oe-workbench-context body.oe-terminal-payment-popup #logs pre,
     html.oe-workbench-context body.oe-terminal-payment-popup #logs code {
       min-width: 0;
