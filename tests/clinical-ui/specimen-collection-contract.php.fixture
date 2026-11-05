@@ -1,0 +1,165 @@
+<?php
+
+declare(strict_types=1);
+
+// The native service's constructor needs application services. Its parent is only
+// declared here; the service itself, its traits, helpers, and FHIR models are native.
+namespace OpenEMR\Services\FHIR {
+    abstract class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRSpecimen;
+    use OpenEMR\Services\FHIR\FhirCodeSystemConstants;
+    use OpenEMR\Services\FHIR\FhirSpecimenService;
+
+    const EXPECTED_SOURCE_SHA256 = '25570b96595955e4ff96a3db65b2e460566a3c1397c6265baef7b9eb5b862280';
+    const EXPECTED_CASE_COUNT = 16;
+
+    $root = dirname(__DIR__, 2);
+    $source = $root . '/src/Services/FHIR/FhirSpecimenService.php';
+    $report = ['total' => 0, 'failed' => 0, 'cases' => [], 'errors' => [], 'source_sha256' => null];
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $case = static function (string $name, callable $body) use (&$report): void {
+        ++$report['total'];
+        try {
+            $body();
+            $report['cases'][] = ['name' => $name, 'passed' => true];
+        } catch (\Throwable $error) {
+            ++$report['failed'];
+            $report['cases'][] = ['name' => $name, 'passed' => false];
+            $report['errors'][] = ['case' => $name, 'message' => $error->getMessage()];
+        }
+    };
+
+    try {
+        $check(PHP_SAPI === 'cli', 'CLI required');
+        $check(is_file($source), 'Native service source missing');
+        $bytes = file_get_contents($source);
+        $check(is_string($bytes), 'Cannot read native service source');
+        $report['source_sha256'] = hash('sha256', $bytes);
+
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (str_starts_with($class, $prefix)) {
+                $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+                if (is_file($path)) {
+                    require_once $path;
+                }
+            }
+        });
+
+        // A fixed source digest proves this is the native class. A future repaired
+        // guard is accepted only if reversing its exact two-operand expansion
+        // reproduces the original digest; no other source change is accepted.
+        $old = "!empty(\$dataRecord['collection_end']) || !empty(\$dataRecord['method']) || !empty(\$dataRecord['location'])";
+        $new = "!empty(\$dataRecord['collection_end']) || !empty(\$dataRecord['method_code']) || !empty(\$dataRecord['method']) || !empty(\$dataRecord['location_code']) || !empty(\$dataRecord['location'])";
+        $case('native_source_provenance', static function () use ($check, $source, $bytes, $old, $new, $report): void {
+            $reflection = new \ReflectionClass(FhirSpecimenService::class);
+            $check($reflection->getFileName() === realpath($source), 'Service class has wrong source');
+            $check($reflection->getMethod('parseOpenEMRRecord')->getDeclaringClass()->getName() === FhirSpecimenService::class, 'Parser is not the native method');
+            if ($report['source_sha256'] !== EXPECTED_SOURCE_SHA256) {
+                $check(substr_count($bytes, $new) === 1, 'Only one exact expanded guard is allowed');
+                $check(substr_count($bytes, $old) === 0, 'Original guard must be replaced');
+                $check(hash('sha256', str_replace($new, $old, $bytes)) === EXPECTED_SOURCE_SHA256, 'Source differs beyond guard expansion');
+            }
+        });
+
+        $service = (new \ReflectionClass(FhirSpecimenService::class))->newInstanceWithoutConstructor();
+        $check($service instanceof FhirSpecimenService, 'Native service did not load');
+
+        $baseline = [
+            'uuid' => '11111111-2222-4333-8444-555555555555',
+            'patient_uuid' => 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+            'identifier' => 'SPEC-001',
+            'updated_at' => '2026-10-21T12:34:56+00:00',
+            'deleted' => '0',
+        ];
+        $run = static function (string $name, array $input, ?array $method, ?array $location = null, ?array $dates = null) use ($case, $check, $service, $baseline): void {
+            $case($name, static function () use ($check, $service, $baseline, $input, $method, $location, $dates): void {
+                $record = array_replace($baseline, $input);
+                $specimen = $service->parseOpenEMRRecord($record, false);
+                $check($specimen instanceof FHIRSpecimen, 'Parser returned a nonnative FHIR model');
+                $collection = $specimen->getCollection();
+                $expectedCollection = $method !== null || $location !== null || $dates !== null;
+                $check(($collection !== null) === $expectedCollection, 'Collection presence differs');
+                $encoded = $service->parseOpenEMRRecord($record, true);
+                $check(is_string($encoded), 'Encoded parser did not return JSON string');
+                $modelJson = json_encode($specimen, JSON_THROW_ON_ERROR);
+                $check($encoded === $modelJson, 'Encoded and model JSON differ');
+                $json = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+                $check(($json['id'] ?? null) === $baseline['uuid'], 'Specimen id lost');
+                $check(($json['identifier'][0]['value'] ?? null) === $baseline['identifier'], 'Specimen identifier lost');
+                $check(($json['subject']['reference'] ?? null) === 'Patient/' . $baseline['patient_uuid'], 'Patient subject lost');
+                $check(($json['meta']['versionId'] ?? null) === '1', 'Meta version lost');
+                $check(($json['meta']['lastUpdated'] ?? null) === '2026-10-21T12:34:56+00:00', 'Meta time lost');
+                $check(in_array(FhirSpecimenService::USCDI_PROFILE, $json['meta']['profile'] ?? [], true), 'Meta profile lost');
+                $check(($json['status'] ?? null) === 'available', 'Specimen status changed');
+                $check(isset($json['collection']) === $expectedCollection, 'JSON collection presence differs');
+                if (!$expectedCollection) {
+                    return;
+                }
+                $value = static fn ($item) => is_object($item) ? $item->getValue() : $item;
+                $check($collection instanceof \OpenEMR\FHIR\R4\FHIRResource\FHIRSpecimen\FHIRSpecimenCollection, 'Collection is not native model');
+                foreach (['method' => $method, 'bodySite' => $location] as $field => $expected) {
+                    $concept = $field === 'method' ? $collection->getMethod() : $collection->getBodySite();
+                    $check(($concept !== null) === ($expected !== null), "$field model presence differs");
+                    $check(isset($json['collection'][$field]) === ($expected !== null), "$field JSON presence differs");
+                    if ($expected === null) {
+                        continue;
+                    }
+                    $coding = $concept->getCoding()[0] ?? null;
+                    $check($coding instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRCoding, "$field coding is not native");
+                    $actual = $json['collection'][$field]['coding'][0] ?? [];
+                    $check($value($coding->getSystem()) === FhirCodeSystemConstants::SNOMED_CT, "$field model system differs");
+                    $check(($actual['system'] ?? null) === FhirCodeSystemConstants::SNOMED_CT, "$field JSON system differs");
+                    foreach (['code' => 'getCode', 'display' => 'getDisplay'] as $key => $getter) {
+                        $check($value($coding->$getter()) === ($expected[$key] ?? null), "$field model $key differs");
+                        $check(($actual[$key] ?? null) === ($expected[$key] ?? null), "$field JSON $key differs");
+                    }
+                }
+                if ($dates !== null) {
+                    foreach ($dates as $key => $value) {
+                        $check(($json['collection'][$key] ?? null) === $value, "Collection $key lost");
+                    }
+                }
+            });
+        };
+
+        foreach (['absent', 'null', 'empty'] as $description) {
+            $methodInput = ['method_code' => 'M-123'];
+            $locationInput = ['location_code' => 'L-456'];
+            if ($description !== 'absent') {
+                $methodInput['method'] = $description === 'null' ? null : '';
+                $locationInput['location'] = $description === 'null' ? null : '';
+            }
+            $run("method_code_$description", $methodInput, ['code' => 'M-123']);
+            $run("location_code_$description", $locationInput, null, ['code' => 'L-456']);
+            $run("both_codes_$description", $methodInput + $locationInput, ['code' => 'M-123'], ['code' => 'L-456']);
+        }
+        $run('both_codes_descriptions', ['method_code' => 'M-123', 'method' => 'Venipuncture', 'location_code' => 'L-456', 'location' => 'Left arm'], ['code' => 'M-123', 'display' => 'Venipuncture'], ['code' => 'L-456', 'display' => 'Left arm']);
+        $run('descriptions_only', ['method' => 'Venipuncture', 'location' => 'Left arm'], ['display' => 'Venipuncture'], ['display' => 'Left arm']);
+        $run('dates_only', ['collected_date' => '2026-10-20T09:10:11+00:00'], null, null, ['collectedDateTime' => '2026-10-20T09:10:11+00:00']);
+        $run('codes_with_collected_date', ['method_code' => 'M-123', 'location_code' => 'L-456', 'collected_date' => '2026-10-20T09:10:11+00:00'], ['code' => 'M-123'], ['code' => 'L-456'], ['collectedDateTime' => '2026-10-20T09:10:11+00:00']);
+        $run('codes_with_period', ['method_code' => 'M-123', 'location_code' => 'L-456', 'collection_start' => '2026-10-20T09:10:11+00:00', 'collection_end' => '2026-10-20T10:11:12+00:00'], ['code' => 'M-123'], ['code' => 'L-456'], ['collectedPeriod' => ['start' => '2026-10-20T09:10:11+00:00', 'end' => '2026-10-20T10:11:12+00:00']]);
+        $run('empty_collection', [], null, null);
+        $check($report['total'] === EXPECTED_CASE_COUNT, 'Case count differs from contract');
+    } catch (\Throwable $error) {
+        ++$report['failed'];
+        $report['errors'][] = ['case' => 'infrastructure', 'message' => $error->getMessage()];
+    }
+
+    echo json_encode($report, JSON_THROW_ON_ERROR) . "\n";
+    exit($report['failed'] === 0 && $report['total'] === EXPECTED_CASE_COUNT ? 0 : 1);
+}
