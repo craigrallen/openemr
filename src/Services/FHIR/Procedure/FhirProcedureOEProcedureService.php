@@ -217,7 +217,7 @@ class FhirProcedureOEProcedureService extends FhirServiceBase implements IPatien
         $fhirCodeableConcept = new FHIRCodeableConcept();
         if (!empty($codeParts['code'])) {
             $code = $codeParts['code'];
-            $description = $codesService->lookup_code_description($code);
+            $description = $codesService->lookup_code_description($dataRecord['code']);
             $description = !empty($description) ? $description : null; // we can get an "" string back from lookup
             $system = $codesService->getSystemForCodeType($codeParts['code_type']) ?? null;
             if (!empty($system)) {

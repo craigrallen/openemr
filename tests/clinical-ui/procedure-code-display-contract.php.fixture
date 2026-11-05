@@ -1,0 +1,238 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only parent. The real mapper and its native traits do the work.
+    class FhirServiceBase {}
+}
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Procedure/FhirProcedureOEProcedureService.php';
+    $source = null;
+    $cases = [];
+    $lookupCalls = [];
+    $descriptions = [
+        'CPT4:99213' => 'Office visit',
+        'SNOMED-CT:80146002' => 'Appendectomy',
+        'ICD10:Z01.818' => 'Preprocedural examination',
+        'LOINC:1234-5' => 'Laboratory measure',
+    ];
+    $code_types = [
+        'CPT4' => ['id' => 1, 'external' => 0],
+        'SNOMED-CT' => ['id' => 2, 'external' => 11],
+        'ICD10' => ['id' => 3, 'external' => 1],
+        'LOINC' => ['id' => 4, 'external' => 0],
+    ];
+    $code_external_tables = [];
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    });
+
+    // Synthetic, typed lookup boundary. Native lookup_code_descriptions in
+    // custom/code_types.inc.php likewise splits TYPE:CODE before querying SQL.
+    // This fixture performs no SQL and does not claim to exercise that function.
+    function lookup_code_descriptions($codes, $desc_detail = 'code_text'): string
+    {
+        global $lookupCalls, $descriptions;
+        $lookupCalls[] = [$codes, $desc_detail];
+        return $descriptions[$codes] ?? '';
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function runCase(string $name, callable $test): void
+    {
+        global $cases;
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+
+    function mapper(): \OpenEMR\Services\FHIR\Procedure\FhirProcedureOEProcedureService
+    {
+        return (new \ReflectionClass(\OpenEMR\Services\FHIR\Procedure\FhirProcedureOEProcedureService::class))->newInstanceWithoutConstructor();
+    }
+
+    function row(): array
+    {
+        return [
+            'order_uuid' => '11111111-1111-4111-8111-111111111111',
+            'patient' => ['uuid' => '22222222-2222-4222-8222-222222222222'],
+            'encounter' => ['uuid' => '33333333-3333-4333-8333-333333333333'],
+            'provider' => ['uuid' => '44444444-4444-4444-8444-444444444444'],
+            'date_ordered' => '2024-02-03 04:05:06',
+            'code' => 'CPT4:99213',
+            'name' => 'Ordered procedure',
+        ];
+    }
+
+    function output(array $record): array
+    {
+        $resource = mapper()->parseOpenEMRRecord($record);
+        check($resource instanceof \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRProcedure, 'mapper did not return native FHIRProcedure');
+        check($resource->getCode() instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept, 'code is not native FHIRCodeableConcept');
+        foreach ($resource->getCode()->getCoding() as $coding) {
+            check($coding instanceof \OpenEMR\FHIR\R4\FHIRElement\FHIRCoding, 'coding is not native FHIRCoding');
+        }
+        $objectJson = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $encoded = mapper()->parseOpenEMRRecord($record, true);
+        check(is_string($encoded), 'encoded mapper output is not a string');
+        $encodedJson = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        check($encodedJson === $objectJson, 'object and encoded Procedure differ');
+        return $objectJson;
+    }
+
+    runCase('source byte inverse', static function () use (&$source, $sourcePath): void {
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'mapper source unavailable');
+        $original = '$description = $codesService->lookup_code_description($code);';
+        $corrected = '$description = $codesService->lookup_code_description($dataRecord[\'code\']);';
+        check(substr_count($source, $original) + substr_count($source, $corrected) === 1, 'primary lookup operand is absent or duplicated');
+        $inverse = str_replace($corrected, $original, $source);
+        check(hash('sha256', $inverse) === '7342c9643feb67b27df71d5e3d26bff86f7d575f4de33ba9cb77d9a2bc22cb70', 'mapper differs beyond approved operand replacement');
+    });
+
+    runCase('native declarations and parser', static function () use ($root): void {
+        $native = [
+            \OpenEMR\Services\FHIR\Procedure\FhirProcedureOEProcedureService::class => 'Services/FHIR/Procedure/FhirProcedureOEProcedureService.php',
+            \OpenEMR\Services\CodeTypesService::class => 'Services/CodeTypesService.php',
+            \OpenEMR\Services\FHIR\UtilsService::class => 'Services/FHIR/UtilsService.php',
+            \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRProcedure::class => 'FHIR/R4/FHIRDomainResource/FHIRProcedure.php',
+            \OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept::class => 'FHIR/R4/FHIRElement/FHIRCodeableConcept.php',
+            \OpenEMR\FHIR\R4\FHIRElement\FHIRCoding::class => 'FHIR/R4/FHIRElement/FHIRCoding.php',
+            \OpenEMR\Services\FHIR\Traits\VersionedProfileTrait::class => 'Services/FHIR/Traits/VersionedProfileTrait.php',
+            \OpenEMR\Services\FHIR\Traits\FhirServiceBaseEmptyTrait::class => 'Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+            \OpenEMR\Services\FHIR\Traits\PatientSearchTrait::class => 'Services/FHIR/Traits/PatientSearchTrait.php',
+            \OpenEMR\Services\FHIR\IPatientCompartmentResourceService::class => 'Services/FHIR/IPatientCompartmentResourceService.php',
+        ];
+        foreach ($native as $class => $path) {
+            check((new \ReflectionClass($class))->getFileName() === realpath($root . '/src/' . $path), 'non-native declaration: ' . $class);
+        }
+        foreach (['parseOpenEMRRecord', 'getSupportedVersions'] as $method) {
+            check((new \ReflectionMethod(\OpenEMR\Services\FHIR\Procedure\FhirProcedureOEProcedureService::class, $method))->getFileName() === realpath($root . '/src/Services/FHIR/Procedure/FhirProcedureOEProcedureService.php'), 'non-native mapper method: ' . $method);
+        }
+        $parser = new \OpenEMR\Services\CodeTypesService();
+        check($parser->parseCode('CPT4:99213') === ['code' => '99213', 'code_type' => 'CPT4'], 'native parser did not strip CPT4 type');
+        check($parser->parseCode('SNOMED-CT:80146002') === ['code' => '80146002', 'code_type' => 'SNOMED-CT'], 'native parser did not strip SNOMED type');
+        check($parser->lookup_code_description('CPT4:99213') === 'Office visit', 'native CodeTypesService did not use typed lookup seam');
+        check($parser->lookup_code_description('99213') === '', 'untyped lookup unexpectedly succeeded');
+    });
+
+    runCase('typed CPT4 primary display', static function (): void {
+        global $lookupCalls;
+        $lookupCalls = [];
+        $json = output(row());
+        check(($json['code']['coding'][0] ?? null) === [
+            'system' => \OpenEMR\Services\FHIR\FhirCodeSystemConstants::AMA_CPT,
+            'code' => '99213',
+            'display' => 'Office visit',
+        ], 'CPT4 coding code, system, or display changed');
+        check(in_array(['CPT4:99213', 'code_text'], $lookupCalls, true), 'primary lookup lost CPT4 type');
+    });
+
+    runCase('typed SNOMED primary display', static function (): void {
+        global $lookupCalls;
+        $record = row();
+        $record['code'] = 'SNOMED-CT:80146002';
+        $lookupCalls = [];
+        $json = output($record);
+        check(($json['code']['coding'][0]['code'] ?? null) === '80146002', 'SNOMED code retained type or changed');
+        check(($json['code']['coding'][0]['system'] ?? null) === \OpenEMR\Services\FHIR\FhirCodeSystemConstants::SNOMED_CT, 'SNOMED system changed');
+        check(($json['code']['coding'][0]['display'] ?? null) === 'Appendectomy', 'SNOMED display missing');
+        check(in_array(['SNOMED-CT:80146002', 'code_text'], $lookupCalls, true), 'primary lookup lost SNOMED type');
+    });
+
+    runCase('reason and LOINC lookup independence', static function (): void {
+        global $lookupCalls;
+        $record = row();
+        $record['diagnosis'] = 'ICD10:Z01.818';
+        $record['standard_code'] = '1234-5';
+        $lookupCalls = [];
+        $json = output($record);
+        check(($json['reasonCode'][0]['coding'][0]['display'] ?? null) === 'Preprocedural examination', 'reason description changed');
+        check(($json['reasonCode'][0]['coding'][0]['code'] ?? null) === 'Z01.818', 'reason code changed');
+        check(($json['code']['coding'][0]['display'] ?? null) === 'Office visit', 'primary display missing with LOINC');
+        check(($json['code']['coding'][1] ?? null) === [
+            'system' => \OpenEMR\Services\FHIR\FhirCodeSystemConstants::LOINC,
+            'code' => '1234-5',
+            'display' => 'Laboratory measure',
+        ], 'LOINC coding changed');
+        check(in_array(['ICD10:Z01.818', 'code_text'], $lookupCalls, true), 'reason lookup lost type');
+        check(in_array(['LOINC:1234-5', 'code_text'], $lookupCalls, true), 'LOINC lookup lost type');
+        $record['standard_code'] = '9999-9';
+        $fallback = output($record);
+        check(($fallback['code']['coding'][1]['display'] ?? null) === 'Ordered procedure', 'missing LOINC description did not use name fallback');
+    });
+
+    runCase('missing descriptions and code fallback', static function (): void {
+        $record = row();
+        $record['code'] = 'CPT4:99999';
+        $json = output($record);
+        check(($json['code']['coding'][0]['code'] ?? null) === '99999', 'unknown CPT4 code changed');
+        check(!array_key_exists('display', $json['code']['coding'][0]), 'missing description emitted as display');
+        $record['code'] = 'LOCAL:ABC';
+        $json = output($record);
+        check(($json['code']['text'] ?? null) === 'Ordered procedure', 'text fallback changed');
+        check(empty($json['code']['coding']), 'unsupported system emitted coding');
+        $record['code'] = '';
+        $record['name'] = '';
+        $json = output($record);
+        check(($json['code']['coding'][0]['display'] ?? null) === 'Unknown', 'no-code unknown fallback changed');
+    });
+
+    runCase('status date and identity preservation', static function (): void {
+        $record = row();
+        $ordered = output($record);
+        check(($ordered['id'] ?? null) === $record['order_uuid'], 'order identity changed');
+        check(($ordered['subject']['reference'] ?? null) === 'Patient/' . $record['patient']['uuid'], 'patient reference changed');
+        check(($ordered['encounter']['reference'] ?? null) === 'Encounter/' . $record['encounter']['uuid'], 'encounter reference changed');
+        check(($ordered['performer'][0]['actor']['reference'] ?? null) === 'Practitioner/' . $record['provider']['uuid'], 'performer reference changed');
+        check(($ordered['basedOn'][0]['reference'] ?? null) === 'ServiceRequest/' . $record['order_uuid'], 'basedOn reference changed');
+        check(($ordered['status'] ?? null) === 'preparation', 'ordered status changed');
+        check(($ordered['performedDateTime'] ?? null) === '2024-02-03T04:05:06+00:00', 'order performed date changed');
+        check(($ordered['meta']['lastUpdated'] ?? null) === '2024-02-03T04:05:06+00:00', 'order meta date changed');
+        $record['reports'] = [['date' => '2024-03-04 05:06:07', 'results' => [['status' => 'final']]]];
+        $completed = output($record);
+        check(($completed['status'] ?? null) === 'completed', 'completed status changed');
+        check(($completed['performedDateTime'] ?? null) === '2024-03-04T05:06:07+00:00', 'report performed date changed');
+        check(($completed['meta']['lastUpdated'] ?? null) === '2024-03-04T05:06:07+00:00', 'report meta date changed');
+        $record['reports'][0]['results'][0]['status'] = 'preliminary';
+        check((output($record)['status'] ?? null) === 'in-progress', 'in-progress status changed');
+    });
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    $report = [
+        'cases' => $cases,
+        'total' => count($cases),
+        'passed' => count($cases) - $failed,
+        'failed' => $failed,
+        'source_sha256' => hash('sha256', is_string($source) ? $source : ''),
+    ];
+    echo json_encode($report, JSON_THROW_ON_ERROR), "\n";
+    exit($failed === 0 && count($cases) === 7 ? 0 : 1);
+}
