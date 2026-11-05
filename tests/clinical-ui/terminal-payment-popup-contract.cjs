@@ -100,6 +100,11 @@ const STYLE = `<style>
       overflow-wrap: anywhere;
     }
 
+    html.oe-workbench-context body.oe-terminal-payment-popup #logs > .row {
+      margin-right: 0;
+      margin-left: 0;
+    }
+
     html.oe-workbench-context body.oe-terminal-payment-popup #logs pre,
     html.oe-workbench-context body.oe-terminal-payment-popup #logs code {
       min-width: 0;
@@ -191,6 +196,10 @@ test('the proposed screen style keeps a readable, bounded payment sheet', () => 
   assert.doesNotMatch(STYLE, /<script|@media print/i);
 });
 
+test('direct native log-row gutters stay inside the progress panel', () => {
+  assert.match(makeCandidate(), /html\.oe-workbench-context body\.oe-terminal-payment-popup #logs > \.row \{\n      margin-right: 0;\n      margin-left: 0;\n    \}\n\n    html\.oe-workbench-context body\.oe-terminal-payment-popup #logs pre,/);
+});
+
 test('negative controls reject unique changes outside the two allowed insertions', () => {
   const candidate = makeCandidate();
   const mutations = [
@@ -214,6 +223,7 @@ test('negative controls reject duplicated, relocated, and unsafe style bytes', (
   const styleMutants = [
     ['duplicate style', replaceOnce(candidate, STYLE, STYLE + STYLE)],
     ['relocated style', replaceOnce(candidate, `${STYLE}</head>\n${BODY_MARKER}`, `</head>\n${BODY_MARKER}\n${STYLE}`)],
+    ['removed direct log-row gutter reset', replaceOnce(candidate, '    html.oe-workbench-context body.oe-terminal-payment-popup #logs > .row {\n      margin-right: 0;\n      margin-left: 0;\n    }\n\n', '')],
     ['unscoped selector', replaceOnce(candidate, 'html.oe-workbench-context body.oe-terminal-payment-popup #logs.bg-secondary', 'body #logs.bg-secondary')],
     ['print media', replaceOnce(candidate, '@media screen {', '@media print {')],
     ['revealed hidden controls', replaceOnce(candidate, '  @media screen {', '  @media screen {\n    .d-none { display: block !important; }')],
