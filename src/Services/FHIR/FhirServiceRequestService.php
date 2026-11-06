@@ -941,7 +941,12 @@ class FhirServiceRequestService extends FhirServiceBase implements
             }
             $display = $coding['display'] ?? null;
             $codes[] = [
-                'procedure_code' => $procCode,
+                'procedure_code' => $procCode === '0'
+                    ? $procCode
+                    : (new CodeTypesService())->getOpenEMRCodeForSystemAndCode(
+                        is_string($coding['system'] ?? null) ? $coding['system'] : '',
+                        $procCode
+                    ),
                 'procedure_name' => is_string($display)
                     ? $display
                     : ($codeText ?? ''),
