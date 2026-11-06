@@ -14,7 +14,7 @@ test('Goal description coding identity through native CLI fixture', () => {
   expect(result.error).toBeUndefined();
   expect(result.signal).toBeNull();
   expect(result.stderr).toBe('');
-  expect(result.stdout).toMatch(/^\{[^\r\n]*\}\n$/);
+  expect(result.stdout).toMatch(/^\{[^\r\n]*\}\n(?![\s\S])/);
 
   const report = JSON.parse(result.stdout.trimEnd());
   expect(Object.keys(report).sort()).toEqual(['expected', 'failed', 'passed']);
