@@ -114,6 +114,9 @@ class FhirMediaRestController
     public function getAll(array $fhirSearchParameters, ?string $puuidBind = null): Response
     {
         $processingResult = $this->fhirMediaService->getAll($fhirSearchParameters, $puuidBind);
+        if ($processingResult->hasErrors()) {
+            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);
+        }
         $bundleEntries = [];
         foreach ($processingResult->getData() as $searchResult) {
             $bundleEntry = [
