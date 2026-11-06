@@ -55,7 +55,7 @@ test('native Medication form read contract', () => {
 
     for (const entry of report.cases) {
         expect(entry && typeof entry === 'object' && !Array.isArray(entry)).toBe(true);
-        expect(Object.keys(entry).sort()).toEqual(['name', 'ok', 'error']);
+        expect(Object.keys(entry).sort()).toEqual(['error', 'name', 'ok']);
         expect(typeof entry.name).toBe('string');
         expect(typeof entry.ok).toBe('boolean');
         if (entry.ok) {
