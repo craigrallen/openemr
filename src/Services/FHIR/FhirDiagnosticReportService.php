@@ -98,19 +98,27 @@ class FhirDiagnosticReportService extends FhirServiceBase implements IPatientCom
                 );
                 $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
             } elseif (isset($fhirSearchParameters['code'])) {
-                $codeValues = $fhirSearchParameters['code'];
-                if (is_string($codeValues) && str_contains($codeValues, ',')) {
-                    $codeValues = explode(',', $codeValues);
-                }
-                $codeField = new TokenSearchField('code', $codeValues);
-                $services = $this->getServiceListForCode($codeField);
-                if ($services === []) {
-                    $this->getServiceForCode($codeField, '');
-                }
-                if (count($services) === 1) {
-                    $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
+                if (isset($fhirSearchParameters['_count']) || isset($fhirSearchParameters['_offset']) || isset($fhirSearchParameters['_sort'])) {
+                    $service = $this->getServiceForCode(
+                        new TokenSearchField('code', $fhirSearchParameters['code']),
+                        ''
+                    );
+                    $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
                 } else {
-                    $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+                    $codeValues = $fhirSearchParameters['code'];
+                    if (is_string($codeValues) && str_contains($codeValues, ',')) {
+                        $codeValues = explode(',', $codeValues);
+                    }
+                    $codeField = new TokenSearchField('code', $codeValues);
+                    $services = $this->getServiceListForCode($codeField);
+                    if ($services === []) {
+                        $this->getServiceForCode($codeField, '');
+                    }
+                    if (count($services) === 1) {
+                        $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
+                    } else {
+                        $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+                    }
                 }
             } else {
                 $fhirSearchResult = $this->searchAllServices($fhirSearchParameters, $puuidBind);
