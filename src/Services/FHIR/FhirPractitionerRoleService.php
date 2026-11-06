@@ -128,7 +128,7 @@ class FhirPractitionerRoleService extends FhirServiceBase implements IResourceUS
             $reason = new FHIRCodeableConcept();
             $reason->addCoding($dataRecord['specialty_code']);
             $reason->setText($dataRecord['specialty_title']);
-            $practitionerRoleResource->addCode($reason);
+            $practitionerRoleResource->addSpecialty($reason);
         }
 
         if (!empty($dataRecord['location_uuid'])) {
