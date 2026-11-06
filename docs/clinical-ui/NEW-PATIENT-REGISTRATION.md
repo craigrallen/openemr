@@ -1,0 +1,9 @@
+# New patient registration workbench presentation
+
+The comprehensive registration body is included by `interface/new/new.php` when `full_new_patient_form` is enabled. This change is limited to the presentation of `interface/new/new_comprehensive.php`. It gives the first outer container a bounded 72rem sheet and lets the final Search and Create New Patient buttons wrap at narrow widths. It keeps the existing form, labeled layout fields, insurance sections, accordions, validation, duplicate checking, CSRF handling, and save flow intact.
+
+The screen styles apply only inside `html.oe-workbench-context body.oe-new-patient-registration`. They leave print rendering and pages outside that context unchanged. The sheet uses inherited theme colors and type; existing controls and their palette classes keep their native styling. The action buttons receive separate `:focus` and `:focus-visible` outlines. The stylesheet does not promise that every site-configured layout field fits every viewport.
+
+The contract compares the route with a pinned, byte-for-byte original fixture after removing exactly four approved additions: one style block, the body class, the first outer container class, and the final button group class. The fixture SHA-256 is `8e349a5a7936d31ba63bc5c793dd1c62a1b4282c98bdbdb5a4e2e73e13664fe7`. The optional `--history` mode also checks it against Git commit `09b29da7771aea334ed5745e058751157af980d7`. The portable default and `--json` modes do not use Git.
+
+The scheduled delivery covers both the implementation and QA, with run 1 and at most run 2 available for the combined work. The untouched route is expected to fail this presentation contract. No GREEN result or CI result is claimed here. Native rendering across supported widths, authenticated role behavior, security, persistence, and clinical approval remain for the scheduled QA. No patient record or route action is needed for this source contract.
