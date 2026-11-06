@@ -120,7 +120,7 @@ class FhirQuestionnaireRestController
             // RestConfig::authorization_check("patients", "med");
             $result = $this->getAll($request->getQueryParams());
         }
-        return RestControllerHelper::returnSingleObjectResponse($result);
+        return $result;
     }
 
     /**
@@ -267,11 +267,14 @@ class FhirQuestionnaireRestController
      *
      * @param  array   $searchParams
      * @param  ?string $puuidBind    - Optional variable to only allow visibility of the patient with this puuid.
-     * @return FHIRBundle FHIR bundle with query results, if found
+     * @return ResponseInterface Questionnaire list response from the existing error helper or the once-wrapped success bundle.
      */
-    private function getAll(array $searchParams, ?string $puuidBind = null): FHIRBundle
+    private function getAll(array $searchParams, ?string $puuidBind = null): ResponseInterface
     {
         $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);
+        if ($processingResult->hasErrors()) {
+            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);
+        }
         $bundleEntries = [];
         foreach ($processingResult->getData() as $searchResult) {
             $bundleEntry = [
@@ -281,6 +284,6 @@ class FhirQuestionnaireRestController
             $fhirBundleEntry = new FHIRBundleEntry($bundleEntry);
             $bundleEntries[] = $fhirBundleEntry;
         }
-        return $this->fhirService->createBundle('Questionnaire', $bundleEntries, false);
+        return RestControllerHelper::returnSingleObjectResponse($this->fhirService->createBundle('Questionnaire', $bundleEntries, false));
     }
 }
