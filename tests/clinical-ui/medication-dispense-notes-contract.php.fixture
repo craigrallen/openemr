@@ -1,0 +1,198 @@
+<?php
+declare(strict_types=1);
+
+// Declaration-only parent: its real constructor builds search and application services.
+namespace OpenEMR\Services\FHIR {
+    abstract class FhirServiceBase {}
+}
+
+namespace Psr\Log {
+    // External PSR logging package is absent in this source checkout. This unused
+    // declaration keeps OpenEMR's own SystemLoggerAwareTrait native and loadable.
+    trait LoggerAwareTrait {}
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRAnnotation;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRMarkdown;
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRMedicationDispense;
+    use OpenEMR\Services\CodeTypesService;
+    use OpenEMR\Services\FHIR\FhirOrganizationService;
+    use OpenEMR\Services\FHIR\MedicationDispense\FhirMedicationDispenseLocalDispensaryService;
+    use OpenEMR\Services\FHIR\UtilsService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    date_default_timezone_set('UTC');
+    $root = dirname(__DIR__, 2);
+    $source = $root . '/src/Services/FHIR/MedicationDispense/FhirMedicationDispenseLocalDispensaryService.php';
+    $originalSha = 'be719fdae00aa949fb7c97a5a9c88fe06aed7f9db5dd8607e4320f9b8feee111';
+    $actualSha = is_file($source) ? hash_file('sha256', $source) : null;
+    $cases = [];
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $case = static function (string $name, callable $run) use (&$cases): void {
+        try {
+            $run();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => get_class($error) . ': ' . $error->getMessage()];
+        }
+    };
+
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $case('source_exact_inverse', static function () use ($source, $actualSha, $originalSha, $check): void {
+        $text = file_get_contents($source);
+        $check(is_string($text), 'mapper source unavailable');
+        $check($actualSha === hash('sha256', $text), 'reported SHA mismatch');
+        if ($actualSha === $originalSha) {
+            return; // Genuine RED source is explicitly permitted.
+        }
+        $import = "use OpenEMR\\FHIR\\R4\\FHIRElement\\FHIRMarkdown;\n";
+        $operand = "            \$note->setText(new FHIRMarkdown(\$dataRecord['notes']));";
+        $check(substr_count($text, $import) === 1, 'expected one FHIRMarkdown import');
+        $check(substr_count($text, $operand) === 1, 'expected one typed plural-notes operand');
+        $inverse = str_replace($import, '', $text);
+        $inverse = str_replace($operand, "            \$note->setText(\$dataRecord['note']);", $inverse);
+        $check(hash('sha256', $inverse) === $originalSha, 'source differs beyond approved import and operand');
+    });
+
+    try {
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (str_starts_with($class, $prefix)) {
+                $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+                if (is_file($path)) {
+                    require_once $path;
+                }
+            }
+        });
+        $mapperReflection = new \ReflectionClass(FhirMedicationDispenseLocalDispensaryService::class);
+        $check($mapperReflection->getFileName() === $source, 'mapper did not load from complete native source');
+        foreach ([
+            FHIRMedicationDispense::class => '/src/FHIR/R4/FHIRDomainResource/FHIRMedicationDispense.php',
+            FHIRAnnotation::class => '/src/FHIR/R4/FHIRElement/FHIRAnnotation.php',
+            FHIRMarkdown::class => '/src/FHIR/R4/FHIRElement/FHIRMarkdown.php',
+            UtilsService::class => '/src/Services/FHIR/UtilsService.php',
+        ] as $class => $suffix) {
+            $check((new \ReflectionClass($class))->getFileName() === $root . $suffix, $class . ' is not native');
+        }
+        $check($mapperReflection->implementsInterface(\OpenEMR\Services\FHIR\IFhirExportableResourceService::class), 'native export interface missing');
+        $check(in_array(\OpenEMR\Services\FHIR\Traits\PatientSearchTrait::class, $mapperReflection->getTraitNames(), true), 'native patient trait missing');
+
+        // Synthetic typed service boundaries avoid organization and code lookup DB calls.
+        // FHIR resources, annotation, markdown, helpers, traits and mapper are native.
+        $mapper = $mapperReflection->newInstanceWithoutConstructor();
+        $mapper->setCodeTypesService(new class extends CodeTypesService {});
+        $mapper->setFhirOrganizationService(new class extends FhirOrganizationService {
+            public function __construct() {}
+            public function getPrimaryBusinessEntityReference()
+            {
+                return UtilsService::createRelativeReference('Organization', 'synthetic-org');
+            }
+        });
+        $row = [
+            'uuid' => 'dispense-217', 'trans_type' => 1,
+            'bill_date' => '2025-03-04T13:14:15+00:00',
+            'sale_date' => '2025-03-05T16:17:18+00:00',
+            'patient_uuid' => 'patient-217', 'encounter_uuid' => 'encounter-217',
+            'dispenser_uuid' => 'practitioner-217', 'prescription_uuid' => 'request-217',
+            'drug_name' => 'Synthetic amoxicillin 250 mg', 'quantity' => 17,
+            'drug_form_title' => 'capsules',
+        ];
+        $parse = static fn (array $input, bool $encode = false) => $mapper->parseOpenEMRRecord($input, $encode);
+        $noteText = static function (FHIRMedicationDispense $resource) use ($check): string {
+            $notes = $resource->getNote();
+            $check(count($notes) === 1, 'expected exactly one annotation');
+            $check($notes[0] instanceof FHIRAnnotation, 'annotation is not native FHIRAnnotation');
+            $check($notes[0]->getText() instanceof FHIRMarkdown, 'annotation text is not native FHIRMarkdown');
+            return $notes[0]->getText()->getValue();
+        };
+        $note = "  Déjà vu 🩺 <b>& *dose*\nsecond line\t  ";
+
+        $case('projected_notes_object', static function () use ($row, $note, $parse, $noteText, $check): void {
+            $resource = $parse($row + ['notes' => $note]);
+            $check($resource instanceof FHIRMedicationDispense, 'native resource expected');
+            $check($noteText($resource) === $note, 'projected notes changed');
+        });
+        $case('projected_notes_encoded_json', static function () use ($row, $note, $parse, $check): void {
+            $json = $parse($row + ['notes' => $note], true);
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+            $check(($decoded['note'][0]['text'] ?? null) === $note, 'encoded note text differs');
+            $check($json === json_encode($parse($row + ['notes' => $note]), JSON_THROW_ON_ERROR), 'object/encoded JSON differs');
+        });
+        $case('singular_note_distractor', static function () use ($row, $note, $parse, $noteText, $check): void {
+            $resource = $parse($row + ['notes' => $note, 'note' => 'WRONG singular field']);
+            $check($noteText($resource) === $note, 'singular note took precedence');
+        });
+        $case('unicode_markup_newline_whitespace', static function () use ($row, $note, $parse, $noteText, $check): void {
+            $check($noteText($parse($row + ['notes' => $note])) === $note, 'markdown content was normalized');
+        });
+        foreach (['missing', 'null', 'empty', 'string_zero', 'integer_zero', 'false'] as $guard) {
+            $case('empty_guard_' . $guard, static function () use ($row, $guard, $parse, $check): void {
+                $value = match ($guard) {
+                    'null' => null, 'empty' => '', 'string_zero' => '0',
+                    'integer_zero' => 0, 'false' => false, default => null,
+                };
+                $input = $row + ['note' => 'singular distractor'];
+                if ($guard !== 'missing') {
+                    $input['notes'] = $value;
+                }
+                $resource = $parse($input);
+                $check($resource->getNote() === [], 'empty projected notes emitted annotation');
+                $decoded = json_decode($parse($input, true), true, 512, JSON_THROW_ON_ERROR);
+                $check(!array_key_exists('note', $decoded), 'empty projected notes emitted JSON note');
+            });
+        }
+        $assertFields = static function (array $data) use ($row, $check): void {
+            $check(($data['id'] ?? null) === 'dispense-217', 'id changed');
+            $check(($data['status'] ?? null) === 'completed', 'status changed');
+            $check(($data['subject']['reference'] ?? null) === 'Patient/patient-217', 'patient changed');
+            $check(($data['context']['reference'] ?? null) === 'Encounter/encounter-217', 'context changed');
+            $actors = array_column(array_column($data['performer'] ?? [], 'actor'), 'reference');
+            $check($actors === ['Practitioner/practitioner-217', 'Organization/synthetic-org'], 'performers changed');
+            $check(($data['authorizingPrescription'][0]['reference'] ?? null) === 'MedicationRequest/request-217', 'prescription changed');
+            $check(($data['medicationCodeableConcept']['text'] ?? null) === $row['drug_name'], 'medication changed');
+            $check(($data['quantity']['value'] ?? null) === 17, 'quantity changed');
+            $check(($data['quantity']['unit'] ?? null) === 'capsules', 'quantity unit changed');
+            $check(($data['meta']['lastUpdated'] ?? null) === $row['bill_date'], 'metadata date changed');
+            $check(($data['whenHandedOver'] ?? null) === $row['sale_date'], 'handed-over date changed');
+        };
+        $case('resource_fields_baseline', static function () use ($row, $parse, $assertFields): void {
+            $assertFields(json_decode($parse($row, true), true, 512, JSON_THROW_ON_ERROR));
+        });
+        $case('resource_fields_preserved', static function () use ($row, $note, $parse, $assertFields): void {
+            $assertFields(json_decode($parse($row + ['notes' => $note], true), true, 512, JSON_THROW_ON_ERROR));
+        });
+        $case('input_immutable', static function () use ($row, $note, $parse, $check): void {
+            $input = $row + ['notes' => $note];
+            $before = $input;
+            $parse($input);
+            $check($input === $before, 'input row mutated');
+        });
+        $case('repeated_parsing_independent', static function () use ($row, $parse, $noteText, $check): void {
+            $first = $parse($row + ['notes' => 'first']);
+            $second = $parse($row + ['notes' => 'second']);
+            $check($first !== $second, 'same resource instance reused');
+            $check($noteText($first) === 'first' && $noteText($second) === 'second', 'note state leaked between parses');
+            $check($first->getNote()[0] !== $second->getNote()[0], 'annotation instance reused');
+        });
+    } catch (\Throwable $error) {
+        $cases[] = ['name' => 'harness_bootstrap', 'ok' => false, 'error' => get_class($error) . ': ' . $error->getMessage()];
+    }
+
+    restore_error_handler();
+    $passed = count(array_filter($cases, static fn (array $item): bool => $item['ok']));
+    $report = ['cases' => $cases, 'total' => count($cases), 'passed' => $passed,
+        'failed' => count($cases) - $passed, 'source_sha256' => $actualSha];
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+    exit($report['failed'] === 0 ? 0 : 1);
+}
