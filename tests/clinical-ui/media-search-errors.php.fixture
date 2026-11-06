@@ -1,0 +1,245 @@
+<?php
+namespace Symfony\Component\HttpFoundation {
+    class Response
+    {
+        public function __construct(public string $label = '')
+        {
+        }
+    }
+}
+
+namespace OpenEMR\Common\Http {
+    class HttpRestRequest
+    {
+        public function getSession(): mixed
+        {
+            return null;
+        }
+    }
+}
+
+namespace OpenEMR\Core {
+    class OEGlobalsBag
+    {
+        public static function getInstance(): self
+        {
+            return new self();
+        }
+
+        public function get(string $key): string
+        {
+            return 'https://example.test';
+        }
+    }
+}
+
+namespace OpenEMR\FHIR\R4\FHIRResource\FHIRBundle {
+    class FHIRBundleEntry
+    {
+        public function __construct(public array $value)
+        {
+        }
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    class FhirMediaService
+    {
+        public static \OpenEMR\Validators\ProcessingResult $result;
+        public static array $calls = [];
+
+        public function setSession(mixed $session): void
+        {
+        }
+
+        public function getAll(array $parameters, ?string $puuidBind): \OpenEMR\Validators\ProcessingResult
+        {
+            self::$calls[] = [$parameters, $puuidBind];
+            return self::$result;
+        }
+    }
+
+    class FhirResourcesService
+    {
+        public static array $calls = [];
+
+        public function createBundle(string $type, array $entries, bool $flag): object
+        {
+            $bundle = (object) ['type' => $type, 'entries' => $entries, 'flag' => $flag];
+            self::$calls[] = [$type, $entries, $flag, $bundle];
+            return $bundle;
+        }
+    }
+}
+
+namespace OpenEMR\RestControllers {
+    class RestControllerHelper
+    {
+        public static array $errorCalls = [];
+        public static array $successCalls = [];
+        public static \Symfony\Component\HttpFoundation\Response $errorResponse;
+        public static \Symfony\Component\HttpFoundation\Response $successResponse;
+
+        public static function handleFhirProcessingResult(\OpenEMR\Validators\ProcessingResult $result, int $status): \Symfony\Component\HttpFoundation\Response
+        {
+            self::$errorCalls[] = [$result, $status];
+            return self::$errorResponse;
+        }
+
+        public static function responseHandler(mixed $body, mixed $extra, int $status): \Symfony\Component\HttpFoundation\Response
+        {
+            self::$successCalls[] = [$body, $extra, $status];
+            return self::$successResponse;
+        }
+    }
+}
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    const ROOT = __DIR__ . '/../..';
+    require ROOT . '/src/Common/Database/QueryPagination.php';
+    require ROOT . '/src/Validators/ProcessingResult.php';
+    require ROOT . '/src/RestControllers/FHIR/FhirMediaRestController.php';
+
+    class ObservedResult extends \OpenEMR\Validators\ProcessingResult
+    {
+        public function getData()
+        {
+            throw new \RuntimeException('Error result getData was called');
+        }
+    }
+
+    class PoisonRow
+    {
+        public function getId(): never
+        {
+            throw new \RuntimeException('Poison row getId was called');
+        }
+    }
+
+    class MediaRow
+    {
+        public function __construct(private string $id)
+        {
+        }
+
+        public function getId(): string
+        {
+            return $this->id;
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function controller(): \OpenEMR\RestControllers\FHIR\FhirMediaRestController
+    {
+        $reflection = new \ReflectionClass(\OpenEMR\RestControllers\FHIR\FhirMediaRestController::class);
+        $controller = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('fhirMediaService')->setValue($controller, new \OpenEMR\Services\FHIR\FhirMediaService());
+        return $controller;
+    }
+
+    function resetSpies(\OpenEMR\Validators\ProcessingResult $result): void
+    {
+        \OpenEMR\Services\FHIR\FhirMediaService::$result = $result;
+        \OpenEMR\Services\FHIR\FhirMediaService::$calls = [];
+        \OpenEMR\Services\FHIR\FhirResourcesService::$calls = [];
+        \OpenEMR\RestControllers\RestControllerHelper::$errorCalls = [];
+        \OpenEMR\RestControllers\RestControllerHelper::$successCalls = [];
+        \OpenEMR\RestControllers\RestControllerHelper::$errorResponse = new \Symfony\Component\HttpFoundation\Response('error sentinel');
+        \OpenEMR\RestControllers\RestControllerHelper::$successResponse = new \Symfony\Component\HttpFoundation\Response('success sentinel');
+        $_SERVER['REDIRECT_URL'] = '/fhir/Media';
+    }
+
+    function errorCase(string $kind, bool $poison): void
+    {
+        $result = new ObservedResult();
+        if ($kind === 'validation' || $kind === 'combined') {
+            $result->setValidationMessages(['invalid search']);
+        }
+        if ($kind === 'internal' || $kind === 'combined') {
+            $result->addInternalError('internal failure');
+        }
+        $result->setData($poison ? [new PoisonRow()] : []);
+        check($result->hasErrors(), 'Native result must report errors');
+        if ($kind === 'internal') {
+            check($result->isValid(), 'Internal-only result must remain validation-valid');
+        }
+        resetSpies($result);
+        $parameters = ['_id' => 'raw-id', 'content-type' => 'image/jpeg'];
+        $response = controller()->getAll($parameters, 'patient-uuid');
+        check($response === \OpenEMR\RestControllers\RestControllerHelper::$errorResponse, 'Expected exact helper sentinel response');
+        check(\OpenEMR\Services\FHIR\FhirMediaService::$calls === [[$parameters, 'patient-uuid']], 'Search arguments changed');
+        $calls = \OpenEMR\RestControllers\RestControllerHelper::$errorCalls;
+        check(count($calls) === 1 && $calls[0][0] === $result && $calls[0][1] === 200, 'Expected original result and success code at helper boundary');
+        check(\OpenEMR\Services\FHIR\FhirResourcesService::$calls === [], 'Error path created a bundle');
+        check(\OpenEMR\RestControllers\RestControllerHelper::$successCalls === [], 'Error path called responseHandler');
+    }
+
+    function successCase(array $rows): void
+    {
+        $result = new \OpenEMR\Validators\ProcessingResult();
+        $result->setData($rows);
+        resetSpies($result);
+        $parameters = ['patient' => 'raw-patient', '_lastUpdated' => 'ge2025-01-01'];
+        $response = controller()->getAll($parameters, null);
+        check($response === \OpenEMR\RestControllers\RestControllerHelper::$successResponse, 'Expected exact success sentinel response');
+        check(\OpenEMR\Services\FHIR\FhirMediaService::$calls === [[$parameters, null]], 'Search arguments changed');
+        check(\OpenEMR\RestControllers\RestControllerHelper::$errorCalls === [], 'Success path called error helper');
+        $bundleCalls = \OpenEMR\Services\FHIR\FhirResourcesService::$calls;
+        check(count($bundleCalls) === 1, 'Expected one bundle call');
+        [$type, $entries, $flag, $bundle] = $bundleCalls[0];
+        check($type === 'Media' && $flag === false && count($entries) === count($rows), 'Bundle arguments changed');
+        foreach ($rows as $index => $row) {
+            check($entries[$index] instanceof \OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry, 'Bundle entry type changed');
+            check($entries[$index]->value['resource'] === $row, 'Resource identity or order changed');
+            check($entries[$index]->value['fullUrl'] === 'https://example.test/fhir/Media/' . $row->getId(), 'Bundle fullUrl changed');
+        }
+        $successCalls = \OpenEMR\RestControllers\RestControllerHelper::$successCalls;
+        check(count($successCalls) === 1 && $successCalls[0][0] === $bundle && $successCalls[0][1] === null && $successCalls[0][2] === 200, 'responseHandler arguments changed');
+    }
+
+    $cases = [
+        'whole-source inverse' => static function (): void {
+            $source = file_get_contents(ROOT . '/src/RestControllers/FHIR/FhirMediaRestController.php');
+            check(is_string($source), 'Cannot read controller source');
+            $insertion = "        if (\$processingResult->hasErrors()) {\n            return RestControllerHelper::handleFhirProcessingResult(\$processingResult, 200);\n        }\n";
+            check(substr_count($source, $insertion) === 1, 'Expected exactly one proposed insertion');
+            $original = str_replace($insertion, '', $source);
+            check(hash('sha256', $original) === '30132df488edc749c1f3206f4722c774c4ef0ccbc58da2d17bb2947d9353c281', 'Whole-source inverse hash differs from supplied original');
+        },
+    ];
+    foreach (['validation', 'internal', 'combined'] as $kind) {
+        foreach ([false, true] as $poison) {
+            $cases[$kind . ($poison ? ' poison data' : ' empty data')] = static function () use ($kind, $poison): void {
+                errorCase($kind, $poison);
+            };
+        }
+    }
+    $cases['success empty'] = static function (): void { successCase([]); };
+    $cases['success multiple rows'] = static function (): void { successCase([new MediaRow('first'), new MediaRow('second')]); };
+
+    $failures = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+        } catch (\Throwable $error) {
+            $failures[] = ['name' => $name, 'message' => $error->getMessage()];
+        }
+    }
+    $failed = count($failures);
+    echo json_encode(['total' => count($cases), 'passed' => count($cases) - $failed, 'failed' => $failed, 'failures' => $failures], JSON_THROW_ON_ERROR) . "\n";
+    exit($failed === 0 ? 0 : 1);
+}
