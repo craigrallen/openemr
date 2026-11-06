@@ -325,9 +325,22 @@ namespace {
         }
         $old = '                $result->setInternalErrors(xlt("The event should have returned a ProcessingResult object"));';
         $new = '                $result = new ProcessingResult();' . "\n" . '                $result->addInternalError(xlt("The event should have returned a ProcessingResult object"));' . "\n" . '                return $result;';
-        expectFixture(substr_count($source, $new) === 1, 'Approved replacement missing or repeated');
-        $reversed = str_replace($new, $old, $source);
+        $guarded = '            if ($result->isValid()) {' . "\n" . '                $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);' . "\n" . '                $result->addProcessingResult($processingResult);' . "\n" . '            }';
+        $unguarded = '            $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);' . "\n" . '            $result->addProcessingResult($processingResult);';
+        expectFixture(substr_count($source, $new) === 1, 'Approved wrong-type replacement missing or repeated');
+        expectFixture(substr_count($source, $guarded) + substr_count($source, $unguarded) === 1, 'Merge block missing or repeated');
+        $reversed = str_replace($unguarded, $guarded, $source);
+        $reversed = str_replace($new, $old, $reversed);
         expectFixture(hash('sha256', $reversed) === $originalHash, 'Other source bytes changed');
+    });
+
+    $case('redundant valid-result guard removed', static function () use ($root): void {
+        $source = file_get_contents($root . '/src/Services/FHIR/FhirQuestionnaireResponseService.php');
+        expectFixture($source !== false, 'Source unreadable');
+        $guarded = '            if ($result->isValid()) {' . "\n" . '                $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);' . "\n" . '                $result->addProcessingResult($processingResult);' . "\n" . '            }';
+        $unguarded = '            $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);' . "\n" . '            $result->addProcessingResult($processingResult);';
+        expectFixture(substr_count($source, $guarded) === 0, 'Redundant valid-result guard remains');
+        expectFixture(substr_count($source, $unguarded) === 1, 'Unguarded merge block missing or repeated');
     });
 
     $report = ['total' => $total, 'passed' => $passed, 'failed' => count($failures), 'failures' => $failures];

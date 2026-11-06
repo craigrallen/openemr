@@ -19,7 +19,7 @@ test('OPEMR-224 native QuestionnaireResponse search event fixture', () => {
     expect(Number.isInteger(report.passed)).toBe(true);
     expect(Number.isInteger(report.failed)).toBe(true);
     expect(Array.isArray(report.failures)).toBe(true);
-    expect(report.total).toBe(15);
+    expect(report.total).toBe(16);
     expect(report.passed).toBe(report.total);
     expect(report.failed).toBe(0);
     expect(report.failures).toEqual([]);
