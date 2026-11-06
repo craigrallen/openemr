@@ -12,6 +12,8 @@
 namespace OpenEMR\Services\FHIR\Group;
 
 use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRGroup;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRBoolean;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRGroupType;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRMeta;
 use OpenEMR\FHIR\R4\FHIRResource\FHIRGroup\FHIRGroupMember;
 use OpenEMR\Services\FHIR\FhirServiceBase;
@@ -79,6 +81,8 @@ class FhirPatientProviderGroupService extends FhirServiceBase implements IPatien
 
         $fhirGroup->setId($dataRecord['uuid']);
         $fhirGroup->setName($dataRecord['name']);
+        $fhirGroup->setType((new FHIRGroupType())->setValue('person'));
+        $fhirGroup->setActual(new FHIRBoolean(true));
 
         if (!empty($dataRecord['patients'])) {
             foreach ($dataRecord['patients'] as $patient) {
