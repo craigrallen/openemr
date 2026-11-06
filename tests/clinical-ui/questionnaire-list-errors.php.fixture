@@ -1,0 +1,339 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Psr\Http\Message {
+    interface ResponseInterface {}
+}
+
+namespace Psr\Log {
+    interface LoggerInterface {}
+}
+
+namespace OpenEMR\Common\Http {
+    final class HttpRestRequest
+    {
+        public int $patientUuidReads = 0;
+
+        public function __construct(private bool $patient, private array $params, private string $patientUuid) {}
+        public function isPatientRequest(): bool { return $this->patient; }
+        public function getQueryParams(): array { return $this->params; }
+        public function getPatientUUIDString(): string
+        {
+            ++$this->patientUuidReads;
+            return $this->patientUuid;
+        }
+    }
+}
+
+namespace OpenEMR\Core {
+    final class OEGlobalsBag
+    {
+        private static ?self $instance = null;
+        public static function getInstance(): self { return self::$instance ??= new self(); }
+        public function get(string $key): string
+        {
+            if ($key !== 'site_addr_oath') {
+                throw new \LogicException('Unexpected globals key');
+            }
+            return 'https://example.test';
+        }
+    }
+}
+
+namespace OpenEMR\FHIR\R4\FHIRResource {
+    final class FHIRBundle
+    {
+        public function __construct(public string $type, public array $entries, public bool $flag) {}
+    }
+}
+
+namespace OpenEMR\FHIR\R4\FHIRResource\FHIRBundle {
+    final class FHIRBundleEntry
+    {
+        public function __construct(public array $value) {}
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle;
+    use OpenEMR\Validators\ProcessingResult;
+
+    final class FhirQuestionnaireService
+    {
+        public ?ProcessingResult $result = null;
+        public array $calls = [];
+
+        public function getAll(array $params, ?string $patientUuid = null): ProcessingResult
+        {
+            $this->calls[] = [$params, $patientUuid];
+            if ($this->result === null) {
+                throw new \LogicException('Missing service result');
+            }
+            return $this->result;
+        }
+    }
+
+    final class FhirResourcesService
+    {
+        public array $calls = [];
+        public ?FHIRBundle $bundle = null;
+
+        public function createBundle(string $type, array $entries, bool $flag): FHIRBundle
+        {
+            $this->calls[] = [$type, $entries, $flag];
+            return $this->bundle = new FHIRBundle($type, $entries, $flag);
+        }
+    }
+}
+
+namespace OpenEMR\RestControllers {
+    use OpenEMR\Validators\ProcessingResult;
+    use Psr\Http\Message\ResponseInterface;
+
+    final class QuestionnaireResponse implements ResponseInterface {}
+
+    final class RestControllerHelper
+    {
+        public static array $errorCalls = [];
+        public static array $successCalls = [];
+        public static ?QuestionnaireResponse $errorResponse = null;
+        public static ?QuestionnaireResponse $successResponse = null;
+
+        public static function reset(): void
+        {
+            self::$errorCalls = [];
+            self::$successCalls = [];
+            self::$errorResponse = new QuestionnaireResponse();
+            self::$successResponse = new QuestionnaireResponse();
+        }
+
+        public static function handleFhirProcessingResult(ProcessingResult $result, int $status): ResponseInterface
+        {
+            self::$errorCalls[] = [$result, $status];
+            return self::$errorResponse;
+        }
+
+        public static function returnSingleObjectResponse(mixed $object, bool $gzipEncoded = false): ResponseInterface
+        {
+            self::$successCalls[] = [$object, $gzipEncoded];
+            return self::$successResponse;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\Common\Http\HttpRestRequest;
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
+    use OpenEMR\RestControllers\FHIR\FhirQuestionnaireRestController;
+    use OpenEMR\RestControllers\RestControllerHelper;
+    use OpenEMR\Services\FHIR\FhirQuestionnaireService;
+    use OpenEMR\Services\FHIR\FhirResourcesService;
+    use OpenEMR\Validators\ProcessingResult;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+    error_reporting(E_ALL);
+
+    $root = dirname(__DIR__, 2);
+    require $root . '/src/Common/Database/QueryPagination.php';
+    require $root . '/src/Validators/ProcessingResult.php';
+    require $root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php';
+
+    final class SpiedProcessingResult extends ProcessingResult
+    {
+        public int $dataReads = 0;
+        public function getData()
+        {
+            ++$this->dataReads;
+            return parent::getData();
+        }
+    }
+
+    final class QuestionnaireResource
+    {
+        public int $idReads = 0;
+        public function __construct(private string $id) {}
+        public function getId(): string
+        {
+            ++$this->idReads;
+            return $this->id;
+        }
+    }
+
+    final class PoisonResource
+    {
+        public function getId(): never
+        {
+            throw new \LogicException('Error data was traversed');
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function controller(FhirQuestionnaireService $questionnaire, FhirResourcesService $resources): FhirQuestionnaireRestController
+    {
+        $reflection = new \ReflectionClass(FhirQuestionnaireRestController::class);
+        $controller = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('questionnaireResourceService')->setValue($controller, $questionnaire);
+        $reflection->getProperty('fhirService')->setValue($controller, $resources);
+        return $controller;
+    }
+
+    function prepare(bool $patient, SpiedProcessingResult $result): array
+    {
+        RestControllerHelper::reset();
+        $questionnaire = new FhirQuestionnaireService();
+        $questionnaire->result = $result;
+        $resources = new FhirResourcesService();
+        $params = ['_id' => 'requested-id', '_count' => '2'];
+        $request = new HttpRestRequest($patient, $params, 'bound-patient-uuid');
+        return [controller($questionnaire, $resources), $request, $questionnaire, $resources, $params];
+    }
+
+    function checkServiceCall(FhirQuestionnaireService $service, HttpRestRequest $request, array $params, bool $patient): void
+    {
+        check(count($service->calls) === 1, 'Service call count');
+        check($service->calls[0][0] === $params, 'Raw query parameters changed');
+        check($service->calls[0][1] === ($patient ? 'bound-patient-uuid' : null), 'Patient binding changed');
+        check($request->patientUuidReads === ($patient ? 1 : 0), 'Patient UUID read count');
+    }
+
+    function checkSource(string $root): void
+    {
+        $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
+        check($source !== false, 'Controller source unreadable');
+        $pairs = [
+            ['return RestControllerHelper::returnSingleObjectResponse($result);', 'return $result;'],
+            ['@return FHIRBundle FHIR bundle with query results, if found', '@return ResponseInterface Questionnaire list response from the existing error helper or the once-wrapped success bundle.'],
+            ['private function getAll(array $searchParams, ?string $puuidBind = null): FHIRBundle', 'private function getAll(array $searchParams, ?string $puuidBind = null): ResponseInterface'],
+            [
+                implode("\n", [
+                    '        $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);',
+                    '        $bundleEntries = [];',
+                ]),
+                implode("\n", [
+                    '        $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);',
+                    '        if ($processingResult->hasErrors()) {',
+                    '            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);',
+                    '        }',
+                    '        $bundleEntries = [];',
+                ]),
+            ],
+            [
+                "return \$this->fhirService->createBundle('Questionnaire', \$bundleEntries, false);",
+                "return RestControllerHelper::returnSingleObjectResponse(\$this->fhirService->createBundle('Questionnaire', \$bundleEntries, false));",
+            ],
+        ];
+        $restored = $source;
+        foreach ($pairs as [$old, $new]) {
+            check(substr_count($restored, $new) === 1, 'Expected production fragment missing or repeated');
+            $restored = str_replace($new, $old, $restored, $count);
+            check($count === 1, 'Inverse replacement count');
+        }
+        check(hash('sha256', $restored) === 'b5b937fee16e2dbc9c6441d41419901ab5688a7aec03f6c8097b5dc88c6e9b20', 'Restored controller differs from pinned original');
+    }
+
+    $cases = [];
+    $cases['whole-source inverse'] = static function () use ($root): void { checkSource($root); };
+
+    foreach ([false, true] as $patient) {
+        $scope = $patient ? 'patient' : 'staff';
+        foreach (['validation', 'internal', 'combined'] as $kind) {
+            foreach ([false, true] as $poison) {
+                $name = $scope . ' ' . $kind . ' error ' . ($poison ? 'poison data' : 'empty data');
+                $cases[$name] = static function () use ($patient, $kind, $poison): void {
+                    $result = new SpiedProcessingResult();
+                    if ($kind !== 'internal') {
+                        $result->setValidationMessages(['invalid query']);
+                    }
+                    if ($kind !== 'validation') {
+                        $result->addInternalError('internal failure');
+                    }
+                    if ($poison) {
+                        $result->setData([new PoisonResource()]);
+                    }
+                    check($result->hasErrors(), 'Native result should have errors');
+                    check($result->isValid() === ($kind === 'internal'), 'Native validation state');
+                    [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
+                    $response = $controller->list($request);
+                    check($response === RestControllerHelper::$errorResponse, 'Original error response identity');
+                    check(count(RestControllerHelper::$errorCalls) === 1, 'Error helper call count');
+                    check(RestControllerHelper::$errorCalls[0][0] === $result, 'Native ProcessingResult identity');
+                    check(RestControllerHelper::$errorCalls[0][1] === 200, 'Error helper success status argument');
+                    check(RestControllerHelper::$successCalls === [], 'Error response was wrapped by success serializer');
+                    check($resources->calls === [], 'Bundle created after error');
+                    check($result->dataReads === 0, 'Error data was read');
+                    checkServiceCall($service, $request, $params, $patient);
+                };
+            }
+        }
+        foreach (['empty', 'multiple', 'fallback'] as $shape) {
+            $cases[$scope . ' healthy ' . $shape] = static function () use ($patient, $shape): void {
+                $result = new SpiedProcessingResult();
+                $first = new QuestionnaireResource('first-id');
+                $second = new QuestionnaireResource('second-id');
+                $items = $shape === 'empty' ? [] : [$first, $second];
+                $result->setData($items);
+                check(!$result->hasErrors(), 'Native result should be healthy');
+                [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
+                $previous = $_SERVER['REDIRECT_URL'] ?? null;
+                $hadRedirect = array_key_exists('REDIRECT_URL', $_SERVER);
+                if ($shape === 'fallback') {
+                    unset($_SERVER['REDIRECT_URL']);
+                } else {
+                    $_SERVER['REDIRECT_URL'] = '/fhir/Questionnaire';
+                }
+                try {
+                    $response = $controller->list($request);
+                } finally {
+                    if ($hadRedirect) {
+                        $_SERVER['REDIRECT_URL'] = $previous;
+                    } else {
+                        unset($_SERVER['REDIRECT_URL']);
+                    }
+                }
+                check($response === RestControllerHelper::$successResponse, 'Original success response identity');
+                check(RestControllerHelper::$errorCalls === [], 'Error helper used on healthy result');
+                check(count(RestControllerHelper::$successCalls) === 1, 'Success serializer call count');
+                check(RestControllerHelper::$successCalls[0][0] === $resources->bundle, 'Exact created Bundle identity');
+                check(RestControllerHelper::$successCalls[0][1] === false, 'Unexpected gzip argument');
+                check(count($resources->calls) === 1, 'Bundle creation count');
+                check($resources->calls[0][0] === 'Questionnaire', 'Bundle resource type');
+                check($resources->calls[0][2] === false, 'Bundle flag');
+                $entries = $resources->calls[0][1];
+                check(count($entries) === count($items), 'Bundle entry count');
+                foreach ($items as $index => $item) {
+                    check($entries[$index] instanceof FHIRBundleEntry, 'Bundle entry type');
+                    check($entries[$index]->value['resource'] === $item, 'Entry resource identity or order');
+                    $prefix = $shape === 'fallback' ? '' : '/fhir/Questionnaire';
+                    $id = $index === 0 ? 'first-id' : 'second-id';
+                    check($entries[$index]->value['fullUrl'] === 'https://example.test' . $prefix . '/' . $id, 'Entry fullUrl');
+                }
+                check($first->idReads === (count($items) > 0 ? 1 : 0), 'First resource ID reads');
+                check($second->idReads === (count($items) > 0 ? 1 : 0), 'Second resource ID reads');
+                check($result->dataReads === 1, 'Healthy data read count');
+                checkServiceCall($service, $request, $params, $patient);
+            };
+        }
+    }
+
+    $failures = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+        } catch (\Throwable $error) {
+            $failures[] = ['name' => $name, 'message' => $error->getMessage()];
+        }
+    }
+    $total = count($cases);
+    $failed = count($failures);
+    fwrite(STDOUT, json_encode(['total' => $total, 'passed' => $total - $failed, 'failed' => $failed, 'failures' => $failures], JSON_THROW_ON_ERROR) . "\n");
+    exit($failed === 0 ? 0 : 1);
+}
