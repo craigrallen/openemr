@@ -1,0 +1,344 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\BC {
+    // Fixed logger seam for the native SearchFieldException catch; no production logger is initialized.
+    final class ServiceContainer
+    {
+        public static function getLogger(): object
+        {
+            return new class {
+                public function error(string $message, array $context = []): void
+                {
+                }
+            };
+        }
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only framework seam. The aggregator constructor is bypassed below.
+    class FhirServiceBase
+    {
+    }
+    interface IPatientCompartmentResourceService
+    {
+    }
+    interface IResourceUSCIGProfileService
+    {
+    }
+    interface IFhirExportableResourceService
+    {
+    }
+}
+
+namespace OpenEMR\Services\FHIR\Traits {
+    // Unused framework traits are declaration-only seams. Mapping and patient traits load natively.
+    trait BulkExportSupportAllOperationsTrait
+    {
+    }
+    trait FhirBulkExportDomainResourceTrait
+    {
+    }
+    trait FhirServiceBaseEmptyTrait
+    {
+    }
+    trait VersionedProfileTrait
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Services\FHIR\FhirDiagnosticReportService;
+    use OpenEMR\Services\FHIR\FhirServiceBase;
+    use OpenEMR\Services\Search\FHIRSearchFieldFactory;
+    use OpenEMR\Services\Search\FhirSearchParameterDefinition;
+    use OpenEMR\Services\Search\SearchFieldType;
+    use OpenEMR\Services\Search\TokenSearchField;
+    use OpenEMR\Validators\ProcessingResult;
+
+    const EXPECTED = 17;
+    const ORIGINAL_SHA256 = 'd1f7069a77b8a438b8ecd0737762c13f6eacdb3df29e8fbd557a2ff7b6faca38';
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    function requireTrue(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function same(mixed $actual, mixed $expected, string $message): void
+    {
+        requireTrue($actual === $expected, $message . ': ' . json_encode($actual, JSON_THROW_ON_ERROR));
+    }
+
+    final class DiagnosticRows extends FhirServiceBase
+    {
+        public array $calls = [];
+        public ?string $failure = null;
+
+        public function __construct(
+            private readonly array $rows,
+            private readonly array $codes,
+            private readonly array $categories,
+            private readonly bool $allCodes = false
+        ) {
+        }
+
+        public function supportsCode($code): bool
+        {
+            return $this->allCodes || in_array($code, $this->codes, true);
+        }
+
+        public function supportsCategory($category): bool
+        {
+            return in_array($category, $this->categories, true);
+        }
+
+        public function getAll($params, $bind = null): ProcessingResult
+        {
+            $this->calls[] = [$params, $bind];
+            $result = new ProcessingResult();
+            $tokens = null;
+            if (isset($params['code'])) {
+                // The native factory performs the child service's token and comma parsing.
+                $factory = new FHIRSearchFieldFactory([
+                    'code' => new FhirSearchParameterDefinition('code', SearchFieldType::TOKEN, ['code']),
+                ]);
+                $tokens = $factory->buildSearchField('code', $params['code']);
+                requireTrue($tokens instanceof TokenSearchField, 'native code field must be a token');
+            }
+            foreach ($this->rows as $row) {
+                if ($tokens === null || $tokens->hasCodeValue($row['code'])) {
+                    $result->addData($row);
+                }
+            }
+            if ($this->failure === 'validation') {
+                $result->setValidationMessages(['code' => 'synthetic child failure']);
+            } elseif ($this->failure === 'internal') {
+                $result->addInternalError('synthetic child failure');
+            }
+            return $result;
+        }
+    }
+
+    function fixture(bool $labAcceptsAll = true): array
+    {
+        $reflection = new \ReflectionClass(FhirDiagnosticReportService::class);
+        $aggregator = $reflection->newInstanceWithoutConstructor();
+        $clinical = new DiagnosticRows(
+            [['id' => 'clinical-shared', 'code' => 'SHARED'], ['id' => 'clinical-only', 'code' => 'C']],
+            ['SHARED', 'C'],
+            ['NOTE']
+        );
+        $lab = new DiagnosticRows(
+            [['id' => 'lab-shared', 'code' => 'SHARED'], ['id' => 'lab-only', 'code' => 'L']],
+            [],
+            ['LAB'],
+            $labAcceptsAll
+        );
+        $aggregator->setMappedServices([$clinical, $lab]);
+        return [$aggregator, $clinical, $lab];
+    }
+
+    function ids(ProcessingResult $result): array
+    {
+        return array_column($result->getData(), 'id');
+    }
+
+    function sourceGate(string $root): void
+    {
+        $path = $root . '/src/Services/FHIR/FhirDiagnosticReportService.php';
+        $source = file_get_contents($path);
+        requireTrue($source !== false, 'cannot read native aggregator');
+        $old = <<<'OLD'
+            } elseif (isset($fhirSearchParameters['code'])) {
+                $service = $this->getServiceForCode(
+                    new TokenSearchField('code', $fhirSearchParameters['code']),
+                    ''
+                );
+                // if we have a service let's search on that
+                if (isset($service)) {
+                    $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
+                } else {
+                    $fhirSearchResult = $this->searchAllServices($fhirSearchParameters, $puuidBind);
+                }
+OLD;
+        // The sole approved future product block. It changes routing only: child input remains raw.
+        $replacement = <<<'NEW'
+            } elseif (isset($fhirSearchParameters['code'])) {
+                $codeValues = $fhirSearchParameters['code'];
+                if (is_string($codeValues) && str_contains($codeValues, ',')) {
+                    $codeValues = explode(',', $codeValues);
+                }
+                $codeField = new TokenSearchField('code', $codeValues);
+                $services = $this->getServiceListForCode($codeField);
+                if ($services === []) {
+                    $this->getServiceForCode($codeField, '');
+                }
+                $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+NEW;
+        if (hash('sha256', $source) === ORIGINAL_SHA256) {
+            same(substr_count($source, $old), 1, 'original code block count');
+            return;
+        }
+        same(substr_count($source, $replacement), 1, 'approved replacement count');
+        $reversed = str_replace($replacement, $old, $source, $count);
+        same($count, 1, 'replacement reversal count');
+        same(hash('sha256', $reversed), ORIGINAL_SHA256, 'whole-source preservation');
+    }
+
+    try {
+        $root = dirname(__DIR__, 2);
+        $map = [
+            'OpenEMR\\Services\\FHIR\\FhirDiagnosticReportService' => 'src/Services/FHIR/FhirDiagnosticReportService.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\MappedServiceCodeTrait' => 'src/Services/FHIR/Traits/MappedServiceCodeTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\MappedServiceTrait' => 'src/Services/FHIR/Traits/MappedServiceTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\MappedServiceCategoryTrait' => 'src/Services/FHIR/Traits/MappedServiceCategoryTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\PatientSearchTrait' => 'src/Services/FHIR/Traits/PatientSearchTrait.php',
+            'OpenEMR\\Services\\Search\\BasicSearchField' => 'src/Services/Search/BasicSearchField.php',
+            'OpenEMR\\Services\\Search\\ISearchField' => 'src/Services/Search/ISearchField.php',
+            'OpenEMR\\Services\\Search\\SearchFieldException' => 'src/Services/Search/SearchFieldException.php',
+            'OpenEMR\\Services\\Search\\SearchFieldType' => 'src/Services/Search/SearchFieldType.php',
+            'OpenEMR\\Services\\Search\\ServiceField' => 'src/Services/Search/ServiceField.php',
+            'OpenEMR\\Services\\Search\\TokenSearchField' => 'src/Services/Search/TokenSearchField.php',
+            'OpenEMR\\Services\\Search\\TokenSearchValue' => 'src/Services/Search/TokenSearchValue.php',
+            'OpenEMR\\Services\\Search\\FhirSearchParameterDefinition' => 'src/Services/Search/FhirSearchParameterDefinition.php',
+            'OpenEMR\\Services\\Search\\FHIRSearchFieldFactory' => 'src/Services/Search/FhirSearchFieldFactory.php',
+            'OpenEMR\\Validators\\ProcessingResult' => 'src/Validators/ProcessingResult.php',
+            'OpenEMR\\Common\\Database\\QueryPagination' => 'src/Common/Database/QueryPagination.php',
+        ];
+        spl_autoload_register(static function (string $class) use ($root, $map): void {
+            if (!isset($map[$class])) {
+                throw new \RuntimeException('outside bounded autoloader: ' . $class);
+            }
+            require_once $root . '/' . $map[$class];
+        });
+        sourceGate($root);
+        $checks = [
+            'native class and traits' => static function () use ($root): void {
+                same((new \ReflectionClass(FhirDiagnosticReportService::class))->getFileName(), $root . '/src/Services/FHIR/FhirDiagnosticReportService.php', 'native class path');
+                foreach (['MappedServiceCodeTrait', 'MappedServiceTrait', 'MappedServiceCategoryTrait', 'PatientSearchTrait'] as $name) {
+                    same((new \ReflectionClass('OpenEMR\\Services\\FHIR\\Traits\\' . $name))->getFileName(), $root . '/src/Services/FHIR/Traits/' . $name . '.php', 'native trait path');
+                }
+            },
+            'shared code aggregates' => static function (): void {
+                [$a, $c, $l] = fixture();
+                same(ids($a->getAll(['code' => 'SHARED'])), ['clinical-shared', 'lab-shared'], 'shared data');
+                same([count($c->calls), count($l->calls)], [1, 1], 'shared routing');
+            },
+            'clinical-only code' => static function (): void {
+                [$a, $c, $l] = fixture();
+                same(ids($a->getAll(['code' => 'C'])), ['clinical-only'], 'clinical data');
+                same([count($c->calls), count($l->calls)], [1, 1], 'lab accepts all codes');
+            },
+            'lab-only code' => static function (): void {
+                [$a, $c, $l] = fixture();
+                same(ids($a->getAll(['code' => 'L'])), ['lab-only'], 'lab data');
+                same([count($c->calls), count($l->calls)], [0, 1], 'lab routing');
+            },
+            'comma OR clinical first' => static function (): void {
+                [$a] = fixture();
+                same(ids($a->getAll(['code' => 'C,L'])), ['clinical-only', 'lab-only'], 'comma OR');
+            },
+            'comma OR lab first' => static function (): void {
+                [$a] = fixture();
+                same(ids($a->getAll(['code' => 'L,C'])), ['clinical-only', 'lab-only'], 'reverse comma OR');
+            },
+            'array OR' => static function (): void {
+                [$a] = fixture();
+                same(ids($a->getAll(['code' => ['C', 'L']])), ['clinical-only', 'lab-only'], 'array OR');
+            },
+            'prefixed LOINC token' => static function (): void {
+                [$a] = fixture();
+                same(ids($a->getAll(['code' => 'http://loinc.org|SHARED'])), ['clinical-shared', 'lab-shared'], 'LOINC token');
+            },
+            'repeated code values' => static function (): void {
+                [$a] = fixture();
+                same(ids($a->getAll(['code' => ['C', 'L', 'C']])), ['clinical-only', 'lab-only'], 'repeated code OR');
+            },
+            'parameters and caller input preserved' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $input = ['code' => 'SHARED', 'patient' => 'query-patient', '_id' => 'opaque-id', '_lastUpdated' => 'opaque-time', '_revinclude' => 'opaque-include', 'date' => 'opaque-date'];
+                $copy = $input;
+                $a->getAll($input);
+                same($input, $copy, 'caller input');
+                same($c->calls[0], [$copy, null], 'clinical params');
+                same($l->calls[0], [$copy, null], 'lab params');
+            },
+            'explicit patient bind' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $input = ['code' => 'SHARED', 'patient' => 'query-patient'];
+                $a->getAll($input, 'bound-patient');
+                same($input['patient'], 'query-patient', 'caller patient');
+                same($c->calls[0], [['code' => 'SHARED', 'patient' => 'bound-patient'], 'bound-patient'], 'clinical bind');
+                same($l->calls[0], [['code' => 'SHARED', 'patient' => 'bound-patient'], 'bound-patient'], 'lab bind');
+            },
+            'category precedence' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $params = ['category' => 'LAB', 'code' => 'SHARED'];
+                same(ids($a->getAll($params)), ['lab-shared'], 'category data');
+                same(count($c->calls), 0, 'clinical excluded');
+                same($l->calls[0], [$params, null], 'code passed to category service');
+            },
+            'unknown category validation' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $result = $a->getAll(['category' => 'UNKNOWN', 'code' => 'SHARED']);
+                same($result->getValidationMessages(), ['category' => 'Invalid or unsupported category'], 'category validation');
+                same([count($c->calls), count($l->calls)], [0, 0], 'unknown category calls');
+            },
+            'no-code aggregation' => static function (): void {
+                [$a, $c, $l] = fixture();
+                same(ids($a->getAll(['patient' => 'p'])), ['clinical-shared', 'clinical-only', 'lab-shared', 'lab-only'], 'all data');
+                same([count($c->calls), count($l->calls)], [1, 1], 'all services');
+            },
+            'first child error stops later service' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $c->failure = 'validation';
+                $result = $a->getAll(['code' => 'SHARED']);
+                same(ids($result), [], 'cleared data');
+                same($result->getValidationMessages(), ['code' => 'synthetic child failure'], 'preserved validation');
+                same(count($l->calls), 0, 'later service stopped');
+            },
+            'second child error clears accumulated data' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $l->failure = 'internal';
+                $result = $a->getAll(['code' => 'SHARED']);
+                same(ids($result), [], 'cleared accumulated data');
+                same($result->getInternalErrors(), ['synthetic child failure'], 'preserved internal error');
+                same([count($c->calls), count($l->calls)], [1, 1], 'error call sequence');
+            },
+            'unsupported code retains validation' => static function (): void {
+                // Compatibility seam only: the native laboratory service accepts every code.
+                [$a, $c, $l] = fixture(false);
+                $result = $a->getAll(['code' => 'UNSUPPORTED']);
+                same($result->getValidationMessages(), ['code' => 'Invalid or unsupported code'], 'unsupported validation');
+                same([count($c->calls), count($l->calls)], [0, 0], 'unsupported calls');
+            },
+        ];
+        same(count($checks), EXPECTED, 'fixed check count');
+        $failed = [];
+        $passed = 0;
+        foreach ($checks as $name => $check) {
+            try {
+                $check();
+                ++$passed;
+            } catch (\Throwable $error) {
+                $failed[] = ['name' => $name, 'error' => $error->getMessage()];
+            }
+        }
+        echo json_encode(['expected' => EXPECTED, 'passed' => $passed, 'failed' => $failed], JSON_THROW_ON_ERROR) . "\n";
+        exit($failed === [] ? 0 : 1);
+    } catch (\Throwable $error) {
+        echo json_encode(['expected' => EXPECTED, 'passed' => 0, 'failed' => [['name' => 'harness', 'error' => $error->getMessage()]]], JSON_THROW_ON_ERROR) . "\n";
+        exit(2);
+    }
+}
