@@ -112,7 +112,7 @@ class FhirDiagnosticReportService extends FhirServiceBase implements IPatientCom
                     $codeField = new TokenSearchField('code', $codeValues);
                     $services = $this->getServiceListForCode($codeField);
                     if ($services === []) {
-                        $this->getServiceForCode($codeField, '');
+                        $services = [$this->getServiceForCode($codeField, '')];
                     }
                     if (count($services) === 1) {
                         $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
