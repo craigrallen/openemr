@@ -273,7 +273,9 @@ class FhirQuestionnaireRestController
     {
         $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);
         if ($processingResult->hasErrors()) {
-            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);
+            $psr17Factory = new \OpenEMR\Common\Http\Psr17Factory();
+            $psrHttpFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);
+            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));
         }
         $bundleEntries = [];
         foreach ($processingResult->getData() as $searchResult) {
