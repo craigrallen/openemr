@@ -1,0 +1,294 @@
+<?php
+declare(strict_types=1);
+
+// CLI seam only: real source classes and model serializers, without application bootstrap.
+if (PHP_SAPI !== 'cli') {
+    exit(2);
+}
+
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRPerson;
+use OpenEMR\Services\FHIR\FhirPersonService;
+
+$root = dirname(__DIR__, 2);
+$sourcePath = $root . '/src/Services/FHIR/FhirPersonService.php';
+$originalHash = '327c26ab2140b27b60a4e960a0d9efe06b2b7cfc0e200606090f6420ba61b316';
+$originalOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
+$fixedOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . (is_string(\$narrativeText) ? htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') : \$narrativeText) . '</p></div>'";
+$originalFnameAssignment = "\$narrativeText = \$dataRecord['fname'];";
+$names = [
+    'source_integrity', 'native_class_paths', 'special_characters_object',
+    'special_characters_encoded', 'literal_entities', 'multilingual_names',
+    'zero_name', 'absent_names', 'null_names', 'empty_names',
+    'whitespace_names', 'last_name_only', 'full_mapping_unchanged',
+    'input_immutable_independent_outputs', 'invalid_utf8_object',
+    'invalid_utf8_native_json_limit', 'integer_fname_without_lname',
+    'boolean_false_fname_without_lname',
+];
+$results = [];
+
+function check(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+function baseRecord(): array
+{
+    return [
+        'uuid' => 'person-219', 'active' => '1',
+        'last_updated' => '2024-01-02 03:04:05',
+        'period_start' => '2024-01-01 00:00:00',
+        'fname' => 'Ada', 'lname' => 'Lovelace', 'mname' => 'Byron',
+        'title' => 'Dr', 'street' => '1 Main & Lane', 'city' => 'Malmö',
+        'state' => 'CA', 'postal_code' => '01234',
+        'phone' => '100', 'phonew1' => '200', 'phonecell' => '300',
+        'email' => 'ada@example.test',
+    ];
+}
+
+function mapped(array $record, bool $encode = false): mixed
+{
+    static $service = null;
+    if ($service === null) {
+        $service = (new ReflectionClass(FhirPersonService::class))->newInstanceWithoutConstructor();
+    }
+    return $service->parseOpenEMRRecord($record, $encode);
+}
+
+function objectJson(FHIRPerson $person): array
+{
+    $json = json_decode(json_encode($person, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    check(is_array($json), 'native model JSON is not an object');
+    return $json;
+}
+
+function narrative(array $record): string
+{
+    $person = mapped($record);
+    check($person instanceof FHIRPerson, 'mapper did not return native FHIRPerson');
+    $json = objectJson($person);
+    check(($json['text']['status'] ?? null) === 'generated', 'narrative status changed');
+    return $json['text']['div'] ?? '';
+}
+
+function expectedDiv(string $raw): string
+{
+    return '<div xmlns="http://www.w3.org/1999/xhtml"> <p>'
+        . htmlspecialchars($raw, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8')
+        . '</p></div>';
+}
+
+function assertNarrative(array $record, string $raw): void
+{
+    $actual = narrative($record);
+    check($actual === expectedDiv($raw), 'XHTML narrative does not escape the raw joined name');
+    if (class_exists(DOMDocument::class)) {
+        $document = new DOMDocument();
+        check($document->loadXML($actual), 'narrative is not well-formed XHTML');
+        check($document->documentElement->namespaceURI === 'http://www.w3.org/1999/xhtml', 'XHTML namespace changed');
+        check($document->getElementsByTagName('p')->item(0)?->textContent === mbSafeReplacement($raw), 'XHTML text differs from source name');
+    }
+}
+
+function mbSafeReplacement(string $raw): string
+{
+    // ENT_SUBSTITUTE is the contract for malformed UTF-8, including without mbstring.
+    return html_entity_decode(htmlspecialchars($raw, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8'), ENT_QUOTES | ENT_XML1, 'UTF-8');
+}
+
+$cases = [
+    'source_integrity' => static function () use ($sourcePath, $originalHash, $originalOperand, $fixedOperand, $originalFnameAssignment): void {
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'source unreadable');
+        $hash = hash('sha256', $source);
+        check(substr_count($source, $originalFnameAssignment) === 1, 'original fname assignment is not unique');
+        if ($hash === $originalHash) {
+            check(substr_count($source, $originalOperand) === 1, 'original narrative operand is not unique');
+            return;
+        }
+        check(substr_count($source, $fixedOperand) === 1, 'fixed narrative operand is not unique');
+        $inverse = str_replace($fixedOperand, $originalOperand, $source, $operandCount);
+        check($operandCount === 1 && hash('sha256', $inverse) === $originalHash, 'source differs beyond the one approved fragment');
+    },
+    'native_class_paths' => static function () use ($root): void {
+        foreach ([
+            FhirPersonService::class => '/src/Services/FHIR/FhirPersonService.php',
+            OpenEMR\Services\FHIR\UtilsService::class => '/src/Services/FHIR/UtilsService.php',
+            FHIRPerson::class => '/src/FHIR/R4/FHIRDomainResource/FHIRPerson.php',
+            OpenEMR\FHIR\R4\FHIRElement\FHIRHumanName::class => '/src/FHIR/R4/FHIRElement/FHIRHumanName.php',
+            OpenEMR\FHIR\R4\FHIRElement\FHIRAddress::class => '/src/FHIR/R4/FHIRElement/FHIRAddress.php',
+        ] as $class => $path) {
+            check((new ReflectionClass($class))->getFileName() === $root . $path, 'non-native class: ' . $class);
+        }
+    },
+    'special_characters_object' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = 'A&B <img src="x">';
+        $record['lname'] = "O'Neil > \"Q\"";
+        assertNarrative($record, 'A&B <img src="x"> O\'Neil > "Q"');
+    },
+    'special_characters_encoded' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '<script>&"';
+        $record['lname'] = "' >";
+        $encoded = mapped($record, true);
+        check(is_string($encoded), 'encode=true did not return JSON string');
+        $json = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        check($json['text']['div'] === expectedDiv('<script>&" \' >'), 'encoded native model narrative differs');
+        check($json['name'][0]['given'][0] === '<script>&"', 'structured given name was escaped');
+    },
+    'literal_entities' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '&amp; &#60;';
+        $record['lname'] = '&unknown;';
+        assertNarrative($record, '&amp; &#60; &unknown;');
+    },
+    'multilingual_names' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '李 <安娜>';
+        $record['lname'] = 'Åström & Ω';
+        assertNarrative($record, '李 <安娜> Åström & Ω');
+    },
+    'zero_name' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '0';
+        $record['lname'] = '0';
+        assertNarrative($record, '0 0');
+        check(objectJson(mapped($record))['name'][0] === ['use' => 'official', 'given' => ['Byron'], 'prefix' => ['Dr']], 'native helper zero-name behavior changed');
+    },
+    'absent_names' => static function (): void {
+        $record = baseRecord();
+        unset($record['fname'], $record['lname']);
+        assertNarrative($record, '');
+    },
+    'null_names' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = null;
+        $record['lname'] = null;
+        assertNarrative($record, '');
+    },
+    'empty_names' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '';
+        $record['lname'] = '';
+        assertNarrative($record, ' ');
+    },
+    'whitespace_names' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = '  ';
+        $record['lname'] = "\t ";
+        assertNarrative($record, "   \t ");
+    },
+    'last_name_only' => static function (): void {
+        $record = baseRecord();
+        unset($record['fname']);
+        $record['lname'] = '<Last&>';
+        assertNarrative($record, ' <Last&>');
+    },
+    'full_mapping_unchanged' => static function (): void {
+        $record = baseRecord();
+        $json = objectJson(mapped($record));
+        check($json['resourceType'] === 'Person' && $json['id'] === 'person-219', 'resource type or id changed');
+        check($json['meta'] === ['versionId' => '1', 'lastUpdated' => '2024-01-02T03:04:05+00:00'], 'metadata changed');
+        check($json['active'] === true, 'active changed');
+        check($json['name'] === [['use' => 'official', 'family' => 'Lovelace', 'given' => ['Ada', 'Byron'], 'prefix' => ['Dr']]], 'structured name changed');
+        check(count($json['address']) === 1, 'address count changed');
+        check(($json['address'][0]['line'] ?? null) === ['1 Main & Lane'] && ($json['address'][0]['city'] ?? null) === 'Malmö' && ($json['address'][0]['state'] ?? null) === 'CA' && ($json['address'][0]['postalCode'] ?? null) === '01234', 'structured address changed');
+        check(($json['address'][0]['period']['start'] ?? null) === '2024-01-01T00:00:00.000+00:00', 'address period changed');
+        check($json['telecom'] === [
+            ['system' => 'phone', 'value' => '100', 'use' => 'home'],
+            ['system' => 'phone', 'value' => '200', 'use' => 'work'],
+            ['system' => 'phone', 'value' => '300', 'use' => 'mobile'],
+            ['system' => 'email', 'value' => 'ada@example.test', 'use' => 'home'],
+        ], 'telecom changed');
+    },
+    'input_immutable_independent_outputs' => static function (): void {
+        $record = baseRecord();
+        $before = $record;
+        $first = mapped($record);
+        $second = mapped($record);
+        check($record === $before, 'mapper mutated input');
+        check($first !== $second && $first->getName()[0] !== $second->getName()[0], 'output objects are shared');
+        $first->getName()[0]->setFamily('changed');
+        check(objectJson($second)['name'][0]['family'] === 'Lovelace', 'later output changed with first output');
+    },
+    'invalid_utf8_object' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = "A\xC3\x28&B";
+        $record['lname'] = '<X>';
+        $person = mapped($record);
+        check($person instanceof FHIRPerson, 'native object missing');
+        $div = $person->getText()['div'];
+        check($div === expectedDiv("A\xC3\x28&B <X>"), 'malformed UTF-8 was not substituted in XHTML');
+        check($person->getName()[0]->getGiven()[0] === "A\xC3\x28&B", 'structured invalid UTF-8 was modified');
+    },
+    'invalid_utf8_native_json_limit' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = "A\xC3\x28&B";
+        check(mapped($record, true) === false, 'native JSON should reject malformed structured UTF-8');
+        check(json_last_error() === JSON_ERROR_UTF8, 'native JSON failure has a different reason');
+    },
+    'integer_fname_without_lname' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = 42;
+        unset($record['lname']);
+        $person = mapped($record);
+        check($person instanceof FHIRPerson, 'mapper did not return native FHIRPerson');
+        check($person->getText()['div'] === '<div xmlns="http://www.w3.org/1999/xhtml"> <p>42</p></div>', 'integer narrative changed');
+        $json = objectJson($person);
+        check($json['name'][0] === ['use' => 'official', 'given' => [42, 'Byron'], 'prefix' => ['Dr']], 'integer structured name changed');
+        $encoded = mapped($record, true);
+        check(is_string($encoded), 'integer encode=true did not return JSON string');
+        check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'integer encoded native model differs');
+    },
+    'boolean_false_fname_without_lname' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = false;
+        unset($record['lname']);
+        $person = mapped($record);
+        check($person instanceof FHIRPerson, 'mapper did not return native FHIRPerson');
+        check($person->getText()['div'] === '<div xmlns="http://www.w3.org/1999/xhtml"> <p></p></div>', 'false narrative changed');
+        $json = objectJson($person);
+        check($json['name'][0] === ['use' => 'official', 'given' => ['Byron'], 'prefix' => ['Dr']], 'false structured name changed');
+        $encoded = mapped($record, true);
+        check(is_string($encoded), 'false encode=true did not return JSON string');
+        check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'false encoded native model differs');
+    },
+];
+
+date_default_timezone_set('UTC');
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (str_starts_with($class, $prefix)) {
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    }
+});
+// The real parent constructor requires application bootstrap; only its declaration is supplied.
+eval('namespace OpenEMR\\Services\\FHIR; class FhirServiceBase {}');
+
+foreach ($names as $name) {
+    $error = null;
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new ErrorException($message, 0, $severity);
+    });
+    try {
+        $cases[$name]();
+    } catch (Throwable $failure) {
+        $error = $failure->getMessage();
+    } finally {
+        restore_error_handler();
+    }
+    $results[] = ['name' => $name, 'ok' => $error === null, 'error' => $error];
+}
+
+$passed = count(array_filter($results, static fn(array $case): bool => $case['ok']));
+$report = [
+    'cases' => $results, 'total' => count($results), 'passed' => $passed,
+    'failed' => count($results) - $passed, 'source_sha256' => hash_file('sha256', $sourcePath),
+];
+echo json_encode($report, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+exit($report['failed'] === 0 ? 0 : 1);
