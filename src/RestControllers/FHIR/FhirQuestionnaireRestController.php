@@ -19,7 +19,6 @@ use OpenApi\Attributes as OA;
 use OpenEMR\Common\Http\HttpRestRequest;
 use OpenEMR\Common\Http\HttpRestRouteHandler;
 use OpenEMR\Core\OEGlobalsBag;
-use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle;
 use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
 use OpenEMR\RestControllers\RestControllerHelper;
 use OpenEMR\Services\FHIR\FhirQuestionnaireService;
@@ -273,8 +272,12 @@ class FhirQuestionnaireRestController
     {
         $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);
         if ($processingResult->hasErrors()) {
-            $psr17Factory = new \OpenEMR\Common\Http\Psr17Factory();
-            $psrHttpFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);
+            $psrHttpFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory(
+                \OpenEMR\BC\ServiceContainer::getServerRequestFactory(),
+                \OpenEMR\BC\ServiceContainer::getResponseFactory(),
+                \OpenEMR\BC\ServiceContainer::getStreamFactory(),
+                \OpenEMR\BC\ServiceContainer::getUploadedFileFactory()
+            );
             return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));
         }
         $bundleEntries = [];
