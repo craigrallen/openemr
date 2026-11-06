@@ -1,0 +1,161 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only: the mapper constructor is never called.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRGroup;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRBoolean;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRGroupType;
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRGroup\FHIRGroupMember;
+    use OpenEMR\Services\FHIR\Group\FhirPatientProviderGroupService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Group/FhirPatientProviderGroupService.php';
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    });
+
+    function assertSameValue(mixed $expected, mixed $actual, string $message): void
+    {
+        if ($expected !== $actual) {
+            throw new \RuntimeException($message . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function normalizeJson(mixed $value): mixed
+    {
+        if (!is_array($value)) {
+            return $value;
+        }
+        if (!array_is_list($value)) {
+            ksort($value);
+        }
+        foreach ($value as $key => $item) {
+            $value[$key] = normalizeJson($item);
+        }
+        return $value;
+    }
+
+    function checkRecord(array $record, array $patientIds, bool $encode = false): void
+    {
+        $before = serialize($record);
+        $service = (new \ReflectionClass(FhirPatientProviderGroupService::class))->newInstanceWithoutConstructor();
+        $group = $service->parseOpenEMRRecord($record, $encode);
+        assertSameValue($before, serialize($record), 'source record changed');
+        if (!$group instanceof FHIRGroup) {
+            throw new \RuntimeException('mapper did not return the native FHIRGroup');
+        }
+        if (!$group->getType() instanceof FHIRGroupType || !$group->getActual() instanceof FHIRBoolean) {
+            throw new \RuntimeException('type and actual must use native FHIR primitives');
+        }
+        assertSameValue('person', $group->getType()->getValue(), 'native type');
+        assertSameValue(true, $group->getActual()->getValue(), 'native actual');
+        assertSameValue(count($patientIds), count($group->getMember()), 'native member count');
+        foreach ($group->getMember() as $member) {
+            if (!$member instanceof FHIRGroupMember) {
+                throw new \RuntimeException('member must use the native FHIRGroupMember');
+            }
+        }
+
+        $members = [];
+        foreach ($patientIds as $id) {
+            $members[] = ['entity' => ['reference' => 'Patient/' . $id, 'type' => 'Patient']];
+        }
+        $expected = [
+            'resourceType' => 'Group',
+            'id' => 'group-123',
+            'meta' => ['versionId' => '1', 'lastUpdated' => '2024-01-02T03:04:05+00:00'],
+            'type' => 'person',
+            'actual' => true,
+            'name' => 'Dr Example Patients',
+        ];
+        if ($members !== []) {
+            $expected['member'] = $members;
+        }
+        $actual = json_decode(json_encode($group, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        assertSameValue(normalizeJson($expected), normalizeJson($actual), 'complete Group JSON');
+    }
+
+    $cases = [];
+    $errors = [];
+    $run = static function (string $name, callable $check) use (&$cases, &$errors): void {
+        try {
+            $check();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $message = $error::class . ': ' . $error->getMessage();
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $message];
+            $errors[] = $name . ': ' . $message;
+        }
+    };
+
+    $source = file_get_contents($sourcePath);
+    $sourceSha256 = hash('sha256', $source);
+    $run('whole-source inverse', static function () use ($source): void {
+        $additions = [
+            "use OpenEMR\\FHIR\\R4\\FHIRElement\\FHIRBoolean;\nuse OpenEMR\\FHIR\\R4\\FHIRElement\\FHIRGroupType;\n",
+            "        \$fhirGroup->setType((new FHIRGroupType())->setValue('person'));\n        \$fhirGroup->setActual(new FHIRBoolean(true));\n",
+        ];
+        foreach ($additions as $addition) {
+            assertSameValue(1, substr_count($source, $addition), 'approved addition count');
+            $source = str_replace($addition, '', $source);
+        }
+        assertSameValue('9bce5814663cb5c3c00ef0a7716c35c5fabcc2580e2c79f86ff4819a72bd878c', hash('sha256', $source), 'inverse original source hash');
+    });
+    $run('real mapper reflection', static function () use ($sourcePath): void {
+        $class = new \ReflectionClass(FhirPatientProviderGroupService::class);
+        assertSameValue(realpath($sourcePath), realpath($class->getFileName()), 'mapper file');
+        assertSameValue(FhirPatientProviderGroupService::class, $class->getMethod('parseOpenEMRRecord')->getDeclaringClass()->getName(), 'declaring method');
+    });
+
+    $base = [
+        'uuid' => 'group-123',
+        'name' => 'Dr Example Patients',
+        'last_modified_date' => '2024-01-02 03:04:05',
+    ];
+    $run('missing patients', static fn() => checkRecord($base, []));
+    $run('null patients', static fn() => checkRecord($base + ['patients' => null], []));
+    $run('empty patients', static fn() => checkRecord($base + ['patients' => []], []));
+    $run('one patient', static fn() => checkRecord($base + ['patients' => [['uuid' => 'patient-a', 'name' => 'Private One']]], ['patient-a']));
+    $run('two patients and encode contract', static function () use ($base): void {
+        $record = $base + ['patients' => [
+            ['uuid' => 'patient-b', 'name' => 'Private Two'],
+            ['uuid' => 'patient-a', 'name' => 'Private One'],
+        ]];
+        checkRecord($record, ['patient-b', 'patient-a']);
+        checkRecord($record, ['patient-b', 'patient-a'], true);
+    });
+
+    $report = [
+        'cases' => $cases,
+        'errors' => $errors,
+        'total' => count($cases),
+        'failed' => count($errors),
+        'source_sha256' => $sourceSha256,
+    ];
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), "\n";
+    exit($report['failed'] === 0 ? 0 : 1);
+}
