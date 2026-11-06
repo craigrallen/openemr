@@ -115,7 +115,9 @@ class FhirDiagnosticReportService extends FhirServiceBase implements IPatientCom
                         $services = [$this->getServiceForCode($codeField, '')];
                     }
                     if (count($services) === 1) {
-                        $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
+                        /** @var FhirServiceBase $service */
+                        $service = $services[0];
+                        $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
                     } else {
                         $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
                     }

@@ -259,11 +259,38 @@ FINAL;
                     }
                 }
 NEXT;
+        $typedReplacement = <<<'TYPED'
+            } elseif (isset($fhirSearchParameters['code'])) {
+                if (isset($fhirSearchParameters['_count']) || isset($fhirSearchParameters['_offset']) || isset($fhirSearchParameters['_sort'])) {
+                    $service = $this->getServiceForCode(
+                        new TokenSearchField('code', $fhirSearchParameters['code']),
+                        ''
+                    );
+                    $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
+                } else {
+                    $codeValues = $fhirSearchParameters['code'];
+                    if (is_string($codeValues) && str_contains($codeValues, ',')) {
+                        $codeValues = explode(',', $codeValues);
+                    }
+                    $codeField = new TokenSearchField('code', $codeValues);
+                    $services = $this->getServiceListForCode($codeField);
+                    if ($services === []) {
+                        $services = [$this->getServiceForCode($codeField, '')];
+                    }
+                    if (count($services) === 1) {
+                        /** @var FhirServiceBase $service */
+                        $service = $services[0];
+                        $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
+                    } else {
+                        $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+                    }
+                }
+TYPED;
         if (hash('sha256', $source) === ORIGINAL_SHA256) {
             same(substr_count($source, $old), 1, 'original code block count');
             return;
         }
-        $candidates = [$previousReplacement, $latestReplacement, $finalReplacement, $nextReplacement];
+        $candidates = [$previousReplacement, $latestReplacement, $finalReplacement, $nextReplacement, $typedReplacement];
         $counts = array_map(static fn (string $candidate): int => substr_count($source, $candidate), $candidates);
         same(array_sum($counts), 1, 'approved replacement count');
         $replacement = $candidates[array_search(1, $counts, true)];
