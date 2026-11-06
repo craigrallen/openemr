@@ -136,7 +136,7 @@ class FhirPersonService extends FhirServiceBase implements IFhirExportableResour
         }
         $text = [
             'status' => 'generated',
-            'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . htmlspecialchars($narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'
+            'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . htmlspecialchars((string) $narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'
         ];
         $person->setText($text);
 
