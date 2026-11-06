@@ -1,0 +1,307 @@
+<?php
+
+declare(strict_types=1);
+
+// CLI-only synthetic boundary: no application bootstrap, database, network, or clinical records.
+// The only framework seams are an empty FhirServiceBase and constructor bypass for the mapper.
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase {}
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRGoal;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCoding;
+    use OpenEMR\Services\CodeTypesService;
+    use OpenEMR\Services\FHIR\FhirGoalService;
+
+    const EXPECTED = 16;
+    const ORIGINAL_SHA256 = 'e73ad2b3e64728168a13af1607ee91a1dabef0afcb414af71be169bdb502e28b';
+
+    function lookup_code_descriptions($codes, $detail = 'code_text'): string
+    {
+        // Deterministic synthetic lookup from the actual typed input; the backticks exercise display cleanup.
+        return "Label `{$codes}`";
+    }
+
+    function xl($text): string
+    {
+        return $text;
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function record(array $details): array
+    {
+        return [
+            'uuid' => 'synthetic-goal-001',
+            'puuid' => 'synthetic-patient-001',
+            'provider_uuid' => 'synthetic-provider-001',
+            'provider_npi' => '0000000000',
+            'creation_date' => '2024-01-02 03:04:05',
+            'date' => '2024-02-03 04:05:06',
+            'date_end' => '2024-03-04 05:06:07',
+            'plan_status' => 'active',
+            'details' => $details,
+        ];
+    }
+
+    function detail(?string $code, string $description = 'Opaque `detail`'): array
+    {
+        return ['code' => $code, 'description' => $description];
+    }
+
+    function mapped(FhirGoalService $mapper, array $details): array
+    {
+        $goal = $mapper->parseOpenEMRRecord(record($details));
+        check($goal instanceof FHIRGoal, 'mapper did not return native FHIRGoal');
+        return json_decode(json_encode($goal, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    function codingRows(array $goal): array
+    {
+        return array_map(static fn(array $coding): array => [
+            $coding['system'] ?? null,
+            $coding['code'] ?? null,
+            $coding['display'] ?? null,
+        ], $goal['description']['coding'] ?? []);
+    }
+
+    function rows(FhirGoalService $mapper, array $details, array $expected): array
+    {
+        $goal = mapped($mapper, $details);
+        check(codingRows($goal) === $expected, 'description coding identity, order, or first display differs');
+        check(count($goal['target'] ?? []) === count($details), 'description dedup removed target entries');
+        return $goal;
+    }
+
+    function label(string $typed): string
+    {
+        return "Label '{$typed}'";
+    }
+
+    function sourceContract(string $source): void
+    {
+        $original = <<<'PHP'
+            // FIXED: Add coding from US Core Goal Description value set (no duplicates, clean codes)
+            $codeTypeService = new CodeTypesService();
+            $addedCodes = []; // Track codes to prevent duplicates
+
+            foreach ($dataRecord['details'] as $detail) {
+                if (!empty($detail['code'])) {
+                    // FIXED: Strip prefix from code
+                    $cleanCode = self::stripCodePrefix($detail['code']);
+
+                    // FIXED: Prevent duplicate codes
+                    if (in_array($cleanCode, $addedCodes)) {
+                        continue;
+                    }
+
+                    $codeText = $codeTypeService->lookup_code_description($detail['code']);
+                    $codeSystem = $codeTypeService->getSystemForCode($detail['code']);
+
+                    $coding = new FHIRCoding();
+                    $coding->setCode($cleanCode);
+                    if (!empty($codeText)) {
+                        // FIXED: Fix apostrophes in display text
+                        // @phpstan-ignore argument.type (legacy on-the-fly translation of dynamic value; migration tracked in #11498)
+                        $cleanDisplay = str_replace('`', "'", xl($codeText));
+                        $coding->setDisplay($cleanDisplay);
+                    }
+                    $coding->setSystem($codeSystem);
+                    $codeableConcept->addCoding($coding);
+
+                    $addedCodes[] = $cleanCode;
+                }
+            }
+PHP;
+        $fixed = <<<'PHP'
+            // FIXED: Add coding from US Core Goal Description value set (no duplicates, clean codes)
+            $codeTypeService = new CodeTypesService();
+            $addedCodes = []; // Track resolved system and exact code pairs
+
+            foreach ($dataRecord['details'] as $detail) {
+                if (!empty($detail['code'])) {
+                    // FIXED: Strip prefix from code
+                    $cleanCode = self::stripCodePrefix($detail['code']);
+                    $codeSystem = $codeTypeService->getSystemForCode($detail['code']);
+                    $identity = [$codeSystem, $cleanCode];
+
+                    // FIXED: Prevent duplicate codings within the same resolved system
+                    if (in_array($identity, $addedCodes, true)) {
+                        continue;
+                    }
+
+                    $codeText = $codeTypeService->lookup_code_description($detail['code']);
+
+                    $coding = new FHIRCoding();
+                    $coding->setCode($cleanCode);
+                    if (!empty($codeText)) {
+                        // FIXED: Fix apostrophes in display text
+                        // @phpstan-ignore argument.type (legacy on-the-fly translation of dynamic value; migration tracked in #11498)
+                        $cleanDisplay = str_replace('`', "'", xl($codeText));
+                        $coding->setDisplay($cleanDisplay);
+                    }
+                    $coding->setSystem($codeSystem);
+                    $codeableConcept->addCoding($coding);
+
+                    $addedCodes[] = $identity;
+                }
+            }
+PHP;
+        if (hash('sha256', $source) === ORIGINAL_SHA256) {
+            check(substr_count($source, $original) === 1, 'original description block missing or repeated');
+            return;
+        }
+        check(substr_count($source, $fixed) === 1, 'approved fixed description block missing or repeated');
+        $reverted = str_replace($fixed, $original, $source);
+        check(hash('sha256', $reverted) === ORIGINAL_SHA256, 'whole-source inverse differs from original mapper');
+    }
+
+    function report(int $passed, array $failed, int $status): never
+    {
+        echo json_encode(['expected' => EXPECTED, 'passed' => $passed, 'failed' => $failed], JSON_THROW_ON_ERROR), "\n";
+        exit($status);
+    }
+
+    if (PHP_SAPI !== 'cli') {
+        report(0, [['name' => 'harness', 'error' => 'CLI required']], 2);
+    }
+
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '0');
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    try {
+        $root = dirname(__DIR__, 2);
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $relative = substr($class, strlen($prefix));
+            if (!preg_match('/^[A-Za-z0-9_\\\\]+$/D', $relative)) {
+                throw new \RuntimeException('invalid autoload class');
+            }
+            $path = $root . '/src/' . str_replace('\\', '/', $relative) . '.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        });
+        $sourcePath = $root . '/src/Services/FHIR/FhirGoalService.php';
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'mapper source unavailable');
+        $mapper = (new \ReflectionClass(FhirGoalService::class))->newInstanceWithoutConstructor();
+        $GLOBALS['code_types'] = [];
+        // The native constructor reads only this synthetic empty global; no code_types.inc.php is loaded.
+        $codeTypes = new CodeTypesService();
+    } catch (\Throwable $error) {
+        report(0, [['name' => 'harness', 'error' => $error->getMessage()]], 2);
+    }
+
+    $snomed = 'http://snomed.info/sct';
+    $loinc = 'http://loinc.org';
+    $icd10 = 'http://hl7.org/fhir/sid/icd-10-cm';
+    $cpt = 'http://www.ama-assn.org/go/cpt';
+    $cases = [
+        'whole_source_inverse' => static fn() => sourceContract($source),
+        'native_class_files_and_systems' => static function () use ($root, $mapper, $codeTypes, $snomed, $loinc, $icd10, $cpt): void {
+            foreach ([
+                FhirGoalService::class => '/src/Services/FHIR/FhirGoalService.php',
+                CodeTypesService::class => '/src/Services/CodeTypesService.php',
+                FHIRGoal::class => '/src/FHIR/R4/FHIRDomainResource/FHIRGoal.php',
+                FHIRCoding::class => '/src/FHIR/R4/FHIRElement/FHIRCoding.php',
+                \OpenEMR\Services\FHIR\UtilsService::class => '/src/Services/FHIR/UtilsService.php',
+            ] as $class => $suffix) {
+                check((new \ReflectionClass($class))->getFileName() === realpath($root . $suffix), 'non-native class: ' . $class);
+            }
+            check($mapper instanceof FhirGoalService, 'mapper seam differs');
+            check($codeTypes->getSystemForCode('SNOMED:42') === $snomed, 'SNOMED resolution');
+            check($codeTypes->getSystemForCode('SNOMED-CT:42') === $snomed, 'SNOMED-CT resolution');
+            check($codeTypes->getSystemForCode('LOINC:42') === $loinc, 'LOINC resolution');
+            check($codeTypes->getSystemForCode('ICD10:42') === $icd10, 'ICD10 resolution');
+            check($codeTypes->getSystemForCode('CPT4:42') === $cpt, 'CPT4 resolution');
+        },
+        'single_baseline' => static fn() => rows($mapper, [detail('SNOMED:42')], [[$snomed, '42', label('SNOMED:42')]]),
+        'cross_system_snomed_first' => static fn() => rows($mapper, [detail('SNOMED:42'), detail('LOINC:42')], [[$snomed, '42', label('SNOMED:42')], [$loinc, '42', label('LOINC:42')]]),
+        'cross_system_loinc_first' => static fn() => rows($mapper, [detail('LOINC:42'), detail('SNOMED:42')], [[$loinc, '42', label('LOINC:42')], [$snomed, '42', label('SNOMED:42')]]),
+        'repeated_exact_first_display' => static fn() => rows($mapper, [detail('LOINC:42', 'First'), detail('LOINC:42', 'Second')], [[$loinc, '42', label('LOINC:42')]]),
+        'resolved_alias_dedup' => static fn() => rows($mapper, [detail('SNOMED:42'), detail('SNOMED-CT:42')], [[$snomed, '42', label('SNOMED:42')]]),
+        'strict_string_suffixes' => static fn() => rows($mapper, [detail('LOINC:01'), detail('LOINC:1')], [[$loinc, '01', label('LOINC:01')], [$loinc, '1', label('LOINC:1')]]),
+        'four_native_systems' => static fn() => rows($mapper, [detail('SNOMED:7'), detail('LOINC:7'), detail('ICD10:7'), detail('CPT4:7')], [[$snomed, '7', label('SNOMED:7')], [$loinc, '7', label('LOINC:7')], [$icd10, '7', label('ICD10:7')], [$cpt, '7', label('CPT4:7')]]),
+        'unknown_and_null_system_identity' => static fn() => rows($mapper, [detail('OPAQUE-A:7'), detail('OPAQUE-B:7'), detail('7'), detail('7')], [[null, 'OPAQUE-A:7', label('OPAQUE-A:7')], [null, 'OPAQUE-B:7', label('OPAQUE-B:7')], [null, '7', label('7')]]),
+        'empty_missing_null_code_guards' => static fn() => rows($mapper, [detail(''), ['description' => 'Missing'], detail(null)], []),
+        'metadata_status_subject_provider_dates_category_text' => static function () use ($mapper): void {
+            $goal = mapped($mapper, [detail('LOINC:42', 'Opaque `one`'), detail('SNOMED:42', 'Opaque two')]);
+            check(($goal['id'] ?? null) === 'synthetic-goal-001', 'id');
+            check(($goal['meta']['versionId'] ?? null) === '1', 'meta version');
+            check(in_array(FhirGoalService::USCGI_PROFILE_URI, $goal['meta']['profile'] ?? [], true), 'meta profile');
+            check(is_string($goal['meta']['lastUpdated'] ?? null), 'meta lastUpdated');
+            check(($goal['lifecycleStatus'] ?? null) === 'active', 'lifecycle status');
+            check(($goal['achievementStatus']['coding'][0]['code'] ?? null) === 'in-progress', 'achievement status');
+            check(($goal['subject']['reference'] ?? null) === 'Patient/synthetic-patient-001', 'subject');
+            check(($goal['expressedBy']['reference'] ?? null) === 'Practitioner/synthetic-provider-001', 'provider');
+            check(($goal['startDate'] ?? null) === '2024-02-03', 'startDate');
+            check(($goal['category'][0]['coding'][0]['code'] ?? null) === 'physiological', 'category');
+            check(($goal['description']['text'] ?? null) === "Opaque 'one'\nOpaque two", 'description text');
+        },
+        'all_target_measures_and_due_dates' => static function () use ($mapper, $snomed, $loinc): void {
+            $goal = rows($mapper, [detail('SNOMED:42'), detail('LOINC:42'), detail('SNOMED:42')], [[$snomed, '42', label('SNOMED:42')], [$loinc, '42', label('LOINC:42')]]);
+            $targets = $goal['target'];
+            check(count($targets) === 3, 'target count');
+            check(array_map(static fn(array $target): ?string => $target['measure']['coding'][0]['system'] ?? null, $targets) === [$snomed, $loinc, $snomed], 'target measures');
+            foreach ($targets as $target) {
+                check(($target['dueDate'] ?? null) === '2024-03-04', 'target dueDate');
+                check(($target['detailString'] ?? null) === "Opaque 'detail'", 'target detail');
+            }
+        },
+        'native_coding_objects_and_sibling_isolation' => static function () use ($mapper): void {
+            $goal = $mapper->parseOpenEMRRecord(record([detail('SNOMED:42'), detail('LOINC:42')]));
+            $codings = $goal->getDescription()->getCoding();
+            check(count($codings) === 2 && $codings[0] instanceof FHIRCoding && $codings[1] instanceof FHIRCoding, 'native coding objects');
+            check($codings[0] !== $codings[1], 'coding instances shared');
+            $before = json_encode($codings[1], JSON_THROW_ON_ERROR);
+            $codings[0]->setDisplay('mutated');
+            check(json_encode($codings[1], JSON_THROW_ON_ERROR) === $before, 'sibling coding changed');
+        },
+        'encoded_result' => static function () use ($mapper): void {
+            $input = record([detail('SNOMED:42'), detail('LOINC:42')]);
+            $encoded = $mapper->parseOpenEMRRecord($input, true);
+            check(is_string($encoded), 'encoded result is not a string');
+            $decoded = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+            $object = $mapper->parseOpenEMRRecord($input, false);
+            check($decoded === json_decode(json_encode($object, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR), 'encoded and object results differ');
+        },
+        'input_unchanged' => static function () use ($mapper): void {
+            $input = record([detail('SNOMED:42'), detail('LOINC:42')]);
+            $before = serialize($input);
+            $mapper->parseOpenEMRRecord($input);
+            check(serialize($input) === $before, 'input record changed');
+        },
+    ];
+
+    try {
+        check(count($cases) === EXPECTED, 'case count differs from report contract');
+    } catch (\Throwable $error) {
+        report(0, [['name' => 'harness', 'error' => $error->getMessage()]], 2);
+    }
+
+    $passed = 0;
+    $failed = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+            $passed++;
+        } catch (\Throwable $error) {
+            $failed[] = ['name' => $name, 'error' => $error->getMessage()];
+        }
+    }
+    report($passed, $failed, $failed === [] ? 0 : 1);
+}
