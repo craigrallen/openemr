@@ -1,0 +1,517 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Psr\Http\Message {
+    interface ResponseInterface {}
+    interface ServerRequestFactoryInterface {}
+    interface StreamFactoryInterface {}
+    interface UploadedFileFactoryInterface {}
+    interface ResponseFactoryInterface {}
+}
+
+namespace Psr\Log {
+    interface LoggerInterface {}
+}
+
+namespace Symfony\Component\HttpFoundation {
+    class Response {}
+}
+
+namespace OpenEMR\BC {
+    use Psr\Http\Message\ResponseFactoryInterface;
+    use Psr\Http\Message\ServerRequestFactoryInterface;
+    use Psr\Http\Message\StreamFactoryInterface;
+    use Psr\Http\Message\UploadedFileFactoryInterface;
+
+    class SyntheticFactory
+    {
+        public function __construct(public string $slot) {}
+    }
+
+    final class SyntheticServerRequestFactory extends SyntheticFactory implements ServerRequestFactoryInterface {}
+    final class SyntheticStreamFactory extends SyntheticFactory implements StreamFactoryInterface {}
+    final class SyntheticUploadedFileFactory extends SyntheticFactory implements UploadedFileFactoryInterface {}
+    final class SyntheticResponseFactory extends SyntheticFactory implements ResponseFactoryInterface {}
+
+    final class ServiceContainer
+    {
+        public static array $calls = [];
+        public static array $factories = [];
+
+        public static function reset(): void
+        {
+            self::$calls = [];
+            self::$factories = [
+                'serverRequest' => new SyntheticServerRequestFactory('serverRequest'),
+                'response' => new SyntheticResponseFactory('response'),
+                'stream' => new SyntheticStreamFactory('stream'),
+                'uploadedFile' => new SyntheticUploadedFileFactory('uploadedFile'),
+            ];
+        }
+
+        public static function getServerRequestFactory(): ServerRequestFactoryInterface
+        {
+            self::$calls[] = 'getServerRequestFactory';
+            return self::$factories['serverRequest'];
+        }
+
+        public static function getResponseFactory(): ResponseFactoryInterface
+        {
+            self::$calls[] = 'getResponseFactory';
+            return self::$factories['response'];
+        }
+
+        public static function getStreamFactory(): StreamFactoryInterface
+        {
+            self::$calls[] = 'getStreamFactory';
+            return self::$factories['stream'];
+        }
+
+        public static function getUploadedFileFactory(): UploadedFileFactoryInterface
+        {
+            self::$calls[] = 'getUploadedFileFactory';
+            return self::$factories['uploadedFile'];
+        }
+    }
+}
+
+namespace OpenEMR\Common\Http {
+    // Retain an explicit old-path double so pre-fix RED is a slot-policy
+    // failure, not a missing-class harness error. Final source forbids it.
+    final class Psr17Factory extends \OpenEMR\BC\SyntheticFactory implements \Psr\Http\Message\ServerRequestFactoryInterface, \Psr\Http\Message\StreamFactoryInterface, \Psr\Http\Message\UploadedFileFactoryInterface, \Psr\Http\Message\ResponseFactoryInterface
+    {
+        public function __construct()
+        {
+            parent::__construct('direct-construction');
+        }
+    }
+
+    final class HttpRestRequest
+    {
+        public int $patientUuidReads = 0;
+
+        public function __construct(private bool $patient, private array $params, private string $patientUuid) {}
+        public function isPatientRequest(): bool { return $this->patient; }
+        public function getQueryParams(): array { return $this->params; }
+        public function getPatientUUIDString(): string
+        {
+            ++$this->patientUuidReads;
+            return $this->patientUuid;
+        }
+    }
+}
+
+namespace Symfony\Bridge\PsrHttpMessage\Factory {
+    use OpenEMR\BC\ServiceContainer;
+    use Psr\Http\Message\ResponseFactoryInterface;
+    use Psr\Http\Message\ResponseInterface;
+    use Psr\Http\Message\ServerRequestFactoryInterface;
+    use Psr\Http\Message\StreamFactoryInterface;
+    use Psr\Http\Message\UploadedFileFactoryInterface;
+    use Symfony\Component\HttpFoundation\Response;
+
+    final class PsrHttpFactory
+    {
+        public static int $instances = 0;
+        public static array $factoryArguments = [];
+        public static array $calls = [];
+        public static ?ResponseInterface $response = null;
+
+        // Synthetic marker interfaces reproduce only the constructor type ABI.
+        // Pinned Symfony psr-http-message-bridge v7.4.8 source: composer.lock
+        // reference 76f1a57719a4a04c0ea18678a6c9305b5dcb9da8; retrieved
+        // PsrHttpFactory.php SHA-256 5d2cbcdba4334983f17d71a699dda59918b47d908f66aa1d2344f1b2a401d53b.
+        public function __construct(ServerRequestFactoryInterface $requestFactory, StreamFactoryInterface $streamFactory, UploadedFileFactoryInterface $uploadedFileFactory, ResponseFactoryInterface $responseFactory)
+        {
+            ++self::$instances;
+            self::$factoryArguments[] = [$requestFactory, $streamFactory, $uploadedFileFactory, $responseFactory];
+            if ($requestFactory !== ServiceContainer::$factories['serverRequest']
+                || $streamFactory !== ServiceContainer::$factories['stream']
+                || $uploadedFileFactory !== ServiceContainer::$factories['uploadedFile']
+                || $responseFactory !== ServiceContainer::$factories['response']) {
+                throw new \LogicException('Bridge factory slot mismatch');
+            }
+        }
+
+        public function createResponse(Response $response): ResponseInterface
+        {
+            self::$calls[] = $response;
+            if (self::$response === null) {
+                throw new \LogicException('Missing bridge response');
+            }
+            return self::$response;
+        }
+    }
+}
+
+namespace OpenEMR\Core {
+    final class OEGlobalsBag
+    {
+        private static ?self $instance = null;
+        public static function getInstance(): self { return self::$instance ??= new self(); }
+        public function get(string $key): string
+        {
+            if ($key !== 'site_addr_oath') {
+                throw new \LogicException('Unexpected globals key');
+            }
+            return 'https://example.test';
+        }
+    }
+}
+
+namespace OpenEMR\FHIR\R4\FHIRResource {
+    final class FHIRBundle
+    {
+        public function __construct(public string $type, public array $entries, public bool $flag) {}
+    }
+}
+
+namespace OpenEMR\FHIR\R4\FHIRResource\FHIRBundle {
+    final class FHIRBundleEntry
+    {
+        public function __construct(public array $value) {}
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle;
+    use OpenEMR\Validators\ProcessingResult;
+
+    final class FhirQuestionnaireService
+    {
+        public ?ProcessingResult $result = null;
+        public array $calls = [];
+
+        public function getAll(array $params, ?string $patientUuid = null): ProcessingResult
+        {
+            $this->calls[] = [$params, $patientUuid];
+            if ($this->result === null) {
+                throw new \LogicException('Missing service result');
+            }
+            return $this->result;
+        }
+    }
+
+    final class FhirResourcesService
+    {
+        public array $calls = [];
+        public ?FHIRBundle $bundle = null;
+
+        public function createBundle(string $type, array $entries, bool $flag): FHIRBundle
+        {
+            $this->calls[] = [$type, $entries, $flag];
+            return $this->bundle = new FHIRBundle($type, $entries, $flag);
+        }
+    }
+}
+
+namespace OpenEMR\RestControllers {
+    use OpenEMR\Validators\ProcessingResult;
+    use Psr\Http\Message\ResponseInterface;
+    use Symfony\Component\HttpFoundation\Response;
+
+    final class QuestionnaireResponse implements ResponseInterface {}
+
+    final class RestControllerHelper
+    {
+        public static array $errorCalls = [];
+        public static array $successCalls = [];
+        public static ?Response $errorResponse = null;
+        public static ?QuestionnaireResponse $successResponse = null;
+
+        public static function reset(): void
+        {
+            self::$errorCalls = [];
+            self::$successCalls = [];
+            self::$errorResponse = new Response();
+            self::$successResponse = new QuestionnaireResponse();
+        }
+
+        public static function handleFhirProcessingResult(ProcessingResult $result, int $status): Response
+        {
+            self::$errorCalls[] = [$result, $status];
+            return self::$errorResponse;
+        }
+
+        public static function returnSingleObjectResponse(mixed $object, bool $gzipEncoded = false): ResponseInterface
+        {
+            self::$successCalls[] = [$object, $gzipEncoded];
+            return self::$successResponse;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\BC\ServiceContainer;
+    use OpenEMR\Common\Http\HttpRestRequest;
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
+    use OpenEMR\RestControllers\FHIR\FhirQuestionnaireRestController;
+    use OpenEMR\RestControllers\RestControllerHelper;
+    use OpenEMR\Services\FHIR\FhirQuestionnaireService;
+    use OpenEMR\Services\FHIR\FhirResourcesService;
+    use OpenEMR\Validators\ProcessingResult;
+    use Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+    error_reporting(E_ALL);
+
+    $root = dirname(__DIR__, 2);
+    require $root . '/src/Common/Database/QueryPagination.php';
+    require $root . '/src/Validators/ProcessingResult.php';
+    require $root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php';
+
+    final class SpiedProcessingResult extends ProcessingResult
+    {
+        public int $dataReads = 0;
+        public function getData()
+        {
+            ++$this->dataReads;
+            return parent::getData();
+        }
+    }
+
+    final class QuestionnaireResource
+    {
+        public int $idReads = 0;
+        public function __construct(private string $id) {}
+        public function getId(): string
+        {
+            ++$this->idReads;
+            return $this->id;
+        }
+    }
+
+    final class PoisonResource
+    {
+        public function getId(): never
+        {
+            throw new \LogicException('Error data was traversed');
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function controller(FhirQuestionnaireService $questionnaire, FhirResourcesService $resources): FhirQuestionnaireRestController
+    {
+        $reflection = new \ReflectionClass(FhirQuestionnaireRestController::class);
+        $controller = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('questionnaireResourceService')->setValue($controller, $questionnaire);
+        $reflection->getProperty('fhirService')->setValue($controller, $resources);
+        return $controller;
+    }
+
+    function prepare(bool $patient, SpiedProcessingResult $result): array
+    {
+        RestControllerHelper::reset();
+        ServiceContainer::reset();
+        PsrHttpFactory::$instances = 0;
+        PsrHttpFactory::$factoryArguments = [];
+        PsrHttpFactory::$calls = [];
+        PsrHttpFactory::$response = new \OpenEMR\RestControllers\QuestionnaireResponse();
+        $questionnaire = new FhirQuestionnaireService();
+        $questionnaire->result = $result;
+        $resources = new FhirResourcesService();
+        $params = ['_id' => 'requested-id', '_count' => '2'];
+        $request = new HttpRestRequest($patient, $params, 'bound-patient-uuid');
+        return [controller($questionnaire, $resources), $request, $questionnaire, $resources, $params];
+    }
+
+    function checkServiceCall(FhirQuestionnaireService $service, HttpRestRequest $request, array $params, bool $patient): void
+    {
+        check(count($service->calls) === 1, 'Service call count');
+        check($service->calls[0][0] === $params, 'Raw query parameters changed');
+        check($service->calls[0][1] === ($patient ? 'bound-patient-uuid' : null), 'Patient binding changed');
+        check($request->patientUuidReads === ($patient ? 1 : 0), 'Patient UUID read count');
+    }
+
+    function correctedBranch(): string
+    {
+        return implode("\n", [
+            '        if ($processingResult->hasErrors()) {',
+            '            $psrHttpFactory = new \\Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory(',
+            '                \\OpenEMR\\BC\\ServiceContainer::getServerRequestFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getStreamFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getUploadedFileFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getResponseFactory()',
+            '            );',
+            '            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));',
+            '        }',
+        ]);
+    }
+
+    function checkFactoryPolicySource(string $root): void
+    {
+        $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
+        check($source !== false, 'Controller source unreadable');
+        check(!str_contains($source, 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle;'), 'Orphan FHIRBundle import remains');
+        check(!str_contains($source, 'new \\OpenEMR\\Common\\Http\\Psr17Factory()'), 'Direct PSR-17 factory construction remains');
+        check(substr_count($source, correctedBranch()) === 1, 'Exact four getter bridge branch missing or repeated');
+    }
+
+    function checkSource(string $root): void
+    {
+        $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
+        check($source !== false, 'Controller source unreadable');
+        $currentBranch = implode("\n", [
+            '        if ($processingResult->hasErrors()) {',
+            '            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);',
+            '        }',
+        ]);
+        $bridgedBranch = correctedBranch();
+        $restored = $source;
+        check(substr_count($restored, $bridgedBranch) === 1, 'Bridged branch missing or repeated');
+        $restored = str_replace($bridgedBranch, $currentBranch, $restored, $count);
+        check($count === 1, 'Bridge inverse replacement count');
+        check(substr_count($restored, $currentBranch) === 1, 'Current error branch missing or repeated');
+        $entryImport = 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle\\FHIRBundleEntry;';
+        $originalImports = 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle;' . "\n" . $entryImport;
+        check(substr_count($restored, $entryImport) === 1, 'Adjacent native import missing or repeated');
+        check(substr_count($restored, $originalImports) === 0, 'Orphan import already present');
+        $restored = str_replace($entryImport, $originalImports, $restored, $count);
+        check($count === 1, 'Import inverse replacement count');
+        $pairs = [
+            ['return RestControllerHelper::returnSingleObjectResponse($result);', 'return $result;'],
+            ['@return FHIRBundle FHIR bundle with query results, if found', '@return ResponseInterface Questionnaire list response from the existing error helper or the once-wrapped success bundle.'],
+            ['private function getAll(array $searchParams, ?string $puuidBind = null): FHIRBundle', 'private function getAll(array $searchParams, ?string $puuidBind = null): ResponseInterface'],
+            [
+                implode("\n", [
+                    '        $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);',
+                    '        $bundleEntries = [];',
+                ]),
+                implode("\n", [
+                    '        $processingResult = $this->questionnaireResourceService->getAll($searchParams, $puuidBind);',
+                    '        if ($processingResult->hasErrors()) {',
+                    '            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);',
+                    '        }',
+                    '        $bundleEntries = [];',
+                ]),
+            ],
+            [
+                "return \$this->fhirService->createBundle('Questionnaire', \$bundleEntries, false);",
+                "return RestControllerHelper::returnSingleObjectResponse(\$this->fhirService->createBundle('Questionnaire', \$bundleEntries, false));",
+            ],
+        ];
+        foreach ($pairs as [$old, $new]) {
+            check(substr_count($restored, $new) === 1, 'Expected production fragment missing or repeated');
+            $restored = str_replace($new, $old, $restored, $count);
+            check($count === 1, 'Inverse replacement count');
+        }
+        check(hash('sha256', $restored) === 'b5b937fee16e2dbc9c6441d41419901ab5688a7aec03f6c8097b5dc88c6e9b20', 'Restored controller differs from pinned original');
+    }
+
+    $cases = [];
+    $cases['whole-source inverse'] = static function () use ($root): void { checkSource($root); };
+    $cases['factory policy source guard'] = static function () use ($root): void { checkFactoryPolicySource($root); };
+
+    foreach ([false, true] as $patient) {
+        $scope = $patient ? 'patient' : 'staff';
+        foreach (['validation', 'internal', 'combined'] as $kind) {
+            foreach ([false, true] as $poison) {
+                $name = $scope . ' ' . $kind . ' error ' . ($poison ? 'poison data' : 'empty data');
+                $cases[$name] = static function () use ($patient, $kind, $poison): void {
+                    $result = new SpiedProcessingResult();
+                    if ($kind !== 'internal') {
+                        $result->setValidationMessages(['invalid query']);
+                    }
+                    if ($kind !== 'validation') {
+                        $result->addInternalError('internal failure');
+                    }
+                    if ($poison) {
+                        $result->setData([new PoisonResource()]);
+                    }
+                    check($result->hasErrors(), 'Native result should have errors');
+                    check($result->isValid() === ($kind === 'internal'), 'Native validation state');
+                    [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
+                    $response = $controller->list($request);
+                    check($response === PsrHttpFactory::$response, 'Bridged error response identity');
+                    check(ServiceContainer::$calls === ['getServerRequestFactory', 'getStreamFactory', 'getUploadedFileFactory', 'getResponseFactory'], 'Factory getter count or order');
+                    check(PsrHttpFactory::$instances === 1, 'Bridge initialization count');
+                    check(count(PsrHttpFactory::$factoryArguments) === 1, 'Bridge constructor call count');
+                    check(PsrHttpFactory::$factoryArguments[0] === [ServiceContainer::$factories['serverRequest'], ServiceContainer::$factories['stream'], ServiceContainer::$factories['uploadedFile'], ServiceContainer::$factories['response']], 'Bridge factory identity or order');
+                    check(count(PsrHttpFactory::$calls) === 1, 'Bridge response conversion count');
+                    check(PsrHttpFactory::$calls[0] === RestControllerHelper::$errorResponse, 'Exact helper Response was not bridged');
+                    check(count(RestControllerHelper::$errorCalls) === 1, 'Error helper call count');
+                    check(RestControllerHelper::$errorCalls[0][0] === $result, 'Native ProcessingResult identity');
+                    check(RestControllerHelper::$errorCalls[0][1] === 200, 'Error helper success status argument');
+                    check(RestControllerHelper::$successCalls === [], 'Error response was wrapped by success serializer');
+                    check($resources->calls === [], 'Bundle created after error');
+                    check($result->dataReads === 0, 'Error data was read');
+                    checkServiceCall($service, $request, $params, $patient);
+                };
+            }
+        }
+        foreach (['empty', 'multiple', 'fallback'] as $shape) {
+            $cases[$scope . ' healthy ' . $shape] = static function () use ($patient, $shape): void {
+                $result = new SpiedProcessingResult();
+                $first = new QuestionnaireResource('first-id');
+                $second = new QuestionnaireResource('second-id');
+                $items = $shape === 'empty' ? [] : [$first, $second];
+                $result->setData($items);
+                check(!$result->hasErrors(), 'Native result should be healthy');
+                [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
+                $previous = $_SERVER['REDIRECT_URL'] ?? null;
+                $hadRedirect = array_key_exists('REDIRECT_URL', $_SERVER);
+                if ($shape === 'fallback') {
+                    unset($_SERVER['REDIRECT_URL']);
+                } else {
+                    $_SERVER['REDIRECT_URL'] = '/fhir/Questionnaire';
+                }
+                try {
+                    $response = $controller->list($request);
+                } finally {
+                    if ($hadRedirect) {
+                        $_SERVER['REDIRECT_URL'] = $previous;
+                    } else {
+                        unset($_SERVER['REDIRECT_URL']);
+                    }
+                }
+                check($response === RestControllerHelper::$successResponse, 'Original success response identity');
+                check(ServiceContainer::$calls === [], 'Factory getter called on healthy result');
+                check(PsrHttpFactory::$instances === 0, 'Bridge initialized on healthy result');
+                check(PsrHttpFactory::$factoryArguments === [], 'Bridge constructor called on healthy result');
+                check(PsrHttpFactory::$calls === [], 'Bridge called on healthy result');
+                check(RestControllerHelper::$errorCalls === [], 'Error helper used on healthy result');
+                check(count(RestControllerHelper::$successCalls) === 1, 'Success serializer call count');
+                check(RestControllerHelper::$successCalls[0][0] === $resources->bundle, 'Exact created Bundle identity');
+                check(RestControllerHelper::$successCalls[0][1] === false, 'Unexpected gzip argument');
+                check(count($resources->calls) === 1, 'Bundle creation count');
+                check($resources->calls[0][0] === 'Questionnaire', 'Bundle resource type');
+                check($resources->calls[0][2] === false, 'Bundle flag');
+                $entries = $resources->calls[0][1];
+                check(count($entries) === count($items), 'Bundle entry count');
+                foreach ($items as $index => $item) {
+                    check($entries[$index] instanceof FHIRBundleEntry, 'Bundle entry type');
+                    check($entries[$index]->value['resource'] === $item, 'Entry resource identity or order');
+                    $prefix = $shape === 'fallback' ? '' : '/fhir/Questionnaire';
+                    $id = $index === 0 ? 'first-id' : 'second-id';
+                    check($entries[$index]->value['fullUrl'] === 'https://example.test' . $prefix . '/' . $id, 'Entry fullUrl');
+                }
+                check($first->idReads === (count($items) > 0 ? 1 : 0), 'First resource ID reads');
+                check($second->idReads === (count($items) > 0 ? 1 : 0), 'Second resource ID reads');
+                check($result->dataReads === 1, 'Healthy data read count');
+                checkServiceCall($service, $request, $params, $patient);
+            };
+        }
+    }
+
+    $failures = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+        } catch (\Throwable $error) {
+            $failures[] = ['name' => $name, 'message' => $error->getMessage()];
+        }
+    }
+    $total = count($cases);
+    $failed = count($failures);
+    fwrite(STDOUT, json_encode(['total' => $total, 'passed' => $total - $failed, 'failed' => $failed, 'failures' => $failures], JSON_THROW_ON_ERROR) . "\n");
+    exit($failed === 0 ? 0 : 1);
+}
