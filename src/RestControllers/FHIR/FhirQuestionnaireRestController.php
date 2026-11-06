@@ -274,9 +274,9 @@ class FhirQuestionnaireRestController
         if ($processingResult->hasErrors()) {
             $psrHttpFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory(
                 \OpenEMR\BC\ServiceContainer::getServerRequestFactory(),
-                \OpenEMR\BC\ServiceContainer::getResponseFactory(),
                 \OpenEMR\BC\ServiceContainer::getStreamFactory(),
-                \OpenEMR\BC\ServiceContainer::getUploadedFileFactory()
+                \OpenEMR\BC\ServiceContainer::getUploadedFileFactory(),
+                \OpenEMR\BC\ServiceContainer::getResponseFactory()
             );
             return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));
         }
