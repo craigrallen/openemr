@@ -146,12 +146,12 @@ class FhirQuestionnaireResponseService extends FhirServiceBase implements
                     return $result;
                 }
             } else {
-                $result->setInternalErrors(xlt("The event should have returned a ProcessingResult object"));
+                $result = new ProcessingResult();
+                $result->addInternalError(xlt("The event should have returned a ProcessingResult object"));
+                return $result;
             }
-            if ($result->isValid()) {
-                $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);
-                $result->addProcessingResult($processingResult);
-            }
+            $processingResult = $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);
+            $result->addProcessingResult($processingResult);
             return $result;
         } else {
             return $this->searchAllServicesWithSupportedFields($fhirSearchParameters, $puuidBind);
