@@ -50,6 +50,7 @@ namespace OpenEMR\Services\FHIR\Traits {
 }
 
 namespace {
+    use OpenEMR\Common\Database\QueryPagination;
     use OpenEMR\Services\FHIR\FhirDiagnosticReportService;
     use OpenEMR\Services\FHIR\FhirServiceBase;
     use OpenEMR\Services\Search\FHIRSearchFieldFactory;
@@ -58,7 +59,7 @@ namespace {
     use OpenEMR\Services\Search\TokenSearchField;
     use OpenEMR\Validators\ProcessingResult;
 
-    const EXPECTED = 17;
+    const EXPECTED = 18;
     const ORIGINAL_SHA256 = 'd1f7069a77b8a438b8ecd0737762c13f6eacdb3df29e8fbd557a2ff7b6faca38';
 
     if (PHP_SAPI !== 'cli') {
@@ -84,6 +85,8 @@ namespace {
     {
         public array $calls = [];
         public ?string $failure = null;
+        public ?QueryPagination $pagination = null;
+        public ?ProcessingResult $lastResult = null;
 
         public function __construct(
             private readonly array $rows,
@@ -107,6 +110,9 @@ namespace {
         {
             $this->calls[] = [$params, $bind];
             $result = new ProcessingResult();
+            if ($this->pagination !== null) {
+                $result->setPagination($this->pagination);
+            }
             $tokens = null;
             if (isset($params['code'])) {
                 // The native factory performs the child service's token and comma parsing.
@@ -126,6 +132,7 @@ namespace {
             } elseif ($this->failure === 'internal') {
                 $result->addInternalError('synthetic child failure');
             }
+            $this->lastResult = $result;
             return $result;
         }
     }
@@ -172,8 +179,7 @@ namespace {
                     $fhirSearchResult = $this->searchAllServices($fhirSearchParameters, $puuidBind);
                 }
 OLD;
-        // The sole approved future product block. It changes routing only: child input remains raw.
-        $replacement = <<<'NEW'
+        $previousReplacement = <<<'PREVIOUS'
             } elseif (isset($fhirSearchParameters['code'])) {
                 $codeValues = $fhirSearchParameters['code'];
                 if (is_string($codeValues) && str_contains($codeValues, ',')) {
@@ -185,12 +191,32 @@ OLD;
                     $this->getServiceForCode($codeField, '');
                 }
                 $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
-NEW;
+PREVIOUS;
+        $latestReplacement = <<<'LATEST'
+            } elseif (isset($fhirSearchParameters['code'])) {
+                $codeValues = $fhirSearchParameters['code'];
+                if (is_string($codeValues) && str_contains($codeValues, ',')) {
+                    $codeValues = explode(',', $codeValues);
+                }
+                $codeField = new TokenSearchField('code', $codeValues);
+                $services = $this->getServiceListForCode($codeField);
+                if ($services === []) {
+                    $this->getServiceForCode($codeField, '');
+                }
+                if (count($services) === 1) {
+                    $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
+                } else {
+                    $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+                }
+LATEST;
         if (hash('sha256', $source) === ORIGINAL_SHA256) {
             same(substr_count($source, $old), 1, 'original code block count');
             return;
         }
-        same(substr_count($source, $replacement), 1, 'approved replacement count');
+        $previousCount = substr_count($source, $previousReplacement);
+        $latestCount = substr_count($source, $latestReplacement);
+        same($previousCount + $latestCount, 1, 'approved replacement count');
+        $replacement = $previousCount === 1 ? $previousReplacement : $latestReplacement;
         $reversed = str_replace($replacement, $old, $source, $count);
         same($count, 1, 'replacement reversal count');
         same(hash('sha256', $reversed), ORIGINAL_SHA256, 'whole-source preservation');
@@ -244,6 +270,29 @@ NEW;
                 [$a, $c, $l] = fixture();
                 same(ids($a->getAll(['code' => 'L'])), ['lab-only'], 'lab data');
                 same([count($c->calls), count($l->calls)], [0, 1], 'lab routing');
+            },
+            'single-service result retains pagination' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $pagination = new QueryPagination(1, 7);
+                $pagination->setTotalCount(42);
+                $pagination->setSearchUri('synthetic-search');
+                $pagination->setHasMoreData(true);
+                $l->pagination = $pagination;
+                $result = $a->getAll(['code' => 'L']);
+                same([count($c->calls), count($l->calls)], [0, 1], 'single-service routing');
+                same(ids($result), ['lab-only'], 'limited laboratory row');
+                same($result, $l->lastResult, 'child ProcessingResult identity');
+                same($result->getPagination(), $pagination, 'child pagination identity');
+                same($result->getPagination()->getLimit(), 1, 'pagination limit');
+                same($result->getPagination()->getCurrentOffsetId(), 7, 'pagination offset');
+                same($result->getPagination()->getTotalCount(), 42, 'pagination total count');
+                same($result->getPagination()->getSearchUri(), 'synthetic-search', 'pagination search URI');
+                same($result->getPagination()->hasMoreData(), true, 'pagination has more data');
+                same($result->getPagination()->getLinks(), [
+                    'first' => 'synthetic-search&_offset=0&_count=1',
+                    'previous' => 'synthetic-search&_offset=6&_count=1',
+                    'next' => 'synthetic-search&_offset=8&_count=1',
+                ], 'pagination links');
             },
             'comma OR clinical first' => static function (): void {
                 [$a] = fixture();
