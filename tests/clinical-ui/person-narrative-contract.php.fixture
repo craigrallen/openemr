@@ -13,16 +13,16 @@ $root = dirname(__DIR__, 2);
 $sourcePath = $root . '/src/Services/FHIR/FhirPersonService.php';
 $originalHash = '327c26ab2140b27b60a4e960a0d9efe06b2b7cfc0e200606090f6420ba61b316';
 $originalOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
-$fixedOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'";
+$fixedOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . (is_string(\$narrativeText) ? htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') : \$narrativeText) . '</p></div>'";
 $originalFnameAssignment = "\$narrativeText = \$dataRecord['fname'];";
-$fixedFnameAssignment = "\$narrativeText .= \$dataRecord['fname'];";
 $names = [
     'source_integrity', 'native_class_paths', 'special_characters_object',
     'special_characters_encoded', 'literal_entities', 'multilingual_names',
     'zero_name', 'absent_names', 'null_names', 'empty_names',
     'whitespace_names', 'last_name_only', 'full_mapping_unchanged',
     'input_immutable_independent_outputs', 'invalid_utf8_object',
-    'invalid_utf8_native_json_limit',
+    'invalid_utf8_native_json_limit', 'integer_fname_without_lname',
+    'boolean_false_fname_without_lname',
 ];
 $results = [];
 
@@ -98,20 +98,18 @@ function mbSafeReplacement(string $raw): string
 }
 
 $cases = [
-    'source_integrity' => static function () use ($sourcePath, $originalHash, $originalOperand, $fixedOperand, $originalFnameAssignment, $fixedFnameAssignment): void {
+    'source_integrity' => static function () use ($sourcePath, $originalHash, $originalOperand, $fixedOperand, $originalFnameAssignment): void {
         $source = file_get_contents($sourcePath);
         check(is_string($source), 'source unreadable');
         $hash = hash('sha256', $source);
+        check(substr_count($source, $originalFnameAssignment) === 1, 'original fname assignment is not unique');
         if ($hash === $originalHash) {
             check(substr_count($source, $originalOperand) === 1, 'original narrative operand is not unique');
-            check(substr_count($source, $originalFnameAssignment) === 1, 'original fname assignment is not unique');
             return;
         }
         check(substr_count($source, $fixedOperand) === 1, 'fixed narrative operand is not unique');
-        check(substr_count($source, $fixedFnameAssignment) === 1, 'fixed fname assignment is not unique');
         $inverse = str_replace($fixedOperand, $originalOperand, $source, $operandCount);
-        $inverse = str_replace($fixedFnameAssignment, $originalFnameAssignment, $inverse, $assignmentCount);
-        check($operandCount === 1 && $assignmentCount === 1 && hash('sha256', $inverse) === $originalHash, 'source differs beyond the two approved fragments');
+        check($operandCount === 1 && hash('sha256', $inverse) === $originalHash, 'source differs beyond the one approved fragment');
     },
     'native_class_paths' => static function () use ($root): void {
         foreach ([
@@ -230,6 +228,32 @@ $cases = [
         $record['fname'] = "A\xC3\x28&B";
         check(mapped($record, true) === false, 'native JSON should reject malformed structured UTF-8');
         check(json_last_error() === JSON_ERROR_UTF8, 'native JSON failure has a different reason');
+    },
+    'integer_fname_without_lname' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = 42;
+        unset($record['lname']);
+        $person = mapped($record);
+        check($person instanceof FHIRPerson, 'mapper did not return native FHIRPerson');
+        check($person->getText()['div'] === '<div xmlns="http://www.w3.org/1999/xhtml"> <p>42</p></div>', 'integer narrative changed');
+        $json = objectJson($person);
+        check($json['name'][0] === ['use' => 'official', 'given' => [42, 'Byron'], 'prefix' => ['Dr']], 'integer structured name changed');
+        $encoded = mapped($record, true);
+        check(is_string($encoded), 'integer encode=true did not return JSON string');
+        check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'integer encoded native model differs');
+    },
+    'boolean_false_fname_without_lname' => static function (): void {
+        $record = baseRecord();
+        $record['fname'] = false;
+        unset($record['lname']);
+        $person = mapped($record);
+        check($person instanceof FHIRPerson, 'mapper did not return native FHIRPerson');
+        check($person->getText()['div'] === '<div xmlns="http://www.w3.org/1999/xhtml"> <p></p></div>', 'false narrative changed');
+        $json = objectJson($person);
+        check($json['name'][0] === ['use' => 'official', 'given' => ['Byron'], 'prefix' => ['Dr']], 'false structured name changed');
+        $encoded = mapped($record, true);
+        check(is_string($encoded), 'false encode=true did not return JSON string');
+        check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'false encoded native model differs');
     },
 ];
 
