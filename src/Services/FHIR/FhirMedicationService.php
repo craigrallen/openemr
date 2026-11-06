@@ -133,6 +133,7 @@ class FhirMedicationService extends FhirServiceBase implements IResourceUSCIGPro
             $formCoding->setCode($formCode);
             $formCoding->setDisplay($formDisplay);
             $form->addCoding($formCoding);
+            $medicationResource->setForm($form);
         }
 
         if (isset($dataRecord['expiration']) || isset($dataRecord['expiration'])) {

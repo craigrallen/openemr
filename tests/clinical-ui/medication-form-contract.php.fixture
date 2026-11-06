@@ -1,0 +1,217 @@
+<?php
+
+declare(strict_types=1);
+
+// CLI-only contract for the native read mapper. No application or database bootstrap.
+error_reporting(E_ALL);
+date_default_timezone_set('UTC');
+
+$root = dirname(__DIR__, 2);
+$sourcePath = $root . '/src/Services/FHIR/FhirMedicationService.php';
+$originalSha = '137fee92d19025f5bce8fedf0e2a5daed94e7609448667921acbb567ba2d85e7';
+$source = file_get_contents($sourcePath);
+$sourceSha = hash('sha256', $source);
+
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require $path;
+    }
+});
+
+// The installed checkout lacks Composer's PSR logger dependency. Only the base
+// declaration is replaced; the service, its traits/interfaces and FHIR models
+// below still load from their native src files.
+eval('namespace OpenEMR\\Services\\FHIR; abstract class FhirServiceBase {}');
+
+$cases = [];
+$check = static function (bool $condition, string $message): void {
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+};
+$run = static function (string $name, callable $body, array $allowedWarnings = []) use (&$cases): void {
+    $warnings = [];
+    set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+        $warnings[] = $message;
+        return true;
+    });
+    try {
+        $body();
+        foreach ($warnings as $warning) {
+            if (!in_array($warning, $allowedWarnings, true)) {
+                throw new RuntimeException('PHP warning: ' . $warning);
+            }
+        }
+        $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+    } catch (Throwable $error) {
+        $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+    } finally {
+        restore_error_handler();
+    }
+};
+
+$run('source_exact_single_insertion', static function () use ($check, $source, $sourceSha, $originalSha): void {
+    $needle = "            \$form->addCoding(\$formCoding);\n";
+    $check(substr_count($source, $needle) === 1, 'Expected one original form addCoding line');
+    $approved = $needle . "            \$medicationResource->setForm(\$form);\n";
+    $original = str_replace($approved, $needle, $source, $count);
+    $check(
+        $sourceSha === $originalSha || ($count === 1 && hash('sha256', $original) === $originalSha),
+        'Mapper differs from pinned original plus the one permitted insertion'
+    );
+});
+
+$serviceClass = OpenEMR\Services\FHIR\FhirMedicationService::class;
+$resourceClass = OpenEMR\FHIR\R4\FHIRDomainResource\FHIRMedication::class;
+$conceptClass = OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept::class;
+$codingClass = OpenEMR\FHIR\R4\FHIRElement\FHIRCoding::class;
+$service = (new ReflectionClass($serviceClass))->newInstanceWithoutConstructor();
+
+$run('native_class_provenance', static function () use ($check, $root, $serviceClass, $resourceClass, $conceptClass, $codingClass): void {
+    $nativeClasses = [
+        $serviceClass, $resourceClass, $conceptClass, $codingClass,
+        OpenEMR\Services\FHIR\UtilsService::class,
+        OpenEMR\FHIR\R4\FHIRElement\FHIRMeta::class,
+        OpenEMR\FHIR\R4\FHIRResource\FHIRMedication\FHIRMedicationBatch::class,
+    ];
+    foreach ($nativeClasses as $class) {
+        $reflection = new ReflectionClass($class);
+        $check($reflection->isInstantiable(), $class . ' is not a native instantiable class');
+        $check(str_starts_with((string) realpath($reflection->getFileName()), realpath($root . '/src/') . '/'), $class . ' did not load from src');
+    }
+    $serviceReflection = new ReflectionClass($serviceClass);
+    foreach ([
+        OpenEMR\Services\FHIR\Traits\FhirServiceBaseEmptyTrait::class,
+        OpenEMR\Services\FHIR\Traits\VersionedProfileTrait::class,
+    ] as $trait) {
+        $reflection = new ReflectionClass($trait);
+        $check($reflection->isTrait(), $trait . ' is not a native trait');
+        $check(str_starts_with((string) realpath($reflection->getFileName()), realpath($root . '/src/') . '/'), $trait . ' did not load from src');
+        $check(in_array($trait, $serviceReflection->getTraitNames(), true), 'Service does not use ' . $trait);
+    }
+    foreach ([
+        OpenEMR\Services\FHIR\IResourceUSCIGProfileService::class,
+        OpenEMR\Services\FHIR\INonPatientCompartmentResourceService::class,
+    ] as $interface) {
+        $reflection = new ReflectionClass($interface);
+        $check($reflection->isInterface(), $interface . ' is not a native interface');
+        $check(str_starts_with((string) realpath($reflection->getFileName()), realpath($root . '/src/') . '/'), $interface . ' did not load from src');
+        $check($serviceReflection->implementsInterface($interface), 'Service does not implement ' . $interface);
+    }
+    $method = new ReflectionMethod($serviceClass, 'parseOpenEMRRecord');
+    $check($method->getDeclaringClass()->getName() === $serviceClass, 'Parser did not come from native service');
+    $check(realpath($method->getFileName()) === realpath($root . '/src/Services/FHIR/FhirMedicationService.php'), 'Parser source path differs');
+});
+
+$row = [
+    'uuid' => '11111111-2222-4333-8444-555555555555',
+    'active' => '1',
+    'form' => '2',
+    'drug_code' => ['RXCUI:12345' => ['system' => 'http://www.nlm.nih.gov/research/umls/rxnorm', 'description' => 'Example drug']],
+    'drug_last_updated' => '2024-03-04T05:06:07+00:00',
+    'expiration' => '2027-08-09',
+    'lot_number' => 'LOT-42',
+];
+$forms = [
+    1 => ['suspension', 'C60928'], 2 => ['tablet', 'C42998'],
+    3 => ['capsule', 'C25158'], 4 => ['solution', 'C42986'],
+    5 => ['tsp', 'C48544'], 6 => ['ml', 'C28254'],
+    7 => ['units', 'C44278'], 8 => ['inhalation', 'C42944'],
+    9 => ['gtts(drops)', 'C48491'], 10 => ['cream', 'C28944'],
+    11 => ['ointment', 'C42966'], 12 => ['puff', 'C42944'],
+];
+
+foreach ($forms as $key => [$display, $code]) {
+    foreach (['string' => (string) $key, 'integer' => $key] as $kind => $value) {
+        $run('form_' . $key . '_' . $kind, static function () use ($check, $service, $row, $value, $resourceClass, $conceptClass, $codingClass, $display, $code): void {
+            $input = $row;
+            $input['form'] = $value;
+            $before = serialize($input);
+            $medication = $service->parseOpenEMRRecord($input);
+            $check($medication instanceof $resourceClass, 'Parser did not return native Medication');
+            $form = $medication->getForm();
+            $check($form instanceof $conceptClass, 'Medication.form is not native CodeableConcept');
+            $codings = $form->getCoding();
+            $check(count($codings) === 1 && $codings[0] instanceof $codingClass, 'Expected one native Coding');
+            $json = json_decode(json_encode($medication, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check(($json['form']['coding'] ?? null) === [[
+                'system' => 'http://ncimeta.nci.nih.gov', 'code' => $code, 'display' => $display,
+            ]], 'Serialized form coding differs');
+            $encoded = $service->parseOpenEMRRecord($input, true);
+            $check(is_string($encoded), 'encode=true did not return JSON text');
+            $check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'encode=true differs from object JSON');
+            $check(serialize($input) === $before, 'Parser mutated input row');
+        });
+    }
+}
+
+foreach (['unknown' => '99', 'null' => null, 'empty' => '', 'zero_string' => '0', 'zero_integer' => 0, 'missing' => null] as $kind => $value) {
+    $input = $row;
+    if ($kind === 'missing') {
+        unset($input['form']);
+    } else {
+        $input['form'] = $value;
+    }
+    $run('omit_' . $kind, static function () use ($check, $service, $input): void {
+        $before = serialize($input);
+        $medication = $service->parseOpenEMRRecord($input);
+        $json = json_decode(json_encode($medication, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $check($medication->getForm() === null && !array_key_exists('form', $json), 'Unmapped form was emitted');
+        $encoded = json_decode($service->parseOpenEMRRecord($input, true), true, 512, JSON_THROW_ON_ERROR);
+        $check(!array_key_exists('form', $encoded), 'encode=true emitted unmapped form');
+        $check(serialize($input) === $before, 'Parser mutated input row');
+    // Native PHP emits these warnings for absent/null form keys. This contract
+    // records that baseline limitation while leaving the mapper guards intact.
+    }, $kind === 'missing'
+        ? ['Undefined array key "form"', 'Using null as an array offset is deprecated, use an empty string instead']
+        : ($kind === 'null' ? ['Using null as an array offset is deprecated, use an empty string instead'] : []));
+}
+
+$run('preserve_projected_fields', static function () use ($check, $service, $row): void {
+    $json = json_decode(json_encode($service->parseOpenEMRRecord($row), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    $check(($json['resourceType'] ?? null) === 'Medication', 'resourceType changed');
+    $check(($json['id'] ?? null) === $row['uuid'], 'id changed');
+    $check(($json['meta']['versionId'] ?? null) === '1', 'meta.versionId changed');
+    $check(($json['meta']['lastUpdated'] ?? null) === $row['drug_last_updated'], 'meta.lastUpdated changed');
+    $check(($json['status'] ?? null) === 'active', 'status changed');
+    $check(($json['code']['coding'][0] ?? null) === [
+        'system' => $row['drug_code']['RXCUI:12345']['system'],
+        'code' => 'RXCUI:12345',
+        'display' => 'Example drug',
+    ], 'drug code changed');
+    $check(($json['batch']['expirationDate'] ?? null) === $row['expiration'], 'batch expiration changed');
+    $check(($json['batch']['lotNumber'] ?? null) === $row['lot_number'], 'batch lot changed');
+});
+
+$run('inactive_status', static function () use ($check, $service, $row): void {
+    $row['active'] = '0';
+    $json = json_decode(json_encode($service->parseOpenEMRRecord($row), JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    $check(($json['status'] ?? null) === 'inactive', 'inactive status changed');
+});
+
+$run('independent_resources', static function () use ($check, $service, $row): void {
+    $first = $service->parseOpenEMRRecord($row);
+    $second = $service->parseOpenEMRRecord($row);
+    $check($first !== $second, 'Resource objects are shared');
+    $check($first->getForm() !== $second->getForm(), 'Form objects are shared');
+    $check($first->getForm()->getCoding()[0] !== $second->getForm()->getCoding()[0], 'Coding objects are shared');
+    $first->getForm()->getCoding()[0]->setDisplay('mutated');
+    $later = $service->parseOpenEMRRecord($row);
+    $json = json_decode(json_encode($later, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    $check(($json['form']['coding'][0]['display'] ?? null) === 'tablet', 'Prior mutation affected future parse');
+});
+
+$failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+echo json_encode([
+    'cases' => $cases,
+    'total' => count($cases),
+    'passed' => count($cases) - $failed,
+    'failed' => $failed,
+    'source_sha256' => $sourceSha,
+], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), "\n";
+exit($failed === 0 ? 0 : 1);
