@@ -315,7 +315,7 @@ TYPED;
             'OpenEMR\\Services\\Search\\TokenSearchField' => 'src/Services/Search/TokenSearchField.php',
             'OpenEMR\\Services\\Search\\TokenSearchValue' => 'src/Services/Search/TokenSearchValue.php',
             'OpenEMR\\Services\\Search\\FhirSearchParameterDefinition' => 'src/Services/Search/FhirSearchParameterDefinition.php',
-            'OpenEMR\\Services\\Search\\FHIRSearchFieldFactory' => 'src/Services/Search/FhirSearchFieldFactory.php',
+            'OpenEMR\\Services\\Search\\FHIRSearchFieldFactory' => 'src/Services/Search/FHIRSearchFieldFactory.php',
             'OpenEMR\\Validators\\ProcessingResult' => 'src/Validators/ProcessingResult.php',
             'OpenEMR\\Common\\Database\\QueryPagination' => 'src/Common/Database/QueryPagination.php',
         ];
