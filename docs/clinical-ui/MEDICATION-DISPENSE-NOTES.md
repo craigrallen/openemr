@@ -2,7 +2,7 @@
 
 ## Scope and cause
 
-`DrugSalesService` projects the dispense note from `ds.notes` into the row's `notes` key. The local dispensary FHIR mapper already checked `!empty($dataRecord['notes'])`, but then read the singular `note` key. A populated projected note therefore triggered an undefined-key error. If a separate singular key was present, the mapper passed its raw value to `FHIRAnnotation::setText()`; the native annotation documents its text as `FHIRMarkdown`.
+`DrugSalesService` projects the dispense note from `ds.notes` into the row's `notes` key. The local dispensary FHIR mapper already checked `!empty($dataRecord['notes'])`, but then read the singular `note` key. A populated projected note therefore read a missing key (the fixture promotes that PHP warning to a case failure). If a separate singular key was present, the mapper passed its raw value to `FHIRAnnotation::setText()`; the native annotation documents its text as `FHIRMarkdown`.
 
 The fix imports `FHIRMarkdown` and passes `new FHIRMarkdown($dataRecord['notes'])` to `setText()`. The existing empty-notes guard and all other mapper source bytes are preserved. The fixture checks that preservation by reversing exactly the import and operand, then comparing the whole source SHA-256 to `be719fdae00aa949fb7c97a5a9c88fe06aed7f9db5dd8607e4320f9b8feee111`.
 
