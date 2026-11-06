@@ -13,7 +13,9 @@ $root = dirname(__DIR__, 2);
 $sourcePath = $root . '/src/Services/FHIR/FhirPersonService.php';
 $originalHash = '327c26ab2140b27b60a4e960a0d9efe06b2b7cfc0e200606090f6420ba61b316';
 $originalOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
-$fixedOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . htmlspecialchars((string) \$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'";
+$fixedOperand = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'";
+$originalFnameAssignment = "\$narrativeText = \$dataRecord['fname'];";
+$fixedFnameAssignment = "\$narrativeText .= \$dataRecord['fname'];";
 $names = [
     'source_integrity', 'native_class_paths', 'special_characters_object',
     'special_characters_encoded', 'literal_entities', 'multilingual_names',
@@ -96,17 +98,20 @@ function mbSafeReplacement(string $raw): string
 }
 
 $cases = [
-    'source_integrity' => static function () use ($sourcePath, $originalHash, $originalOperand, $fixedOperand): void {
+    'source_integrity' => static function () use ($sourcePath, $originalHash, $originalOperand, $fixedOperand, $originalFnameAssignment, $fixedFnameAssignment): void {
         $source = file_get_contents($sourcePath);
         check(is_string($source), 'source unreadable');
         $hash = hash('sha256', $source);
         if ($hash === $originalHash) {
             check(substr_count($source, $originalOperand) === 1, 'original narrative operand is not unique');
+            check(substr_count($source, $originalFnameAssignment) === 1, 'original fname assignment is not unique');
             return;
         }
         check(substr_count($source, $fixedOperand) === 1, 'fixed narrative operand is not unique');
-        $inverse = str_replace($fixedOperand, $originalOperand, $source, $count);
-        check($count === 1 && hash('sha256', $inverse) === $originalHash, 'source differs beyond the single narrative operand');
+        check(substr_count($source, $fixedFnameAssignment) === 1, 'fixed fname assignment is not unique');
+        $inverse = str_replace($fixedOperand, $originalOperand, $source, $operandCount);
+        $inverse = str_replace($fixedFnameAssignment, $originalFnameAssignment, $inverse, $assignmentCount);
+        check($operandCount === 1 && $assignmentCount === 1 && hash('sha256', $inverse) === $originalHash, 'source differs beyond the two approved fragments');
     },
     'native_class_paths' => static function () use ($root): void {
         foreach ([
