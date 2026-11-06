@@ -20,7 +20,7 @@ test('native DiagnosticReport code search contract', () => {
 
   const report = JSON.parse(run.stdout.slice(0, -1));
   expect(Object.keys(report).sort()).toEqual(['expected', 'failed', 'passed'].sort());
-  expect(report.expected).toBe(18);
-  expect(report.passed).toBe(18);
+  expect(report.expected).toBe(20);
+  expect(report.passed).toBe(20);
   expect(report.failed).toEqual([]);
 });
