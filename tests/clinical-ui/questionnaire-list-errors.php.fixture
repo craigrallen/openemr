@@ -10,7 +10,21 @@ namespace Psr\Log {
     interface LoggerInterface {}
 }
 
+namespace Symfony\Component\HttpFoundation {
+    class Response {}
+}
+
 namespace OpenEMR\Common\Http {
+    final class Psr17Factory
+    {
+        public static int $instances = 0;
+
+        public function __construct()
+        {
+            ++self::$instances;
+        }
+    }
+
     final class HttpRestRequest
     {
         public int $patientUuidReads = 0;
@@ -22,6 +36,36 @@ namespace OpenEMR\Common\Http {
         {
             ++$this->patientUuidReads;
             return $this->patientUuid;
+        }
+    }
+}
+
+namespace Symfony\Bridge\PsrHttpMessage\Factory {
+    use OpenEMR\Common\Http\Psr17Factory;
+    use Psr\Http\Message\ResponseInterface;
+    use Symfony\Component\HttpFoundation\Response;
+
+    final class PsrHttpFactory
+    {
+        public static int $instances = 0;
+        public static array $calls = [];
+        public static ?ResponseInterface $response = null;
+
+        public function __construct(Psr17Factory $requestFactory, Psr17Factory $responseFactory, Psr17Factory $streamFactory, Psr17Factory $uploadedFileFactory)
+        {
+            ++self::$instances;
+            if ($requestFactory !== $responseFactory || $requestFactory !== $streamFactory || $requestFactory !== $uploadedFileFactory) {
+                throw new \LogicException('Bridge factories differ');
+            }
+        }
+
+        public function createResponse(Response $response): ResponseInterface
+        {
+            self::$calls[] = $response;
+            if (self::$response === null) {
+                throw new \LogicException('Missing bridge response');
+            }
+            return self::$response;
         }
     }
 }
@@ -90,6 +134,7 @@ namespace OpenEMR\Services\FHIR {
 namespace OpenEMR\RestControllers {
     use OpenEMR\Validators\ProcessingResult;
     use Psr\Http\Message\ResponseInterface;
+    use Symfony\Component\HttpFoundation\Response;
 
     final class QuestionnaireResponse implements ResponseInterface {}
 
@@ -97,18 +142,18 @@ namespace OpenEMR\RestControllers {
     {
         public static array $errorCalls = [];
         public static array $successCalls = [];
-        public static ?QuestionnaireResponse $errorResponse = null;
+        public static ?Response $errorResponse = null;
         public static ?QuestionnaireResponse $successResponse = null;
 
         public static function reset(): void
         {
             self::$errorCalls = [];
             self::$successCalls = [];
-            self::$errorResponse = new QuestionnaireResponse();
+            self::$errorResponse = new Response();
             self::$successResponse = new QuestionnaireResponse();
         }
 
-        public static function handleFhirProcessingResult(ProcessingResult $result, int $status): ResponseInterface
+        public static function handleFhirProcessingResult(ProcessingResult $result, int $status): Response
         {
             self::$errorCalls[] = [$result, $status];
             return self::$errorResponse;
@@ -124,12 +169,14 @@ namespace OpenEMR\RestControllers {
 
 namespace {
     use OpenEMR\Common\Http\HttpRestRequest;
+    use OpenEMR\Common\Http\Psr17Factory;
     use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
     use OpenEMR\RestControllers\FHIR\FhirQuestionnaireRestController;
     use OpenEMR\RestControllers\RestControllerHelper;
     use OpenEMR\Services\FHIR\FhirQuestionnaireService;
     use OpenEMR\Services\FHIR\FhirResourcesService;
     use OpenEMR\Validators\ProcessingResult;
+    use Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory;
 
     if (PHP_SAPI !== 'cli') {
         exit(1);
@@ -189,6 +236,10 @@ namespace {
     function prepare(bool $patient, SpiedProcessingResult $result): array
     {
         RestControllerHelper::reset();
+        Psr17Factory::$instances = 0;
+        PsrHttpFactory::$instances = 0;
+        PsrHttpFactory::$calls = [];
+        PsrHttpFactory::$response = new \OpenEMR\RestControllers\QuestionnaireResponse();
         $questionnaire = new FhirQuestionnaireService();
         $questionnaire->result = $result;
         $resources = new FhirResourcesService();
@@ -209,6 +260,23 @@ namespace {
     {
         $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
         check($source !== false, 'Controller source unreadable');
+        $currentBranch = implode("\n", [
+            '        if ($processingResult->hasErrors()) {',
+            '            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);',
+            '        }',
+        ]);
+        $bridgedBranch = implode("\n", [
+            '        if ($processingResult->hasErrors()) {',
+            '            $psr17Factory = new \\OpenEMR\\Common\\Http\\Psr17Factory();',
+            '            $psrHttpFactory = new \\Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);',
+            '            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));',
+            '        }',
+        ]);
+        $restored = $source;
+        check(substr_count($restored, $bridgedBranch) === 1, 'Bridged branch missing or repeated');
+        $restored = str_replace($bridgedBranch, $currentBranch, $restored, $count);
+        check($count === 1, 'Bridge inverse replacement count');
+        check(substr_count($restored, $currentBranch) === 1, 'Current error branch missing or repeated');
         $pairs = [
             ['return RestControllerHelper::returnSingleObjectResponse($result);', 'return $result;'],
             ['@return FHIRBundle FHIR bundle with query results, if found', '@return ResponseInterface Questionnaire list response from the existing error helper or the once-wrapped success bundle.'],
@@ -231,7 +299,6 @@ namespace {
                 "return RestControllerHelper::returnSingleObjectResponse(\$this->fhirService->createBundle('Questionnaire', \$bundleEntries, false));",
             ],
         ];
-        $restored = $source;
         foreach ($pairs as [$old, $new]) {
             check(substr_count($restored, $new) === 1, 'Expected production fragment missing or repeated');
             $restored = str_replace($new, $old, $restored, $count);
@@ -263,7 +330,11 @@ namespace {
                     check($result->isValid() === ($kind === 'internal'), 'Native validation state');
                     [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
                     $response = $controller->list($request);
-                    check($response === RestControllerHelper::$errorResponse, 'Original error response identity');
+                    check($response === PsrHttpFactory::$response, 'Bridged error response identity');
+                    check(Psr17Factory::$instances === 1, 'PSR-17 factory initialization count');
+                    check(PsrHttpFactory::$instances === 1, 'Bridge initialization count');
+                    check(count(PsrHttpFactory::$calls) === 1, 'Bridge response conversion count');
+                    check(PsrHttpFactory::$calls[0] === RestControllerHelper::$errorResponse, 'Exact helper Response was not bridged');
                     check(count(RestControllerHelper::$errorCalls) === 1, 'Error helper call count');
                     check(RestControllerHelper::$errorCalls[0][0] === $result, 'Native ProcessingResult identity');
                     check(RestControllerHelper::$errorCalls[0][1] === 200, 'Error helper success status argument');
@@ -300,6 +371,9 @@ namespace {
                     }
                 }
                 check($response === RestControllerHelper::$successResponse, 'Original success response identity');
+                check(Psr17Factory::$instances === 0, 'PSR-17 factory initialized on healthy result');
+                check(PsrHttpFactory::$instances === 0, 'Bridge initialized on healthy result');
+                check(PsrHttpFactory::$calls === [], 'Bridge called on healthy result');
                 check(RestControllerHelper::$errorCalls === [], 'Error helper used on healthy result');
                 check(count(RestControllerHelper::$successCalls) === 1, 'Success serializer call count');
                 check(RestControllerHelper::$successCalls[0][0] === $resources->bundle, 'Exact created Bundle identity');
