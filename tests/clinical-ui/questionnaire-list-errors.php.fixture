@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Psr\Http\Message {
     interface ResponseInterface {}
+    interface ServerRequestFactoryInterface {}
+    interface StreamFactoryInterface {}
+    interface UploadedFileFactoryInterface {}
+    interface ResponseFactoryInterface {}
 }
 
 namespace Psr\Log {
@@ -15,10 +19,20 @@ namespace Symfony\Component\HttpFoundation {
 }
 
 namespace OpenEMR\BC {
+    use Psr\Http\Message\ResponseFactoryInterface;
+    use Psr\Http\Message\ServerRequestFactoryInterface;
+    use Psr\Http\Message\StreamFactoryInterface;
+    use Psr\Http\Message\UploadedFileFactoryInterface;
+
     class SyntheticFactory
     {
         public function __construct(public string $slot) {}
     }
+
+    final class SyntheticServerRequestFactory extends SyntheticFactory implements ServerRequestFactoryInterface {}
+    final class SyntheticStreamFactory extends SyntheticFactory implements StreamFactoryInterface {}
+    final class SyntheticUploadedFileFactory extends SyntheticFactory implements UploadedFileFactoryInterface {}
+    final class SyntheticResponseFactory extends SyntheticFactory implements ResponseFactoryInterface {}
 
     final class ServiceContainer
     {
@@ -29,32 +43,32 @@ namespace OpenEMR\BC {
         {
             self::$calls = [];
             self::$factories = [
-                'serverRequest' => new SyntheticFactory('serverRequest'),
-                'response' => new SyntheticFactory('response'),
-                'stream' => new SyntheticFactory('stream'),
-                'uploadedFile' => new SyntheticFactory('uploadedFile'),
+                'serverRequest' => new SyntheticServerRequestFactory('serverRequest'),
+                'response' => new SyntheticResponseFactory('response'),
+                'stream' => new SyntheticStreamFactory('stream'),
+                'uploadedFile' => new SyntheticUploadedFileFactory('uploadedFile'),
             ];
         }
 
-        public static function getServerRequestFactory(): SyntheticFactory
+        public static function getServerRequestFactory(): ServerRequestFactoryInterface
         {
             self::$calls[] = 'getServerRequestFactory';
             return self::$factories['serverRequest'];
         }
 
-        public static function getResponseFactory(): SyntheticFactory
+        public static function getResponseFactory(): ResponseFactoryInterface
         {
             self::$calls[] = 'getResponseFactory';
             return self::$factories['response'];
         }
 
-        public static function getStreamFactory(): SyntheticFactory
+        public static function getStreamFactory(): StreamFactoryInterface
         {
             self::$calls[] = 'getStreamFactory';
             return self::$factories['stream'];
         }
 
-        public static function getUploadedFileFactory(): SyntheticFactory
+        public static function getUploadedFileFactory(): UploadedFileFactoryInterface
         {
             self::$calls[] = 'getUploadedFileFactory';
             return self::$factories['uploadedFile'];
@@ -65,7 +79,7 @@ namespace OpenEMR\BC {
 namespace OpenEMR\Common\Http {
     // Retain an explicit old-path double so pre-fix RED is a slot-policy
     // failure, not a missing-class harness error. Final source forbids it.
-    final class Psr17Factory extends \OpenEMR\BC\SyntheticFactory
+    final class Psr17Factory extends \OpenEMR\BC\SyntheticFactory implements \Psr\Http\Message\ServerRequestFactoryInterface, \Psr\Http\Message\StreamFactoryInterface, \Psr\Http\Message\UploadedFileFactoryInterface, \Psr\Http\Message\ResponseFactoryInterface
     {
         public function __construct()
         {
@@ -90,8 +104,11 @@ namespace OpenEMR\Common\Http {
 
 namespace Symfony\Bridge\PsrHttpMessage\Factory {
     use OpenEMR\BC\ServiceContainer;
-    use OpenEMR\BC\SyntheticFactory;
+    use Psr\Http\Message\ResponseFactoryInterface;
     use Psr\Http\Message\ResponseInterface;
+    use Psr\Http\Message\ServerRequestFactoryInterface;
+    use Psr\Http\Message\StreamFactoryInterface;
+    use Psr\Http\Message\UploadedFileFactoryInterface;
     use Symfony\Component\HttpFoundation\Response;
 
     final class PsrHttpFactory
@@ -101,14 +118,18 @@ namespace Symfony\Bridge\PsrHttpMessage\Factory {
         public static array $calls = [];
         public static ?ResponseInterface $response = null;
 
-        public function __construct(SyntheticFactory $requestFactory, SyntheticFactory $responseFactory, SyntheticFactory $streamFactory, SyntheticFactory $uploadedFileFactory)
+        // Synthetic marker interfaces reproduce only the constructor type ABI.
+        // Pinned Symfony psr-http-message-bridge v7.4.8 source: composer.lock
+        // reference 76f1a57719a4a04c0ea18678a6c9305b5dcb9da8; retrieved
+        // PsrHttpFactory.php SHA-256 5d2cbcdba4334983f17d71a699dda59918b47d908f66aa1d2344f1b2a401d53b.
+        public function __construct(ServerRequestFactoryInterface $requestFactory, StreamFactoryInterface $streamFactory, UploadedFileFactoryInterface $uploadedFileFactory, ResponseFactoryInterface $responseFactory)
         {
             ++self::$instances;
-            self::$factoryArguments[] = [$requestFactory, $responseFactory, $streamFactory, $uploadedFileFactory];
+            self::$factoryArguments[] = [$requestFactory, $streamFactory, $uploadedFileFactory, $responseFactory];
             if ($requestFactory !== ServiceContainer::$factories['serverRequest']
-                || $responseFactory !== ServiceContainer::$factories['response']
                 || $streamFactory !== ServiceContainer::$factories['stream']
-                || $uploadedFileFactory !== ServiceContainer::$factories['uploadedFile']) {
+                || $uploadedFileFactory !== ServiceContainer::$factories['uploadedFile']
+                || $responseFactory !== ServiceContainer::$factories['response']) {
                 throw new \LogicException('Bridge factory slot mismatch');
             }
         }
@@ -317,9 +338,9 @@ namespace {
             '        if ($processingResult->hasErrors()) {',
             '            $psrHttpFactory = new \\Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory(',
             '                \\OpenEMR\\BC\\ServiceContainer::getServerRequestFactory(),',
-            '                \\OpenEMR\\BC\\ServiceContainer::getResponseFactory(),',
             '                \\OpenEMR\\BC\\ServiceContainer::getStreamFactory(),',
-            '                \\OpenEMR\\BC\\ServiceContainer::getUploadedFileFactory()',
+            '                \\OpenEMR\\BC\\ServiceContainer::getUploadedFileFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getResponseFactory()',
             '            );',
             '            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));',
             '        }',
@@ -411,10 +432,10 @@ namespace {
                     [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
                     $response = $controller->list($request);
                     check($response === PsrHttpFactory::$response, 'Bridged error response identity');
-                    check(ServiceContainer::$calls === ['getServerRequestFactory', 'getResponseFactory', 'getStreamFactory', 'getUploadedFileFactory'], 'Factory getter count or order');
+                    check(ServiceContainer::$calls === ['getServerRequestFactory', 'getStreamFactory', 'getUploadedFileFactory', 'getResponseFactory'], 'Factory getter count or order');
                     check(PsrHttpFactory::$instances === 1, 'Bridge initialization count');
                     check(count(PsrHttpFactory::$factoryArguments) === 1, 'Bridge constructor call count');
-                    check(PsrHttpFactory::$factoryArguments[0] === [ServiceContainer::$factories['serverRequest'], ServiceContainer::$factories['response'], ServiceContainer::$factories['stream'], ServiceContainer::$factories['uploadedFile']], 'Bridge factory identity or order');
+                    check(PsrHttpFactory::$factoryArguments[0] === [ServiceContainer::$factories['serverRequest'], ServiceContainer::$factories['stream'], ServiceContainer::$factories['uploadedFile'], ServiceContainer::$factories['response']], 'Bridge factory identity or order');
                     check(count(PsrHttpFactory::$calls) === 1, 'Bridge response conversion count');
                     check(PsrHttpFactory::$calls[0] === RestControllerHelper::$errorResponse, 'Exact helper Response was not bridged');
                     check(count(RestControllerHelper::$errorCalls) === 1, 'Error helper call count');
