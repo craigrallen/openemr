@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only parent: the native service constructor is bypassed so no
+    // search factory, ProcedureService, UUID service, or database is initialized.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    if (PHP_SAPI !== 'cli' || realpath($_SERVER['SCRIPT_FILENAME'] ?? '') !== __FILE__) {
+        exit(1);
+    }
+
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    });
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    $GLOBALS['code_types'] = [];
+
+    function nativeAssertSame(mixed $expected, mixed $actual, string $label): void
+    {
+        if ($expected !== $actual) {
+            throw new \RuntimeException($label . ': expected ' . json_encode($expected) . ', got ' . json_encode($actual));
+        }
+    }
+
+    function nativeConcept(array $codings, ?string $text = null): array
+    {
+        $concept = ['coding' => $codings];
+        if ($text !== null) {
+            $concept['text'] = $text;
+        }
+        return $concept;
+    }
+
+    function nativeRow(string $code, string $name = '', string $title = ''): array
+    {
+        return ['procedure_code' => $code, 'procedure_name' => $name, 'procedure_order_title' => $title];
+    }
+
+    function nativeCheck(array $payload, array $expectedRows, array $expectedHeader = [], ?string $validationField = null): void
+    {
+        $resource = new \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRServiceRequest(
+            array_replace(['status' => 'active', 'intent' => 'order'], $payload)
+        );
+        // Reflection bypasses only the service constructor. The complete native
+        // parseFhirResource method and native payload/code helpers run below.
+        $service = (new \ReflectionClass(\OpenEMR\Services\FHIR\FhirServiceRequestService::class))
+            ->newInstanceWithoutConstructor();
+        $result = $service->parseFhirResource($resource);
+        nativeAssertSame($expectedRows, $result['codes'], 'codes');
+        foreach (array_replace(['order_status' => 'pending', 'order_intent' => 'order'], $expectedHeader) as $key => $value) {
+            nativeAssertSame($value, $result['header'][$key] ?? null, 'header.' . $key);
+        }
+        nativeAssertSame($validationField, $result['__validation_field__'] ?? null, 'validation field');
+        nativeAssertSame($validationField !== null, isset($result['__validation_error__']), 'validation error presence');
+    }
+
+    $cases = [
+        'loinc system' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '718-7', 'display' => 'Hemoglobin']])], [nativeRow('LOINC:718-7', 'Hemoglobin', 'Hemoglobin')]),
+        'snomed system' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://snomed.info/sct', 'code' => '123456', 'display' => 'Procedure']])], [nativeRow('SNOMED-CT:123456', 'Procedure', 'Procedure')]),
+        'cpt system' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://www.ama-assn.org/go/cpt', 'code' => '99213']])], [nativeRow('CPT4:99213')]),
+        'icd-10 alias' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://hl7.org/fhir/sid/icd-10-cm', 'code' => 'A01.0']])], [nativeRow('ICD10:A01.0')]),
+        'duplicate suffix across systems' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '123'], ['system' => 'http://snomed.info/sct', 'code' => '123']])], [nativeRow('LOINC:123'), nativeRow('SNOMED-CT:123')]),
+        'leading zero' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '0012']])], [nativeRow('LOINC:0012')]),
+        'exact string zero' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '0']])], [nativeRow('0')]),
+        'multiple entries retain order' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '1'], ['system' => 'http://www.ama-assn.org/go/cpt', 'code' => '2'], ['system' => 'http://snomed.info/sct', 'code' => '3']])], [nativeRow('LOINC:1'), nativeRow('CPT4:2'), nativeRow('SNOMED-CT:3')]),
+        'concept text supplies missing display' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '7']], 'Panel name')], [nativeRow('LOINC:7', 'Panel name')]),
+        'display and title stay distinct from text' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => '7', 'display' => 'Specific display']], 'General text')], [nativeRow('LOINC:7', 'Specific display', 'Specific display')]),
+        'missing system keeps bare code' => static fn() => nativeCheck(['code' => nativeConcept([['code' => '718-7']])], [nativeRow('718-7')]),
+        'unknown system keeps bare code' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'https://example.invalid/local', 'code' => '718-7']])], [nativeRow('718-7')]),
+        'malformed system keeps bare code' => static fn() => nativeCheck(['code' => nativeConcept([['system' => ['url' => 'http://loinc.org'], 'code' => '718-7']])], [nativeRow('718-7')]),
+        'empty system keeps bare code' => static fn() => nativeCheck(['code' => nativeConcept([['system' => '', 'code' => '718-7']])], [nativeRow('718-7')]),
+        'nonstring code is skipped' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => 12], ['code' => 'valid']])], [nativeRow('valid')]),
+        'empty code is skipped' => static fn() => nativeCheck(['code' => nativeConcept([['system' => 'http://loinc.org', 'code' => ''], ['code' => 'valid']])], [nativeRow('valid')]),
+        'malformed coding entries are skipped' => static fn() => nativeCheck(['code' => nativeConcept(['bad', null, ['system' => 'http://loinc.org', 'code' => '9']])], [nativeRow('LOINC:9')]),
+        'text only remains invalid' => static fn() => nativeCheck(['code' => ['text' => 'Uncoded request']], [], [], 'code'),
+        'missing code remains invalid' => static fn() => nativeCheck([], [], [], 'code'),
+        'header mapping remains intact' => static fn() => nativeCheck(['status' => 'completed', 'intent' => 'plan', 'priority' => 'urgent', 'category' => [['coding' => [['code' => '108252007']]]], 'patientInstruction' => 'Fast', 'note' => [['text' => 'Context']], 'code' => nativeConcept([['code' => 'local']])], [nativeRow('local')], ['order_status' => 'complete', 'order_intent' => 'plan', 'order_priority' => 'urgent', 'procedure_order_type' => 'laboratory_test', 'patient_instructions' => 'Fast', 'clinical_hx' => 'Context']),
+        'unsupported intent remains invalid' => static fn() => nativeCheck(['intent' => 'reflex-order', 'code' => nativeConcept([['code' => 'local']])], [nativeRow('local')], ['order_intent' => null], 'intent'),
+        'wrong resource type remains rejected' => static function (): void {
+            $service = (new \ReflectionClass(\OpenEMR\Services\FHIR\FhirServiceRequestService::class))
+                ->newInstanceWithoutConstructor();
+            try {
+                $service->parseFhirResource(new \OpenEMR\FHIR\R4\FHIRResource\FHIRDomainResource([]));
+            } catch (\InvalidArgumentException $exception) {
+                nativeAssertSame(true, str_contains($exception->getMessage(), 'Expected FHIRServiceRequest'), 'wrong-type guard');
+                return;
+            }
+            throw new \RuntimeException('wrong resource type was accepted');
+        },
+        'whole-source inverse guard' => static function () use ($root): void {
+            $source = file_get_contents($root . '/src/Services/FHIR/FhirServiceRequestService.php');
+            if ($source === false) {
+                throw new \RuntimeException('cannot read native service source');
+            }
+            $originalHash = 'dbee68f0dec008298ebadc2cc908f3f0979da0a97cf3138a4a994f99e82e1a4c';
+            $oldFragment = "'procedure_code' => \$procCode,";
+            $newFragment = <<<'PHP_FRAGMENT'
+'procedure_code' => $procCode === '0'
+                    ? $procCode
+                    : (new CodeTypesService())->getOpenEMRCodeForSystemAndCode(
+                        is_string($coding['system'] ?? null) ? $coding['system'] : '',
+                        $procCode
+                    ),
+PHP_FRAGMENT;
+            $isOriginal = substr_count($source, $oldFragment) === 1
+                && substr_count($source, $newFragment) === 0
+                && hash('sha256', $source) === $originalHash;
+            $isApprovedReplacement = substr_count($source, $oldFragment) === 0
+                && substr_count($source, $newFragment) === 1
+                && hash('sha256', str_replace($newFragment, $oldFragment, $source)) === $originalHash;
+            nativeAssertSame(true, $isOriginal || $isApprovedReplacement, 'whole-source inverse');
+        },
+    ];
+
+    $failures = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+        } catch (\Throwable $exception) {
+            $failures[] = ['name' => $name, 'message' => $exception::class . ': ' . $exception->getMessage()];
+        }
+    }
+    $total = count($cases);
+    $failed = count($failures);
+    echo json_encode(['total' => $total, 'passed' => $total - $failed, 'failed' => $failed, 'failures' => $failures], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES) . "\n";
+    exit($failed === 0 ? 0 : 1);
+}
