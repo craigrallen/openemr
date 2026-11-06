@@ -59,7 +59,7 @@ namespace {
     use OpenEMR\Services\Search\TokenSearchField;
     use OpenEMR\Validators\ProcessingResult;
 
-    const EXPECTED = 20;
+    const EXPECTED = 21;
     const ORIGINAL_SHA256 = 'd1f7069a77b8a438b8ecd0737762c13f6eacdb3df29e8fbd557a2ff7b6faca38';
 
     if (PHP_SAPI !== 'cli') {
@@ -234,11 +234,36 @@ LATEST;
                     }
                 }
 FINAL;
+        $nextReplacement = <<<'NEXT'
+            } elseif (isset($fhirSearchParameters['code'])) {
+                if (isset($fhirSearchParameters['_count']) || isset($fhirSearchParameters['_offset']) || isset($fhirSearchParameters['_sort'])) {
+                    $service = $this->getServiceForCode(
+                        new TokenSearchField('code', $fhirSearchParameters['code']),
+                        ''
+                    );
+                    $fhirSearchResult = $service->getAll($fhirSearchParameters, $puuidBind);
+                } else {
+                    $codeValues = $fhirSearchParameters['code'];
+                    if (is_string($codeValues) && str_contains($codeValues, ',')) {
+                        $codeValues = explode(',', $codeValues);
+                    }
+                    $codeField = new TokenSearchField('code', $codeValues);
+                    $services = $this->getServiceListForCode($codeField);
+                    if ($services === []) {
+                        $services = [$this->getServiceForCode($codeField, '')];
+                    }
+                    if (count($services) === 1) {
+                        $fhirSearchResult = $services[0]->getAll($fhirSearchParameters, $puuidBind);
+                    } else {
+                        $fhirSearchResult = $this->searchServices($services, $fhirSearchParameters, $puuidBind);
+                    }
+                }
+NEXT;
         if (hash('sha256', $source) === ORIGINAL_SHA256) {
             same(substr_count($source, $old), 1, 'original code block count');
             return;
         }
-        $candidates = [$previousReplacement, $latestReplacement, $finalReplacement];
+        $candidates = [$previousReplacement, $latestReplacement, $finalReplacement, $nextReplacement];
         $counts = array_map(static fn (string $candidate): int => substr_count($source, $candidate), $candidates);
         same(array_sum($counts), 1, 'approved replacement count');
         $replacement = $candidates[array_search(1, $counts, true)];
@@ -453,6 +478,16 @@ FINAL;
                     'previous' => 'synthetic-search&_offset=6&_count=1',
                     'next' => 'synthetic-search&_offset=8&_count=1',
                 ], 'comma paginated links');
+            },
+            'empty code array retains laboratory fallback' => static function (): void {
+                [$a, $c, $l] = fixture();
+                $input = ['code' => [], 'patient' => 'synthetic-patient'];
+                $copy = $input;
+                $result = $a->getAll($input);
+                same($input, $copy, 'empty-array caller input');
+                same([count($c->calls), count($l->calls)], [0, 1], 'empty-array laboratory fallback routing');
+                same($l->calls[0], [$copy, null], 'empty-array raw params and null bind');
+                same($result, $l->lastResult, 'empty-array child ProcessingResult identity');
             },
         ];
         same(count($checks), EXPECTED, 'fixed check count');
