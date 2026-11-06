@@ -78,12 +78,14 @@ class InsuranceService extends BaseService
     {
         $sql = "SELECT `insurance_data`.*,
                        `puuid`,
-                       `insureruuid`
+                       `insureruuid`,
+                       `insurance_company_data`.`ins_type_code`
                 FROM `insurance_data`
                 LEFT JOIN (
                     SELECT
                     `uuid` AS `insureruuid`,
-                    `id` AS `insurerid`
+                    `id` AS `insurerid`,
+                    `ins_type_code`
                     FROM `insurance_companies`
                     ) `insurance_company_data` ON `insurance_data`.`provider` = `insurance_company_data`.`insurerid`
                 LEFT JOIN (

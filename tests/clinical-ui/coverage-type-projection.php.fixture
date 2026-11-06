@@ -1,0 +1,224 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only. The native parent is deliberately not constructed.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Services\FHIR\FhirCoverageService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    });
+    $sourcePath = $root . '/src/Services/InsuranceService.php';
+    $fhirPath = $root . '/src/Services/FHIR/FhirCoverageService.php';
+    $originalHash = 'c3871951b1886cc5322b8c56e95e99986eae5b45aa6be854ba426cf12cb223fe';
+    $source = is_file($sourcePath) ? file_get_contents($sourcePath) : false;
+    $sourceHash = $source === false ? null : hash('sha256', $source);
+    $cases = [];
+    $errors = [];
+
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $run = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $exception) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $exception->getMessage()];
+        }
+    };
+
+    $outerOld = "SELECT `insurance_data`.*,\n                       `puuid`,\n                       `insureruuid`";
+    $outerNew = "SELECT `insurance_data`.*,\n                       `puuid`,\n                       `insureruuid`,\n                       `insurance_company_data`.`ins_type_code`";
+    $innerOld = "`uuid` AS `insureruuid`,\n                    `id` AS `insurerid`\n                    FROM `insurance_companies`";
+    $innerNew = "`uuid` AS `insureruuid`,\n                    `id` AS `insurerid`,\n                    `ins_type_code`\n                    FROM `insurance_companies`";
+
+    $run('insurer_schema', static function () use ($root, $check): void {
+        $schema = file_get_contents($root . '/sql/database.sql');
+        $check($schema !== false, 'Native database schema unavailable');
+        $start = strpos($schema, 'CREATE TABLE `insurance_companies` (');
+        $check($start !== false, 'insurance_companies table absent');
+        $end = strpos($schema, ') ENGINE=', $start);
+        $check($end !== false, 'insurance_companies definition incomplete');
+        $table = substr($schema, $start, $end - $start);
+        $check(str_contains($table, '`ins_type_code` int(11) default NULL'), 'Native insurer type column absent');
+    });
+
+    $run('inner_insurer_projection', static function () use ($source, $innerOld, $innerNew, $check): void {
+        $check(is_string($source), 'InsuranceService source unavailable');
+        $check(substr_count($source, $innerNew) === 1, 'Inner insurer projection must occur exactly once');
+        $check(substr_count($source, $innerOld) === 0, 'Old inner insurer projection remains');
+    });
+
+    $run('outer_coverage_projection', static function () use ($source, $outerOld, $outerNew, $check): void {
+        $check(is_string($source), 'InsuranceService source unavailable');
+        $check(substr_count($source, $outerNew) === 1, 'Outer coverage projection must occur exactly once');
+        $check(substr_count($source, $outerOld . "\n") === 0, 'Old outer coverage projection remains');
+        $searchStart = strpos($source, 'public function search(array $search, $isAndCondition = true)');
+        $check($searchStart !== false, 'Native search method absent');
+        $queryEnd = strpos($source, '$whereClause = FhirSearchWhereClauseBuilder::build', $searchStart);
+        $check($queryEnd !== false, 'Native search query boundary absent');
+        $querySource = substr($source, $searchStart, $queryEnd - $searchStart);
+        $check(substr_count($querySource, $outerNew) === 1, 'Outer projection is outside the native search query');
+        $check(substr_count($querySource, $innerNew = "`uuid` AS `insureruuid`,\n                    `id` AS `insurerid`,\n                    `ins_type_code`\n                    FROM `insurance_companies`") === 1, 'Inner projection is outside the native insurer subquery');
+    });
+
+    $run('exact_inverse_source_pin', static function () use ($source, $outerOld, $outerNew, $innerOld, $innerNew, $originalHash, $check): void {
+        $check(is_string($source), 'InsuranceService source unavailable');
+        $check(substr_count($source, $outerNew) === 1 && substr_count($source, $innerNew) === 1, 'Both approved replacements must occur exactly once');
+        $inverse = str_replace($outerNew, $outerOld, $source);
+        $inverse = str_replace($innerNew, $innerOld, $inverse);
+        $check(hash('sha256', $inverse) === $originalHash, 'Reversing the two projections did not restore the exact original source');
+    });
+
+    $run('native_service_and_dependencies', static function () use ($root, $fhirPath, $check): void {
+
+        $classes = [
+            FhirCoverageService::class => $fhirPath,
+            'OpenEMR\\Services\\FHIR\\UtilsService' => $root . '/src/Services/FHIR/UtilsService.php',
+            'OpenEMR\\Common\\Utils\\ValidationUtils' => $root . '/src/Common/Utils/ValidationUtils.php',
+            'OpenEMR\\FHIR\\R4\\FHIRDomainResource\\FHIRCoverage' => null,
+        ];
+        foreach ($classes as $class => $path) {
+            $reflection = new \ReflectionClass($class);
+            if ($path !== null) {
+                $check(realpath((string) $reflection->getFileName()) === realpath($path), 'Unexpected native source for ' . $class);
+            } else {
+                $check($reflection->getFileName() !== false, 'Generated Coverage model is not native');
+            }
+        }
+        foreach ([
+            'OpenEMR\\Services\\FHIR\\IPatientCompartmentResourceService',
+            'OpenEMR\\Services\\FHIR\\IResourceUSCIGProfileService',
+            'OpenEMR\\Services\\FHIR\\IFhirExportableResourceService',
+            'OpenEMR\\Services\\FHIR\\Traits\\FhirServiceBaseEmptyTrait',
+            'OpenEMR\\Services\\FHIR\\Traits\\BulkExportSupportAllOperationsTrait',
+            'OpenEMR\\Services\\FHIR\\Traits\\FhirBulkExportDomainResourceTrait',
+            'OpenEMR\\Services\\FHIR\\Traits\\VersionedProfileTrait',
+        ] as $dependency) {
+            $reflection = new \ReflectionClass($dependency);
+            $check(str_starts_with((string) realpath((string) $reflection->getFileName()), realpath($root . '/src') . DIRECTORY_SEPARATOR), 'Unexpected dependency source for ' . $dependency);
+        }
+        $method = new \ReflectionMethod(FhirCoverageService::class, 'parseOpenEMRRecord');
+        $check(realpath((string) $method->getFileName()) === realpath($fhirPath), 'Mapper method is not native');
+    });
+
+    $GLOBALS['site_id'] = 'default';
+    $GLOBALS['date_display_format'] = 0;
+    $GLOBALS['gbl_time_zone'] = 'UTC';
+    date_default_timezone_set('UTC');
+
+    $row = [
+        'uuid' => '11111111-1111-4111-8111-111111111111',
+        'puuid' => '22222222-2222-4222-8222-222222222222',
+        'insureruuid' => '33333333-3333-4333-8333-333333333333',
+        'policy_number' => 'MEMBER-228',
+        'policy_type' => 'POLICY-228',
+        'subscriber_relationship' => 'self',
+        'date' => '2020-01-02 03:04:05',
+        'date_end' => '2099-12-31 23:59:59',
+        'group_number' => 'GROUP-228',
+        'plan_name' => 'PLAN-228',
+        'type' => 'primary',
+        'copay' => '25.50',
+    ];
+
+    $map = static function (array $record) use ($check): array {
+        $service = (new \ReflectionClass(FhirCoverageService::class))->newInstanceWithoutConstructor();
+        $before = $record;
+        $object = $service->parseOpenEMRRecord($record, false);
+        $check($object instanceof \OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCoverage, 'Native mapper did not return Coverage');
+        $objectJson = json_decode(json_encode($object, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $encoded = $service->parseOpenEMRRecord($record, true);
+        $check(is_string($encoded), 'Encoded mapper result is not a string');
+        $decoded = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        $check($decoded === $objectJson, 'Object and encoded Coverage differ');
+        $check($record === $before, 'Mapper mutated its input row');
+        return $decoded;
+    };
+
+    $assertType = static function (array $output, string $expected) use ($check): void {
+        $check(($output['type']['coding'][0]['system'] ?? null) === 'http://terminology.hl7.org/CodeSystem/v3-ActCode', 'Coverage type system changed');
+        $check(($output['type']['coding'][0]['code'] ?? null) === $expected, 'Coverage type code mismatch');
+        $display = $expected === 'PUBLICPOL' ? 'public healthcare' : 'health insurance plan number';
+        $check(($output['type']['coding'][0]['display'] ?? null) === $display, 'Coverage type display mismatch');
+    };
+
+    $run('public_codes_integer_and_string', static function () use ($row, $map, $assertType): void {
+        foreach ([1, 2, 5, 6, 9] as $code) {
+            foreach ([$code, (string) $code] as $value) {
+                $assertType($map(['ins_type_code' => $value] + $row), 'PUBLICPOL');
+            }
+        }
+    });
+
+    $run('private_codes_integer_and_string', static function () use ($row, $map, $assertType): void {
+        foreach ([3, 4, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17] as $code) {
+            foreach ([$code, (string) $code] as $value) {
+                $assertType($map(['ins_type_code' => $value] + $row), 'HIP');
+            }
+        }
+    });
+
+    $run('missing_null_and_unknown_fallback', static function () use ($row, $map, $assertType): void {
+        $assertType($map($row), 'HIP');
+        foreach ([null, 0, '0', 18, '18', -1, '-1', 'unknown'] as $value) {
+            $assertType($map(['ins_type_code' => $value] + $row), 'HIP');
+        }
+    });
+
+    $run('non_type_coverage_unchanged', static function () use ($row, $map, $check): void {
+        $baseline = $map(['ins_type_code' => 3] + $row);
+        $public = $map(['ins_type_code' => 1] + $row);
+        unset($baseline['type'], $public['type']);
+        $check($baseline === $public, 'A non-type Coverage field changed');
+        $check(($public['id'] ?? null) === $row['uuid'], 'Coverage id changed');
+        $check(($public['subscriberId'] ?? null) === $row['policy_number'], 'Subscriber id changed');
+        $check(($public['beneficiary']['reference'] ?? null) === 'Patient/' . $row['puuid'], 'Beneficiary changed');
+        $check(($public['payor'][0]['reference'] ?? null) === 'Organization/' . $row['insureruuid'], 'Payor changed');
+        $check(($public['status'] ?? null) === 'active', 'Status changed');
+        $check(($public['order'] ?? null) === 1, 'Coordination order changed');
+        $check(($public['class'][0]['value'] ?? null) === $row['group_number'], 'Group changed');
+        $check(($public['class'][1]['value'] ?? null) === $row['plan_name'], 'Plan changed');
+        $check(($public['costToBeneficiary'][0]['valueMoney']['value'] ?? null) == 25.5, 'Copay changed');
+        $check(($public['costToBeneficiary'][0]['valueMoney']['currency'] ?? null) === 'USD', 'Copay currency changed');
+        $check(count($public['identifier'] ?? []) === 2, 'Identifiers changed');
+    });
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    $report = [
+        'cases' => $cases,
+        'errors' => $errors,
+        'total' => count($cases),
+        'failed' => $failed,
+        'source_sha256' => $sourceHash,
+    ];
+    echo json_encode($report, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES) . "\n";
+    exit($failed === 0 ? 0 : 1);
+}
