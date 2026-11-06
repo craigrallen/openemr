@@ -1,0 +1,336 @@
+<?php
+
+// OPEMR-224: CLI-only execution of the native service and native result classes.
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+
+    function xlt(string $message): string
+    {
+        return $message;
+    }
+}
+
+// Synthetic Symfony event boundary: vendor packages are deliberately not loaded.
+namespace Symfony\Component\EventDispatcher {
+    interface EventDispatcherInterface
+    {
+        public function dispatch(object $event, ?string $eventName = null): object;
+    }
+
+    class GenericEvent
+    {
+        private array $arguments = [];
+        private bool $stopped = false;
+
+        public function __construct(private mixed $subject)
+        {
+        }
+
+        public function getSubject(): mixed
+        {
+            return $this->subject;
+        }
+
+        public function hasArgument(string $name): bool
+        {
+            return array_key_exists($name, $this->arguments);
+        }
+
+        public function getArgument(string $name): mixed
+        {
+            return $this->arguments[$name];
+        }
+
+        public function setArgument(string $name, mixed $value): void
+        {
+            $this->arguments[$name] = $value;
+        }
+
+        public function stopPropagation(): void
+        {
+            $this->stopped = true;
+        }
+
+        public function isPropagationStopped(): bool
+        {
+            return $this->stopped;
+        }
+    }
+
+    class EventDispatcher implements EventDispatcherInterface
+    {
+        public function dispatch(object $event, ?string $eventName = null): object
+        {
+            return $event;
+        }
+    }
+}
+
+// Synthetic declaration-only parent. The native service's getAll() is never copied or overridden.
+namespace OpenEMR\Services\FHIR {
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRDomainResource;
+    use OpenEMR\Validators\ProcessingResult;
+
+    class FhirServiceBase
+    {
+        public function __construct(?string $fhirApiURL = null)
+        {
+        }
+
+        public function getFhirApiURL(): ?string
+        {
+            return null;
+        }
+
+        public function getSupportedSearchParams($paramsToFilter): array
+        {
+            return [];
+        }
+
+        public function getSearchParams(): array
+        {
+            return [];
+        }
+
+        public function getOne($fhirResourceId, $puuidBind = null): ProcessingResult
+        {
+            return new ProcessingResult();
+        }
+
+        public function insert(FHIRDomainResource $fhirResource): ProcessingResult
+        {
+            return new ProcessingResult();
+        }
+
+        public function update($fhirResourceId, FHIRDomainResource $fhirResource): ProcessingResult
+        {
+            return new ProcessingResult();
+        }
+    }
+}
+
+namespace {
+    $root = dirname(__DIR__, 2);
+    foreach ([
+        'src/Common/Database/QueryPagination.php',
+        'src/Validators/ProcessingResult.php',
+        'src/Services/FHIR/IResourceReadableService.php',
+        'src/Services/FHIR/IResourceSearchableService.php',
+        'src/Services/FHIR/IResourceCreatableService.php',
+        'src/Services/FHIR/IResourceUpdateableService.php',
+        'src/Services/FHIR/IResourceUSCIGProfileService.php',
+        'src/Services/FHIR/IPatientCompartmentResourceService.php',
+        'src/Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+        'src/Services/FHIR/Traits/PatientSearchTrait.php',
+        'src/Services/FHIR/Traits/MappedServiceTrait.php',
+        'src/Services/FHIR/Traits/VersionedProfileTrait.php',
+        'src/Services/FHIR/FhirQuestionnaireResponseService.php',
+    ] as $relativePath) {
+        require_once $root . '/' . $relativePath;
+    }
+
+    use OpenEMR\Services\FHIR\FhirQuestionnaireResponseService;
+    use OpenEMR\Services\FHIR\FhirServiceBase;
+    use OpenEMR\Validators\ProcessingResult;
+    use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+    use Symfony\Component\EventDispatcher\GenericEvent;
+
+    final class FixtureDispatcher implements EventDispatcherInterface
+    {
+        public ?GenericEvent $event = null;
+        public ?string $name = null;
+        public mixed $result = null;
+        public bool $provideResult = false;
+        public bool $stop = false;
+
+        public function dispatch(object $event, ?string $eventName = null): object
+        {
+            if (!$event instanceof GenericEvent) {
+                throw new RuntimeException('Expected GenericEvent');
+            }
+            $this->event = $event;
+            $this->name = $eventName;
+            if ($this->provideResult) {
+                $event->setArgument('result', $this->result);
+            }
+            if ($this->stop) {
+                $event->stopPropagation();
+            }
+            return $event;
+        }
+    }
+
+    final class FixtureBackend extends FhirServiceBase
+    {
+        public array $calls = [];
+        public array $supported = ['_id', 'patient'];
+        public ProcessingResult $response;
+
+        public function __construct()
+        {
+            $this->response = new ProcessingResult();
+        }
+
+        public function getSupportedSearchParams($paramsToFilter): array
+        {
+            return array_intersect_key($paramsToFilter, array_flip($this->supported));
+        }
+
+        public function getAll($params, $puuidBind = null): ProcessingResult
+        {
+            $this->calls[] = [$params, $puuidBind];
+            return $this->response;
+        }
+    }
+
+    final class HostileResult
+    {
+        public int $calls = 0;
+
+        public function setInternalErrors(mixed $value): void
+        {
+            ++$this->calls;
+            throw new RuntimeException('Hostile setInternalErrors invoked');
+        }
+
+        public function isValid(): bool
+        {
+            ++$this->calls;
+            throw new RuntimeException('Hostile isValid invoked');
+        }
+
+        public function __call(string $name, array $arguments): never
+        {
+            ++$this->calls;
+            throw new RuntimeException('Hostile method invoked: ' . $name);
+        }
+    }
+
+    function fixture(bool $provideResult = false, mixed $value = null, bool $stop = false): array
+    {
+        // Bypass the native constructor, which initializes application services.
+        $service = (new ReflectionClass(FhirQuestionnaireResponseService::class))->newInstanceWithoutConstructor();
+        $dispatcher = new FixtureDispatcher();
+        $dispatcher->provideResult = $provideResult;
+        $dispatcher->result = $value;
+        $dispatcher->stop = $stop;
+        $service->setEventDispatcher($dispatcher);
+        $backend = new FixtureBackend();
+        $service->addMappedService($backend);
+        return [$service, $dispatcher, $backend];
+    }
+
+    function expectFixture(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new RuntimeException($message);
+        }
+    }
+
+    $total = 0;
+    $passed = 0;
+    $failures = [];
+    $case = static function (string $name, callable $assertions) use (&$total, &$passed, &$failures): void {
+        ++$total;
+        try {
+            $assertions();
+            ++$passed;
+        } catch (Throwable $error) {
+            $failures[] = $name . ': ' . get_class($error) . ': ' . $error->getMessage();
+        }
+    };
+
+    foreach (['null' => null, 'false' => false, 'true' => true, 'zero' => 0, 'string' => 'bad', 'array' => [], 'object' => new stdClass(), 'hostile' => new HostileResult()] as $name => $badValue) {
+        $case('wrong type ' . $name, static function () use ($badValue): void {
+            [$service, $dispatcher, $backend] = fixture(true, $badValue);
+            $result = $service->getAll(['_id' => 'response-1'], 'patient-1');
+            expectFixture($result instanceof ProcessingResult, 'Expected native ProcessingResult');
+            expectFixture($result->hasErrors(), 'Expected internal error');
+            expectFixture($result->getInternalErrors() === ['The event should have returned a ProcessingResult object'], 'Wrong internal error');
+            expectFixture($backend->calls === [], 'Backend was called');
+            expectFixture($dispatcher->name === 'fhir.questionnaire_response.search', 'Wrong event name');
+            if ($badValue instanceof HostileResult) {
+                expectFixture($badValue->calls === 0, 'Hostile object method was invoked');
+            }
+        });
+    }
+
+    $case('stopped wrong type fails closed', static function (): void {
+        [$service, , $backend] = fixture(true, false, true);
+        $result = $service->getAll([]);
+        expectFixture($result->getInternalErrors() === ['The event should have returned a ProcessingResult object'], 'Wrong internal error');
+        expectFixture($backend->calls === [], 'Backend was called');
+    });
+
+    $case('stopped valid result identity', static function (): void {
+        $eventResult = new ProcessingResult();
+        $eventResult->addData('event');
+        [$service, , $backend] = fixture(true, $eventResult, true);
+        $result = $service->getAll([]);
+        expectFixture($result === $eventResult, 'Result identity changed');
+        expectFixture($backend->calls === [], 'Backend was called');
+    });
+
+    $case('validation invalid result identity', static function (): void {
+        $eventResult = new ProcessingResult();
+        $eventResult->setValidationMessages(['patient' => 'invalid']);
+        [$service, , $backend] = fixture(true, $eventResult);
+        $result = $service->getAll([]);
+        expectFixture($result === $eventResult, 'Result identity changed');
+        expectFixture($backend->calls === [], 'Backend was called');
+    });
+
+    $case('no event result filters search and retains patient binding', static function (): void {
+        [$service, $dispatcher, $backend] = fixture();
+        $backend->response->addData('backend');
+        $raw = ['_id' => 'response-1', 'patient' => 'patient-1', 'unsupported' => 'ignored'];
+        $result = $service->getAll($raw, 'patient-1');
+        expectFixture($dispatcher->event?->getSubject() === $raw, 'Raw event parameters changed');
+        expectFixture($backend->calls === [[['_id' => 'response-1', 'patient' => 'patient-1'], 'patient-1']], 'Mapped backend parameters or binding changed');
+        expectFixture($result->getData() === ['backend'], 'Backend data missing');
+    });
+
+    $case('event and backend data merge', static function (): void {
+        $eventResult = new ProcessingResult();
+        $eventResult->addData('event');
+        [$service, , $backend] = fixture(true, $eventResult);
+        $backend->response->addData('backend');
+        $result = $service->getAll(['_id' => 'response-1'], 'patient-1');
+        expectFixture($result === $eventResult, 'Result identity changed');
+        expectFixture($result->getData() === ['event', 'backend'], 'Merge lost event or backend data');
+        expectFixture($backend->calls === [[['_id' => 'response-1'], 'patient-1']], 'Backend call changed');
+    });
+
+    $case('internal-error valid result preserves inherited merge', static function (): void {
+        $eventResult = new ProcessingResult();
+        $eventResult->addInternalError('event error');
+        $eventResult->addData('event');
+        [$service, , $backend] = fixture(true, $eventResult);
+        $backend->response->addData('backend');
+        $result = $service->getAll([]);
+        expectFixture($result === $eventResult, 'Result identity changed');
+        expectFixture($result->getInternalErrors() === ['event error'], 'Internal error changed');
+        expectFixture($result->getData() === ['event', 'backend'], 'Inherited merge changed');
+        expectFixture(count($backend->calls) === 1, 'Backend was not called once');
+    });
+
+    $case('whole source is original or exact approved replacement', static function () use ($root): void {
+        $source = file_get_contents($root . '/src/Services/FHIR/FhirQuestionnaireResponseService.php');
+        expectFixture($source !== false, 'Source unreadable');
+        $originalHash = '3b6e2d13edb39b7131e941e9140d8c6b437e16869420be20e833c3bbdf000884';
+        if (hash('sha256', $source) === $originalHash) {
+            return;
+        }
+        $old = '                $result->setInternalErrors(xlt("The event should have returned a ProcessingResult object"));';
+        $new = '                $result = new ProcessingResult();' . "\n" . '                $result->addInternalError(xlt("The event should have returned a ProcessingResult object"));' . "\n" . '                return $result;';
+        expectFixture(substr_count($source, $new) === 1, 'Approved replacement missing or repeated');
+        $reversed = str_replace($new, $old, $source);
+        expectFixture(hash('sha256', $reversed) === $originalHash, 'Other source bytes changed');
+    });
+
+    $report = ['total' => $total, 'passed' => $passed, 'failed' => count($failures), 'failures' => $failures];
+    echo json_encode($report, JSON_THROW_ON_ERROR) . "\n";
+    exit($failures === [] ? 0 : 1);
+}
