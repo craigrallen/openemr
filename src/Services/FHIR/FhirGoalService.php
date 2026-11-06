@@ -169,20 +169,21 @@ class FhirGoalService extends FhirServiceBase implements IResourceUSCIGProfileSe
 
             // FIXED: Add coding from US Core Goal Description value set (no duplicates, clean codes)
             $codeTypeService = new CodeTypesService();
-            $addedCodes = []; // Track codes to prevent duplicates
+            $addedCodes = []; // Track resolved system and exact code pairs
 
             foreach ($dataRecord['details'] as $detail) {
                 if (!empty($detail['code'])) {
                     // FIXED: Strip prefix from code
                     $cleanCode = self::stripCodePrefix($detail['code']);
+                    $codeSystem = $codeTypeService->getSystemForCode($detail['code']);
+                    $identity = [$codeSystem, $cleanCode];
 
-                    // FIXED: Prevent duplicate codes
-                    if (in_array($cleanCode, $addedCodes)) {
+                    // FIXED: Prevent duplicate codings within the same resolved system
+                    if (in_array($identity, $addedCodes, true)) {
                         continue;
                     }
 
                     $codeText = $codeTypeService->lookup_code_description($detail['code']);
-                    $codeSystem = $codeTypeService->getSystemForCode($detail['code']);
 
                     $coding = new FHIRCoding();
                     $coding->setCode($cleanCode);
@@ -195,7 +196,7 @@ class FhirGoalService extends FhirServiceBase implements IResourceUSCIGProfileSe
                     $coding->setSystem($codeSystem);
                     $codeableConcept->addCoding($coding);
 
-                    $addedCodes[] = $cleanCode;
+                    $addedCodes[] = $identity;
                 }
             }
             $goal->setDescription($codeableConcept);
