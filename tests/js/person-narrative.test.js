@@ -9,7 +9,7 @@ const source = path.join(root, 'src/Services/FHIR/FhirPersonService.php');
 const fixture = path.join(root, 'tests/clinical-ui/person-narrative-contract.php.fixture');
 const originalSha = '327c26ab2140b27b60a4e960a0d9efe06b2b7cfc0e200606090f6420ba61b316';
 const originalOperand = `'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . $narrativeText . '</p></div>'`;
-const fixedOperand = `'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . htmlspecialchars($narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'`;
+const fixedOperand = `'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . htmlspecialchars((string) $narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'`;
 const expectedNames = [
     'source_integrity', 'native_class_paths', 'special_characters_object',
     'special_characters_encoded', 'literal_entities', 'multilingual_names',
