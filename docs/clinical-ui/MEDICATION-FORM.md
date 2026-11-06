@@ -1,0 +1,19 @@
+# OPEMR-218 Medication form read mapping
+
+## Scope
+
+The exact four-file slice is `src/Services/FHIR/FhirMedicationService.php`, `tests/clinical-ui/medication-form-contract.php.fixture`, `tests/js/medication-form.test.js`, and this document. The two test files are the tests-only input from controller HEAD `6284c3ce3ba6bf75a3df65138f697bba10a5749a`; this implementation changes only the service and this document.
+
+`DrugService::search()` projects `drug_table.form` from `drugs`, and `DrugService::createResultRecordFromDatabaseResult()` returns the read-side record used by the complete `FhirMedicationService::parseOpenEMRRecord()` mapper. That mapper already converts form values 1–12 to NCI codes and displays and creates a native `FHIRCodeableConcept` containing a native `FHIRCoding`. It omitted the call that attaches the concept to the native `FHIRMedication` resource. The fix adds exactly `$medicationResource->setForm($form);` immediately after `$form->addCoding($formCoding);` inside the existing nonempty `$formCode` block. No terminology or inbound mapping changes are included. In particular, form 8 (`inhalation`) and form 12 (`puff`) still share `C42944`.
+
+## Evidence and verification
+
+The tests-only controller run before this fix reported RED: 35 cases, 10 passing and 25 semantic failures. All 24 mapped string/integer form cases failed because `Medication.form` was absent; the resource-independence case failed for the same reason. Before the RED run and tests-only commit, the controller corrected its nonproduction inverse source check: it removes the exact approved insertion from a fixed source and checks the resulting original hash. Its initial inverse mistakenly attempted to insert into fixed source. That correction needs independent review later; it is not a production TDD exception. The original service SHA-256 was `137fee92d19025f5bce8fedf0e2a5daed94e7609448667921acbb567ba2d85e7`, and the fixture pins that original plus the single allowed insertion.
+
+The CLI fixture runs the full native service class, traits, interfaces, FHIR models, and mapper helpers from `src`. It substitutes only a declaration for the base class because this checkout lacks the Composer PSR logger dependency, bypasses the service constructor through Reflection, and passes a synthetic record in the shape projected by `DrugService`. Its 35 cases cover each of the 12 mapped forms as string and integer, unmapped and absent values, existing projected fields, inactive status, source provenance, and resource independence. The JavaScript adapter checks the fixture's strict JSON report and source hash; it is syntax checked only in this slice.
+
+After the fix, `php tests/clinical-ui/medication-form-contract.php.fixture` passed all 35 cases with zero failures and reported source SHA-256 `d0ff193619356ffe5c834fa5d27071c283ceb20e6b22c0714f834f04897d8d87`. `php -l` reported no syntax errors in the service or fixture. `node --check tests/js/medication-form.test.js` exited successfully. No local Jest, PHPUnit, app bootstrap, SQL, patient data, or network run is part of this evidence.
+
+## Limits and status
+
+The fixture does not exercise authenticated FHIR requests, the actual SQL projection, persistence, security, or clinical QA. It does not establish an enforced sandbox. The pre-existing `drug_code` and expiration guards, null/missing-form warnings, inbound form map, and puff/inhalation code collision remain as they were. Independent review, hosted gates, native authenticated checks, and ordinary approval are pending; this is a draft, unmerged and undeployed. Original OPEMR-22 scope, UI, demo, and Swedish acceptance are not complete. All prior denials remain in force.
