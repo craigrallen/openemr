@@ -26,7 +26,7 @@ describe('OPEMR-227 Questionnaire list error routing', () => {
         expect(Number.isInteger(report.passed)).toBe(true);
         expect(Number.isInteger(report.failed)).toBe(true);
         expect(Array.isArray(report.failures)).toBe(true);
-        expect(report.total).toBe(19);
+        expect(report.total).toBe(20);
         expect(report.passed + report.failed).toBe(report.total);
         expect(report.failures.length).toBe(report.failed);
         expect(report.failures.every((failure) =>
@@ -34,7 +34,7 @@ describe('OPEMR-227 Questionnaire list error routing', () => {
             && typeof failure.name === 'string'
             && typeof failure.message === 'string'
         )).toBe(true);
-        expect(report.passed).toBe(19);
+        expect(report.passed).toBe(20);
         expect(report.failed).toBe(0);
         expect(report.failures).toEqual([]);
     });

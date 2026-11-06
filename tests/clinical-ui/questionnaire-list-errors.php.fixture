@@ -14,14 +14,62 @@ namespace Symfony\Component\HttpFoundation {
     class Response {}
 }
 
-namespace OpenEMR\Common\Http {
-    final class Psr17Factory
+namespace OpenEMR\BC {
+    class SyntheticFactory
     {
-        public static int $instances = 0;
+        public function __construct(public string $slot) {}
+    }
 
+    final class ServiceContainer
+    {
+        public static array $calls = [];
+        public static array $factories = [];
+
+        public static function reset(): void
+        {
+            self::$calls = [];
+            self::$factories = [
+                'serverRequest' => new SyntheticFactory('serverRequest'),
+                'response' => new SyntheticFactory('response'),
+                'stream' => new SyntheticFactory('stream'),
+                'uploadedFile' => new SyntheticFactory('uploadedFile'),
+            ];
+        }
+
+        public static function getServerRequestFactory(): SyntheticFactory
+        {
+            self::$calls[] = 'getServerRequestFactory';
+            return self::$factories['serverRequest'];
+        }
+
+        public static function getResponseFactory(): SyntheticFactory
+        {
+            self::$calls[] = 'getResponseFactory';
+            return self::$factories['response'];
+        }
+
+        public static function getStreamFactory(): SyntheticFactory
+        {
+            self::$calls[] = 'getStreamFactory';
+            return self::$factories['stream'];
+        }
+
+        public static function getUploadedFileFactory(): SyntheticFactory
+        {
+            self::$calls[] = 'getUploadedFileFactory';
+            return self::$factories['uploadedFile'];
+        }
+    }
+}
+
+namespace OpenEMR\Common\Http {
+    // Retain an explicit old-path double so pre-fix RED is a slot-policy
+    // failure, not a missing-class harness error. Final source forbids it.
+    final class Psr17Factory extends \OpenEMR\BC\SyntheticFactory
+    {
         public function __construct()
         {
-            ++self::$instances;
+            parent::__construct('direct-construction');
         }
     }
 
@@ -41,21 +89,27 @@ namespace OpenEMR\Common\Http {
 }
 
 namespace Symfony\Bridge\PsrHttpMessage\Factory {
-    use OpenEMR\Common\Http\Psr17Factory;
+    use OpenEMR\BC\ServiceContainer;
+    use OpenEMR\BC\SyntheticFactory;
     use Psr\Http\Message\ResponseInterface;
     use Symfony\Component\HttpFoundation\Response;
 
     final class PsrHttpFactory
     {
         public static int $instances = 0;
+        public static array $factoryArguments = [];
         public static array $calls = [];
         public static ?ResponseInterface $response = null;
 
-        public function __construct(Psr17Factory $requestFactory, Psr17Factory $responseFactory, Psr17Factory $streamFactory, Psr17Factory $uploadedFileFactory)
+        public function __construct(SyntheticFactory $requestFactory, SyntheticFactory $responseFactory, SyntheticFactory $streamFactory, SyntheticFactory $uploadedFileFactory)
         {
             ++self::$instances;
-            if ($requestFactory !== $responseFactory || $requestFactory !== $streamFactory || $requestFactory !== $uploadedFileFactory) {
-                throw new \LogicException('Bridge factories differ');
+            self::$factoryArguments[] = [$requestFactory, $responseFactory, $streamFactory, $uploadedFileFactory];
+            if ($requestFactory !== ServiceContainer::$factories['serverRequest']
+                || $responseFactory !== ServiceContainer::$factories['response']
+                || $streamFactory !== ServiceContainer::$factories['stream']
+                || $uploadedFileFactory !== ServiceContainer::$factories['uploadedFile']) {
+                throw new \LogicException('Bridge factory slot mismatch');
             }
         }
 
@@ -168,8 +222,8 @@ namespace OpenEMR\RestControllers {
 }
 
 namespace {
+    use OpenEMR\BC\ServiceContainer;
     use OpenEMR\Common\Http\HttpRestRequest;
-    use OpenEMR\Common\Http\Psr17Factory;
     use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
     use OpenEMR\RestControllers\FHIR\FhirQuestionnaireRestController;
     use OpenEMR\RestControllers\RestControllerHelper;
@@ -236,8 +290,9 @@ namespace {
     function prepare(bool $patient, SpiedProcessingResult $result): array
     {
         RestControllerHelper::reset();
-        Psr17Factory::$instances = 0;
+        ServiceContainer::reset();
         PsrHttpFactory::$instances = 0;
+        PsrHttpFactory::$factoryArguments = [];
         PsrHttpFactory::$calls = [];
         PsrHttpFactory::$response = new \OpenEMR\RestControllers\QuestionnaireResponse();
         $questionnaire = new FhirQuestionnaireService();
@@ -256,6 +311,30 @@ namespace {
         check($request->patientUuidReads === ($patient ? 1 : 0), 'Patient UUID read count');
     }
 
+    function correctedBranch(): string
+    {
+        return implode("\n", [
+            '        if ($processingResult->hasErrors()) {',
+            '            $psrHttpFactory = new \\Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory(',
+            '                \\OpenEMR\\BC\\ServiceContainer::getServerRequestFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getResponseFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getStreamFactory(),',
+            '                \\OpenEMR\\BC\\ServiceContainer::getUploadedFileFactory()',
+            '            );',
+            '            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));',
+            '        }',
+        ]);
+    }
+
+    function checkFactoryPolicySource(string $root): void
+    {
+        $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
+        check($source !== false, 'Controller source unreadable');
+        check(!str_contains($source, 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle;'), 'Orphan FHIRBundle import remains');
+        check(!str_contains($source, 'new \\OpenEMR\\Common\\Http\\Psr17Factory()'), 'Direct PSR-17 factory construction remains');
+        check(substr_count($source, correctedBranch()) === 1, 'Exact four getter bridge branch missing or repeated');
+    }
+
     function checkSource(string $root): void
     {
         $source = file_get_contents($root . '/src/RestControllers/FHIR/FhirQuestionnaireRestController.php');
@@ -265,18 +344,18 @@ namespace {
             '            return RestControllerHelper::handleFhirProcessingResult($processingResult, 200);',
             '        }',
         ]);
-        $bridgedBranch = implode("\n", [
-            '        if ($processingResult->hasErrors()) {',
-            '            $psr17Factory = new \\OpenEMR\\Common\\Http\\Psr17Factory();',
-            '            $psrHttpFactory = new \\Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory($psr17Factory, $psr17Factory, $psr17Factory, $psr17Factory);',
-            '            return $psrHttpFactory->createResponse(RestControllerHelper::handleFhirProcessingResult($processingResult, 200));',
-            '        }',
-        ]);
+        $bridgedBranch = correctedBranch();
         $restored = $source;
         check(substr_count($restored, $bridgedBranch) === 1, 'Bridged branch missing or repeated');
         $restored = str_replace($bridgedBranch, $currentBranch, $restored, $count);
         check($count === 1, 'Bridge inverse replacement count');
         check(substr_count($restored, $currentBranch) === 1, 'Current error branch missing or repeated');
+        $entryImport = 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle\\FHIRBundleEntry;';
+        $originalImports = 'use OpenEMR\\FHIR\\R4\\FHIRResource\\FHIRBundle;' . "\n" . $entryImport;
+        check(substr_count($restored, $entryImport) === 1, 'Adjacent native import missing or repeated');
+        check(substr_count($restored, $originalImports) === 0, 'Orphan import already present');
+        $restored = str_replace($entryImport, $originalImports, $restored, $count);
+        check($count === 1, 'Import inverse replacement count');
         $pairs = [
             ['return RestControllerHelper::returnSingleObjectResponse($result);', 'return $result;'],
             ['@return FHIRBundle FHIR bundle with query results, if found', '@return ResponseInterface Questionnaire list response from the existing error helper or the once-wrapped success bundle.'],
@@ -309,6 +388,7 @@ namespace {
 
     $cases = [];
     $cases['whole-source inverse'] = static function () use ($root): void { checkSource($root); };
+    $cases['factory policy source guard'] = static function () use ($root): void { checkFactoryPolicySource($root); };
 
     foreach ([false, true] as $patient) {
         $scope = $patient ? 'patient' : 'staff';
@@ -331,8 +411,10 @@ namespace {
                     [$controller, $request, $service, $resources, $params] = prepare($patient, $result);
                     $response = $controller->list($request);
                     check($response === PsrHttpFactory::$response, 'Bridged error response identity');
-                    check(Psr17Factory::$instances === 1, 'PSR-17 factory initialization count');
+                    check(ServiceContainer::$calls === ['getServerRequestFactory', 'getResponseFactory', 'getStreamFactory', 'getUploadedFileFactory'], 'Factory getter count or order');
                     check(PsrHttpFactory::$instances === 1, 'Bridge initialization count');
+                    check(count(PsrHttpFactory::$factoryArguments) === 1, 'Bridge constructor call count');
+                    check(PsrHttpFactory::$factoryArguments[0] === [ServiceContainer::$factories['serverRequest'], ServiceContainer::$factories['response'], ServiceContainer::$factories['stream'], ServiceContainer::$factories['uploadedFile']], 'Bridge factory identity or order');
                     check(count(PsrHttpFactory::$calls) === 1, 'Bridge response conversion count');
                     check(PsrHttpFactory::$calls[0] === RestControllerHelper::$errorResponse, 'Exact helper Response was not bridged');
                     check(count(RestControllerHelper::$errorCalls) === 1, 'Error helper call count');
@@ -371,8 +453,9 @@ namespace {
                     }
                 }
                 check($response === RestControllerHelper::$successResponse, 'Original success response identity');
-                check(Psr17Factory::$instances === 0, 'PSR-17 factory initialized on healthy result');
+                check(ServiceContainer::$calls === [], 'Factory getter called on healthy result');
                 check(PsrHttpFactory::$instances === 0, 'Bridge initialized on healthy result');
+                check(PsrHttpFactory::$factoryArguments === [], 'Bridge constructor called on healthy result');
                 check(PsrHttpFactory::$calls === [], 'Bridge called on healthy result');
                 check(RestControllerHelper::$errorCalls === [], 'Error helper used on healthy result');
                 check(count(RestControllerHelper::$successCalls) === 1, 'Success serializer call count');
