@@ -58,6 +58,52 @@ $fres = getLayoutRes($SHORT_FORM);
     margin-bottom: 0.25rem;
 }
 </style>
+<style id="new-patient-registration-workbench">
+@media screen {
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-sheet {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1rem;
+    border: 1px solid var(--gray300);
+    border-radius: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-sheet > .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-actions > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-actions > .btn:focus {
+    outline: 3px solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-new-patient-registration .oe-new-patient-registration-actions > .btn:focus-visible {
+    outline: 3px solid currentcolor;
+    outline-offset: 2px;
+  }
+}
+</style>
 
 <?php include_once(OEGlobalsBag::getInstance()->getSrcDir() . "/options.js.php"); ?>
 
@@ -346,14 +392,14 @@ function srchDone(pid){
 </script>
 </head>
 
-<body class="body_top">
+<body class="body_top oe-new-patient-registration">
 
 <?php
 /*Get the constraint from the DB-> LBF forms accordinf the form_id*/
 $constraints = LBF_Validation::generate_validate_constraints("DEM");
 ?>
 <script> var constraints = <?php echo $constraints; ?>; </script>
-    <div class="container-xl">
+    <div class="container-xl oe-new-patient-registration-sheet">
         <div class="row">
             <div class="col-md-12">
                 <h2><?php echo xlt('Search or Add Patient');?></h2>
@@ -766,7 +812,7 @@ $constraints = LBF_Validation::generate_validate_constraints("DEM");
         </div>
         <div class="row">
             <div class="col-md-12">
-                <div class="btn-group">
+                <div class="btn-group oe-new-patient-registration-actions">
                     <?php if ($WITH_SEARCH) { ?>
                         <button type="button" class="btn btn-secondary btn-search" id="search" value="<?php echo xla('Search'); ?>">
                             <?php echo xlt('Search'); ?>
