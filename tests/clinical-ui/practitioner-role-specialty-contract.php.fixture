@@ -1,0 +1,246 @@
+<?php
+
+declare(strict_types=1);
+
+// Explicit CLI-only native-class seam, never an application endpoint.
+if (PHP_SAPI !== 'cli') {
+    exit(2);
+}
+
+date_default_timezone_set('UTC');
+$root = dirname(__DIR__, 2);
+$sourcePath = $root . '/src/Services/FHIR/FhirPractitionerRoleService.php';
+$sourceSha256 = '';
+$cases = [];
+
+set_error_handler(static function (int $severity, string $message): never {
+    throw new ErrorException($message, 0, $severity);
+});
+
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (str_starts_with($class, $prefix)) {
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    }
+});
+
+// Fixed declaration only: no request, fixture case or external text is evaluated.
+// The real parent constructor bootstraps the application; only its declaration is synthetic.
+eval('namespace OpenEMR\\Services\\FHIR; class FhirServiceBase {}');
+
+function expectSame(mixed $expected, mixed $actual, string $label): void
+{
+    if ($expected !== $actual) {
+        throw new RuntimeException($label . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+    }
+}
+
+function check(string $name, callable $body): void
+{
+    global $cases;
+    try {
+        $body();
+        $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+    } catch (Throwable $error) {
+        $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+    }
+}
+
+function row(): array
+{
+    return [
+        'uuid' => 'role-uuid',
+        'role_last_updated' => '2024-01-02 03:04:05',
+        'provider_uuid' => 'provider-uuid',
+        'user_name' => 'Dr. Åsa 日本語',
+        'facility_uuid' => 'facility-uuid',
+        'facility_name' => 'Klinik Ö',
+        'location_uuid' => 'location-uuid',
+        'role_code' => 'physician',
+        'role_title' => 'Médecin 日本語',
+        'specialty_code' => 'cardiology',
+        'specialty_title' => 'Hjärtläkare قلب',
+        'work_phone' => '+46 8 123 456',
+        'work_phone_system' => 'phone',
+        'work_phone_use' => 'work',
+        'fax' => '+46 8 123 457',
+        'fax_system' => 'fax',
+        'fax_use' => 'work',
+        'email' => 'asa@example.test',
+        'email_system' => 'email',
+        'email_use' => 'work',
+        'url' => 'https://example.test',
+        'url_system' => 'url',
+        'url_use' => 'work',
+    ];
+}
+
+function mapped(array $input): array
+{
+    static $service = null;
+    if ($service === null) {
+        $service = (new ReflectionClass(OpenEMR\Services\FHIR\FhirPractitionerRoleService::class))->newInstanceWithoutConstructor();
+    }
+    $resource = $service->parseOpenEMRRecord($input);
+    $encoded = $service->parseOpenEMRRecord($input, true);
+    if (!is_string($encoded)) {
+        throw new RuntimeException('Encoded mapper result is not a string');
+    }
+    $json = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+    expectSame(json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR), $json, 'object and encoded forms');
+    return [$resource, $json];
+}
+
+function concept(array $items, string $code, string $title, string $label): void
+{
+    expectSame(1, count($items), $label . ' count');
+    if (!$items[0] instanceof OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept) {
+        throw new RuntimeException($label . ' is not a native CodeableConcept');
+    }
+    expectSame([$code], $items[0]->getCoding(), $label . ' raw coding');
+    expectSame($title, $items[0]->getText(), $label . ' text');
+}
+
+check('source_integrity', static function () use ($sourcePath, &$sourceSha256): void {
+    $source = file_get_contents($sourcePath);
+    if (!is_string($source)) {
+        throw new RuntimeException('Mapper source is unreadable');
+    }
+    $sourceSha256 = hash('sha256', $source);
+    $originalSha256 = '6bb2f8ce277c96e867ef30bf8c7b133fe4452a4efa49f52ff4d248cfd8ab3f04';
+    if ($sourceSha256 === $originalSha256) {
+        return;
+    }
+    $old = implode("\n", [
+        "        if (!empty(\$dataRecord['specialty_code'])) {",
+        '            $reason = new FHIRCodeableConcept();',
+        "            \$reason->addCoding(\$dataRecord['specialty_code']);",
+        "            \$reason->setText(\$dataRecord['specialty_title']);",
+        '            $practitionerRoleResource->addCode($reason);',
+        '        }',
+    ]);
+    $new = str_replace('->addCode($reason);', '->addSpecialty($reason);', $old);
+    if (substr_count($source, $new) !== 1 || substr_count($source, $old) !== 0) {
+        throw new RuntimeException('Mapper differs from the approved one-block change');
+    }
+    $restored = str_replace($new, $old, $source, $replacements);
+    expectSame(1, $replacements, 'replacement count');
+    expectSame($originalSha256, hash('sha256', $restored), 'restored original SHA256');
+});
+
+check('native_classes', static function () use ($root): void {
+    $paths = [
+        OpenEMR\Services\FHIR\FhirPractitionerRoleService::class => '/src/Services/FHIR/FhirPractitionerRoleService.php',
+        OpenEMR\FHIR\R4\FHIRDomainResource\FHIRPractitionerRole::class => '/src/FHIR/R4/FHIRDomainResource/FHIRPractitionerRole.php',
+        OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept::class => '/src/FHIR/R4/FHIRElement/FHIRCodeableConcept.php',
+        OpenEMR\Services\FHIR\UtilsService::class => '/src/Services/FHIR/UtilsService.php',
+        OpenEMR\Services\FHIR\Traits\FhirServiceBaseEmptyTrait::class => '/src/Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+        OpenEMR\Services\FHIR\Traits\VersionedProfileTrait::class => '/src/Services/FHIR/Traits/VersionedProfileTrait.php',
+        OpenEMR\Services\FHIR\IResourceUSCIGProfileService::class => '/src/Services/FHIR/IResourceUSCIGProfileService.php',
+        OpenEMR\Services\FHIR\INonPatientCompartmentResourceService::class => '/src/Services/FHIR/INonPatientCompartmentResourceService.php',
+    ];
+    foreach ($paths as $class => $relativePath) {
+        expectSame($root . $relativePath, (new ReflectionClass($class))->getFileName(), $class . ' native path');
+    }
+});
+
+check('role_only', static function (): void {
+    $input = row();
+    unset($input['specialty_code'], $input['specialty_title']);
+    [$resource, $json] = mapped($input);
+    concept($resource->getCode(), 'physician', 'Médecin 日本語', 'role');
+    expectSame([], $resource->getSpecialty(), 'role-only specialty getter');
+    expectSame([['coding' => ['physician'], 'text' => 'Médecin 日本語']], $json['code'] ?? null, 'role-only JSON code');
+    expectSame(false, array_key_exists('specialty', $json), 'role-only JSON specialty absence');
+});
+
+check('specialty_only', static function (): void {
+    $input = row();
+    unset($input['role_code'], $input['role_title']);
+    [$resource, $json] = mapped($input);
+    expectSame([], $resource->getCode(), 'specialty-only role getter');
+    concept($resource->getSpecialty(), 'cardiology', 'Hjärtläkare قلب', 'specialty');
+    expectSame(false, array_key_exists('code', $json), 'specialty-only JSON code absence');
+    expectSame([['coding' => ['cardiology'], 'text' => 'Hjärtläkare قلب']], $json['specialty'] ?? null, 'specialty-only JSON placement');
+});
+
+check('both', static function (): void {
+    [$resource, $json] = mapped(row());
+    concept($resource->getCode(), 'physician', 'Médecin 日本語', 'both role');
+    concept($resource->getSpecialty(), 'cardiology', 'Hjärtläkare قلب', 'both specialty');
+    expectSame([['coding' => ['physician'], 'text' => 'Médecin 日本語']], $json['code'] ?? null, 'both JSON role');
+    expectSame([['coding' => ['cardiology'], 'text' => 'Hjärtläkare قلب']], $json['specialty'] ?? null, 'both JSON specialty');
+});
+
+check('references_telecom_meta', static function (): void {
+    $input = row();
+    [, $both] = mapped($input);
+    unset($input['specialty_code'], $input['specialty_title']);
+    [, $roleOnly] = mapped($input);
+    foreach (['resourceType', 'id', 'meta', 'practitioner', 'organization', 'location', 'telecom'] as $field) {
+        expectSame($roleOnly[$field] ?? null, $both[$field] ?? null, $field . ' unchanged');
+    }
+    expectSame('PractitionerRole', $both['resourceType'] ?? null, 'resource type');
+    expectSame('role-uuid', $both['id'] ?? null, 'id');
+    expectSame('1', $both['meta']['versionId'] ?? null, 'meta version');
+    if (!is_string($both['meta']['lastUpdated'] ?? null) || $both['meta']['lastUpdated'] === '') {
+        throw new RuntimeException('Explicit last-updated date was not serialized');
+    }
+    expectSame(['reference' => 'Practitioner/provider-uuid', 'display' => 'Dr. Åsa 日本語'], $both['practitioner'] ?? null, 'practitioner');
+    expectSame(['reference' => 'Organization/facility-uuid', 'display' => 'Klinik Ö'], $both['organization'] ?? null, 'organization');
+    expectSame('Location/location-uuid', $both['location'][0]['reference'] ?? null, 'location');
+    expectSame(1, count($both['location'] ?? []), 'location count');
+    expectSame(4, count($both['telecom'] ?? []), 'telecom count');
+    foreach ([['phone', 'work', '+46 8 123 456'], ['fax', 'work', '+46 8 123 457'], ['email', 'work', 'asa@example.test'], ['url', 'work', 'https://example.test']] as $index => $expected) {
+        expectSame($expected[0], $both['telecom'][$index]['system'] ?? null, 'telecom system ' . $index);
+        expectSame($expected[1], $both['telecom'][$index]['use'] ?? null, 'telecom use ' . $index);
+        expectSame($expected[2], $both['telecom'][$index]['value'] ?? null, 'telecom value ' . $index);
+    }
+});
+
+check('guard_missing', static function (): void {
+    $input = row();
+    unset($input['role_code'], $input['specialty_code']);
+    [$resource, $json] = mapped($input);
+    expectSame([], $resource->getCode(), 'missing role');
+    expectSame([], $resource->getSpecialty(), 'missing specialty');
+    expectSame(false, array_key_exists('code', $json), 'missing JSON code');
+    expectSame(false, array_key_exists('specialty', $json), 'missing JSON specialty');
+});
+
+foreach (['guard_null' => null, 'guard_empty' => '', 'guard_string_zero' => '0', 'guard_integer_zero' => 0] as $name => $value) {
+    check($name, static function () use ($value): void {
+        $input = row();
+        $input['role_code'] = $value;
+        $input['specialty_code'] = $value;
+        [$resource, $json] = mapped($input);
+        expectSame([], $resource->getCode(), 'guarded role getter');
+        expectSame([], $resource->getSpecialty(), 'guarded specialty getter');
+        expectSame(false, array_key_exists('code', $json), 'guarded JSON code');
+        expectSame(false, array_key_exists('specialty', $json), 'guarded JSON specialty');
+    });
+}
+
+check('nonmutation_independence', static function (): void {
+    $input = row();
+    $snapshot = $input;
+    [$first] = mapped($input);
+    expectSame($snapshot, $input, 'input nonmutation');
+    [$second] = mapped($input);
+    if ($first === $second || $first->getCode()[0] === $first->getSpecialty()[0] || $first->getSpecialty()[0] === $second->getSpecialty()[0]) {
+        throw new RuntimeException('Native mutable resources or concepts were shared');
+    }
+    $first->getSpecialty()[0]->setText('changed');
+    expectSame('Médecin 日本語', $first->getCode()[0]->getText(), 'independent role concept');
+    expectSame('Hjärtläkare قلب', $second->getSpecialty()[0]->getText(), 'independent mapping');
+    expectSame($snapshot, $input, 'input after object mutation');
+});
+
+$total = count($cases);
+$passed = count(array_filter($cases, static fn (array $case): bool => $case['ok']));
+$report = ['cases' => $cases, 'total' => $total, 'passed' => $passed, 'failed' => $total - $passed, 'source_sha256' => $sourceSha256];
+echo json_encode($report, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
+exit($report['failed'] === 0 ? 0 : 1);
