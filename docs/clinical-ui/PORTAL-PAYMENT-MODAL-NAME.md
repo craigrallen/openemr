@@ -1,0 +1,9 @@
+# Portal payment modal name
+
+OPEMR-234 adds a translated, attribute-safe accessible name to the native portal payment dialog root. The Pay Invoice launcher targets `#openPayModal`; its visible heading already reads “Submit Payment for Authorization.” The change adds `aria-label="<?php echo xla('Submit Payment for Authorization'); ?>"` to that root. The `show.bs.modal` callback continues to populate payment fields.
+
+The five delivery paths are `portal/portal_payment.php`, `tests/clinical-ui/portal-payment-modal-name-contract.cjs`, `tests/clinical-ui/fixtures/portal-payment-modal-name-original.php.txt`, `tests/js/portal-payment-modal-name.test.js`, and `docs/clinical-ui/PORTAL-PAYMENT-MODAL-NAME.md`. The controller copies the complete original PHP source into the fixture and authenticates it against SHA256 `a7eac9aaa2a1c5d553a15b67d2fedc0966a1933ce031075764617440ac7fe3ff`. The contract permits exactly the specified root replacement and checks that the actual launcher, heading, callback, forms, CSRF reference, gateway sources, and every other production byte remain unchanged.
+
+TDD delivery sequence for the controller: materialize the fixture and test files first; run `node tests/clinical-ui/portal-payment-modal-name-contract.cjs` and capture actual RED from the unchanged product; apply the one-root product change; rerun that command for GREEN. Hosted QA then runs `npx jest tests/js/portal-payment-modal-name.test.js --runInBand`. These are instructions for controller execution, not claimed results. Controller evidence is external to this source-only proposal.
+
+This source contract does not prove runtime behavior, persistence, security, or assistive technology behavior. Ordinary approval applies. This delivery consumes one of at most two consecutive scheduled delivery runs, counting implementation and QA runs rather than test attempts; after that budget, schedule the next different item.
