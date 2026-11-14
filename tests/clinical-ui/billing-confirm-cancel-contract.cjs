@@ -60,7 +60,8 @@ function mutant(name, mutate) {
         requireTrue(changed !== baseline, 'mutation did not change source');
         const preservationResult = preserved(changed);
         const semanticResults = semantics.map(([, predicate]) => predicate(changed));
-        requireTrue(!preservationResult || semanticResults.some(result => !result), 'mutant accepted');
+        const semanticIndex = { 'old wrong selector': 0, 'missing selector': 0, 'duplicate selector': 0, 'changed reject token': 1, 'Cancel submit type': 4, 'altered success handler': 2, 'deleted catch': 5 };
+        requireTrue(name === 'unrelated source byte' ? !preservationResult : semanticResults[semanticIndex[name]] === false, 'mutant accepted');
     });
 }
 mutant('old wrong selector', source => replaceOnce(source, newLine, oldLine));
