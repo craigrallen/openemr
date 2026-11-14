@@ -193,7 +193,7 @@ $partners = $x->_utility_array($x->x12_partner_factory());
                     $(this).off();
                     resolve("btn-validate");
                 });
-                $('#confirmDialog .btn-danger').click(function() {
+                $('#confirmDialog .btn-cancel').click(function() {
                     $(this).off();
                     reject("btn-cancel");
                 });
