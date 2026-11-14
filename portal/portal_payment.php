@@ -1089,7 +1089,7 @@ if ($alertmsg === '' && (($_POST['form_save'] ?? null) || filter_input(INPUT_GET
         calctotal();
     </script>
     <!-- credit payment modal -->
-    <div id="openPayModal" class="modal fade" role="dialog">
+    <div id="openPayModal" class="modal fade" role="dialog" aria-label="<?php echo xla('Submit Payment for Authorization'); ?>">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
