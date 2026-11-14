@@ -26,6 +26,7 @@ namespace {
     use OpenEMR\FHIR\R4\FHIRDomainResource\FHIROrganization;
     use OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept;
     use OpenEMR\FHIR\R4\FHIRElement\FHIRCoding;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCode;
     use OpenEMR\Services\FHIR\FhirOrganizationService;
     use OpenEMR\Validators\ProcessingResult;
 
@@ -133,6 +134,9 @@ namespace {
         ['object later coding', 'object', [[['code' => 'prov'], ['code' => 'ins']]], 'insurance'],
         ['object multiple types', 'object', [[['code' => 'prov']], [['code' => 'Ins']]], 'insurance'],
         ['object differing system', 'object', [[['code' => 'ins', 'system' => 'urn:other']]], 'insurance'],
+        ['object primitive ins', 'primitive', [[['code' => 'ins']]], 'insurance'],
+        ['object primitive Ins', 'primitive', [[['code' => 'Ins']]], 'insurance'],
+        ['object primitive prov', 'primitive', [[['code' => 'prov']]], 'facility'],
         ['array ins', 'array', [[['code' => 'ins']]], 'insurance'],
         ['array Ins', 'array', [[['code' => 'Ins']]], 'insurance'],
         ['array prov', 'array', [[['code' => 'prov']]], 'facility'],
@@ -155,11 +159,14 @@ namespace {
 
     foreach ($cases as [$name, $mode, $types, $destination]) {
         $check($name, static function () use ($mode, $types, $destination, $makeAggregate, $assert): void {
-            if ($mode === 'object') {
+            if ($mode === 'object' || $mode === 'primitive') {
                 $resource = new FHIROrganization();
                 foreach ($types as $codings) {
                     $type = new FHIRCodeableConcept();
                     foreach ($codings as $values) {
+                        if ($mode === 'primitive') {
+                            $values['code'] = new FHIRCode($values['code']);
+                        }
                         $type->addCoding(new FHIRCoding($values));
                     }
                     $resource->addType($type);
@@ -168,12 +175,16 @@ namespace {
                     $assert(is_object($type), 'native type was not an object');
                     foreach ($type->getCoding() ?? [] as $coding) {
                         $assert(is_object($coding), 'native coding was not an object');
+                        if ($mode === 'primitive') {
+                            $assert($coding->getCode() instanceof FHIRCode, 'native code primitive was not retained');
+                        }
                     }
                 }
             } else {
                 $resource = new SyntheticLegacyOrganization(array_map(static fn(array $coding): array => ['coding' => $coding], $types));
             }
             $before = json_encode($resource, JSON_THROW_ON_ERROR);
+            $legacyTypesBefore = $mode === 'array' ? $resource->getType() : null;
             [$aggregate, $facility, $insurance] = $makeAggregate();
             $returned = $aggregate->insert($resource);
             $chosen = $destination === 'insurance' ? $insurance : $facility;
@@ -182,6 +193,9 @@ namespace {
             $assert(count($chosen->resources) === 1 && $chosen->resources[0] === $resource, 'wrong backend call or resource identity');
             $assert(count($other->resources) === 0, 'other backend called');
             $assert(json_encode($resource, JSON_THROW_ON_ERROR) === $before, 'resource JSON changed');
+            if ($mode === 'array') {
+                $assert($resource->getType() === $legacyTypesBefore, 'synthetic legacy routing types changed');
+            }
         });
     }
 
@@ -197,7 +211,7 @@ namespace {
         throw new \RuntimeException('original BadMethodCallException was not thrown');
     });
 
-    $tests = 21;
+    $tests = 24;
     $failed = count($failures);
     echo json_encode(['tests' => $tests, 'passed' => $passed, 'failed' => $failed, 'failures' => $failures], JSON_THROW_ON_ERROR), "\n";
     exit($failed === 0 ? 0 : 1);

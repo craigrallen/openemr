@@ -13,7 +13,7 @@ test('Organization insurance routing fixture', () => {
 
   const report = JSON.parse(run.stdout);
   expect(Object.keys(report).sort()).toEqual(['failed', 'failures', 'passed', 'tests'].sort());
-  expect(report.tests).toBe(21);
+  expect(report.tests).toBe(24);
   expect(report.passed).toBe(report.tests);
   expect(report.failed).toBe(0);
   expect(report.failures).toEqual([]);
