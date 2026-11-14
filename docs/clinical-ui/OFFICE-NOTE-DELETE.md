@@ -1,0 +1,14 @@
+# Office Notes delete confirmation
+
+The native delete confirmation posts `mode=edit` in the supplied original source. The dispatcher sends that mode to `updateNoteById`, while its separate `mode=delete` branch calls `deleteNoteById`. The delete form has no note body input. This establishes a source-level routing defect; it does not establish what happened in a live request or database.
+
+The production change is the exact inverse of one authenticated fragment: inside the delete modal only, change the hidden mode from `edit` to `delete`. The original fixture is pinned to SHA-256 `08c6b7461381256a910686c48571bf92c6ba248a7e5686a50546ba93127d6f85`. The contract requires the entire production file to equal that original with this one replacement, preserving all other bytes, including its final newline state. The edit modal, new and activity forms, dispatcher, labels, and buttons remain as supplied.
+
+Controller TDD sequence: copy the complete original source bytes to `tests/clinical-ui/fixtures/office-note-delete-original.php.txt`; materialize the contract, Jest adapter and this scope document; run the direct dependency-free Node contract against the original to capture actual RED evidence; then materialize the one-line production change, rerun the direct contract and require real hosted Jest GREEN. Local Jest and emulation remain stopped. Commands: `node tests/clinical-ui/office-note-delete-contract.cjs` and the repository's hosted Jest invocation for `tests/js/office-note-delete.test.js`. Controller direct source-contract execution is distinct from hosted adapter execution; authoritative results are retained in external controller evidence.
+
+The checks inspect source and reject specific mutations. They do not submit a native form, execute PHP, exercise a database, or prove persistence, clinical behavior, ACL behavior, or security acceptance. Native authenticated synthetic-instance delete, cancel, and edit acceptance remains open, as does ordinary review and approval. Controller owns materialization, evidence, Git, Jira, and PR actions.
+
+Scheduled allocation: 1 of a maximum TWO consecutive SCHEDULED delivery runs per surface INCLUDING implementation AND QA; internal phases/test retries do NOT consume scheduled allocations; rotate after budget regardless pass/fail. The next SCHEDULED delivery run after the maximum must use a DIFFERENT implementation surface.
+
+
+Proposal review before materialization found overescaped initial transport and a next-form/adapter-path problem in a successor; both unmaterialized proposals are retained externally. The final author proposal received a disclosed controller test-harness-only correction: quoted PHP values containing `?>` must not terminate the HTML input tag matcher. This changes no production semantics or acceptance assertions. Controller corrected evidence wording as a nonproduction documentation exception. All five final artifacts require independent review.
