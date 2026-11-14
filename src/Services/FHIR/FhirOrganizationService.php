@@ -135,7 +135,7 @@ class FhirOrganizationService implements IResourceSearchableService, IResourceRe
             //  so will support both the array and the object
             if (is_array($type)) {
                 foreach ($type['coding'] as $coding) {
-                    if ($coding['code'] == self::ORGANIZATION_TYPE_INSURANCE) {
+                    if ($coding['code'] == self::ORGANIZATION_TYPE_INSURANCE || $coding['code'] == 'ins') {
                         // insert into the insurance
                         return $this->insuranceService->insert($fhirResource);
                     }
@@ -143,7 +143,7 @@ class FhirOrganizationService implements IResourceSearchableService, IResourceRe
             } else {
                 $codings = $type->getCoding() ?? [];
                 foreach ($codings as $coding) {
-                    if ($coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE) {
+                    if ($coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE || $coding->getCode() == 'ins') {
                         // insert into the insurance
                         return $this->insuranceService->insert($fhirResource);
                     }
