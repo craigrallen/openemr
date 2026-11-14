@@ -1493,7 +1493,7 @@ function writeITLine($it_array): void
         <input type='hidden' name='form_checksum' value='<?php echo attr(listChecksum($list_id)); ?>' />
         <input type='hidden' name='form_submitted' id='form_submitted' value='false'>
     </form>
-    <div class="modal fade" id="modal-new-list" tabindex="-1" role="dialog">
+    <div class="modal fade" id="modal-new-list" tabindex="-1" role="dialog" aria-label="<?php echo xla('New List'); ?>">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <form action="edit_list.php" method="post" class="form">
