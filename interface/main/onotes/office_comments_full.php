@@ -215,7 +215,7 @@ function renderPaginationControls($currentPage, $totalPages, $active): string
                                 </div>
                                 <div class="modal-body">
                                     <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
-                                    <input type="hidden" name="mode" value="edit">
+                                    <input type="hidden" name="mode" value="delete">
                                     <input type="hidden" name="offset" value="<?php echo attr($offset); ?>">
                                     <input type="hidden" name="active" value="<?php echo attr($active); ?>">
                                     <input type="hidden" name="note_id" value="<?php echo attr($note['id']); ?>">
