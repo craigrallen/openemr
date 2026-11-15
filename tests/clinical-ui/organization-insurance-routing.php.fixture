@@ -1,0 +1,218 @@
+<?php
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+}
+
+namespace Psr\Log {
+    interface LoggerInterface
+    {
+    }
+
+    trait LoggerAwareTrait
+    {
+        protected ?LoggerInterface $logger = null;
+
+        public function setLogger(LoggerInterface $logger): void
+        {
+            $this->logger = $logger;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIROrganization;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCoding;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCode;
+    use OpenEMR\Services\FHIR\FhirOrganizationService;
+    use OpenEMR\Validators\ProcessingResult;
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $repo = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($repo): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $path = $repo . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    });
+
+    class SyntheticLegacyOrganization extends FHIROrganization
+    {
+        private array $syntheticTypes;
+
+        public function __construct(array $types)
+        {
+            parent::__construct([]);
+            $this->syntheticTypes = $types;
+        }
+
+        public function getType()
+        {
+            return $this->syntheticTypes;
+        }
+    }
+
+    class RecordingInsert
+    {
+        public array $resources = [];
+        public ProcessingResult $result;
+
+        public function __construct()
+        {
+            $this->result = new ProcessingResult();
+        }
+
+        public function insert($resource): ProcessingResult
+        {
+            $this->resources[] = $resource;
+            return $this->result;
+        }
+    }
+
+    $failures = [];
+    $passed = 0;
+    $check = static function (string $name, callable $test) use (&$failures, &$passed): void {
+        try {
+            $test();
+            ++$passed;
+        } catch (\Throwable $error) {
+            $failures[] = $name . ': ' . $error::class . ': ' . $error->getMessage();
+        }
+    };
+    $assert = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+
+    $sourcePath = $repo . '/src/Services/FHIR/FhirOrganizationService.php';
+    $old1 = "foreach (\$type['coding'] as \$coding) {\n                    if (\$coding['code'] == self::ORGANIZATION_TYPE_INSURANCE) {";
+    $new1 = "foreach (\$type['coding'] as \$coding) {\n                    \$code = \$coding['code'];\n                    if (\$code == self::ORGANIZATION_TYPE_INSURANCE || \$code == 'ins') {";
+    $old2 = 'if ($coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE) {';
+    $new2 = "if (\$coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE || \$coding->getCode() == 'ins') {";
+    $originalHash = '836dc5000110a4f86b5d56932ff19d8cb4fecd941922e0a0f7a0219c3a052943';
+
+    $check('source preservation', static function () use ($sourcePath, $old1, $new1, $old2, $new2, $originalHash, $assert): void {
+        $source = file_get_contents($sourcePath);
+        $assert($source !== false, 'aggregate source unreadable');
+        if (hash_equals($originalHash, hash('sha256', $source))) {
+            $assert(substr_count($source, $old1) === 1 && substr_count($source, $old2) === 1, 'baseline conditions are not unique');
+            return;
+        }
+        $assert(substr_count($source, $new1) === 1 && substr_count($source, $new2) === 1, 'corrected conditions are not unique');
+        $reversed = str_replace([$new1, $new2], [$old1, $old2], $source);
+        $assert(hash_equals($originalHash, hash('sha256', $reversed)), 'source differs beyond the two conditions');
+    });
+
+    $check('native producer code', static function () use ($repo, $assert): void {
+        $source = file_get_contents($repo . '/src/Services/FHIR/Organization/FhirOrganizationInsuranceService.php');
+        $assert($source !== false, 'producer source unreadable');
+        $assert(str_contains($source, "addType(UtilsService::createCodeableConcept(['ins' => ["), 'native insurance type construction missing');
+        $assert(str_contains($source, "'code' => 'ins'"), 'native lowercase code missing');
+    });
+
+    $cases = [
+        ['object ins', 'object', [[['code' => 'ins']]], 'insurance'],
+        ['object Ins', 'object', [[['code' => 'Ins']]], 'insurance'],
+        ['object prov', 'object', [[['code' => 'prov']]], 'facility'],
+        ['object pay', 'object', [[['code' => 'pay']]], 'facility'],
+        ['object INS', 'object', [[['code' => 'INS']]], 'facility'],
+        ['object unknown', 'object', [[['code' => 'unknown']]], 'facility'],
+        ['object no type', 'object', [], 'facility'],
+        ['object empty coding', 'object', [[]], 'facility'],
+        ['object later coding', 'object', [[['code' => 'prov'], ['code' => 'ins']]], 'insurance'],
+        ['object multiple types', 'object', [[['code' => 'prov']], [['code' => 'Ins']]], 'insurance'],
+        ['object differing system', 'object', [[['code' => 'ins', 'system' => 'urn:other']]], 'insurance'],
+        ['object primitive ins', 'primitive', [[['code' => 'ins']]], 'insurance'],
+        ['object primitive Ins', 'primitive', [[['code' => 'Ins']]], 'insurance'],
+        ['object primitive prov', 'primitive', [[['code' => 'prov']]], 'facility'],
+        ['array ins', 'array', [[['code' => 'ins']]], 'insurance'],
+        ['array Ins', 'array', [[['code' => 'Ins']]], 'insurance'],
+        ['array prov', 'array', [[['code' => 'prov']]], 'facility'],
+        ['array INS', 'array', [[['code' => 'INS']]], 'facility'],
+        ['array later coding', 'array', [[['code' => 'pay'], ['code' => 'ins']]], 'insurance'],
+        ['array multiple types', 'array', [[['code' => 'unknown']], [['code' => 'Ins']]], 'insurance'],
+        ['array differing system', 'array', [[['code' => 'ins', 'system' => 'urn:other']]], 'insurance'],
+    ];
+
+    $makeAggregate = static function () use ($sourcePath, $assert): array {
+        $reflection = new \ReflectionClass(FhirOrganizationService::class);
+        $assert(realpath($reflection->getFileName()) === realpath($sourcePath), 'aggregate is not the repository source');
+        $aggregate = $reflection->newInstanceWithoutConstructor();
+        $facility = new RecordingInsert();
+        $insurance = new RecordingInsert();
+        $reflection->getProperty('facilityService')->setValue($aggregate, $facility);
+        $reflection->getProperty('insuranceService')->setValue($aggregate, $insurance);
+        return [$aggregate, $facility, $insurance];
+    };
+
+    foreach ($cases as [$name, $mode, $types, $destination]) {
+        $check($name, static function () use ($mode, $types, $destination, $makeAggregate, $assert): void {
+            if ($mode === 'object' || $mode === 'primitive') {
+                $resource = new FHIROrganization();
+                foreach ($types as $codings) {
+                    $type = new FHIRCodeableConcept();
+                    foreach ($codings as $values) {
+                        if ($mode === 'primitive') {
+                            $values['code'] = new FHIRCode($values['code']);
+                        }
+                        $type->addCoding(new FHIRCoding($values));
+                    }
+                    $resource->addType($type);
+                }
+                foreach ($resource->getType() ?? [] as $type) {
+                    $assert(is_object($type), 'native type was not an object');
+                    foreach ($type->getCoding() ?? [] as $coding) {
+                        $assert(is_object($coding), 'native coding was not an object');
+                        if ($mode === 'primitive') {
+                            $assert($coding->getCode() instanceof FHIRCode, 'native code primitive was not retained');
+                        }
+                    }
+                }
+            } else {
+                $resource = new SyntheticLegacyOrganization(array_map(static fn(array $coding): array => ['coding' => $coding], $types));
+            }
+            $before = json_encode($resource, JSON_THROW_ON_ERROR);
+            $legacyTypesBefore = $mode === 'array' ? $resource->getType() : null;
+            [$aggregate, $facility, $insurance] = $makeAggregate();
+            $returned = $aggregate->insert($resource);
+            $chosen = $destination === 'insurance' ? $insurance : $facility;
+            $other = $destination === 'insurance' ? $facility : $insurance;
+            $assert($returned === $chosen->result, 'wrong ProcessingResult identity');
+            $assert(count($chosen->resources) === 1 && $chosen->resources[0] === $resource, 'wrong backend call or resource identity');
+            $assert(count($other->resources) === 0, 'other backend called');
+            $assert(json_encode($resource, JSON_THROW_ON_ERROR) === $before, 'resource JSON changed');
+            if ($mode === 'array') {
+                $assert($resource->getType() === $legacyTypesBefore, 'synthetic legacy routing types changed');
+            }
+        });
+    }
+
+    $check('invalid resource', static function () use ($makeAggregate, $assert): void {
+        [$aggregate, $facility, $insurance] = $makeAggregate();
+        try {
+            $aggregate->insert(new \stdClass());
+        } catch (\BadMethodCallException $error) {
+            $assert($error->getMessage() === 'fhir resource must be of type ' . FHIROrganization::class, 'original exception message changed');
+            $assert(count($facility->resources) === 0 && count($insurance->resources) === 0, 'backend called for invalid resource');
+            return;
+        }
+        throw new \RuntimeException('original BadMethodCallException was not thrown');
+    });
+
+    $tests = 24;
+    $failed = count($failures);
+    echo json_encode(['tests' => $tests, 'passed' => $passed, 'failed' => $failed, 'failures' => $failures], JSON_THROW_ON_ERROR), "\n";
+    exit($failed === 0 ? 0 : 1);
+}
