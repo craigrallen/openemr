@@ -431,6 +431,27 @@ if ($confirm_overwrite === 'yes' && $validEraName) {
     <?php $oemr_ui->oeBelowContainerDiv();?>
     <script src = '<?php echo OEGlobalsBag::getInstance()->getWebRoot(); ?>/library/js/oeUI/oeFileUploads.js?v=<?php echo attr_url(OEGlobalsBag::getInstance()->getString('v_js_includes')); ?>'></script>
 
+    <style id="oe-era-overwrite-layout">
+    @media screen {
+      html.oe-workbench-context #overwriteConfirmModal .modal-title,
+      html.oe-workbench-context #overwriteConfirmModal .modal-body {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context #overwriteConfirmModal .modal-footer {
+        flex-wrap: wrap;
+      }
+
+      html.oe-workbench-context #overwriteConfirmModal .modal-footer > .btn {
+        min-width: 0;
+        max-width: calc(100% - 0.5rem);
+        margin: 0.25rem;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+    }
+    </style>
+
     <!-- Overwrite Confirmation Modal -->
     <div class="modal fade" id="overwriteConfirmModal" tabindex="-1" role="dialog" aria-labelledby="overwriteConfirmModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog" role="document">
