@@ -132,7 +132,11 @@ function run() {
     });
     check('duplicate label mutant rejected', () => {
         const original = readOriginal();
-        const mutant = Buffer.from(syntheticCandidate(original).toString('utf8').replace(HEADING, HEADING + LABEL), 'utf8');
+        const candidate = syntheticCandidate(original).toString('utf8');
+        assert.strictEqual(count(candidate, AFTER), 1);
+        const duplicateOpening = AFTER.replace(' aria-hidden="true">', ' ' + LABEL + ' aria-hidden="true">');
+        assert.strictEqual(count(duplicateOpening, LABEL), 2);
+        const mutant = Buffer.from(candidate.replace(AFTER, duplicateOpening), 'utf8');
         assert.strictEqual(sourceSemantics(mutant), false);
         assert.strictEqual(preservesOriginal(mutant, original), false);
     });
