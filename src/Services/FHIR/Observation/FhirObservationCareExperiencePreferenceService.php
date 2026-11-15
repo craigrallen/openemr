@@ -283,7 +283,7 @@ class FhirObservationCareExperiencePreferenceService extends FhirServiceBase imp
                 break;
 
             case 'text':
-                if (!empty($dataRecord['value_text'])) {
+                if (isset($dataRecord['value_text']) && $dataRecord['value_text'] !== '') {
                     $obs->setValueString($dataRecord['value_text']);
                 }
                 break;

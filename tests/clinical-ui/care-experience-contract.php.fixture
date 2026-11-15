@@ -1,0 +1,201 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        http_response_code(404);
+        exit;
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only: the production base class is deliberately not bootstrapped.
+    class FhirServiceBase
+    {
+        public function getSearchParams()
+        {
+            return [];
+        }
+    }
+}
+
+namespace {
+    error_reporting(E_ALL);
+
+
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRObservation;
+    use OpenEMR\Services\FHIR\Observation\FhirObservationCareExperiencePreferenceService;
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Observation/FhirObservationCareExperiencePreferenceService.php';
+    $originalHash = 'fe9d46d2114820ed55feed0ead928dffaad80a818c0031155cd876cf5f52d659';
+    $originalGuard = "if (!empty(\$dataRecord['value_text'])) {";
+    $candidateGuard = "if (isset(\$dataRecord['value_text']) && \$dataRecord['value_text'] !== '') {";
+    $source = is_file($sourcePath) ? file_get_contents($sourcePath) : false;
+    $sourceHash = is_string($source) ? hash('sha256', $source) : str_repeat('0', 64);
+    $cases = [];
+
+    $check = static function (string $name, callable $assertion) use (&$cases): void {
+        try {
+            $assertion();
+            $cases[] = ['name' => $name, 'pass' => true, 'message' => 'ok'];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'pass' => false, 'message' => get_class($error) . ': ' . $error->getMessage()];
+        }
+    };
+    $require = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+
+    $check('source_exact_inverse', static function () use ($source, $sourceHash, $originalHash, $originalGuard, $candidateGuard, $require): void {
+        $require(is_string($source), 'Service source is unavailable');
+        if ($sourceHash === $originalHash) {
+            $require(substr_count($source, $originalGuard) === 1, 'Original guard must occur exactly once');
+            $require(substr_count($source, $candidateGuard) === 0, 'Candidate guard already present in original');
+            return;
+        }
+        $require(substr_count($source, $candidateGuard) === 1, 'Candidate guard must occur exactly once');
+        $require(substr_count($source, $originalGuard) === 0, 'Original guard must be replaced');
+        $restored = str_replace($candidateGuard, $originalGuard, $source);
+        $require(hash('sha256', $restored) === $originalHash, 'Inverse substitution does not restore the complete original source');
+    });
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $relative = substr($class, strlen($prefix));
+        $path = $root . '/src/' . str_replace('\\', '/', $relative) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    });
+
+    $service = null;
+    $mapper = null;
+    $check('native_service_loads', static function () use (&$service, &$mapper, $require): void {
+        $reflection = new \ReflectionClass(FhirObservationCareExperiencePreferenceService::class);
+        $service = $reflection->newInstanceWithoutConstructor();
+        $mapper = $reflection->getMethod('transformRow');
+        $require($service instanceof FhirObservationCareExperiencePreferenceService, 'Native service did not load');
+        $require(class_exists(FHIRObservation::class), 'Native FHIRObservation did not load');
+    });
+
+    $record = static function (string $type = 'text'): array {
+        return [
+            'status' => 'final', 'code' => '95541-9', 'code_text' => 'Care experience preference',
+            'value_type' => $type, 'value_text' => null, 'value_boolean' => null,
+            'value_code' => null, 'value_code_system' => null, 'value_display' => null,
+            'note' => null,
+        ];
+    };
+    $parse = static function (array $data) use (&$service, $require): array {
+        $require($service instanceof FhirObservationCareExperiencePreferenceService, 'Native service unavailable');
+        $object = $service->parseOpenEMRRecord($data, false);
+        $require($object instanceof FHIRObservation, 'Expected native FHIRObservation');
+        $json = json_decode(json_encode($object, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $require(is_array($json), 'Native Observation JSON must decode to an object');
+        return [$object, $json];
+    };
+
+    $check('text_zero_native_object', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        $data['value_text'] = '0';
+        [$object] = $parse($data);
+        $value = $object->getValueString();
+        $require($value === '0', 'Native valueString must preserve text 0');
+    });
+    $check('text_zero_decoded_json', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        $data['value_text'] = '0';
+        [, $json] = $parse($data);
+        $require(($json['valueString'] ?? null) === '0', 'Decoded native JSON must contain valueString 0');
+    });
+    $check('text_normal_preserved', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        $data['value_text'] = 'Prefers a quiet room';
+        [$object, $json] = $parse($data);
+        $require($object->getValueString() === $data['value_text'], 'Native text differs');
+        $require(($json['valueString'] ?? null) === $data['value_text'], 'Decoded text differs');
+    });
+    $check('text_whitespace_preserved', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        $data['value_text'] = '  quiet  ';
+        [$object, $json] = $parse($data);
+        $require($object->getValueString() === $data['value_text'], 'Native whitespace differs');
+        $require(($json['valueString'] ?? null) === $data['value_text'], 'Decoded whitespace differs');
+    });
+    $check('text_missing_omitted', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        unset($data['value_text']);
+        [$object, $json] = $parse($data);
+        $require($object->getValueString() === null, 'Missing text created native valueString');
+        $require(!array_key_exists('valueString', $json), 'Missing text created JSON valueString');
+    });
+    $check('text_null_omitted', static function () use ($record, $parse, $require): void {
+        [$object, $json] = $parse($record());
+        $require($object->getValueString() === null, 'Null text created native valueString');
+        $require(!array_key_exists('valueString', $json), 'Null text created JSON valueString');
+    });
+    $check('text_empty_omitted', static function () use ($record, $parse, $require): void {
+        $data = $record();
+        $data['value_text'] = '';
+        [$object, $json] = $parse($data);
+        $require($object->getValueString() === null, 'Empty text created native valueString');
+        $require(!array_key_exists('valueString', $json), 'Empty text created JSON valueString');
+    });
+    $check('boolean_false_unchanged', static function () use ($record, $parse, $require): void {
+        $data = $record('boolean');
+        $data['value_boolean'] = false;
+        [$object, $json] = $parse($data);
+        $require($object->getValueBoolean() === false, 'Native boolean false differs');
+        $require(array_key_exists('valueBoolean', $json) && $json['valueBoolean'] === false, 'Decoded boolean false differs');
+    });
+    $check('boolean_true_unchanged', static function () use ($record, $parse, $require): void {
+        $data = $record('boolean');
+        $data['value_boolean'] = true;
+        [$object, $json] = $parse($data);
+        $require($object->getValueBoolean() === true, 'Native boolean true differs');
+        $require(($json['valueBoolean'] ?? null) === true, 'Decoded boolean true differs');
+    });
+    $check('coded_value_unchanged', static function () use ($record, $parse, $require): void {
+        $data = $record('coded');
+        $data['value_code'] = 'example';
+        $data['value_code_system'] = 'http://example.org/system';
+        $data['value_display'] = 'Example';
+        [$object, $json] = $parse($data);
+        $require($object->getValueCodeableConcept() !== null, 'Native coded value missing');
+        $coding = $json['valueCodeableConcept']['coding'][0] ?? null;
+        $require(is_array($coding), 'Decoded coding missing');
+        $require(($coding['code'] ?? null) === 'example', 'Decoded code differs');
+        $require(($coding['system'] ?? null) === 'http://example.org/system', 'Decoded system differs');
+        $require(($coding['display'] ?? null) === 'Example', 'Decoded display differs');
+    });
+    $check('native_transform_row_zero', static function () use (&$service, &$mapper, $parse, $require): void {
+        $require($service instanceof FhirObservationCareExperiencePreferenceService && $mapper instanceof \ReflectionMethod, 'Native mapper unavailable');
+        $row = [
+            'uuid' => null, 'patient_id' => 0, 'patient_uuid' => null,
+            'effective_datetime' => null, 'status' => 'final',
+            'observation_code' => '95541-9', 'observation_code_text' => 'Care experience preference',
+            'value_type' => 'text', 'value_code' => null, 'value_code_system' => null,
+            'value_display' => null, 'value_text' => '0', 'value_boolean' => null, 'note' => null,
+        ];
+        $mapped = $mapper->invoke($service, $row);
+        $require($mapped['value_text'] === '0', 'Native transformRow lost text 0');
+        [$object, $json] = $parse($mapped);
+        $require($object->getValueString() === '0', 'Mapped native valueString lost text 0');
+        $require(($json['valueString'] ?? null) === '0', 'Mapped decoded JSON lost text 0');
+    });
+
+    $failed = count(array_filter($cases, static fn (array $case): bool => !$case['pass']));
+    $result = [
+        'total' => count($cases), 'passed' => count($cases) - $failed, 'failed' => $failed,
+        'cases' => $cases, 'source_sha256' => $sourceHash,
+    ];
+    echo json_encode($result, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+    exit($failed === 0 ? 0 : 1);
+}
