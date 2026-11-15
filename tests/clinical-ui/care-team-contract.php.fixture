@@ -135,6 +135,8 @@ namespace {
         if (hash('sha256', $source) === $original) {
             return;
         }
+        $oldSignature = '    private function createRoleCodeableConcept($dataRecordProvider, $codeTypesService)';
+        $newSignature = '    private function createRoleCodeableConcept($dataRecordProvider, CodeTypesService $codeTypesService)';
         $oldSystem = "            \$codes['system'] = self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;";
         $newSystem = "            \$codes['system'] = \$codeTypesService->getSystemForCodeType(\$codes['code_type']) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;";
         $oldLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
@@ -147,6 +149,15 @@ namespace {
         $restored = str_replace($newLookup, $oldLookup, $restored, $lookupCount);
         same(1, $systemCount, 'system inverse count');
         same(1, $lookupCount, 'lookup inverse count');
+        $typedSignatureCount = substr_count($restored, $newSignature);
+        if ($typedSignatureCount === 1) {
+            same(0, substr_count($restored, $oldSignature), 'untyped signature absent');
+            $restored = str_replace($newSignature, $oldSignature, $restored, $signatureCount);
+            same(1, $signatureCount, 'signature inverse count');
+        } else {
+            same(0, $typedSignatureCount, 'typed signature fragment count');
+            same(1, substr_count($restored, $oldSignature), 'untyped signature fragment count');
+        }
         same($original, hash('sha256', $restored), 'restored original SHA256');
     });
 
@@ -171,6 +182,18 @@ namespace {
         foreach ($paths as $class => $relative) {
             same($root . $relative, (new \ReflectionClass($class))->getFileName(), $class . ' native path');
         }
+    });
+
+    check('native_role_type_boundary', static function (): void {
+        $method = new \ReflectionMethod(FhirCareTeamService::class, 'createRoleCodeableConcept');
+        same(true, $method->isPrivate(), 'role helper visibility');
+        same(2, $method->getNumberOfParameters(), 'role helper parameter count');
+        $parameter = new \ReflectionParameter([FhirCareTeamService::class, 'createRoleCodeableConcept'], 1);
+        same('codeTypesService', $parameter->getName(), 'role helper second parameter name');
+        $type = $parameter->getType();
+        same(true, $type instanceof \ReflectionNamedType, 'role helper second parameter native type');
+        same(false, $type->isBuiltin(), 'role helper second parameter class type');
+        same(CodeTypesService::class, $type->getName(), 'role helper second parameter type name');
     });
 
     check('nucc_typed_object_json', static function (): void {

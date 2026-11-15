@@ -4,6 +4,7 @@ const path = require('node:path');
 const expectedNames = [
   'source_integrity',
   'native_classes',
+  'native_role_type_boundary',
   'nucc_typed_object_json',
   'hl7_rolecode_typed',
   'typed_no_title_lookup',
