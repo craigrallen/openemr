@@ -1282,7 +1282,7 @@ $language_direction = $session->get('language_direction'); // fetch before the <
                 <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                     <span class="sr-only"><?php echo xlt('Loading...'); ?></span>
                 </div>
-                <h5 class="mt-3"><?php echo xlt('Searching...'); ?></h5>
+                <h5 class="mt-3" id="searchSpinnerModalLabel"><?php echo xlt('Searching...'); ?></h5>
                 <p class="text-muted"><?php echo xlt('Please wait while we search for invoices.'); ?></p>
             </div>
         </div>
