@@ -1,0 +1,154 @@
+<?php
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only: the native service's parent is not needed for this search path.
+    class FhirServiceBase
+    {
+        protected function getSystemLogger(): object
+        {
+            return new class {
+                public function debug(string $message, array $context = []): void {}
+                public function error(string $message, array $context = []): void {}
+                public function warning(string $message, array $context = []): void {}
+            };
+        }
+    }
+}
+
+namespace OpenEMR\Services\FHIR\Observation {
+    function sqlQuery(string $sql, array $parameters): never
+    {
+        ++$GLOBALS['adiContractSqlCalls'];
+        throw new \RuntimeException('OPEMR-244 SQL trap');
+    }
+}
+
+namespace {
+    use OpenEMR\Services\FHIR\Observation\FhirObservationAdvanceDirectiveService;
+    use OpenEMR\Services\Search\TokenSearchField;
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Observation/FhirObservationAdvanceDirectiveService.php';
+    $originalSha = '85e0dbe9279a3fce1095fe9e75fecb7381cb624cb6afafec26bd5788898e316e';
+    $insertion = "                if (\$code->getValues() !== [] && \$observationCodesToReturn === []) {\n                    return \$processingResult;\n                }\n";
+    $caseIds = [
+        'unknown_single', 'unknown_multiple', 'unknown_system',
+        'supported_single', 'supported_mixed', 'omitted_code',
+        'explicit_empty', 'wrong_code_type', 'bad_category'
+    ];
+    $cases = [];
+    $sourceGate = 'rejected';
+    $failure = null;
+
+    try {
+        $source = file_get_contents($sourcePath);
+        if ($source === false) {
+            throw new \RuntimeException('Cannot read service source');
+        }
+        if (hash('sha256', $source) === $originalSha) {
+            $sourceGate = 'original';
+        } else {
+            $inverse = str_replace($insertion, '', $source, $replacementCount);
+            if (
+                $replacementCount !== 1 ||
+                !str_contains($source, $insertion . "                unset(\$openEMRSearchParameters['code']);") ||
+                hash('sha256', $inverse) !== $originalSha
+            ) {
+                throw new \RuntimeException('Service source is outside the allowed insertion');
+            }
+            $sourceGate = 'allowed_insertion';
+        }
+
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        });
+
+        $reflection = new \ReflectionClass(FhirObservationAdvanceDirectiveService::class);
+        $service = $reflection->newInstanceWithoutConstructor();
+        $search = $reflection->getMethod('searchForOpenEMRRecords');
+
+        $definitions = [
+            'unknown_single' => ['code' => new TokenSearchField('code', ['99999-9'])],
+            'unknown_multiple' => ['code' => new TokenSearchField('code', ['99999-9', '88888-8'])],
+            'unknown_system' => ['code' => new TokenSearchField('code', ['http://loinc.org|99999-9'])],
+            'supported_single' => ['code' => new TokenSearchField('code', [FhirObservationAdvanceDirectiveService::ADI_LIVING_WILL_CODE])],
+            'supported_mixed' => ['code' => new TokenSearchField('code', ['99999-9', FhirObservationAdvanceDirectiveService::ADI_POWER_OF_ATTORNEY_CODE])],
+            'omitted_code' => [],
+            'explicit_empty' => ['code' => new TokenSearchField('code', [])],
+            'wrong_code_type' => ['code' => FhirObservationAdvanceDirectiveService::ADI_LIVING_WILL_CODE],
+            'bad_category' => ['category' => new TokenSearchField('category', ['wrong-category'])],
+        ];
+
+        foreach ($caseIds as $id) {
+            $GLOBALS['adiContractSqlCalls'] = 0;
+            try {
+                $parameters = $definitions[$id];
+                $parameters['puuid'] = 'abcdefghijklmnop';
+                $result = $search->invoke($service, $parameters);
+                $actual = [
+                    'sql_calls' => $GLOBALS['adiContractSqlCalls'],
+                    'internal_errors' => $result->getInternalErrors(),
+                    'validation_messages' => $result->getValidationMessages(),
+                    'data_count' => count($result->getData()),
+                ];
+                $expected = [
+                    'sql_calls' => in_array($id, ['unknown_single', 'unknown_multiple', 'unknown_system', 'wrong_code_type', 'bad_category'], true) ? 0 : 1,
+                    'internal_errors' => in_array($id, ['unknown_single', 'unknown_multiple', 'unknown_system', 'wrong_code_type', 'bad_category'], true) ? [] : ['Error retrieving advance directive observations'],
+                    'validation_messages' => match ($id) {
+                        'wrong_code_type' => ['code' => 'Invalid code'],
+                        'bad_category' => ['category' => "invalid value - only 'assessment' category is supported"],
+                        default => [],
+                    },
+                    'data_count' => 0,
+                ];
+                $cases[] = ['id' => $id, 'passed' => $actual === $expected] + $actual;
+            } catch (\Throwable $exception) {
+                $cases[] = [
+                    'id' => $id,
+                    'passed' => false,
+                    'sql_calls' => $GLOBALS['adiContractSqlCalls'],
+                    'internal_errors' => [],
+                    'validation_messages' => [],
+                    'data_count' => 0,
+                    'failure' => get_class($exception) . ': ' . $exception->getMessage(),
+                ];
+            }
+        }
+    } catch (\Throwable $exception) {
+        $failure = get_class($exception) . ': ' . $exception->getMessage();
+    }
+
+    $passed = count(array_filter($cases, static fn (array $case): bool => $case['passed']));
+    $failed = count($cases) - $passed + ($failure === null ? 0 : 1);
+    $output = [
+        'source_gate' => $sourceGate,
+        'counts' => [
+            'total' => count($cases),
+            'passed' => $passed,
+            'failed' => $failed,
+            'sql_calls' => array_sum(array_column($cases, 'sql_calls')),
+        ],
+        'cases' => $cases,
+        'failure' => $failure,
+    ];
+    fwrite(STDOUT, json_encode($output, JSON_THROW_ON_ERROR) . "\n");
+    exit($failed === 0 && count($cases) === count($caseIds) ? 0 : 1);
+}
