@@ -4,7 +4,7 @@ Owner: Hermes. Scheduled allocation: 1 of at most 2 consecutive delivery runs, i
 
 ## Scope and evidence
 
-The pinned repository path is `/Users/craig/.hermes/workspaces/openemr-sdoh-observation-errors`; the controller supplied HEAD `09b29da7771aea334ed5745e058751157af980d7`. This tests-only handoff does not independently verify HEAD or runtime behavior. The fixture checks the native observation service source against supplied original SHA256 `580b9e2f995f8cbc31c843a46c6e569f0d6f00e36b6618f2e1c0e5d0f1535117`. It accepts the original bytes or exactly one three-line error-return insertion after the backend search, then removes that insertion and checks the whole original SHA256. Every other production byte must remain intact.
+The controller's local repository is `/Users/craig/.hermes/workspaces/openemr-sdoh-observation-errors`; `09b29da7771aea334ed5745e058751157af980d7` is the historical tests-only baseline, not the final review HEAD. The fixture resolves its repository root relatively for hosted portability and authenticates the inherited native method's actual source path. The exact final review HEAD and four artifact hashes are recorded in the controller's external `frozen-review.json`; the inline reviewer does not independently attest HEAD, hashes or runtime behavior. The fixture checks the native observation service source against supplied original SHA256 `580b9e2f995f8cbc31c843a46c6e569f0d6f00e36b6618f2e1c0e5d0f1535117`. It accepts the original bytes or exactly one three-line error-return insertion after the backend search, then removes that insertion and checks the whole original SHA256. Every other production byte must remain intact.
 
 The four paths in this work are:
 
