@@ -41,7 +41,7 @@ namespace {
     $root = dirname(__DIR__, 2);
     $sourcePath = $root . '/src/Services/FHIR/Observation/FhirObservationAdvanceDirectiveService.php';
     $originalSha = '85e0dbe9279a3fce1095fe9e75fecb7381cb624cb6afafec26bd5788898e316e';
-    $insertion = "                if (!empty(\$code->getValues()) && empty(\$observationCodesToReturn)) {\n                    return \$processingResult;\n                }\n";
+    $insertion = "                if (\$code->getValues() !== [] && \$observationCodesToReturn === []) {\n                    return \$processingResult;\n                }\n";
     $caseIds = [
         'unknown_single', 'unknown_multiple', 'unknown_system',
         'supported_single', 'supported_mixed', 'omitted_code',
