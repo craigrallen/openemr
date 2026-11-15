@@ -263,7 +263,7 @@ class FhirPatientService extends FhirServiceBase implements IFhirExportableResou
         if (!empty($narrativeText)) {
             $text = [
                 'status' => 'generated',
-                'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . $narrativeText . '</p></div>'
+                'div' => '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . (is_string($narrativeText) ? htmlspecialchars($narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') : $narrativeText) . '</p></div>'
             ];
             $patientResource->setText($text);
         }
