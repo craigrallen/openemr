@@ -59,7 +59,7 @@ $v_js_includes = $globalsBag->get('v_js_includes');
 </head>
 
 <body class="pt-2">
-<div class="modal fade" id="formdialog" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="formdialog" tabindex="-1" role="dialog" aria-label="<?php echo xla('About Portal Dashboard'); ?>" aria-hidden="true">
     <div class="modal-dialog bg-light">
         <div class="modal-content">
             <div class="modal-header">
