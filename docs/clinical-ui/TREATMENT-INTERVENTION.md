@@ -1,9 +1,11 @@
 # Treatment intervention preference value contract
 
-Status: pending controller RED run, GREEN run, review, and CI.
+OPEMR-243: controller genuine RED 13 cases/10 pass/three zero-text semantic failures at tests-only commit `afc53e60`, followed by 13/13 native GREEN after the wrapped implementer's exact single-guard correction. PHP source/fixture syntax, Node adapter syntax and diff checks pass. Independent review and hosted CI are separate pending gates, recorded in controller evidence.
+
+Initial execution exposed a fixture prerequisite, not product RED: the actual shared trait requires a patient UUID. Controller test-only corrections supply an opaque synthetic patient reference, including after the real private row transformer. UUID conversion and SQL lookup are not exercised. Original-source semantic RED was recaptured before any production edit. These nonproduction fixture/documentation corrections are disclosed for independent review.
 
 This proposed tests-only contract targets `FhirObservationTreatmentInterventionPreferenceService` and LOINC `75773-2`. It checks that text `0` survives the native `FHIRObservation` getter, JSON serialization, and the service's `transformRow` path. It also covers ordinary and whitespace-preserving text, omitted missing/null/empty text, and existing boolean and coded values.
 
 The PHP fixture loads the actual service, FHIR models, mapper, and traits. It declares only a minimal base class and bypasses the service constructor to avoid application bootstrap. It does not use SQL or HTTP. Its source guard accepts the supplied original SHA-256 or a source differing by exactly the intended text guard substitution; the original source should pass that guard while the three zero-value cases fail.
 
-The Jest adapter checks the fixture's single-line JSON report, case accounting, and exit status. The controller owns repository binding validation, Git operations, execution, and the real RED run before any production change. No runtime result, encoded-true compatibility, or clinical persistence is claimed here.
+The Jest adapter checks the fixture's single-line JSON report, case accounting, and exit status. The controller owns repository binding validation, Git operations, execution, and the real RED run before any production change. No encoded-true compatibility, authenticated FHIR/SQL/roles/security/persistence or clinical acceptance is claimed here. This supports native patient-record interoperability only, not completion of original22, researched UI, exhaustive popups, demo coverage or Swedish readiness. No local Jest/emulation/PHPUnit/PHPStan/bootstrap/installation, baseline/config/dependency edits, merge or deployment.
