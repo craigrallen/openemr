@@ -102,7 +102,7 @@ class FhirValueSetService extends FhirServiceBase implements IResourceUSCIGProfi
     protected function loadSearchParameters(): array
     {
         return [
-            '_id' => new FhirSearchParameterDefinition('_id', SearchFieldType::TOKEN, [new ServiceField('id', ServiceField::TYPE_STRING)]),
+            '_id' => new FhirSearchParameterDefinition('_id', SearchFieldType::TOKEN, [new ServiceField('option_id', ServiceField::TYPE_STRING)]),
             '_lastUpdated' => $this->getLastModifiedSearchField(),
         ];
     }
