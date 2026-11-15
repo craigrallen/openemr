@@ -196,6 +196,9 @@ class FhirObservationHistorySdohService extends FhirServiceBase implements IPati
                 $observationCodesToReturn = $supportedCodes;
             }
             $results = $this->sdohHistoryService->search($openEMRSearchParameters);
+            if ($results->hasErrors()) {
+                return $results;
+            }
             if ($results->hasData()) {
                 $records = $results->getData();
                 foreach ($records as $record) {
