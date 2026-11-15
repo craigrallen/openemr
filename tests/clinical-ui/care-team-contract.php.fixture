@@ -39,11 +39,19 @@ namespace {
         }
     });
 
-    // Synthetic terminology response only. Native parseCode, getSystemForCodeType,
-    // and getCodeWithType remain inherited and execute without a database.
+    // Observe the documented string argument boundary, then execute native mapping.
+    // Only the terminology response is synthetic; parseCode and getCodeWithType remain native.
     class RecordingCodeTypesService extends CodeTypesService
     {
         public array $lookups = [];
+
+        public function getSystemForCodeType($codeType, $useOid = false)
+        {
+            if (!is_string($codeType)) {
+                throw new \RuntimeException('getSystemForCodeType codeType must be a string');
+            }
+            return parent::getSystemForCodeType($codeType, $useOid);
+        }
 
         public function lookup_code_description($codes, $desc_detail = 'code_text'): string
         {
@@ -137,27 +145,36 @@ namespace {
         }
         $oldSignature = '    private function createRoleCodeableConcept($dataRecordProvider, $codeTypesService)';
         $newSignature = '    private function createRoleCodeableConcept($dataRecordProvider, CodeTypesService $codeTypesService)';
-        $oldSystem = "            \$codes['system'] = self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;";
-        $newSystem = "            \$codes['system'] = \$codeTypesService->getSystemForCodeType(\$codes['code_type']) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;";
+        $parseLine = '            $codes = $codeTypesService->parseCode($dataRecordProvider[\'physician_type_codes\']);' . "\n";
+        $oldBlock = $parseLine . '            $codes[\'system\'] = self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
+        $currentBlock = $parseLine . '            $codes[\'system\'] = $codeTypesService->getSystemForCodeType($codes[\'code_type\']) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
+        $proposedBlock = $parseLine
+            . '            $codeType = is_string($codes[\'code_type\']) ? $codes[\'code_type\'] : CodeTypesService::CODE_TYPE_SNOMED_CT;' . "\n"
+            . '            $codes[\'system\'] = $codeTypesService->getSystemForCodeType($codeType) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
         $oldLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
-        $newLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], \$codeTypesService->getSystemForCodeType(\$codes['code_type']) !== null ? \$codes['code_type'] : CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
-        same(0, substr_count($source, $oldSystem), 'old system fragment absent');
+        $currentLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], \$codeTypesService->getSystemForCodeType(\$codes['code_type']) !== null ? \$codes['code_type'] : CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
+        $proposedLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], \$codeTypesService->getSystemForCodeType(\$codeType) !== null ? \$codeType : CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
+        same(0, substr_count($source, $oldBlock), 'old parse/system block absent');
         same(0, substr_count($source, $oldLookup), 'old lookup fragment absent');
-        same(1, substr_count($source, $newSystem), 'new system fragment count');
-        same(1, substr_count($source, $newLookup), 'new lookup fragment count');
-        $restored = str_replace($newSystem, $oldSystem, $source, $systemCount);
-        $restored = str_replace($newLookup, $oldLookup, $restored, $lookupCount);
-        same(1, $systemCount, 'system inverse count');
-        same(1, $lookupCount, 'lookup inverse count');
-        $typedSignatureCount = substr_count($restored, $newSignature);
-        if ($typedSignatureCount === 1) {
-            same(0, substr_count($restored, $oldSignature), 'untyped signature absent');
-            $restored = str_replace($newSignature, $oldSignature, $restored, $signatureCount);
-            same(1, $signatureCount, 'signature inverse count');
-        } else {
-            same(0, $typedSignatureCount, 'typed signature fragment count');
-            same(1, substr_count($restored, $oldSignature), 'untyped signature fragment count');
+        same(1, substr_count($source, $newSignature), 'typed signature fragment count');
+        same(0, substr_count($source, $oldSignature), 'untyped signature absent');
+        $isCurrent = substr_count($source, $currentBlock) === 1
+            && substr_count($source, $currentLookup) === 1
+            && substr_count($source, $proposedBlock) === 0
+            && substr_count($source, $proposedLookup) === 0;
+        $isProposed = substr_count($source, $proposedBlock) === 1
+            && substr_count($source, $proposedLookup) === 1
+            && substr_count($source, $currentBlock) === 0
+            && substr_count($source, $currentLookup) === 0;
+        if (!$isCurrent && !$isProposed) {
+            throw new \RuntimeException('CareTeam source is neither the exact current nor proposed fragment set');
         }
+        $restored = str_replace($isCurrent ? $currentBlock : $proposedBlock, $oldBlock, $source, $blockCount);
+        $restored = str_replace($isCurrent ? $currentLookup : $proposedLookup, $oldLookup, $restored, $lookupCount);
+        $restored = str_replace($newSignature, $oldSignature, $restored, $signatureCount);
+        same(1, $blockCount, 'parse/system inverse count');
+        same(1, $lookupCount, 'lookup inverse count');
+        same(1, $signatureCount, 'signature inverse count');
         same($original, hash('sha256', $restored), 'restored original SHA256');
     });
 
