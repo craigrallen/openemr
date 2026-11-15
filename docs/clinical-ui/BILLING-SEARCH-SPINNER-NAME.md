@@ -1,6 +1,6 @@
 # Billing search spinner accessible name
 
-OPEMR-251 is in a tests-only, TDD-pending phase. The controller supplies `tests/clinical-ui/fixtures/billing-search-spinner-original.php.txt` from the original `interface/billing/sl_eob_search.php` before genuine RED. Its pinned SHA-256 is `3e520de0689f34bed847cb8015ea0b9ac7db4872c08ceab1ffd40b3638dbe273`.
+OPEMR-251 is a bounded source accessibility correction. Tests-only commit `56b6e079` recorded genuine controller RED (17 passed, 2 semantic/source-inverse failures) before the production edit. The controller supplied `tests/clinical-ui/fixtures/billing-search-spinner-original.php.txt` from the original `interface/billing/sl_eob_search.php`. Its pinned SHA-256 is `3e520de0689f34bed847cb8015ea0b9ac7db4872c08ceab1ffd40b3638dbe273`. Codex Sol authored the tests and separately supplied the exact minimal production edit under wrapper-bound handoffs; controller strengthened the off-modal semantic mutant before RED. Claude was unavailable.
 
 The intended production change is exactly one insertion: change `<h5 class="mt-3"><?php echo xlt('Searching...'); ?></h5>` to `<h5 class="mt-3" id="searchSpinnerModalLabel"><?php echo xlt('Searching...'); ?></h5>`. The existing modal has `aria-labelledby="searchSpinnerModalLabel"`; the insertion makes that reference resolve to its existing translated heading. No other source bytes, layout, paint, or financial behavior should change.
 
