@@ -1,0 +1,370 @@
+<?php
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (str_starts_with($class, $prefix)) {
+            $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+}
+
+namespace OpenEMR\Services {
+    // Declaration only. The native HistorySdohService constructor is never called.
+    class BaseService
+    {
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only. The native FHIR observation class and traits are loaded.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Common\Database\QueryPagination;
+    use OpenEMR\Services\FHIR\Observation\FhirObservationHistorySdohService;
+    use OpenEMR\Services\SDOH\HistorySdohService;
+    use OpenEMR\Services\Search\BasicSearchField;
+    use OpenEMR\Services\Search\SearchFieldType;
+    use OpenEMR\Services\Search\TokenSearchField;
+    use OpenEMR\Validators\ProcessingResult;
+
+    class RecordingHistorySdohService extends HistorySdohService
+    {
+        public array $calls = [];
+
+        public function __construct(public ProcessingResult $answer)
+        {
+        }
+
+        public function search($openEMRSearchParameters = [], $isAndCondition = true): ProcessingResult
+        {
+            $this->calls[] = [$openEMRSearchParameters, $isAndCondition];
+            return $this->answer;
+        }
+    }
+
+    class CountingProcessingResult extends ProcessingResult
+    {
+        public int $hasDataCalls = 0;
+        public int $getDataCalls = 0;
+
+        public function hasData(): bool
+        {
+            $this->hasDataCalls++;
+            return parent::hasData();
+        }
+
+        public function getData()
+        {
+            $this->getDataCalls++;
+            return parent::getData();
+        }
+    }
+
+    class RecordingFhirObservationHistorySdohService extends FhirObservationHistorySdohService
+    {
+        public array $parseCalls = [];
+        public array $parseAnswers = [];
+
+        public function __construct()
+        {
+        }
+
+        public function runSearch(array $fields): ProcessingResult
+        {
+            return $this->searchForOpenEMRRecords($fields);
+        }
+
+        protected function parseRecordsIntoObservations(array $record, array $observationCodesToReturn): ProcessingResult
+        {
+            $this->parseCalls[] = [$record, $observationCodesToReturn];
+            $answer = array_shift($this->parseAnswers);
+            if (!$answer instanceof ProcessingResult) {
+                throw new \RuntimeException('Unexpected parse call');
+            }
+            return $answer;
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function same(mixed $actual, mixed $expected, string $message): void
+    {
+        check($actual === $expected, $message);
+    }
+
+    function rawData(ProcessingResult $result): mixed
+    {
+        return (new \ReflectionProperty(ProcessingResult::class, 'data'))->getValue($result);
+    }
+
+    function invokeSearch(ProcessingResult $answer, array $fields = [], array $parseAnswers = []): array
+    {
+        $backend = new RecordingHistorySdohService($answer);
+        $mapper = new RecordingFhirObservationHistorySdohService();
+        $mapper->parseAnswers = $parseAnswers;
+        (new \ReflectionProperty(FhirObservationHistorySdohService::class, 'sdohHistoryService'))->setValue($mapper, $backend);
+        return [$mapper->runSearch($fields), $backend, $mapper];
+    }
+
+    function token(string $field, string $value): TokenSearchField
+    {
+        return new TokenSearchField($field, [$value]);
+    }
+
+    function supportedCodes(): array
+    {
+        return (new RecordingFhirObservationHistorySdohService())->getSupportedCodes();
+    }
+
+    function pregnancyCodes(): array
+    {
+        return [
+            FhirObservationHistorySdohService::PREGNANCY_INTENT_LOINC_CODE => FhirObservationHistorySdohService::PREGNANCY_INTENT_LOINC_CODE,
+            FhirObservationHistorySdohService::PREGNANCY_STATUS_LOINC_CODE => FhirObservationHistorySdohService::PREGNANCY_STATUS_LOINC_CODE,
+        ];
+    }
+
+    $cases = [];
+    $run = static function (string $name, callable $test) use (&$cases): void {
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'passed' => true, 'message' => ''];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'passed' => false, 'message' => get_class($error) . ': ' . $error->getMessage()];
+        }
+    };
+
+    $run('source-preservation', static function () use ($root): void {
+        check(is_dir($root . '/src/Services/FHIR/Observation'), 'repository source root');
+        $path = $root . '/src/Services/FHIR/Observation/FhirObservationHistorySdohService.php';
+        same((new \ReflectionMethod(RecordingFhirObservationHistorySdohService::class, 'searchForOpenEMRRecords'))->getFileName(), $path, 'search must be inherited from native source');
+        $source = file_get_contents($path);
+        check(is_string($source), 'native source unreadable');
+        $originalHash = '580b9e2f995f8cbc31c843a46c6e569f0d6f00e36b6618f2e1c0e5d0f1535117';
+        if (hash('sha256', $source) === $originalHash) {
+            return;
+        }
+        $searchLine = '            $results = $this->sdohHistoryService->search($openEMRSearchParameters);' . "\n";
+        $insertion = '            if ($results->hasErrors()) {' . "\n"
+            . '                return $results;' . "\n"
+            . '            }' . "\n";
+        same(substr_count($source, $searchLine . $insertion), 1, 'exact insertion count');
+        $reversed = str_replace($searchLine . $insertion, $searchLine, $source);
+        same(hash('sha256', $reversed), $originalHash, 'whole-source inverse SHA256');
+    });
+
+    $run('internal-error-identity', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addInternalError('backend unavailable');
+        [$result, $backend, $mapper] = invokeSearch($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'result identity');
+        same($result->getInternalErrors(), ['backend unavailable'], 'internal errors');
+        check($result->hasErrors(), 'error state');
+        same($mapper->parseCalls, [], 'parse calls');
+    });
+
+    $run('validation-error-identity', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->setValidationMessages(['patient' => 'invalid reference']);
+        [$result, $backend, $mapper] = invokeSearch($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'result identity');
+        same($result->getValidationMessages(), ['patient' => 'invalid reference'], 'validation messages');
+        check($result->hasErrors(), 'error state');
+        same($mapper->parseCalls, [], 'parse calls');
+    });
+
+    $run('combined-error-partial-data-untouched', static function (): void {
+        $answer = new CountingProcessingResult();
+        $answer->setValidationMessages(['date' => 'invalid date']);
+        $answer->addInternalError('SQL failure');
+        $malformed = ['malformed' => 'must not reach parser'];
+        $answer->addData($malformed);
+        $pagination = new QueryPagination(7, 2);
+        $pagination->setSearchUri('/private-search');
+        $pagination->setTotalCount(19);
+        $pagination->setHasMoreData(true);
+        $answer->setPagination($pagination);
+        [$result, $backend, $mapper] = invokeSearch($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'result identity');
+        same($result->getValidationMessages(), ['date' => 'invalid date'], 'validation messages');
+        same($result->getInternalErrors(), ['SQL failure'], 'internal errors');
+        same(rawData($result), [$malformed], 'partial data identity and value');
+        same($result->getPagination(), $pagination, 'pagination identity');
+        same($pagination->getLimit(), 7, 'pagination limit');
+        same($pagination->getCurrentOffsetId(), 2, 'pagination offset');
+        same($pagination->getTotalCount(), 19, 'pagination total');
+        same($pagination->hasMoreData(), true, 'pagination has more');
+        same($pagination->getSearchUri(), '/private-search', 'pagination URI');
+        same($answer->hasDataCalls, 0, 'hasData calls');
+        same($answer->getDataCalls, 0, 'getData calls');
+        same($mapper->parseCalls, [], 'malformed error row reached parser');
+    });
+
+    $run('success-empty-fresh-result', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend, $mapper] = invokeSearch($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][0], [], 'backend filters');
+        same($backend->calls[0][1], true, 'backend AND default');
+        check($result !== $answer, 'successful empty result must be fresh');
+        same($result->getData(), [], 'empty data');
+        same($result->hasErrors(), false, 'error state');
+        same($mapper->parseCalls, [], 'parse calls');
+    });
+
+    $run('success-rows-parse-seam', static function (): void {
+        $answer = new ProcessingResult();
+        $row1 = ['row' => 1];
+        $row2 = ['row' => 2];
+        $answer->addData($row1);
+        $answer->addData($row2);
+        $parsed1 = new ProcessingResult();
+        $parsed1->addData(['observation' => 1]);
+        $parsed2 = new ProcessingResult();
+        $parsed2->addData(['observation' => 2]);
+        [$result, $backend, $mapper] = invokeSearch($answer, [], [$parsed1, $parsed2]);
+        same(count($backend->calls), 1, 'backend call count');
+        check($result !== $answer, 'successful result must be fresh');
+        same($result->hasErrors(), false, 'error state');
+        same($result->getData(), [['observation' => 1], ['observation' => 2]], 'transformation data');
+        $codes = array_combine(supportedCodes(), supportedCodes());
+        same($mapper->parseCalls, [[$row1, $codes], [$row2, $codes]], 'rows and selected native codes in order');
+    });
+
+    $run('no-code-category-defaults', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData(['row' => 'default']);
+        $parsed = new ProcessingResult();
+        $parsed->addData(['observation' => 'default']);
+        [$result, $backend, $mapper] = invokeSearch($answer, [], [$parsed]);
+        same(count($backend->calls), 1, 'backend call count');
+        $codes = supportedCodes();
+        check(count($codes) > 2, 'native supported codes missing');
+        same($mapper->parseCalls[0][1], array_combine($codes, $codes), 'all supported codes and order');
+        same($result->getData(), [['observation' => 'default']], 'result data');
+    });
+
+    $run('pregnancy-code-filter', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData(['row' => 'pregnancy']);
+        $parsed = new ProcessingResult();
+        $parsed->addData(['observation' => 'pregnancy']);
+        $code = FhirObservationHistorySdohService::PREGNANCY_STATUS_LOINC_CODE;
+        [$result, $backend, $mapper] = invokeSearch($answer, ['code' => token('code', $code)], [$parsed]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][0], [], 'code must be removed from backend filters');
+        same($mapper->parseCalls[0][1], [$code => $code], 'selected pregnancy code');
+        same($result->getData(), [['observation' => 'pregnancy']], 'result data');
+    });
+
+    $run('social-history-pregnancy-codes', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData(['row' => 'social']);
+        $parsed = new ProcessingResult();
+        [$result, $backend, $mapper] = invokeSearch($answer, ['category' => token('category', 'social-history')], [$parsed]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][0], [], 'category must be removed from backend filters');
+        same($mapper->parseCalls[0][1], pregnancyCodes(), 'pregnancy codes and order');
+        same($result->hasErrors(), false, 'error state');
+    });
+
+    $run('survey-excludes-pregnancy', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData(['row' => 'survey']);
+        $parsed = new ProcessingResult();
+        [$result, $backend, $mapper] = invokeSearch($answer, ['category' => token('category', 'survey')], [$parsed]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][0], [], 'category must be removed from backend filters');
+        $codes = array_diff(supportedCodes(), [FhirObservationHistorySdohService::PREGNANCY_INTENT_LOINC_CODE, FhirObservationHistorySdohService::PREGNANCY_STATUS_LOINC_CODE]);
+        same($mapper->parseCalls[0][1], array_combine($codes, $codes), 'survey codes and order');
+        same($result->hasErrors(), false, 'error state');
+    });
+
+    $run('conflicting-category-code-skips-backend', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend, $mapper] = invokeSearch($answer, [
+            'category' => token('category', 'social-history'),
+            'code' => token('code', HistorySdohService::CODE_FOOD_INSECURITY_SCT),
+        ]);
+        same($backend->calls, [], 'backend calls');
+        same($mapper->parseCalls, [], 'parse calls');
+        check($result !== $answer, 'local empty result identity');
+        same($result->getData(), [], 'empty data');
+        same($result->hasErrors(), false, 'error state');
+    });
+
+    $run('malformed-code-native-validation', static function (): void {
+        $answer = new ProcessingResult();
+        $field = new BasicSearchField('code', SearchFieldType::TOKEN, 'code', []);
+        [$result, $backend, $mapper] = invokeSearch($answer, ['code' => $field]);
+        same($backend->calls, [], 'backend calls');
+        same($mapper->parseCalls, [], 'parse calls');
+        check($result !== $answer, 'validation result identity');
+        same($result->getValidationMessages(), ['code' => 'Invalid code'], 'native validation message');
+        check($result->hasErrors(), 'error state');
+    });
+
+    $run('unrecognized-code-skips-backend', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend, $mapper] = invokeSearch($answer, ['code' => token('code', 'not-a-supported-code')]);
+        same($backend->calls, [], 'backend calls');
+        same($mapper->parseCalls, [], 'parse calls');
+        check($result !== $answer, 'local empty result identity');
+        same($result->getData(), [], 'empty data');
+        same($result->hasErrors(), false, 'error state');
+    });
+
+    $run('forwarded-filter-identities', static function (): void {
+        $answer = new ProcessingResult();
+        $patient = token('patient', 'patient-reference');
+        $date = new BasicSearchField('date', SearchFieldType::DATETIME, 'created_at', ['2025-02-03']);
+        $id = token('_id', 'observation-id');
+        [$result, $backend, $mapper] = invokeSearch($answer, [
+            'patient' => $patient,
+            'date' => $date,
+            '_id' => $id,
+            'category' => token('category', 'social-history'),
+            'code' => token('code', FhirObservationHistorySdohService::PREGNANCY_INTENT_LOINC_CODE),
+        ]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][1], true, 'backend AND default');
+        $forwarded = $backend->calls[0][0];
+        same(array_keys($forwarded), ['patient', 'date', '_id'], 'forwarded filter keys and order');
+        same($forwarded['patient'], $patient, 'patient identity');
+        same($forwarded['date'], $date, 'date identity');
+        same($forwarded['_id'], $id, '_id identity');
+        same($mapper->parseCalls, [], 'parse calls');
+        same($result->hasErrors(), false, 'error state');
+    });
+
+    $passed = count(array_filter($cases, static fn(array $case): bool => $case['passed']));
+    $report = ['total' => count($cases), 'passed' => $passed, 'failed' => count($cases) - $passed, 'cases' => $cases];
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "\n";
+    exit($report['failed'] === 0 ? 0 : 1);
+}
