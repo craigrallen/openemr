@@ -14,4 +14,4 @@ Source-only tracing connects `CdaTemplateParse::clinicalNotes()` to `fetchClinic
 
 ## Coverage and next gates
 
-This evidence does not establish full schema-valid CDA conformance, authenticated import, SQL or persistence behavior, clinical safety, roles, the original 22-check suite, or UI acceptance. Hosted adapter, static analysis, and coverage results remain required, followed by ordinary approval and native QA. No merge, deployment, master change, or cron action is part of this fix.
+This evidence does not establish full schema-valid CDA conformance, authenticated import, SQL or persistence behavior, clinical safety, roles, completion of the original 22 requested features, or UI acceptance. Hosted adapter, static analysis, and coverage results remain required, followed by ordinary approval and native QA. No merge, deployment, master change, or cron action is part of this fix.
