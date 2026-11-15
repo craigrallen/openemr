@@ -224,6 +224,9 @@ class FhirObservationAdvanceDirectiveService extends FhirServiceBase implements 
                         $observationCodesToReturn[$codeValue] = $codeValue;
                     }
                 }
+                if (!empty($code->getValues()) && empty($observationCodesToReturn)) {
+                    return $processingResult;
+                }
                 unset($openEMRSearchParameters['code']);
             }
 
