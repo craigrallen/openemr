@@ -190,7 +190,7 @@ class FhirCareTeamService extends FhirServiceBase implements IResourceUSCIGProfi
      * Create role CodeableConcept for a provider participant
      * Uses SNOMED CT codes per US Core 8.0 requirements
      */
-    private function createRoleCodeableConcept($dataRecordProvider, $codeTypesService)
+    private function createRoleCodeableConcept($dataRecordProvider, CodeTypesService $codeTypesService)
     {
         // Map common roles to SNOMED CT codes for USCDI v5 compliance
         $roleMapping = $this->getRoleMappings();
