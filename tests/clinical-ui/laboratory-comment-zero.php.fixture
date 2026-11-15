@@ -1,0 +1,209 @@
+<?php
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+ob_start();
+ini_set('display_errors', '0');
+ini_set('log_errors', '0');
+error_reporting(E_ALL);
+set_error_handler(static function (int $severity, string $message): never {
+    throw new ErrorException($message, 0, $severity);
+});
+date_default_timezone_set('UTC');
+$GLOBALS['gbl_time_zone'] = 'UTC';
+
+$root = dirname(__DIR__, 2);
+spl_autoload_register(static function (string $class) use ($root): void {
+    $prefix = 'OpenEMR\\';
+    if (str_starts_with($class, $prefix)) {
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    }
+});
+
+// The native service's constructor and its database-capable base are unnecessary
+// for this parser-only fixture. All observation traits and FHIR models stay native.
+class_alias(EmptyFhirServiceBase::class, 'OpenEMR\\Services\\FHIR\\FhirServiceBase');
+class EmptyFhirServiceBase
+{
+}
+
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRObservation;
+use OpenEMR\Services\FHIR\Observation\FhirObservationLaboratoryService;
+
+function check(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+function same(mixed $expected, mixed $actual, string $message): void
+{
+    check($expected === $actual, $message . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+}
+
+function observation(bool $hasComment = false, mixed $comment = null, array $extra = []): array
+{
+    $row = [
+        'uuid' => '11111111-2222-4333-8444-555555555555',
+        'report_date' => '2026-01-02 03:04:05',
+        'code' => '1234-5',
+        'text' => 'Synthetic laboratory test',
+        'status' => 'final',
+        'result' => 'normal',
+        'units' => null,
+        'range' => '',
+    ];
+    if ($hasComment) {
+        $row['comments'] = $comment;
+    }
+    return array_replace($row, $extra);
+}
+
+function parseRow(array $row): array
+{
+    $service = (new ReflectionClass(FhirObservationLaboratoryService::class))->newInstanceWithoutConstructor();
+    $model = $service->parseOpenEMRRecord($row);
+    check($model instanceof FHIRObservation, 'Native laboratory parser must return FHIRObservation');
+    $json = json_encode($model, JSON_THROW_ON_ERROR);
+    $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+    check(is_array($decoded), 'Native observation serialization must decode to an object');
+    return [$model, $decoded];
+}
+
+function modelNoteTexts(FHIRObservation $model): array
+{
+    $texts = [];
+    foreach ($model->getNote() as $note) {
+        // The native addNote method retains the array supplied by this mapper.
+        check(is_array($note) && array_keys($note) === ['text'], 'Native getter note shape');
+        $text = $note['text'];
+        check(is_string($text), 'Native annotation text must resolve to a string');
+        $texts[] = $text;
+    }
+    return $texts;
+}
+
+function jsonNoteTexts(array $decoded): array
+{
+    $notes = $decoded['note'] ?? [];
+    check(is_array($notes), 'Serialized note must be an array');
+    $texts = [];
+    foreach ($notes as $note) {
+        check(is_array($note) && array_key_exists('text', $note), 'Serialized annotation needs text');
+        $text = $note['text'];
+        if (is_array($text) && array_key_exists('value', $text)) {
+            $text = $text['value'];
+        }
+        check(is_string($text), 'Serialized annotation text must be a string');
+        $texts[] = $text;
+    }
+    return $texts;
+}
+
+$cases = [
+    'source_preservation' => static function () use ($root): void {
+        $path = $root . '/src/Services/FHIR/Observation/FhirObservationLaboratoryService.php';
+        $source = file_get_contents($path);
+        check(is_string($source), 'Cannot read native laboratory service source');
+        $originalHash = '789b64aff0d5cc9cf8ed1646e6124515da61a537892804cef93c4f7abfbfb910';
+        if (hash('sha256', $source) === $originalHash) {
+            return;
+        }
+        $old = "if (!empty(\$dataRecord['comments'])) {";
+        $new = "if ((!empty(\$dataRecord['comments']) || (\$dataRecord['comments'] ?? null) === '0')) {";
+        same(1, substr_count($source, $new), 'Expected exactly one approved replacement predicate');
+        same(0, substr_count($source, $old), 'Original predicate must have been replaced');
+        $restored = str_replace($new, $old, $source);
+        same($originalHash, hash('sha256', $restored), 'Reversing only the approved fragment must restore original SHA256');
+    },
+    'zero_native_note' => static function (): void {
+        [$model] = parseRow(observation(true, '0'));
+        same(['0'], modelNoteTexts($model), 'Native getter must retain string zero');
+    },
+    'zero_json_note' => static function (): void {
+        [, $decoded] = parseRow(observation(true, '0'));
+        same(['0'], jsonNoteTexts($decoded), 'Native JSON serialization must retain string zero');
+    },
+    'unicode_comment' => static function (): void {
+        $comment = 'Café – återkontroll ✓';
+        [$model, $decoded] = parseRow(observation(true, $comment));
+        same([$comment], modelNoteTexts($model), 'Native unicode comment changed');
+        same([$comment], jsonNoteTexts($decoded), 'Serialized unicode comment changed');
+    },
+    'missing_comment_omitted' => static function (): void {
+        [$model, $decoded] = parseRow(observation());
+        same([], modelNoteTexts($model), 'Missing comment produced a native note');
+        check(!array_key_exists('note', $decoded), 'Missing comment produced serialized note');
+    },
+    'null_comment_omitted' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, null));
+        same([], modelNoteTexts($model), 'Null comment produced a native note');
+        check(!array_key_exists('note', $decoded), 'Null comment produced serialized note');
+    },
+    'empty_comment_omitted' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, ''));
+        same([], modelNoteTexts($model), 'Empty comment produced a native note');
+        check(!array_key_exists('note', $decoded), 'Empty comment produced serialized note');
+    },
+    'whitespace_comment_unchanged' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, '  '));
+        same(['  '], modelNoteTexts($model), 'Whitespace comment was trimmed or omitted');
+        same(['  '], jsonNoteTexts($decoded), 'Serialized whitespace comment changed');
+    },
+    'nonzero_comment_unchanged' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, '1'));
+        same(['1'], modelNoteTexts($model), 'Nonzero comment changed');
+        same(['1'], jsonNoteTexts($decoded), 'Serialized nonzero comment changed');
+    },
+    'numeric_zero_still_omitted' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, 0));
+        same([], modelNoteTexts($model), 'Integer zero must remain outside the string-zero exception');
+        check(!array_key_exists('note', $decoded), 'Integer zero produced serialized note');
+    },
+    'double_zero_unchanged' => static function (): void {
+        [$model, $decoded] = parseRow(observation(true, '00'));
+        same(['00'], modelNoteTexts($model), 'Nonempty numeric-looking string changed');
+        same(['00'], jsonNoteTexts($decoded), 'Serialized numeric-looking string changed');
+    },
+    'zero_with_multiple_specimens' => static function (): void {
+        $specimens = [
+            ['uuid' => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'identifier' => 'Tube A'],
+            ['uuid' => 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'type' => 'Serum'],
+        ];
+        [$model, $decoded] = parseRow(observation(true, '0', ['specimens' => $specimens]));
+        $expected = ['0', 'Multiple specimens collected: Tube A, Serum'];
+        same($expected, modelNoteTexts($model), 'Native note order or content changed');
+        same($expected, jsonNoteTexts($decoded), 'Serialized note order or content changed');
+        same('Specimen/' . $specimens[0]['uuid'], $decoded['specimen']['reference'] ?? null, 'First specimen reference changed');
+    },
+    'baseline_equal_except_note' => static function (): void {
+        [, $missing] = parseRow(observation());
+        [, $zero] = parseRow(observation(true, '0'));
+        same(['0'], jsonNoteTexts($zero), 'Zero variant lacks expected note');
+        unset($zero['note']);
+        same($missing, $zero, 'String zero changed observation fields beyond note');
+    },
+];
+
+$results = [];
+foreach ($cases as $name => $test) {
+    try {
+        $test();
+        $results[] = ['name' => $name, 'passed' => true, 'message' => ''];
+    } catch (Throwable $error) {
+        $results[] = ['name' => $name, 'passed' => false, 'message' => $error::class . ': ' . $error->getMessage()];
+    }
+}
+$passed = count(array_filter($results, static fn(array $case): bool => $case['passed']));
+$report = ['total' => count($results), 'passed' => $passed, 'failed' => count($results) - $passed, 'cases' => $results];
+ob_end_clean();
+echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), "\n";
+exit($report['failed'] === 0 ? 0 : 1);
