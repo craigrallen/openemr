@@ -1,0 +1,309 @@
+<?php
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (str_starts_with($class, $prefix)) {
+            $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+}
+
+namespace OpenEMR\Services {
+    // Declaration only: avoids BaseService's application bootstrap and database constructor.
+    class BaseService
+    {
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only: the employer mapper and its traits remain native.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Common\Database\QueryPagination;
+    use OpenEMR\Services\EmployerService;
+    use OpenEMR\Services\FHIR\Observation\FhirObservationEmployerService;
+    use OpenEMR\Services\Search\BasicSearchField;
+    use OpenEMR\Services\Search\CompositeSearchField;
+    use OpenEMR\Services\Search\SearchFieldType;
+    use OpenEMR\Services\Search\SearchModifier;
+    use OpenEMR\Services\Search\TokenSearchField;
+    use OpenEMR\Services\Search\TokenSearchValue;
+    use OpenEMR\Validators\ProcessingResult;
+
+    class RecordingEmployerService extends EmployerService
+    {
+        public array $calls = [];
+
+        public function __construct(public ProcessingResult $answer)
+        {
+        }
+
+        public function search($openEMRSearchParameters, $isAndCondition = true): ProcessingResult
+        {
+            $this->calls[] = [$openEMRSearchParameters, $isAndCondition];
+            return $this->answer;
+        }
+    }
+
+    class CountingProcessingResult extends ProcessingResult
+    {
+        public int $getDataCalls = 0;
+
+        public function getData()
+        {
+            $this->getDataCalls++;
+            return parent::getData();
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function same(mixed $actual, mixed $expected, string $message): void
+    {
+        check($actual === $expected, $message);
+    }
+
+    function invokeMapper(ProcessingResult $answer, array $fields = []): array
+    {
+        $backend = new RecordingEmployerService($answer);
+        $mapper = (new \ReflectionClass(FhirObservationEmployerService::class))->newInstanceWithoutConstructor();
+        $mapper->setEmployerService($backend);
+        $method = new \ReflectionMethod(FhirObservationEmployerService::class, 'searchForOpenEMRRecords');
+        return [$method->invoke($mapper, $fields), $backend];
+    }
+
+    function rawData(ProcessingResult $result): mixed
+    {
+        return (new \ReflectionProperty(ProcessingResult::class, 'data'))->getValue($result);
+    }
+
+    function checkBackendFilter(array $fields): void
+    {
+        check(isset($fields['occupation-industry']), 'missing occupation-industry filter');
+        $filter = $fields['occupation-industry'];
+        check($filter instanceof CompositeSearchField, 'filter is not native composite');
+        same($filter->getName(), 'occupation-industry', 'filter name');
+        same($filter->isAnd(), false, 'filter must be OR');
+        $children = $filter->getChildren();
+        same(count($children), 2, 'filter child count');
+        foreach (['occupation', 'industry'] as $index => $name) {
+            $child = $children[$index];
+            check($child instanceof TokenSearchField, 'filter child is not native token field');
+            same($child->getName(), $name, 'filter child name');
+            same($child->getModifier(), SearchModifier::MISSING, 'filter child modifier');
+            $values = $child->getValues();
+            same(count($values), 1, 'filter child value count');
+            check($values[0] instanceof TokenSearchValue, 'filter child value type');
+            same($values[0]->getCode(), false, 'filter child missing(false) value');
+        }
+    }
+
+    $cases = [];
+    $run = static function (string $name, callable $test) use (&$cases): void {
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'passed' => true, 'message' => ''];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'passed' => false, 'message' => get_class($error) . ': ' . $error->getMessage()];
+        }
+    };
+
+    $run('source-preservation', static function () use ($root): void {
+        $source = file_get_contents($root . '/src/Services/FHIR/Observation/FhirObservationEmployerService.php');
+        check(is_string($source), 'source unreadable');
+        $originalHash = '8744a447447c22499029c2ed7bba9b14b3730aa09a591f1aeb122f6aefc86c08';
+        if (hash('sha256', $source) === $originalHash) {
+            return;
+        }
+        $insertion = '            if ($result->hasErrors()) {' . "\n"
+            . '                return $result;' . "\n"
+            . '            }' . "\n";
+        $needle = '            $result = $service->search($openEMRSearchParameters);' . "\n" . $insertion;
+        same(substr_count($source, $needle), 1, 'exact insertion count');
+        $reversed = str_replace($needle, '            $result = $service->search($openEMRSearchParameters);' . "\n", $source);
+        same(hash('sha256', $reversed), $originalHash, 'whole-source inverse hash');
+    });
+
+    $run('internal-error-identity', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addInternalError('backend unavailable');
+        [$result, $backend] = invokeMapper($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'internal error result identity');
+        same($result->getInternalErrors(), ['backend unavailable'], 'internal error value');
+        check($result->hasErrors(), 'internal error state');
+    });
+
+    $run('validation-error-identity', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->setValidationMessages(['patient' => 'invalid reference']);
+        [$result, $backend] = invokeMapper($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'validation result identity');
+        same($result->getValidationMessages(), ['patient' => 'invalid reference'], 'validation message');
+        check($result->hasErrors(), 'validation error state');
+    });
+
+    $run('combined-error-no-data-read', static function (): void {
+        $answer = new CountingProcessingResult();
+        $answer->setValidationMessages(['date' => 'invalid date']);
+        $answer->addInternalError('backend unavailable');
+        $malformed = ['unmapped' => 'must not be transformed'];
+        $answer->addData($malformed);
+        $pagination = new QueryPagination(7, 2);
+        $pagination->setSearchUri('/private-search');
+        $pagination->setTotalCount(19);
+        $pagination->setHasMoreData(true);
+        $answer->setPagination($pagination);
+        [$result, $backend] = invokeMapper($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result, $answer, 'combined result identity');
+        same($result->getValidationMessages(), ['date' => 'invalid date'], 'combined validation');
+        same($result->getInternalErrors(), ['backend unavailable'], 'combined internal error');
+        same(rawData($result), [$malformed], 'combined partial data');
+        same($result->getPagination(), $pagination, 'combined pagination identity');
+        same($pagination->getLimit(), 7, 'pagination limit');
+        same($pagination->getCurrentOffsetId(), 2, 'pagination offset');
+        same($pagination->getTotalCount(), 19, 'pagination total');
+        same($pagination->hasMoreData(), true, 'pagination has more');
+        same($pagination->getSearchUri(), '/private-search', 'pagination URI');
+        same($answer->getDataCalls, 0, 'error data must not be read');
+    });
+
+    $run('invalid-category-before-backend', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend] = invokeMapper($answer, [
+            'category' => new TokenSearchField('category', [new TokenSearchValue('laboratory')]),
+        ]);
+        same(count($backend->calls), 0, 'invalid category reached backend');
+        check($result !== $answer, 'invalid category result identity');
+        same($result->getValidationMessages(), ['category' => 'invalid value'], 'invalid category message');
+        check($result->hasErrors(), 'invalid category error state');
+    });
+
+    $run('invalid-code-before-backend', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend] = invokeMapper($answer, [
+            'code' => new BasicSearchField('code', SearchFieldType::TOKEN, 'code', []),
+        ]);
+        same(count($backend->calls), 0, 'invalid code reached backend');
+        check($result !== $answer, 'invalid code result identity');
+        same($result->getValidationMessages(), ['code' => 'Invalid code'], 'invalid code message');
+        check($result->hasErrors(), 'invalid code error state');
+    });
+
+    $run('success-empty-fresh-result', static function (): void {
+        $answer = new ProcessingResult();
+        [$result, $backend] = invokeMapper($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        check($result !== $answer, 'successful empty result must be fresh');
+        check($result instanceof ProcessingResult, 'successful empty result type');
+        same($result->getData(), [], 'empty data');
+        same($result->hasErrors(), false, 'empty success error state');
+        checkBackendFilter($backend->calls[0][0]);
+    });
+
+    $run('success-native-occupation-observation', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData([
+            'puuid' => 'patient-uuid',
+            'uuid' => 'employer-uuid',
+            'user_uuid' => 'user-uuid',
+            'start_date' => '2025-02-03',
+            'end_date' => null,
+            'date' => '2025-02-04',
+            'occupation' => '',
+            'industry' => '',
+        ]);
+        [$result, $backend] = invokeMapper($answer);
+        same(count($backend->calls), 1, 'backend call count');
+        check($result !== $answer, 'successful row result must be fresh');
+        same($result->hasErrors(), false, 'row success error state');
+        same($result->getData(), [[
+            'code' => 'LOINC:11341-5',
+            'description' => 'Occupation',
+            'ob_type' => 'social-history',
+            'ob_status' => 'final',
+            'puuid' => 'patient-uuid',
+            'uuid' => 'employer-uuid',
+            'user_uuid' => 'user-uuid',
+            'date' => '2025-02-03',
+            'date_end' => null,
+            'last_updated' => '2025-02-04',
+            'profiles' => [
+                'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-occupation',
+                'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-occupation|7.0.0',
+                'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-occupation|8.0.0',
+            ],
+            'value' => '',
+            'value_code_description' => null,
+        ]], 'exact native occupation observation');
+    });
+
+    $run('unsupported-code-row-skip', static function (): void {
+        $answer = new ProcessingResult();
+        $answer->addData(['malformed' => 'safe only when mapping is absent']);
+        [$result, $backend] = invokeMapper($answer, [
+            'code' => new TokenSearchField('code', [new TokenSearchValue('unsupported-code')]),
+        ]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($result->getData(), [], 'unsupported code must skip row');
+        same($result->hasErrors(), false, 'unsupported code success state');
+        check(!isset($backend->calls[0][0]['code']), 'code forwarded to backend');
+    });
+
+    $run('forwarded-fields-and-native-filter', static function (): void {
+        $answer = new ProcessingResult();
+        $patient = new TokenSearchField('patient', [new TokenSearchValue('patient-uuid')]);
+        $id = new TokenSearchField('_id', [new TokenSearchValue('employer-uuid')]);
+        $date = new BasicSearchField('date', SearchFieldType::DATETIME, 'start_date', ['2025-02-03']);
+        $category = new TokenSearchField('category', [new TokenSearchValue('social-history')]);
+        $code = new TokenSearchField('code', [new TokenSearchValue('11341-5')]);
+        [$result, $backend] = invokeMapper($answer, [
+            'patient' => $patient,
+            '_id' => $id,
+            'date' => $date,
+            'category' => $category,
+            'code' => $code,
+        ]);
+        same(count($backend->calls), 1, 'backend call count');
+        same($backend->calls[0][1], true, 'backend AND argument');
+        $fields = $backend->calls[0][0];
+        same($fields['patient'] ?? null, $patient, 'patient field identity');
+        same($fields['_id'] ?? null, $id, '_id field identity');
+        same($fields['date'] ?? null, $date, 'date field identity');
+        check(!array_key_exists('category', $fields), 'category forwarded to backend');
+        check(!array_key_exists('code', $fields), 'code forwarded to backend');
+        same(count($fields), 4, 'backend field count');
+        checkBackendFilter($fields);
+        same($result->hasErrors(), false, 'forwarded field success state');
+    });
+
+    $passed = count(array_filter($cases, static fn(array $case): bool => $case['passed']));
+    $report = ['total' => count($cases), 'passed' => $passed, 'failed' => count($cases) - $passed, 'cases' => $cases];
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "\n";
+    exit($report['failed'] === 0 ? 0 : 1);
+}
