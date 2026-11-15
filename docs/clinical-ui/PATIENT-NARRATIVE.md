@@ -1,6 +1,6 @@
 # Patient narrative XHTML fixture
 
-OPEMR-240 targets the generated FHIR Patient narrative while preserving the structured patient name. This tests-only artifact contains a dependency-free PHP CLI fixture and a Jest adapter. The controller owns Git, execution, and the later product decision. The supplied repository and HEAD binding were controller context; this inline author phase did not independently verify them.
+OPEMR-240 targets the generated FHIR Patient narrative while preserving the structured patient name. The product delta is one guarded XHTML operand; regression artifacts are a dependency-free PHP CLI fixture and a real hosted Jest adapter. The controller owns Git and execution. The supplied repository and HEAD binding were controller context; inline author/reviewer phases do not independently verify them.
 
 The fixture loads the complete native `FhirPatientService.php`, its three native traits and interfaces, and native FHIR Patient and HumanName models through a bounded OpenEMR source autoloader. It declares only a synthetic, empty `FhirServiceBase` parent before loading the service, disables the service constructor, and invokes the real private summary and name methods by reflection. It checks exact source paths. It does not extract or evaluate production methods. Its native `getText()` value is an array, and `getName()` contains HumanName models. It also calls `json_encode()` on the actual Patient model and checks malformed UTF-8 encoding failure.
 
