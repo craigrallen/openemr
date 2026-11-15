@@ -97,8 +97,8 @@ namespace {
     };
 
     $sourcePath = $repo . '/src/Services/FHIR/FhirOrganizationService.php';
-    $old1 = "if (\$coding['code'] == self::ORGANIZATION_TYPE_INSURANCE) {";
-    $new1 = "if (\$coding['code'] == self::ORGANIZATION_TYPE_INSURANCE || \$coding['code'] == 'ins') {";
+    $old1 = "foreach (\$type['coding'] as \$coding) {\n                    if (\$coding['code'] == self::ORGANIZATION_TYPE_INSURANCE) {";
+    $new1 = "foreach (\$type['coding'] as \$coding) {\n                    \$code = \$coding['code'];\n                    if (\$code == self::ORGANIZATION_TYPE_INSURANCE || \$code == 'ins') {";
     $old2 = 'if ($coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE) {';
     $new2 = "if (\$coding->getCode() == self::ORGANIZATION_TYPE_INSURANCE || \$coding->getCode() == 'ins') {";
     $originalHash = '836dc5000110a4f86b5d56932ff19d8cb4fecd941922e0a0f7a0219c3a052943';
