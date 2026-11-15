@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+use OpenEMR\Services\Cda\ClinicalNoteParser;
+
+$repoRoot = dirname(__DIR__, 2);
+$sourcePath = $repoRoot . '/src/Services/Cda/ClinicalNoteParser.php';
+$originalSha256 = 'd3cb6d863c0860bab8938eea0cd8dab972043eed318cd2bf46c106c77cf4c01b';
+$originalCondition = 'if ($text) {';
+$correctedCondition = "if (\$text !== '') {";
+
+$failures = [];
+$total = 0;
+$check = static function (string $name, mixed $expected, mixed $actual) use (&$failures, &$total): void {
+    ++$total;
+    if ($actual !== $expected) {
+        $failures[] = $name;
+    }
+};
+
+try {
+    $source = file_get_contents($sourcePath);
+    if ($source === false) {
+        throw new RuntimeException('Cannot read native parser source');
+    }
+
+    $isOriginal = hash('sha256', $source) === $originalSha256
+        && substr_count($source, $originalCondition) === 1
+        && substr_count($source, $correctedCondition) === 0;
+    $isSingleCorrection = substr_count($source, $originalCondition) === 0
+        && substr_count($source, $correctedCondition) === 1
+        && hash('sha256', str_replace($correctedCondition, $originalCondition, $source)) === $originalSha256;
+    $check('native source differs from original beyond the permitted condition', true, $isOriginal || $isSingleCorrection);
+
+    require_once $sourcePath;
+    $parser = new ClinicalNoteParser();
+    $ns = 'urn:hl7-org:v3';
+
+    $check('zero-only text node', '0', $parser->extractNoteFromTextSection("<text xmlns=\"$ns\"><list><item ID=\"n1\">0</item></list></text>", 'n1'));
+    $check('zero-only paragraph', '0', $parser->extractNoteFromTextSection("<text xmlns=\"$ns\"><list><item ID=\"n1\"><paragraph>0</paragraph></item></list></text>", 'n1'));
+    $check('zero between sibling elements keeps order', "Before\n0\nAfter", $parser->extractNoteFromTextSection("<text xmlns=\"$ns\"><list><item ID=\"n1\"><paragraph>Before</paragraph><content>0</content><paragraph>After</paragraph></item></list></text>", 'n1'));
+    $check('whitespace and empty children are omitted', "First\nLast", $parser->extractNoteFromTextSection("<text xmlns=\"$ns\"><list><item ID=\"n1\"><paragraph> First </paragraph><content>  </content><content></content><paragraph> Last </paragraph></item></list></text>", 'n1'));
+    $check('nonzero and Unicode text', "Café\n東京", $parser->extractNoteFromTextSection("<text xmlns=\"$ns\"><list><item ID=\"n1\"><paragraph>Café</paragraph><content>東京</content></item></list></text>", 'n1'));
+
+    $multiText = "<text xmlns=\"$ns\"><list><item ID=\"n1\"><paragraph>0</paragraph></item><item ID=\"n2\"><paragraph>Second</paragraph></item></list></text>";
+    $check('batch returns multiple notes in order', ['#n1' => '0', '#n2' => 'Second'], $parser->extractNoteFromTextSection($multiText));
+    $check('single note selects second item', 'Second', $parser->extractNoteFromTextSection($multiText, 'n2'));
+    $check('missing item reports no match', "Item with ID 'missing' not found.", $parser->extractNoteFromTextSection($multiText, 'missing'));
+
+    $tableText = "<text xmlns=\"$ns\"><list><item ID=\"t1\"><paragraph>Summary</paragraph><table><thead><tr><th>Value</th><th>Count</th></tr></thead><tbody><tr><td>A</td><td>0</td></tr></tbody></table></item></list></text>";
+    $check('table regression retains zero cell', "Summary A;\n0.", $parser->extractNoteFromTextSection($tableText, 't1'));
+
+    $cda = "<ClinicalDocument xmlns=\"$ns\"><component><section>"
+        . '<templateId root="2.16.840.1.113883.10.20.22.2.65" extension="2016-11-01"/>'
+        . '<code code="11506-3" codeSystemName="LOINC" displayName="Progress Note"/>'
+        . '<text><list><item ID="n1"><paragraph>0</paragraph></item><item ID="n2"><paragraph>Follow-up</paragraph></item></list></text>'
+        . '<entry><observation><text><reference value="#n1"/></text><effectiveTime value="20250102103000"/>'
+        . '<author><assignedAuthor><assignedPerson><name><given>Ada</given><family>Example</family></name></assignedPerson>'
+        . '<addr use="WP"><streetAddressLine>1 Main St</streetAddressLine><city>Testville</city><state>TS</state><postalCode>12345</postalCode><country>US</country></addr>'
+        . '<telecom use="WP" value="tel:5550100"/></assignedAuthor></author>'
+        . '<entryRelationship><encounter><id root="1.2.3" extension="visit-1"/></encounter></entryRelationship>'
+        . '</observation></entry>'
+        . '<entry><observation><text><reference value="#n2"/></text><effectiveTime value="20250103103000"/></observation></entry>'
+        . '</section></component></ClinicalDocument>';
+
+    $parsed = $parser->parseClinicalNotesByCode($cda, '11506-3');
+    $check('full CDA section metadata', ['code' => '11506-3', 'codeSystemName' => 'LOINC', 'displayName' => 'Progress Note'], $parsed['section_metadata'] ?? null);
+    $check('full CDA has two notes', 2, count($parsed['clinical_notes'] ?? []));
+    $first = $parsed['clinical_notes'][0] ?? [];
+    $second = $parsed['clinical_notes'][1] ?? [];
+    $check('full CDA zero reference content', '0', $first['content'] ?? null);
+    $check('full CDA zero reference metadata', ['progress_note', '11506-3', 'LOINC', 'Progress Note', '#n1', '20250102103000', '1.2.3', 'visit-1'], [
+        $first['plan_type'] ?? null, $first['plan_code'] ?? null, $first['plan_code_system_name'] ?? null,
+        $first['plan_display_name'] ?? null, $first['reference_id'] ?? null, $first['effective_time'] ?? null,
+        $first['encounter_root'] ?? null, $first['encounter_extension'] ?? null,
+    ]);
+    $check('full CDA author metadata', [
+        'name' => 'Ada Example',
+        'wp_address' => ['street' => '1 Main St', 'city' => 'Testville', 'state' => 'TS', 'postalCode' => '12345', 'country' => 'US'],
+        'wp_phone' => '5550100', 'given' => 'Ada', 'family' => 'Example',
+    ], $first['author_details'] ?? null);
+    $check('full CDA second note content and reference', ['#n2', 'Follow-up'], [$second['reference_id'] ?? null, $second['content'] ?? null]);
+
+    $batch = $parser->parseClinicalNotesByCode($cda, '11506-3', 1);
+    $check('full CDA batch preserves zero and second note', ['0', 'Follow-up'], array_column($batch['clinical_notes'] ?? [], 'content'));
+    $check('full CDA no matching code', [], $parser->parseClinicalNotesByCode($cda, '34746-8'));
+} catch (Throwable $error) {
+    ++$total;
+    $failures[] = 'fixture exception: ' . get_class($error) . ': ' . $error->getMessage();
+}
+
+$report = ['total' => $total, 'passed' => $total - count($failures), 'failed' => count($failures), 'failures' => $failures];
+echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) . "\n";
+exit($report['failed'] === 0 ? 0 : 1);
