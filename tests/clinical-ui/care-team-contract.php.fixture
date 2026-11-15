@@ -1,0 +1,280 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration-only parent seam. Its application constructor is never invoked.
+    class FhirServiceBase {}
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCareTeam;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRCodeableConcept;
+    use OpenEMR\FHIR\R4\FHIRResource\FHIRCareTeam\FHIRCareTeamParticipant;
+    use OpenEMR\Services\CodeTypesService;
+    use OpenEMR\Services\FHIR\FhirCareTeamService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    error_reporting(E_ALL);
+    ini_set('display_errors', '0');
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    $cases = [];
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    });
+
+    // Observe the documented string argument boundary, then execute native mapping.
+    // Only the terminology response is synthetic; parseCode and getCodeWithType remain native.
+    class RecordingCodeTypesService extends CodeTypesService
+    {
+        public array $lookups = [];
+
+        public function getSystemForCodeType($codeType, $useOid = false)
+        {
+            if (!is_string($codeType)) {
+                throw new \RuntimeException('getSystemForCodeType codeType must be a string');
+            }
+            return parent::getSystemForCodeType($codeType, $useOid);
+        }
+
+        public function lookup_code_description($codes, $desc_detail = 'code_text'): string
+        {
+            $this->lookups[] = $codes;
+            return 'Lookup ' . $codes;
+        }
+    }
+
+    // Synthetic translation boundary for fallback display; no locale bootstrap.
+    function xlt(string $text): string
+    {
+        return $text;
+    }
+
+    function same(mixed $expected, mixed $actual, string $label): void
+    {
+        if ($expected !== $actual) {
+            throw new \RuntimeException($label . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function check(string $name, callable $body): void
+    {
+        global $cases;
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'passed' => true, 'message' => ''];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'passed' => false, 'message' => $error->getMessage()];
+        }
+    }
+
+    function provider(array $changes = []): array
+    {
+        return array_replace([
+            'provider_uuid' => 'provider-opaque-1',
+            'physician_type_codes' => 'SNOMED-CT:224535009',
+            'physician_type_title' => 'Registered nurse',
+            'role' => 'nurse',
+            'role_title' => 'Team nurse',
+            'provider_since' => '2024-01-02T03:04:05Z',
+            'facility_uuid' => 'facility-opaque-1',
+        ], $changes);
+    }
+
+    function populated(array $rows): array
+    {
+        $service = (new \ReflectionClass(FhirCareTeamService::class))->newInstanceWithoutConstructor();
+        $codes = (new \ReflectionClass(RecordingCodeTypesService::class))->newInstanceWithoutConstructor();
+        $team = new FHIRCareTeam();
+        $input = ['providers' => $rows];
+        $snapshot = $input;
+        $service->populateProviderTeamMembers($team, $input, $codes);
+        same($snapshot, $input, 'provider input mutation');
+        $json = json_decode(json_encode($team, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        return [$team, $json, $codes->lookups];
+    }
+
+    function coding(array $rows, string $system, string $code, ?string $display, array $lookups = []): void
+    {
+        [$team, $json, $actualLookups] = populated($rows);
+        same(1, count($team->getParticipant()), 'native participant count');
+        $participant = $team->getParticipant()[0];
+        if (!$participant instanceof FHIRCareTeamParticipant) {
+            throw new \RuntimeException('Participant is not the native FHIR model');
+        }
+        same(1, count($participant->getRole()), 'native role count');
+        $role = $participant->getRole()[0];
+        if (!$role instanceof FHIRCodeableConcept) {
+            throw new \RuntimeException('Role is not the native FHIR model');
+        }
+        same(1, count($role->getCoding()), 'native coding count');
+        $nativeCoding = $role->getCoding()[0];
+        same($system, $nativeCoding->getSystem(), 'native coding system');
+        same($code, $nativeCoding->getCode(), 'native coding code');
+        same($display, $nativeCoding->getDisplay(), 'native coding display');
+        same($system, $json['participant'][0]['role'][0]['coding'][0]['system'] ?? null, 'JSON coding system');
+        same($code, $json['participant'][0]['role'][0]['coding'][0]['code'] ?? null, 'JSON coding code');
+        same($display, $json['participant'][0]['role'][0]['coding'][0]['display'] ?? null, 'JSON coding display');
+        same($lookups, $actualLookups, 'terminology lookup keys');
+    }
+
+    check('source_integrity', static function () use ($root): void {
+        $source = file_get_contents($root . '/src/Services/FHIR/FhirCareTeamService.php');
+        if (!is_string($source)) {
+            throw new \RuntimeException('CareTeam source unreadable');
+        }
+        $original = '4188ebc3c8684fa97ef5ca3564e8143e3c7a5c4a04e845a205fc75734f5a453d';
+        if (hash('sha256', $source) === $original) {
+            return;
+        }
+        $oldSignature = '    private function createRoleCodeableConcept($dataRecordProvider, $codeTypesService)';
+        $newSignature = '    private function createRoleCodeableConcept($dataRecordProvider, CodeTypesService $codeTypesService)';
+        $parseLine = '            $codes = $codeTypesService->parseCode($dataRecordProvider[\'physician_type_codes\']);' . "\n";
+        $oldBlock = $parseLine . '            $codes[\'system\'] = self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
+        $currentBlock = $parseLine . '            $codes[\'system\'] = $codeTypesService->getSystemForCodeType($codes[\'code_type\']) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
+        $proposedBlock = $parseLine
+            . '            $codeType = is_string($codes[\'code_type\']) ? $codes[\'code_type\'] : CodeTypesService::CODE_TYPE_SNOMED_CT;' . "\n"
+            . '            $codes[\'system\'] = $codeTypesService->getSystemForCodeType($codeType) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;';
+        $oldLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
+        $currentLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], \$codeTypesService->getSystemForCodeType(\$codes['code_type']) !== null ? \$codes['code_type'] : CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
+        $proposedLookup = "            } else {\n                \$fullCode = \$codeTypesService->getCodeWithType(\$codes['code'], \$codeTypesService->getSystemForCodeType(\$codeType) !== null ? \$codeType : CodeTypesService::CODE_TYPE_SNOMED_CT);\n                \$codes['description'] = \$codeTypesService->lookup_code_description(\$fullCode);";
+        same(0, substr_count($source, $oldBlock), 'old parse/system block absent');
+        same(0, substr_count($source, $oldLookup), 'old lookup fragment absent');
+        same(1, substr_count($source, $newSignature), 'typed signature fragment count');
+        same(0, substr_count($source, $oldSignature), 'untyped signature absent');
+        $isCurrent = substr_count($source, $currentBlock) === 1
+            && substr_count($source, $currentLookup) === 1
+            && substr_count($source, $proposedBlock) === 0
+            && substr_count($source, $proposedLookup) === 0;
+        $isProposed = substr_count($source, $proposedBlock) === 1
+            && substr_count($source, $proposedLookup) === 1
+            && substr_count($source, $currentBlock) === 0
+            && substr_count($source, $currentLookup) === 0;
+        if (!$isCurrent && !$isProposed) {
+            throw new \RuntimeException('CareTeam source is neither the exact current nor proposed fragment set');
+        }
+        $restored = str_replace($isCurrent ? $currentBlock : $proposedBlock, $oldBlock, $source, $blockCount);
+        $restored = str_replace($isCurrent ? $currentLookup : $proposedLookup, $oldLookup, $restored, $lookupCount);
+        $restored = str_replace($newSignature, $oldSignature, $restored, $signatureCount);
+        same(1, $blockCount, 'parse/system inverse count');
+        same(1, $lookupCount, 'lookup inverse count');
+        same(1, $signatureCount, 'signature inverse count');
+        same($original, hash('sha256', $restored), 'restored original SHA256');
+    });
+
+    check('native_classes', static function () use ($root): void {
+        $paths = [
+            FhirCareTeamService::class => '/src/Services/FHIR/FhirCareTeamService.php',
+            CodeTypesService::class => '/src/Services/CodeTypesService.php',
+            OpenEMR\Services\FHIR\UtilsService::class => '/src/Services/FHIR/UtilsService.php',
+            OpenEMR\Services\FHIR\FhirCodeSystemConstants::class => '/src/Services/FHIR/FhirCodeSystemConstants.php',
+            OpenEMR\Services\FHIR\Traits\BulkExportSupportAllOperationsTrait::class => '/src/Services/FHIR/Traits/BulkExportSupportAllOperationsTrait.php',
+            OpenEMR\Services\FHIR\Traits\FhirBulkExportDomainResourceTrait::class => '/src/Services/FHIR/Traits/FhirBulkExportDomainResourceTrait.php',
+            OpenEMR\Services\FHIR\Traits\FhirServiceBaseEmptyTrait::class => '/src/Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+            OpenEMR\Services\FHIR\Traits\VersionedProfileTrait::class => '/src/Services/FHIR/Traits/VersionedProfileTrait.php',
+            OpenEMR\Services\FHIR\IResourceUSCIGProfileService::class => '/src/Services/FHIR/IResourceUSCIGProfileService.php',
+            OpenEMR\Services\FHIR\IFhirExportableResourceService::class => '/src/Services/FHIR/IFhirExportableResourceService.php',
+            OpenEMR\Services\FHIR\IPatientCompartmentResourceService::class => '/src/Services/FHIR/IPatientCompartmentResourceService.php',
+            FHIRCareTeam::class => '/src/FHIR/R4/FHIRDomainResource/FHIRCareTeam.php',
+            FHIRCareTeamParticipant::class => '/src/FHIR/R4/FHIRResource/FHIRCareTeam/FHIRCareTeamParticipant.php',
+            FHIRCodeableConcept::class => '/src/FHIR/R4/FHIRElement/FHIRCodeableConcept.php',
+            OpenEMR\FHIR\R4\FHIRElement\FHIRCoding::class => '/src/FHIR/R4/FHIRElement/FHIRCoding.php',
+        ];
+        foreach ($paths as $class => $relative) {
+            same($root . $relative, (new \ReflectionClass($class))->getFileName(), $class . ' native path');
+        }
+    });
+
+    check('native_role_type_boundary', static function (): void {
+        $method = new \ReflectionMethod(FhirCareTeamService::class, 'createRoleCodeableConcept');
+        same(true, $method->isPrivate(), 'role helper visibility');
+        same(2, $method->getNumberOfParameters(), 'role helper parameter count');
+        $parameter = new \ReflectionParameter([FhirCareTeamService::class, 'createRoleCodeableConcept'], 1);
+        same('codeTypesService', $parameter->getName(), 'role helper second parameter name');
+        $type = $parameter->getType();
+        same(true, $type instanceof \ReflectionNamedType, 'role helper second parameter native type');
+        same(false, $type->isBuiltin(), 'role helper second parameter class type');
+        same(CodeTypesService::class, $type->getName(), 'role helper second parameter type name');
+    });
+
+    check('nucc_typed_object_json', static function (): void {
+        coding([provider(['physician_type_codes' => 'NUCC:207Q00000X', 'physician_type_title' => 'Family medicine'])], 'http://nucc.org/provider-taxonomy', '207Q00000X', 'Family medicine');
+    });
+    check('hl7_rolecode_typed', static function (): void {
+        coding([provider(['physician_type_codes' => 'RoleCode:ATTPHYS', 'physician_type_title' => 'Attending'])], 'http://terminology.hl7.org/CodeSystem/role-code', 'ATTPHYS', 'Attending');
+    });
+    check('typed_no_title_lookup', static function (): void {
+        coding([provider(['physician_type_codes' => 'NUCC:207Q00000X', 'physician_type_title' => '', 'role_title' => ''])], 'http://nucc.org/provider-taxonomy', '207Q00000X', 'Lookup NUCC:207Q00000X', ['NUCC:207Q00000X']);
+    });
+    check('bare_stripped_snomed', static function (): void {
+        coding([provider(['physician_type_codes' => '224535009', 'physician_type_title' => '', 'role_title' => ''])], 'http://snomed.info/sct', '224535009', 'Lookup SNOMED-CT:224535009', ['SNOMED-CT:224535009']);
+    });
+    check('snomed_ct_alias', static function (): void {
+        coding([provider(['physician_type_codes' => 'SNOMED-CT:224535009', 'physician_type_title' => 'Nurse'])], 'http://snomed.info/sct', '224535009', 'Nurse');
+    });
+    check('snomed_alias_lookup', static function (): void {
+        coding([provider(['physician_type_codes' => 'SNOMED:224535009', 'physician_type_title' => '', 'role_title' => ''])], 'http://snomed.info/sct', '224535009', 'Lookup SNOMED:224535009', ['SNOMED:224535009']);
+    });
+    check('unknown_prefix_fallback', static function (): void {
+        coding([provider(['physician_type_codes' => 'OPAQUE:ABC', 'physician_type_title' => '', 'role_title' => ''])], 'http://snomed.info/sct', 'ABC', 'Lookup SNOMED-CT:ABC', ['SNOMED-CT:ABC']);
+    });
+    check('missing_codes_role_fallback', static function (): void {
+        $row = provider(['role' => 'nurse', 'role_title' => 'Team nurse']);
+        unset($row['physician_type_codes']);
+        coding([$row], 'http://snomed.info/sct', '224535009', 'Team nurse');
+    });
+    foreach (['null_codes_role_fallback' => null, 'empty_codes_role_fallback' => '', 'zero_codes_role_fallback' => 0] as $name => $value) {
+        check($name, static function () use ($value): void {
+            coding([provider(['physician_type_codes' => $value, 'role' => 'nurse', 'role_title' => 'Team nurse'])], 'http://snomed.info/sct', '224535009', 'Team nurse');
+        });
+    }
+    check('unknown_role_default', static function (): void {
+        coding([provider(['physician_type_codes' => '', 'role' => 'opaque-role', 'role_title' => 'Custom role'])], 'http://snomed.info/sct', '223366009', 'Custom role');
+    });
+    check('title_priority_physician', static function (): void {
+        coding([provider(['physician_type_codes' => 'NUCC:207Q00000X', 'physician_type_title' => 'Physician type title', 'role_title' => 'Role title'])], 'http://nucc.org/provider-taxonomy', '207Q00000X', 'Physician type title');
+    });
+    check('title_priority_role', static function (): void {
+        coding([provider(['physician_type_codes' => 'NUCC:207Q00000X', 'physician_type_title' => '', 'role_title' => 'Role title'])], 'http://nucc.org/provider-taxonomy', '207Q00000X', 'Role title');
+    });
+    check('provider_period_member_onbehalfof_order', static function (): void {
+        $first = provider();
+        $second = provider(['provider_uuid' => 'provider-opaque-2', 'facility_uuid' => null, 'provider_since' => null]);
+        [$team, $json] = populated([$first, $second]);
+        same(2, count($team->getParticipant()), 'ordered native participants');
+        same(2, count($json['participant'] ?? []), 'ordered JSON participants');
+        same('Practitioner/provider-opaque-1', $json['participant'][0]['member']['reference'] ?? null, 'first member');
+        same('Organization/facility-opaque-1', $json['participant'][0]['onBehalfOf']['reference'] ?? null, 'first organization');
+        same('2024-01-02T03:04:05Z', $json['participant'][0]['period']['start'] ?? null, 'first period');
+        same('Practitioner/provider-opaque-2', $json['participant'][1]['member']['reference'] ?? null, 'second member');
+        same(false, array_key_exists('onBehalfOf', $json['participant'][1]), 'second organization absence');
+        same(false, array_key_exists('period', $json['participant'][1]), 'second period absence');
+    });
+    check('no_providers', static function (): void {
+        [$team, $json, $lookups] = populated([]);
+        same([], $team->getParticipant(), 'native empty participants');
+        same(false, array_key_exists('participant', $json), 'JSON participant absence');
+        same([], $lookups, 'empty lookup calls');
+    });
+
+    $total = count($cases);
+    $passed = count(array_filter($cases, static fn (array $case): bool => $case['passed']));
+    echo json_encode(['total' => $total, 'passed' => $passed, 'failed' => $total - $passed, 'cases' => $cases], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
+    exit($passed === $total ? 0 : 1);
+}

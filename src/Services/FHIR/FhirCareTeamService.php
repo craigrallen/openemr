@@ -190,7 +190,7 @@ class FhirCareTeamService extends FhirServiceBase implements IResourceUSCIGProfi
      * Create role CodeableConcept for a provider participant
      * Uses SNOMED CT codes per US Core 8.0 requirements
      */
-    private function createRoleCodeableConcept($dataRecordProvider, $codeTypesService)
+    private function createRoleCodeableConcept($dataRecordProvider, CodeTypesService $codeTypesService)
     {
         // Map common roles to SNOMED CT codes for USCDI v5 compliance
         $roleMapping = $this->getRoleMappings();
@@ -198,7 +198,8 @@ class FhirCareTeamService extends FhirServiceBase implements IResourceUSCIGProfi
         // Try to use physician_type_codes if available
         if (!empty($dataRecordProvider['physician_type_codes'])) {
             $codes = $codeTypesService->parseCode($dataRecordProvider['physician_type_codes']);
-            $codes['system'] = self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;
+            $codeType = is_string($codes['code_type']) ? $codes['code_type'] : CodeTypesService::CODE_TYPE_SNOMED_CT;
+            $codes['system'] = $codeTypesService->getSystemForCodeType($codeType) ?? self::CARE_TEAM_MEMBER_FUNCTION_SYSTEM;
 
             // Get description from various sources
             if (!empty($dataRecordProvider['physician_type_title'])) {
@@ -206,7 +207,7 @@ class FhirCareTeamService extends FhirServiceBase implements IResourceUSCIGProfi
             } elseif (!empty($dataRecordProvider['role_title'])) {
                 $codes['description'] = $dataRecordProvider['role_title'];
             } else {
-                $fullCode = $codeTypesService->getCodeWithType($codes['code'], CodeTypesService::CODE_TYPE_SNOMED_CT);
+                $fullCode = $codeTypesService->getCodeWithType($codes['code'], $codeTypesService->getSystemForCodeType($codeType) !== null ? $codeType : CodeTypesService::CODE_TYPE_SNOMED_CT);
                 $codes['description'] = $codeTypesService->lookup_code_description($fullCode);
             }
 
