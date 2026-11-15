@@ -13,7 +13,7 @@ test('portable signer modal name contract passes', () => {
     expect(result.signal).toBeNull();
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/^\{[^\r\n]*\}\n$/);
+    expect(result.stdout).toMatch(/^\{[^\r\n]*\}\n(?![\s\S])/);
     const report = JSON.parse(result.stdout);
     expect(Object.keys(report).sort()).toEqual(['failed', 'failures', 'passed', 'total']);
     expect(report.total).toBe(portableCount);
