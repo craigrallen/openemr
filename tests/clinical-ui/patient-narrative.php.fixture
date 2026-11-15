@@ -1,0 +1,205 @@
+<?php
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(2);
+}
+
+use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRPatient;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRHumanName;
+use OpenEMR\Services\FHIR\FhirPatientService;
+
+$root = dirname(__DIR__, 2);
+$originalSha = '8b2af56023dd84106c692a53391d1d6abb8941b25505063b26f48ea25fc8710c';
+$sourcePath = $root . '/src/Services/FHIR/FhirPatientService.php';
+$cases = [];
+$sourceSha = '';
+
+function check(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new RuntimeException($message);
+    }
+}
+
+function scalarValue($value): ?string
+{
+    return $value === null ? null : (string) $value;
+}
+
+function scalarList($values): array
+{
+    return array_map(static fn($value): string => (string) $value, $values ?? []);
+}
+
+function actualName(FHIRHumanName $name): array
+{
+    return [
+        'use' => scalarValue($name->getUse()),
+        'family' => scalarValue($name->getFamily()),
+        'given' => scalarList($name->getGiven()),
+        'prefix' => scalarList($name->getPrefix()),
+        'suffix' => scalarList($name->getSuffix()),
+    ];
+}
+
+function expectedName(string $use, ?string $family = null, array $given = [], array $prefix = [], array $suffix = []): array
+{
+    return compact('use', 'family', 'given', 'prefix', 'suffix');
+}
+
+function verifyXml(string $div, string $raw): void
+{
+    if (!class_exists(DOMDocument::class)) {
+        return;
+    }
+    $prior = libxml_use_internal_errors(true);
+    try {
+        $document = new DOMDocument();
+        check($document->loadXML($div), 'narrative is not well-formed XML');
+        $xpath = new DOMXPath($document);
+        $xpath->registerNamespace('x', 'http://www.w3.org/1999/xhtml');
+        $nodes = $xpath->query('/x:div/x:p');
+        check($nodes !== false && $nodes->length === 1, 'missing XHTML paragraph');
+        $paragraph = $nodes->item(0);
+        check($paragraph !== null && $paragraph->childNodes->length === 1 && $paragraph->firstChild instanceof DOMText, 'paragraph contains markup');
+        check($paragraph->textContent === $raw, 'XML text differs from raw name');
+    } finally {
+        libxml_clear_errors();
+        libxml_use_internal_errors($prior);
+    }
+}
+
+function runCase(ReflectionMethod $summary, ReflectionMethod $nameMethod, FhirPatientService $service, array $spec): void
+{
+    $record = $spec['record'];
+    $snapshot = serialize($record);
+    $patient = new FHIRPatient();
+    $summary->invoke($service, $patient, $record);
+    $nameMethod->invoke($service, $patient, $record);
+    check(serialize($record) === $snapshot, 'input record mutated');
+
+    $rawText = $patient->getText();
+    $expectedDiv = $spec['raw'] === null ? null : '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . $spec['safe'] . '</p></div>';
+    if ($expectedDiv === null) {
+        check($rawText === null, 'unexpected native narrative');
+    } else {
+        check(is_array($rawText), 'native narrative is not an array');
+        check(array_keys($rawText) === ['status', 'div'], 'native narrative keys changed');
+        check($rawText['status'] === 'generated', 'narrative status changed');
+        check($rawText['div'] === $expectedDiv, 'native narrative XHTML differs');
+        verifyXml($rawText['div'], $spec['raw']);
+    }
+
+    $names = $patient->getName();
+    check(is_array($names) && count($names) === count($spec['names']), 'native name count differs');
+    foreach ($spec['names'] as $index => $expected) {
+        check($names[$index] instanceof FHIRHumanName, 'name is not a native HumanName');
+        check(actualName($names[$index]) === $expected, 'structured name differs at index ' . $index);
+    }
+
+    $encoded = json_encode($patient);
+    $jsonError = json_last_error();
+    if (!empty($spec['invalid_json'])) {
+        check($encoded === false && $jsonError === JSON_ERROR_UTF8, 'malformed structured UTF-8 should make native JSON encoding fail');
+        return;
+    }
+    check(is_string($encoded) && $jsonError === JSON_ERROR_NONE, 'native JSON encoding failed');
+    $decoded = json_decode($encoded, true);
+    check(is_array($decoded), 'native JSON did not decode to an object');
+    check(($decoded['text'] ?? null) === $rawText, 'serialized native narrative differs');
+    check(isset($decoded['name']) && is_array($decoded['name']) && count($decoded['name']) === count($names), 'serialized native names differ');
+}
+
+$specs = [
+    'amp_lt_gt_quotes' => ['record' => ['fname' => 'A&B <C> "D" \'E\''], 'raw' => 'A&B <C> "D" \'E\'', 'safe' => 'A&amp;B &lt;C&gt; &quot;D&quot; &apos;E&apos;', 'names' => [expectedName('official', null, ['A&B <C> "D" \'E\''])]],
+    'injection_shaped' => ['record' => ['fname' => '<img src=x onerror="alert(1)">'], 'raw' => '<img src=x onerror="alert(1)">', 'safe' => '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;', 'names' => [expectedName('official', null, ['<img src=x onerror="alert(1)">'])]],
+    'literal_entities' => ['record' => ['fname' => '&amp; &#39;'], 'raw' => '&amp; &#39;', 'safe' => '&amp;amp; &amp;#39;', 'names' => [expectedName('official', null, ['&amp; &#39;'])]],
+    'multilingual_utf8' => ['record' => ['fname' => "A\u{030A}sa 😀", 'lname' => '李'], 'raw' => "A\u{030A}sa 😀 李", 'safe' => "A\u{030A}sa 😀 李", 'names' => [expectedName('official', '李', ["A\u{030A}sa 😀"])]],
+    'empty_fields' => ['record' => ['fname' => '', 'lname' => ''], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
+    'missing_fields' => ['record' => [], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
+    'null_fields' => ['record' => ['fname' => null, 'lname' => null], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
+    'zero_strings' => ['record' => ['fname' => '0', 'lname' => '0'], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
+    'zero_integers' => ['record' => ['fname' => 0, 'lname' => 0], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
+    'first_only' => ['record' => ['fname' => 'Ada'], 'raw' => 'Ada', 'safe' => 'Ada', 'names' => [expectedName('official', null, ['Ada'])]],
+    'last_only' => ['record' => ['lname' => 'Lovelace'], 'raw' => ' Lovelace', 'safe' => ' Lovelace', 'names' => [expectedName('official', 'Lovelace')]],
+    'join_whitespace' => ['record' => ['fname' => ' Ada ', 'lname' => ' Lovelace '], 'raw' => ' Ada   Lovelace ', 'safe' => ' Ada   Lovelace ', 'names' => [expectedName('official', ' Lovelace ', [' Ada '])]],
+    'whitespace_only' => ['record' => ['fname' => '  '], 'raw' => '  ', 'safe' => '  ', 'names' => [expectedName('official', null, ['  '])]],
+    'structured_history' => ['record' => ['fname' => 'Ada', 'mname' => 'Augusta', 'lname' => 'Byron', 'title' => 'Countess', 'suffix' => 'III', 'previous_names' => [['previous_name_first' => 'Augusta', 'previous_name_middle' => 'Ada', 'previous_name_last' => 'King', 'previous_name_title' => 'Lady', 'previous_name_suffix' => 'Jr']]], 'raw' => 'Ada Byron', 'safe' => 'Ada Byron', 'names' => [expectedName('official', 'Byron', ['Ada', 'Augusta'], ['Countess'], ['III']), expectedName('old', 'King', ['Augusta', 'Ada'], ['Lady'], ['Jr'])]],
+    'nonstring_first_42' => ['record' => ['fname' => 42], 'raw' => '42', 'safe' => '42', 'names' => [expectedName('official', null, ['42'])]],
+    'malformed_structured_utf8' => ['record' => ['fname' => "A\xC3("], 'raw' => "A\u{FFFD}(", 'safe' => "A\u{FFFD}(", 'names' => [expectedName('official', null, ["A\xC3("])], 'invalid_json' => true],
+];
+
+set_error_handler(static function (int $severity, string $message): void {
+    throw new ErrorException($message, 0, $severity);
+});
+
+try {
+    check(PHP_SAPI === 'cli', 'fixture requires CLI PHP');
+    $source = file_get_contents($sourcePath);
+    check(is_string($source), 'service source unavailable');
+    $sourceSha = hash('sha256', $source);
+    $original = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
+    $replacement = "'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . (is_string(\$narrativeText) ? htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') : \$narrativeText) . '</p></div>'";
+    if ($sourceSha === $originalSha) {
+        check(substr_count($source, $original) === 1, 'original fragment count differs');
+    } else {
+        check(substr_count($source, $replacement) === 1, 'replacement fragment count differs');
+        check(hash('sha256', str_replace($replacement, $original, $source)) === $originalSha, 'source differs beyond the single allowed replacement');
+    }
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix) || preg_match('/^[A-Za-z0-9_\\\\]+$/D', $class) !== 1) {
+            return;
+        }
+        $relative = substr($class, strlen($prefix));
+        $path = $root . '/src/' . str_replace('\\', '/', $relative) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    });
+    eval('namespace OpenEMR\\Services\\FHIR; class FhirServiceBase {}');
+    $native = [
+        FhirPatientService::class => 'src/Services/FHIR/FhirPatientService.php',
+        FHIRPatient::class => 'src/FHIR/R4/FHIRDomainResource/FHIRPatient.php',
+        FHIRHumanName::class => 'src/FHIR/R4/FHIRElement/FHIRHumanName.php',
+        OpenEMR\FHIR\R4\FHIRResource\FHIRDomainResource::class => 'src/FHIR/R4/FHIRResource/FHIRDomainResource.php',
+        OpenEMR\Services\FHIR\Traits\BulkExportSupportAllOperationsTrait::class => 'src/Services/FHIR/Traits/BulkExportSupportAllOperationsTrait.php',
+        OpenEMR\Services\FHIR\Traits\FhirBulkExportDomainResourceTrait::class => 'src/Services/FHIR/Traits/FhirBulkExportDomainResourceTrait.php',
+        OpenEMR\Services\FHIR\Traits\VersionedProfileTrait::class => 'src/Services/FHIR/Traits/VersionedProfileTrait.php',
+        OpenEMR\Services\FHIR\IFhirExportableResourceService::class => 'src/Services/FHIR/IFhirExportableResourceService.php',
+        OpenEMR\Services\FHIR\IResourceUSCIGProfileService::class => 'src/Services/FHIR/IResourceUSCIGProfileService.php',
+        OpenEMR\Services\FHIR\IPatientCompartmentResourceService::class => 'src/Services/FHIR/IPatientCompartmentResourceService.php',
+    ];
+    foreach ($native as $class => $relative) {
+        check((new ReflectionClass($class))->getFileName() === $root . '/' . $relative, 'non-native source for ' . $class);
+    }
+    $reflection = new ReflectionClass(FhirPatientService::class);
+    $service = $reflection->newInstanceWithoutConstructor();
+    $summary = $reflection->getMethod('parseOpenEMRPatientSummaryText');
+    $nameMethod = $reflection->getMethod('parseOpenEMRPatientName');
+    check($summary->isPrivate() && $nameMethod->isPrivate(), 'private method boundary changed');
+    foreach ($specs as $name => $spec) {
+        try {
+            runCase($summary, $nameMethod, $service, $spec);
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+    $cases[] = ['name' => 'xml_parser_available', 'ok' => true, 'error' => class_exists(DOMDocument::class) ? null : 'DOMDocument unavailable; XHTML parse checks skipped'];
+} catch (Throwable $error) {
+    $cases[] = ['name' => 'fixture_bootstrap', 'ok' => false, 'error' => $error->getMessage()];
+}
+
+$total = count($cases);
+$passed = count(array_filter($cases, static fn(array $case): bool => $case['ok']));
+$report = ['cases' => $cases, 'total' => $total, 'passed' => $passed, 'failed' => $total - $passed, 'source_sha256' => $sourceSha];
+$output = json_encode($report, JSON_INVALID_UTF8_SUBSTITUTE);
+if (!is_string($output)) {
+    $output = '{"cases":[],"total":0,"passed":0,"failed":1,"source_sha256":""}';
+}
+fwrite(STDOUT, $output . "\n");
+exit($report['failed'] === 0 ? 0 : 1);
