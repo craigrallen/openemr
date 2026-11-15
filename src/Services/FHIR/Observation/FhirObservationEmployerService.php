@@ -241,6 +241,9 @@ class FhirObservationEmployerService extends FhirServiceBase implements IPatient
             // the patient_data table
             $service = $this->getEmployerService();
             $result = $service->search($openEMRSearchParameters);
+            if ($result->hasErrors()) {
+                return $result;
+            }
             $data = $result->getData() ?? [];
 
             // need to transform these into something we can consume
