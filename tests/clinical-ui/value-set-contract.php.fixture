@@ -1,0 +1,189 @@
+<?php
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(2);
+}
+
+$code_types = [];
+
+/* CLI-only contract fixture. The parent is declaration-only; the service constructor is bypassed. */
+abstract class ValueSetFixtureBase
+{
+}
+
+class_alias(ValueSetFixtureBase::class, 'OpenEMR\\Services\\FHIR\\FhirServiceBase');
+
+$root = dirname(__DIR__, 2);
+$originalSha = '5e15b94f852cdb72759be5847cc61fc0ff0951094ab74de1bb2c597a80cc861e';
+$oldMapping = "new ServiceField('id', ServiceField::TYPE_STRING)";
+$newMapping = "new ServiceField('option_id', ServiceField::TYPE_STRING)";
+$allowed = [
+    'OpenEMR\\Services\\CodeTypesService' => 'src/Services/CodeTypesService.php',
+    'OpenEMR\\Services\\FHIR\\FhirCodeSystemConstants' => 'src/Services/FHIR/FhirCodeSystemConstants.php',
+    'OpenEMR\\Services\\FHIR\\FhirValueSetService' => 'src/Services/FHIR/FhirValueSetService.php',
+    'OpenEMR\\Services\\FHIR\\IResourceUSCIGProfileService' => 'src/Services/FHIR/IResourceUSCIGProfileService.php',
+    'OpenEMR\\Services\\FHIR\\IFhirExportableResourceService' => 'src/Services/FHIR/IFhirExportableResourceService.php',
+    'OpenEMR\\Services\\FHIR\\INonPatientCompartmentResourceService' => 'src/Services/FHIR/INonPatientCompartmentResourceService.php',
+    'OpenEMR\\Services\\FHIR\\Traits\\FhirServiceBaseEmptyTrait' => 'src/Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+    'OpenEMR\\Services\\FHIR\\Traits\\BulkExportSupportAllOperationsTrait' => 'src/Services/FHIR/Traits/BulkExportSupportAllOperationsTrait.php',
+    'OpenEMR\\Services\\FHIR\\Traits\\FhirBulkExportDomainResourceTrait' => 'src/Services/FHIR/Traits/FhirBulkExportDomainResourceTrait.php',
+    'OpenEMR\\Services\\Search\\FhirSearchParameterDefinition' => 'src/Services/Search/FhirSearchParameterDefinition.php',
+    'OpenEMR\\Services\\Search\\ServiceField' => 'src/Services/Search/ServiceField.php',
+    'OpenEMR\\Services\\Search\\SearchFieldType' => 'src/Services/Search/SearchFieldType.php',
+    'OpenEMR\\Services\\Search\\SearchFieldException' => 'src/Services/Search/SearchFieldException.php',
+    'OpenEMR\\Services\\Search\\ISearchField' => 'src/Services/Search/ISearchField.php',
+    'OpenEMR\\Services\\Search\\BasicSearchField' => 'src/Services/Search/BasicSearchField.php',
+    'OpenEMR\\Services\\Search\\TokenSearchField' => 'src/Services/Search/TokenSearchField.php',
+    'OpenEMR\\Services\\Search\\TokenSearchValue' => 'src/Services/Search/TokenSearchValue.php',
+    'OpenEMR\\Services\\Search\\FhirSearchWhereClauseBuilder' => 'src/Services/Search/FhirSearchWhereClauseBuilder.php',
+    'OpenEMR\\Services\\Search\\SearchFieldStatementResolver' => 'src/Services/Search/SearchFieldStatementResolver.php',
+    'OpenEMR\\Services\\Search\\SearchQueryFragment' => 'src/Services/Search/SearchQueryFragment.php',
+    'OpenEMR\\Services\\Search\\SearchModifier' => 'src/Services/Search/SearchModifier.php',
+    'OpenEMR\\Services\\Search\\StringSearchField' => 'src/Services/Search/StringSearchField.php',
+];
+
+spl_autoload_register(static function (string $class) use ($allowed, $root): void {
+    if (isset($allowed[$class])) {
+        $path = $root . '/' . $allowed[$class];
+        if (is_file($path)) {
+            require_once $path;
+        }
+    }
+});
+
+$cases = [];
+$record = static function (string $name, bool $pass, string $message) use (&$cases): void {
+    $cases[] = ['name' => $name, 'pass' => $pass, 'message' => $message];
+};
+$check = static function (string $name, callable $test) use ($record): void {
+    try {
+        [$pass, $message] = $test();
+        $record($name, $pass, $message);
+    } catch (Throwable $error) {
+        $record($name, false, get_class($error) . ': ' . $error->getMessage());
+    }
+};
+$read = static function (string $relative) use ($root): string {
+    $content = file_get_contents($root . '/' . $relative);
+    if ($content === false) {
+        throw new RuntimeException('Cannot read ' . $relative);
+    }
+    return $content;
+};
+$sourceSha = '';
+
+try {
+    $source = $read('src/Services/FHIR/FhirValueSetService.php');
+    $sourceSha = hash('sha256', $source);
+    $check('whole-source preservation', static function () use ($source, $sourceSha, $originalSha, $oldMapping, $newMapping): array {
+        if (hash_equals($originalSha, $sourceSha)) {
+            return [true, 'Original source matches the pinned SHA-256.'];
+        }
+        $count = substr_count($source, $newMapping);
+        $inverse = str_replace($newMapping, $oldMapping, $source);
+        $pass = $count === 1 && hash_equals($originalSha, hash('sha256', $inverse));
+        return [$pass, $pass ? 'Exactly one inverse mapping replacement restores the pinned original.' : 'Source differs beyond the single permitted mapping replacement.'];
+    });
+
+    $check('native list_options columns', static function () use ($read): array {
+        $schema = $read('sql/database.sql');
+        if (!preg_match('/CREATE TABLE `list_options` \((.*?)\) ENGINE=InnoDB;/s', $schema, $table)) {
+            return [false, 'list_options table declaration was not found.'];
+        }
+        preg_match_all('/^\s*`([A-Za-z_][A-Za-z_0-9]*)`\s/m', $table[1], $matches);
+        $columns = $matches[1];
+        $pass = in_array('option_id', $columns, true) && !in_array('id', $columns, true);
+        return [$pass, $pass ? 'option_id exists and id does not.' : 'Expected list_options column contract is absent.'];
+    });
+
+    $check('native ListService projection', static function () use ($read): array {
+        $source = $read('src/Services/ListService.php');
+        $start = strpos($source, 'function searchLists(');
+        $end = $start === false ? false : strpos($source, 'return $processingResult;', $start);
+        $method = $end === false ? '' : substr($source, $start, $end - $start);
+        $pass = (bool) preg_match('/SELECT\s+lo\.\*/i', $method)
+            && (bool) preg_match('/lo\.option_id\s*=\s*sub_list\.sublist_list_id/', $method)
+            && (bool) preg_match('/lo\.list_id\s*=\s*\x27lists\x27/', $method);
+        return [$pass, $pass ? 'The lists query projects lo.*, including option_id, and joins by option_id.' : 'The expected lists query projection or join is absent.'];
+    });
+
+    $reflection = new ReflectionClass('OpenEMR\\Services\\FHIR\\FhirValueSetService');
+    $service = $reflection->newInstanceWithoutConstructor();
+    $load = $reflection->getMethod('loadSearchParameters');
+    $definitions = $load->invoke($service);
+    $definitionClass = 'OpenEMR\\Services\\Search\\FhirSearchParameterDefinition';
+    $fieldClass = 'OpenEMR\\Services\\Search\\ServiceField';
+    $types = 'OpenEMR\\Services\\Search\\SearchFieldType';
+
+    $check('native _id definition', static function () use ($definitions, $definitionClass, $fieldClass, $types): array {
+        $definition = $definitions['_id'] ?? null;
+        $fields = $definition instanceof $definitionClass ? $definition->getMappedFields() : null;
+        $pass = $definition instanceof $definitionClass
+            && $definition->getName() === '_id'
+            && $definition->getType() === $types::TOKEN
+            && $definition->getOptions() === []
+            && is_array($fields)
+            && count($fields) === 1
+            && $fields[0] instanceof $fieldClass
+            && $fields[0]->getField() === 'option_id'
+            && $fields[0]->getType() === $fieldClass::TYPE_STRING;
+        return [$pass, $pass ? '_id is one token-mapped string ServiceField on option_id.' : '_id must map to exactly one string ServiceField on option_id.'];
+    });
+
+    $check('native _lastUpdated definition', static function () use ($definitions, $definitionClass, $types): array {
+        $definition = $definitions['_lastUpdated'] ?? null;
+        $pass = count($definitions) === 2
+            && $definition instanceof $definitionClass
+            && $definition->getName() === '_lastUpdated'
+            && $definition->getType() === $types::DATETIME
+            && $definition->getMappedFields() === ['sublist_updated_date', 'last_updated']
+            && $definition->getOptions() === [];
+        return [$pass, $pass ? 'The list date mapping and empty options remain intact.' : 'The list date definition changed.'];
+    });
+
+    $check('native appointment date definition', static function () use ($reflection, $service, $definitionClass, $types): array {
+        $method = $reflection->getMethod('getLastModifiedSearchFieldForAppointmentCategories');
+        $definition = $method->invoke($service);
+        $pass = $definition instanceof $definitionClass
+            && $definition->getName() === '_lastUpdated'
+            && $definition->getType() === $types::DATETIME
+            && $definition->getMappedFields() === ['pc_last_updated']
+            && $definition->getOptions() === [];
+        return [$pass, $pass ? 'The appointment date mapping and empty options remain intact.' : 'The appointment date definition changed.'];
+    });
+
+    /* SQL coverage uses the real native token and WHERE builder if their native dependencies load. */
+    $sqlUnavailable = null;
+    try {
+        foreach (['custom-list', '0', '01', 'appointment-type'] as $id) {
+            $name = 'native token SQL for ' . $id;
+            $check($name, static function () use ($definitions, $id): array {
+                $fields = $definitions['_id']->getMappedFields();
+                $field = $fields[0]->getField();
+                $token = new OpenEMR\Services\Search\TokenSearchField($field, [$id]);
+                $fragment = OpenEMR\Services\Search\FhirSearchWhereClauseBuilder::build([$field => $token]);
+                $sql = $fragment->getFragment();
+                $bounds = $fragment->getBoundValues();
+                $pass = (bool) preg_match('/(^|[^A-Za-z_0-9])option_id([^A-Za-z_0-9]|$)/', $sql)
+                    && !(bool) preg_match('/(^|[^A-Za-z_0-9])id([^A-Za-z_0-9]|$)/', $sql)
+                    && $bounds === [$id];
+                return [$pass, $pass ? 'Native SQL names option_id and binds the exact string ID.' : 'Native SQL field or bound value differs from the option_id contract.'];
+            });
+        }
+    } catch (Throwable $error) {
+        $sqlUnavailable = get_class($error) . ': ' . $error->getMessage();
+    }
+    if ($sqlUnavailable !== null) {
+        $record('native SQL runtime availability', false, 'SQL runtime unexercised: ' . $sqlUnavailable);
+    }
+} catch (Throwable $error) {
+    $record('fixture setup', false, get_class($error) . ': ' . $error->getMessage());
+}
+
+$total = count($cases);
+$passed = count(array_filter($cases, static fn (array $case): bool => $case['pass']));
+$report = ['total' => $total, 'passed' => $passed, 'failed' => $total - $passed, 'cases' => $cases, 'source_sha256' => $sourceSha];
+echo json_encode($report, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
+exit($report['failed'] === 0 ? 0 : 1);
