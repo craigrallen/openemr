@@ -49,6 +49,24 @@ function expectedName(string $use, ?string $family = null, array $given = [], ar
     return compact('use', 'family', 'given', 'prefix', 'suffix');
 }
 
+function serializedName(string $use, ?string $family = null, array $given = [], array $prefix = [], array $suffix = []): array
+{
+    $name = ['use' => $use];
+    if ($family !== null) {
+        $name['family'] = $family;
+    }
+    if ($given !== []) {
+        $name['given'] = $given;
+    }
+    if ($prefix !== []) {
+        $name['prefix'] = $prefix;
+    }
+    if ($suffix !== []) {
+        $name['suffix'] = $suffix;
+    }
+    return $name;
+}
+
 function verifyXml(string $div, string $raw): void
 {
     if (!class_exists(DOMDocument::class)) {
@@ -109,25 +127,26 @@ function runCase(ReflectionMethod $summary, ReflectionMethod $nameMethod, FhirPa
     $decoded = json_decode($encoded, true);
     check(is_array($decoded), 'native JSON did not decode to an object');
     check(($decoded['text'] ?? null) === $rawText, 'serialized native narrative differs');
-    check(isset($decoded['name']) && is_array($decoded['name']) && count($decoded['name']) === count($names), 'serialized native names differ');
+    check(isset($decoded['name']) && is_array($decoded['name']) && count($decoded['name']) === count($spec['serialized_names']), 'serialized native name count differs');
+    check($decoded['name'] === $spec['serialized_names'], 'serialized native name values differ');
 }
 
 $specs = [
-    'amp_lt_gt_quotes' => ['record' => ['fname' => 'A&B <C> "D" \'E\''], 'raw' => 'A&B <C> "D" \'E\'', 'safe' => 'A&amp;B &lt;C&gt; &quot;D&quot; &apos;E&apos;', 'names' => [expectedName('official', null, ['A&B <C> "D" \'E\''])]],
-    'injection_shaped' => ['record' => ['fname' => '<img src=x onerror="alert(1)">'], 'raw' => '<img src=x onerror="alert(1)">', 'safe' => '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;', 'names' => [expectedName('official', null, ['<img src=x onerror="alert(1)">'])]],
-    'literal_entities' => ['record' => ['fname' => '&amp; &#39;'], 'raw' => '&amp; &#39;', 'safe' => '&amp;amp; &amp;#39;', 'names' => [expectedName('official', null, ['&amp; &#39;'])]],
-    'multilingual_utf8' => ['record' => ['fname' => "A\u{030A}sa 😀", 'lname' => '李'], 'raw' => "A\u{030A}sa 😀 李", 'safe' => "A\u{030A}sa 😀 李", 'names' => [expectedName('official', '李', ["A\u{030A}sa 😀"])]],
-    'empty_fields' => ['record' => ['fname' => '', 'lname' => ''], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
-    'missing_fields' => ['record' => [], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
-    'null_fields' => ['record' => ['fname' => null, 'lname' => null], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
-    'zero_strings' => ['record' => ['fname' => '0', 'lname' => '0'], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
-    'zero_integers' => ['record' => ['fname' => 0, 'lname' => 0], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')]],
-    'first_only' => ['record' => ['fname' => 'Ada'], 'raw' => 'Ada', 'safe' => 'Ada', 'names' => [expectedName('official', null, ['Ada'])]],
-    'last_only' => ['record' => ['lname' => 'Lovelace'], 'raw' => ' Lovelace', 'safe' => ' Lovelace', 'names' => [expectedName('official', 'Lovelace')]],
-    'join_whitespace' => ['record' => ['fname' => ' Ada ', 'lname' => ' Lovelace '], 'raw' => ' Ada   Lovelace ', 'safe' => ' Ada   Lovelace ', 'names' => [expectedName('official', ' Lovelace ', [' Ada '])]],
-    'whitespace_only' => ['record' => ['fname' => '  '], 'raw' => '  ', 'safe' => '  ', 'names' => [expectedName('official', null, ['  '])]],
-    'structured_history' => ['record' => ['fname' => 'Ada', 'mname' => 'Augusta', 'lname' => 'Byron', 'title' => 'Countess', 'suffix' => 'III', 'previous_names' => [['previous_name_first' => 'Augusta', 'previous_name_middle' => 'Ada', 'previous_name_last' => 'King', 'previous_name_title' => 'Lady', 'previous_name_suffix' => 'Jr']]], 'raw' => 'Ada Byron', 'safe' => 'Ada Byron', 'names' => [expectedName('official', 'Byron', ['Ada', 'Augusta'], ['Countess'], ['III']), expectedName('old', 'King', ['Augusta', 'Ada'], ['Lady'], ['Jr'])]],
-    'nonstring_first_42' => ['record' => ['fname' => 42], 'raw' => '42', 'safe' => '42', 'names' => [expectedName('official', null, ['42'])]],
+    'amp_lt_gt_quotes' => ['record' => ['fname' => 'A&B <C> "D" \'E\''], 'raw' => 'A&B <C> "D" \'E\'', 'safe' => 'A&amp;B &lt;C&gt; &quot;D&quot; &apos;E&apos;', 'names' => [expectedName('official', null, ['A&B <C> "D" \'E\''])], 'serialized_names' => [serializedName('official', null, ['A&B <C> "D" \'E\''])]],
+    'injection_shaped' => ['record' => ['fname' => '<img src=x onerror="alert(1)">'], 'raw' => '<img src=x onerror="alert(1)">', 'safe' => '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;', 'names' => [expectedName('official', null, ['<img src=x onerror="alert(1)">'])], 'serialized_names' => [serializedName('official', null, ['<img src=x onerror="alert(1)">'])]],
+    'literal_entities' => ['record' => ['fname' => '&amp; &#39;'], 'raw' => '&amp; &#39;', 'safe' => '&amp;amp; &amp;#39;', 'names' => [expectedName('official', null, ['&amp; &#39;'])], 'serialized_names' => [serializedName('official', null, ['&amp; &#39;'])]],
+    'multilingual_utf8' => ['record' => ['fname' => "A\u{030A}sa 😀", 'lname' => '李'], 'raw' => "A\u{030A}sa 😀 李", 'safe' => "A\u{030A}sa 😀 李", 'names' => [expectedName('official', '李', ["A\u{030A}sa 😀"])], 'serialized_names' => [serializedName('official', '李', ["A\u{030A}sa 😀"])]],
+    'empty_fields' => ['record' => ['fname' => '', 'lname' => ''], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')], 'serialized_names' => [serializedName('official')]],
+    'missing_fields' => ['record' => [], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')], 'serialized_names' => [serializedName('official')]],
+    'null_fields' => ['record' => ['fname' => null, 'lname' => null], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')], 'serialized_names' => [serializedName('official')]],
+    'zero_strings' => ['record' => ['fname' => '0', 'lname' => '0'], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')], 'serialized_names' => [serializedName('official')]],
+    'zero_integers' => ['record' => ['fname' => 0, 'lname' => 0], 'raw' => null, 'safe' => null, 'names' => [expectedName('official')], 'serialized_names' => [serializedName('official')]],
+    'first_only' => ['record' => ['fname' => 'Ada'], 'raw' => 'Ada', 'safe' => 'Ada', 'names' => [expectedName('official', null, ['Ada'])], 'serialized_names' => [serializedName('official', null, ['Ada'])]],
+    'last_only' => ['record' => ['lname' => 'Lovelace'], 'raw' => ' Lovelace', 'safe' => ' Lovelace', 'names' => [expectedName('official', 'Lovelace')], 'serialized_names' => [serializedName('official', 'Lovelace')]],
+    'join_whitespace' => ['record' => ['fname' => ' Ada ', 'lname' => ' Lovelace '], 'raw' => ' Ada   Lovelace ', 'safe' => ' Ada   Lovelace ', 'names' => [expectedName('official', ' Lovelace ', [' Ada '])], 'serialized_names' => [serializedName('official', ' Lovelace ', [' Ada '])]],
+    'whitespace_only' => ['record' => ['fname' => '  '], 'raw' => '  ', 'safe' => '  ', 'names' => [expectedName('official', null, ['  '])], 'serialized_names' => [serializedName('official', null, ['  '])]],
+    'structured_history' => ['record' => ['fname' => 'Ada', 'mname' => 'Augusta', 'lname' => 'Byron', 'title' => 'Countess', 'suffix' => 'III', 'previous_names' => [['previous_name_first' => 'Augusta', 'previous_name_middle' => 'Ada', 'previous_name_last' => 'King', 'previous_name_title' => 'Lady', 'previous_name_suffix' => 'Jr']]], 'raw' => 'Ada Byron', 'safe' => 'Ada Byron', 'names' => [expectedName('official', 'Byron', ['Ada', 'Augusta'], ['Countess'], ['III']), expectedName('old', 'King', ['Augusta', 'Ada'], ['Lady'], ['Jr'])], 'serialized_names' => [serializedName('official', 'Byron', ['Ada', 'Augusta'], ['Countess'], ['III']), serializedName('old', 'King', ['Augusta', 'Ada'], ['Lady'], ['Jr'])]],
+    'nonstring_first_42' => ['record' => ['fname' => 42], 'raw' => '42', 'safe' => '42', 'names' => [expectedName('official', null, ['42'])], 'serialized_names' => [serializedName('official', null, [42])]],
     'malformed_structured_utf8' => ['record' => ['fname' => "A\xC3("], 'raw' => "A\u{FFFD}(", 'safe' => "A\u{FFFD}(", 'names' => [expectedName('official', null, ["A\xC3("])], 'invalid_json' => true],
 ];
 
