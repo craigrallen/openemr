@@ -277,7 +277,7 @@ class FhirObservationLaboratoryService extends FhirServiceBase implements IPatie
             $observation->addPerformer(UtilsService::createRelativeReference('Practitioner', $dataRecord['provider']['uuid']));
         }
 
-        if (!empty($dataRecord['comments'])) {
+        if ((!empty($dataRecord['comments']) || ($dataRecord['comments'] ?? null) === '0')) {
             $observation->addNote(['text' => $dataRecord['comments']]);
         }
 
