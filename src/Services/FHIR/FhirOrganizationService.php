@@ -135,7 +135,8 @@ class FhirOrganizationService implements IResourceSearchableService, IResourceRe
             //  so will support both the array and the object
             if (is_array($type)) {
                 foreach ($type['coding'] as $coding) {
-                    if ($coding['code'] == self::ORGANIZATION_TYPE_INSURANCE || $coding['code'] == 'ins') {
+                    $code = $coding['code'];
+                    if ($code == self::ORGANIZATION_TYPE_INSURANCE || $code == 'ins') {
                         // insert into the insurance
                         return $this->insuranceService->insert($fhirResource);
                     }
