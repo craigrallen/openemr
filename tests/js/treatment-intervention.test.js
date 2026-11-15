@@ -31,6 +31,13 @@ function inspectFixture(result) {
         expect(typeof item.pass).toBe('boolean');
         expect(typeof item.message).toBe('string');
     }
+    expect([...names].sort()).toEqual([
+        'source_exact_inverse', 'native_service_loads', 'text_zero_native_object',
+        'text_zero_decoded_json', 'text_normal_preserved', 'text_whitespace_preserved',
+        'text_missing_omitted', 'text_null_omitted', 'text_empty_omitted',
+        'boolean_false_unchanged', 'boolean_true_unchanged', 'coded_value_unchanged',
+        'native_transform_row_zero',
+    ].sort());
     expect(report.passed).toBe(report.cases.filter((item) => item.pass).length);
     expect(report.failed).toBe(report.cases.filter((item) => !item.pass).length);
     expect(result.status).toBe(report.failed === 0 ? 0 : 1);
@@ -48,6 +55,8 @@ test('native treatment intervention value contract', () => {
     const result = spawnSync('php', ['tests/clinical-ui/treatment-intervention-contract.php.fixture'], {
         cwd: ROOT,
         encoding: 'utf8',
+        timeout: 30000,
+        maxBuffer: 1024 * 1024,
     });
     inspectFixture(result);
 });
