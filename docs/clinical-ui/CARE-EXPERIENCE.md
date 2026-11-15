@@ -1,0 +1,9 @@
+# Care experience preference value contract
+
+OPEMR-242 tests the native `FhirObservationCareExperiencePreferenceService` text value mapping. A stored text string `0` must appear as `valueString: "0"` in the native FHIR Observation and its decoded JSON. Ordinary text and surrounding whitespace remain unchanged. Missing, null, and empty text values remain omitted. Boolean false and true and a coded value are regression cases.
+
+The standalone PHP fixture uses the repository's `OpenEMR` classes through a bounded `src/` autoloader. It declares only a synthetic `FhirServiceBase` parent so the service can load without application bootstrap, and reflection bypasses the constructor. It uses the real service, traits, mapper, and FHIR models. Its native `transformRow` case uses patient ID zero, no patient UUID, and no date; patient lookup and date conversion branches are therefore untested. The fixture calls `parseOpenEMRRecord($record, false)` and decodes `json_encode` of the returned native object. The preexisting `encode=true` array return incompatibility is outside this task.
+
+The fixture checks that the source is either the supplied original SHA256 or differs only by one replacement of the text guard with `isset($dataRecord['value_text']) && $dataRecord['value_text'] !== ''`. Its source check passes on the original; the string `0` semantic cases must fail there. The fixture emits one newline terminated JSON report and exits nonzero when a case fails. The hosted Jest adapter checks framing, schema, counts, unique case names, stderr, process result, and case results.
+
+This is an initial tests-only proposal. RED, GREEN, review, CI, all 22 requested features, and hosted gates remain pending controller execution. These tests do not establish clinical validity, runtime SQL behavior, schema or writer behavior, authorization, ordinary approval, Swedish localization, or UI behavior.
