@@ -10,13 +10,13 @@ test('native ClinicalNoteParser preserves zero narrative content', () => {
 
     expect(result.error).toBeUndefined();
     expect(result.stderr).toBe('');
-    expect(result.stdout).toMatch(/^[^\r\n]*\n$/);
+    expect(result.stdout).toMatch(/^[^\r\n]*\n(?![\s\S])/);
 
     const report = JSON.parse(result.stdout.slice(0, -1));
     expect(Object.keys(report).sort()).toEqual(['failed', 'failures', 'passed', 'total']);
-    expect(Number.isInteger(report.total) && report.total > 0).toBe(true);
-    expect(Number.isInteger(report.passed) && report.passed >= 0).toBe(true);
-    expect(Number.isInteger(report.failed) && report.failed >= 0).toBe(true);
+    expect(report.total).toBe(18);
+    expect(report.passed).toBe(18);
+    expect(report.failed).toBe(0);
     expect(Array.isArray(report.failures)).toBe(true);
     expect(report.failures.every((failure) => typeof failure === 'string' && failure.length > 0)).toBe(true);
     expect(report.total).toBe(report.passed + report.failed);
