@@ -1,0 +1,163 @@
+<?php
+
+namespace OpenEMR\Common\ORDataObject {
+    // Declaration only. The native FormSOAP constructor and parent are never invoked.
+    class ORDataObject
+    {
+    }
+}
+
+namespace {
+    require dirname(__DIR__, 2) . '/interface/forms/soap/FormSOAP.class.php';
+
+    $fields = ['subjective', 'objective', 'assessment', 'plan'];
+    $cases = [];
+
+    $freshNote = static function () use ($fields): FormSOAP {
+        $note = (new \ReflectionClass(FormSOAP::class))->newInstanceWithoutConstructor();
+        foreach ($fields as $field) {
+            $note->$field = "synthetic {$field} initial";
+        }
+        return $note;
+    };
+
+    $checkState = static function (FormSOAP $note, array $expected, string $name) use ($fields): void {
+        foreach ($fields as $field) {
+            $getter = 'get_' . $field;
+            if ($note->$getter() !== $expected[$field]) {
+                throw new \RuntimeException("{$name}: {$field} getter differs");
+            }
+            if ($note->$field !== $expected[$field]) {
+                throw new \RuntimeException("{$name}: {$field} property differs");
+            }
+        }
+    };
+
+    $runCase = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false];
+        }
+    };
+
+    $exercise = static function (string $name, string $field, $value, bool $assign) use ($freshNote, $checkState, $fields): void {
+        $note = $freshNote();
+        $expected = [];
+        foreach ($fields as $item) {
+            $expected[$item] = "synthetic {$item} initial";
+        }
+        $inputBefore = $value;
+        $setter = 'set_' . $field;
+        $note->$setter($value);
+        if ($value !== $inputBefore) {
+            throw new \RuntimeException("{$name}: input changed");
+        }
+        if ($assign) {
+            $expected[$field] = $value;
+        }
+        $checkState($note, $expected, $name);
+    };
+
+    foreach ($fields as $field) {
+        $runCase("empty-{$field}", static function () use ($exercise, $field): void {
+            $exercise("empty-{$field}", $field, '', true);
+        });
+        $runCase("zero-{$field}", static function () use ($exercise, $field): void {
+            $exercise("zero-{$field}", $field, '0', true);
+        });
+        $runCase("normal-{$field}", static function () use ($exercise, $field): void {
+            $exercise("normal-{$field}", $field, 'synthetic replacement', true);
+        });
+        $runCase("unicode-{$field}", static function () use ($exercise, $field): void {
+            $exercise("unicode-{$field}", $field, "synthetic åäö 漢字 🧪", true);
+        });
+        $runCase("newline-{$field}", static function () use ($exercise, $field): void {
+            $exercise("newline-{$field}", $field, "synthetic first\nsynthetic second\r\n", true);
+        });
+        $runCase("whitespace-{$field}", static function () use ($exercise, $field): void {
+            $exercise("whitespace-{$field}", $field, " \t \n ", true);
+        });
+        $runCase("overwrite-{$field}", static function () use ($freshNote, $checkState, $fields, $field): void {
+            $note = $freshNote();
+            $first = 'synthetic intermediate';
+            $last = '';
+            $firstBefore = $first;
+            $lastBefore = $last;
+            $setter = 'set_' . $field;
+            $note->$setter($first);
+            $note->$setter($last);
+            if ($first !== $firstBefore || $last !== $lastBefore) {
+                throw new \RuntimeException("overwrite-{$field}: input changed");
+            }
+            $expected = [];
+            foreach ($fields as $item) {
+                $expected[$item] = $item === $field ? $last : "synthetic {$item} initial";
+            }
+            $checkState($note, $expected, "overwrite-{$field}");
+        });
+    }
+
+    $ignored = [
+        'null' => null,
+        'false' => false,
+        'integer-zero' => 0,
+        'float-zero' => 0.0,
+        'empty-array' => [],
+    ];
+    foreach ($ignored as $label => $value) {
+        $runCase("ignored-{$label}", static function () use ($exercise, $fields, $value, $label): void {
+            foreach ($fields as $field) {
+                $exercise("ignored-{$label}-{$field}", $field, $value, false);
+            }
+        });
+    }
+
+    $assigned = [
+        'truthy-number' => 7,
+        'truthy-bool' => true,
+        'truthy-array' => ['synthetic' => 'value'],
+        'truthy-object' => (object) ['synthetic' => 'value'],
+    ];
+    foreach ($assigned as $label => $value) {
+        $runCase("assigned-{$label}", static function () use ($exercise, $fields, $value, $label): void {
+            foreach ($fields as $field) {
+                $exercise("assigned-{$label}-{$field}", $field, $value, true);
+            }
+        });
+    }
+
+    $runCase('exact-source-inverse', static function () use ($fields): void {
+        $path = dirname(__DIR__, 2) . '/interface/forms/soap/FormSOAP.class.php';
+        $source = file_get_contents($path);
+        if ($source === false) {
+            throw new \RuntimeException('Cannot read native FormSOAP source');
+        }
+        $correctedGuard = 'if (!empty($data) || is_string($data)) {';
+        if (substr_count($source, $correctedGuard) !== 4) {
+            throw new \RuntimeException('Expected exactly four corrected guards');
+        }
+        foreach ($fields as $field) {
+            $corrected = "    public function set_{$field}(\$data)\n    {\n        if (!empty(\$data) || is_string(\$data)) {\n            \$this->{$field} = \$data;\n        }\n    }";
+            $original = "    public function set_{$field}(\$data)\n    {\n        if (!empty(\$data)) {\n            \$this->{$field} = \$data;\n        }\n    }";
+            if (substr_count($source, $corrected) !== 1) {
+                throw new \RuntimeException("Expected one complete corrected {$field} setter");
+            }
+            $source = str_replace($corrected, $original, $source);
+        }
+        if (hash('sha256', $source) !== 'e7afff2cd8d2b63c29c172e4168f6f83abcd06cef4d82ae679e9b128dfa6d48a') {
+            throw new \RuntimeException('Inverse source does not match supplied original SHA256');
+        }
+    });
+
+    $failed = count(array_filter($cases, static function (array $case): bool {
+        return !$case['ok'];
+    }));
+    echo json_encode([
+        'passed' => count($cases) - $failed,
+        'failed' => $failed,
+        'cases' => $cases,
+    ], JSON_THROW_ON_ERROR), "\n";
+    exit($failed === 0 ? 0 : 1);
+}
