@@ -1,0 +1,276 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only. Neither this parent nor the native service is constructed.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCoverage;
+    use OpenEMR\Services\FHIR\FhirCoverageService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $cases = [];
+    $emit = static function (array $cases, int $exitCode): never {
+        $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+        $report = ['passed' => count($cases) - $failed, 'failed' => $failed, 'cases' => $cases];
+        echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        exit($exitCode);
+    };
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $run = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    };
+
+    try {
+        $root = dirname(__DIR__, 2);
+        $fhirPath = $root . '/src/Services/FHIR/FhirCoverageService.php';
+        $source = file_get_contents($fhirPath);
+        if ($source === false) {
+            throw new \RuntimeException('Native Coverage source unavailable');
+        }
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        });
+        $GLOBALS['site_id'] = 'default';
+        $GLOBALS['date_display_format'] = 0;
+        $GLOBALS['gbl_time_zone'] = 'UTC';
+        date_default_timezone_set('UTC');
+        $service = (new \ReflectionClass(FhirCoverageService::class))->newInstanceWithoutConstructor();
+    } catch (\Throwable $error) {
+        $emit([['name' => 'bootstrap', 'ok' => false, 'error' => $error->getMessage()]], 2);
+    }
+
+    $oldGuard = "if (!empty(\$dataRecord['policy_number'])) {";
+    $newGuard = "if (!empty(\$dataRecord['policy_number']) || (\$dataRecord['policy_number'] ?? null) === '0') {";
+    $originalHash = 'f3bab1661280d995102f9675a23095a74026276069df7832a9bc74bad4e6b15a';
+    $unwrap = static function (mixed $value): mixed {
+        while (is_object($value) && method_exists($value, 'getValue')) {
+            $value = $value->getValue();
+        }
+        return $value;
+    };
+    $row = [
+        'uuid' => '11111111-1111-4111-8111-111111111111',
+        'puuid' => '22222222-2222-4222-8222-222222222222',
+        'insureruuid' => '33333333-3333-4333-8333-333333333333',
+        'policy_number' => 'MEMBER-228',
+        'policy_type' => 'POLICY-228',
+        'subscriber_relationship' => 'self',
+        'date' => '2020-01-02 03:04:05',
+        'date_end' => '2099-12-31 23:59:59',
+        'group_number' => 'GROUP-228',
+        'plan_name' => 'PLAN-228',
+        'type' => 'primary',
+        'copay' => '25.50',
+    ];
+    $map = static function (array $record) use ($service, $check): array {
+        $before = $record;
+        $object = $service->parseOpenEMRRecord($record, false);
+        $check($object instanceof FHIRCoverage, 'Native mapper did not return FHIRCoverage');
+        $objectJson = json_decode(json_encode($object, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $encoded = $service->parseOpenEMRRecord($record, true);
+        $check(is_string($encoded), 'Encoded mode did not return a string');
+        $decoded = json_decode($encoded, true, 512, JSON_THROW_ON_ERROR);
+        $check($decoded === $objectJson, 'Object and encoded modes differ');
+        $check($record === $before, 'Mapper mutated the input');
+        return [$object, $decoded];
+    };
+    $assertPolicy = static function (array $record, ?string $expected) use ($map, $check, $unwrap): array {
+        [$object, $json] = $map($record);
+        $identifiers = $object->getIdentifier();
+        $check(is_array($identifiers), 'Native identifiers are not an array');
+        $check(count($identifiers) === ($expected === null ? 1 : 2), 'Native identifier count mismatch');
+        $check(($json['resourceType'] ?? null) === 'Coverage', 'Resource type changed');
+        $check(count($json['identifier'] ?? []) === count($identifiers), 'Encoded identifier count mismatch');
+        if ($expected !== null) {
+            $member = $identifiers[0];
+            $coding = $member->getType()->getCoding()[0];
+            $check($unwrap($member->getValue()) === $expected, 'Native member identifier value mismatch');
+            $check($unwrap($coding->getCode()) === 'MB', 'Native member code mismatch');
+            $check($unwrap($coding->getSystem()) === 'http://terminology.hl7.org/CodeSystem/v2-0203', 'Native member system mismatch');
+            $check($unwrap($coding->getDisplay()) === 'Member Number', 'Native member display mismatch');
+            $check(($json['identifier'][0]['value'] ?? null) === $expected, 'Encoded member identifier value mismatch');
+            $check(($json['identifier'][0]['type']['coding'][0]['code'] ?? null) === 'MB', 'Encoded member code mismatch');
+            $check(($json['identifier'][0]['type']['coding'][0]['system'] ?? null) === 'http://terminology.hl7.org/CodeSystem/v2-0203', 'Encoded member system mismatch');
+            $check(($json['identifier'][0]['type']['coding'][0]['display'] ?? null) === 'Member Number', 'Encoded member display mismatch');
+            $check($object->getSubscriberId() !== null, 'Native subscriberId missing');
+            $check($unwrap($object->getSubscriberId()) === $expected, 'Native subscriberId mismatch');
+            $check(($json['subscriberId'] ?? null) === $expected, 'Encoded subscriberId mismatch');
+        } else {
+            $check($object->getSubscriberId() === null, 'Native subscriberId should be absent');
+            $check(!array_key_exists('subscriberId', $json), 'Encoded subscriberId should be absent');
+        }
+        $policyType = $identifiers[count($identifiers) - 1];
+        $check($unwrap($policyType->getSystem()) === 'http://openemr.org/fhir/policy-type', 'Native policy type system changed');
+        $check($unwrap($policyType->getValue()) === 'POLICY-228', 'Native policy type value changed');
+        $last = $json['identifier'][count($identifiers) - 1];
+        $check(($last['system'] ?? null) === 'http://openemr.org/fhir/policy-type', 'Encoded policy type system changed');
+        $check(($last['value'] ?? null) === 'POLICY-228', 'Encoded policy type value changed');
+        return $json;
+    };
+
+    $run('guard_two_occurrences', static function () use ($source, $oldGuard, $newGuard, $check): void {
+        $check(substr_count($source, $newGuard) === 2, 'Both corrected guards are required');
+        $check(substr_count($source, $oldGuard) === 0, 'An old guard remains');
+    });
+    $run('guard_exact_inverse_sha256', static function () use ($source, $oldGuard, $newGuard, $originalHash, $check): void {
+        $check(hash('sha256', $source) !== $originalHash, 'Original source cannot pass the inverse check');
+        $check(substr_count($source, $newGuard) === 2, 'Exactly two corrected guards are required');
+        $check(hash('sha256', str_replace($newGuard, $oldGuard, $source)) === $originalHash, 'Reversing both guards did not restore the supplied original SHA-256');
+    });
+    $run('native_declarations', static function () use ($root, $fhirPath, $check): void {
+        $paths = [
+            FhirCoverageService::class => 'src/Services/FHIR/FhirCoverageService.php',
+            FHIRCoverage::class => 'src/FHIR/R4/FHIRDomainResource/FHIRCoverage.php',
+            'OpenEMR\\Services\\FHIR\\UtilsService' => 'src/Services/FHIR/UtilsService.php',
+            'OpenEMR\\Common\\Utils\\ValidationUtils' => 'src/Common/Utils/ValidationUtils.php',
+            'OpenEMR\\Services\\FHIR\\IPatientCompartmentResourceService' => 'src/Services/FHIR/IPatientCompartmentResourceService.php',
+            'OpenEMR\\Services\\FHIR\\IResourceUSCIGProfileService' => 'src/Services/FHIR/IResourceUSCIGProfileService.php',
+            'OpenEMR\\Services\\FHIR\\IFhirExportableResourceService' => 'src/Services/FHIR/IFhirExportableResourceService.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\FhirServiceBaseEmptyTrait' => 'src/Services/FHIR/Traits/FhirServiceBaseEmptyTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\BulkExportSupportAllOperationsTrait' => 'src/Services/FHIR/Traits/BulkExportSupportAllOperationsTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\FhirBulkExportDomainResourceTrait' => 'src/Services/FHIR/Traits/FhirBulkExportDomainResourceTrait.php',
+            'OpenEMR\\Services\\FHIR\\Traits\\VersionedProfileTrait' => 'src/Services/FHIR/Traits/VersionedProfileTrait.php',
+        ];
+        foreach ($paths as $class => $relative) {
+            $reflection = new \ReflectionClass($class);
+            $check(realpath((string) $reflection->getFileName()) === realpath($root . '/' . $relative), 'Unexpected native path for ' . $class);
+        }
+        $method = new \ReflectionMethod(FhirCoverageService::class, 'parseOpenEMRRecord');
+        $check(realpath((string) $method->getFileName()) === realpath($fhirPath), 'Mapper method is not native');
+    });
+    $run('legacy_caller_policy_filter', static function () use ($root, $check): void {
+        $text = file_get_contents($root . '/interface/new/new_comprehensive_save.php');
+        $check(is_string($text), 'Legacy caller unavailable');
+        $start = strpos($text, 'newInsuranceData(');
+        $check($start !== false, 'Legacy newInsuranceData call missing');
+        $call = substr($text, $start, 2500);
+        $check(str_contains($call, 'filter_input(INPUT_POST, "i1policy_number")'), 'Legacy caller does not forward i1policy_number');
+        $check((bool) preg_match('/newInsuranceData\(\s*\$pid,\s*"primary",\s*filter_input\(INPUT_POST, "i1provider"\),\s*filter_input\(INPUT_POST, "i1policy_number"\)/', $call), 'Policy input is not the native policy argument');
+    });
+    $run('legacy_writer_bound_policy', static function () use ($root, $check): void {
+        $text = file_get_contents($root . '/library/patient.inc.php');
+        $check(is_string($text), 'Legacy writer unavailable');
+        $start = strpos($text, 'function newInsuranceData(');
+        $check($start !== false, 'newInsuranceData declaration missing');
+        $next = strpos($text, "\nfunction ", $start + 1);
+        $body = substr($text, $start, ($next === false ? strlen($text) : $next) - $start);
+        $check((bool) preg_match('/function newInsuranceData\(\s*\$pid,\s*\$type\s*=\s*"",\s*\$provider\s*=\s*"",\s*\$policy_number\s*=\s*""/', $body), 'Policy argument signature changed');
+        $check((bool) preg_match('/INSERT INTO `insurance_data` SET `type` = \?,\s*`provider` = \?,\s*`policy_number` = \?/', $body), 'Policy SQL placeholder changed');
+        $check((bool) preg_match('/\[\s*\$type,\s*\$provider,\s*\$policy_number,/', $body), 'Policy SQL bind changed');
+        $check(!preg_match('/(?:empty|trim)\s*\(\s*\$policy_number\s*\)|CoverageValidator/', $body), 'Legacy writer adds a policy filter or validator');
+    });
+    $run('insurance_search_projection', static function () use ($root, $check): void {
+        $text = file_get_contents($root . '/src/Services/InsuranceService.php');
+        $check(is_string($text), 'InsuranceService unavailable');
+        $start = strpos($text, 'public function search(array $search, $isAndCondition = true)');
+        $check($start !== false, 'Native search method missing');
+        $end = strpos($text, 'return $processingResult;', $start);
+        $check($end !== false, 'Native search result boundary missing');
+        $body = substr($text, $start, $end - $start);
+        $check(str_contains($body, 'SELECT `insurance_data`.*,'), 'Stored row projection missing');
+        $check(str_contains($body, '$this->createResultRecordFromDatabaseResult($row)'), 'Result record conversion missing');
+        $check(str_contains($body, '$processingResult->addData($resultRecord)'), 'Converted record not returned');
+    });
+    $run('stored_policy_schema', static function () use ($root, $check): void {
+        $schema = file_get_contents($root . '/sql/database.sql');
+        $check(is_string($schema), 'Native schema unavailable');
+        $start = strpos($schema, 'CREATE TABLE `insurance_data` (');
+        $check($start !== false, 'insurance_data table missing');
+        $end = strpos($schema, ') ENGINE=', $start);
+        $check($end !== false, 'insurance_data definition incomplete');
+        $table = substr($schema, $start, $end - $start);
+        $check((bool) preg_match('/`policy_number`\s+varchar\s*\(\s*\d+\s*\)/i', $table), 'Stored policy_number is not varchar');
+    });
+
+    $policyCases = [
+        'stored_string_zero' => ['0', '0'],
+        'ordinary_policy' => ['MEMBER-228', 'MEMBER-228'],
+        'leading_zeroes' => ['0007', '0007'],
+        'padded_policy' => [' 07 ', ' 07 '],
+        'unicode_policy' => ['MÉD-七', 'MÉD-七'],
+        'single_letter' => ['A', 'A'],
+        'missing_policy' => [null, null],
+        'null_policy' => [null, null],
+        'empty_policy' => ['', null],
+        'false_policy' => [false, null],
+        'integer_zero_policy' => [0, null],
+    ];
+    foreach ($policyCases as $name => [$value, $expected]) {
+        $run($name, static function () use ($row, $name, $value, $expected, $assertPolicy): void {
+            $record = $row;
+            if ($name === 'missing_policy') {
+                unset($record['policy_number']);
+            } else {
+                $record['policy_number'] = $value;
+            }
+            $assertPolicy($record, $expected);
+        });
+    }
+    $run('stored_zero_subscriber_independent', static function () use ($row, $map, $check, $unwrap): void {
+        [$object, $json] = $map(['policy_number' => '0'] + $row);
+        $check($unwrap($object->getSubscriberId()) === '0', 'Native subscriberId lost stored string zero');
+        $check(($json['subscriberId'] ?? null) === '0', 'Encoded subscriberId lost stored string zero');
+    });
+    $run('unrelated_resource_fields', static function () use ($row, $assertPolicy, $check): void {
+        $baseline = $assertPolicy($row, 'MEMBER-228');
+        $zero = $assertPolicy(['policy_number' => '0'] + $row, '0');
+        unset($baseline['subscriberId'], $zero['subscriberId']);
+        array_shift($baseline['identifier']);
+        array_shift($zero['identifier']);
+        $check($baseline === $zero, 'A field outside the member identifier and subscriberId changed');
+        $check(($zero['id'] ?? null) === $row['uuid'], 'Resource id changed');
+        $check(($zero['status'] ?? null) === 'active', 'Status changed');
+        $check(($zero['beneficiary']['reference'] ?? null) === 'Patient/' . $row['puuid'], 'Beneficiary changed');
+        $check(($zero['payor'][0]['reference'] ?? null) === 'Organization/' . $row['insureruuid'], 'Payor changed');
+        $check(($zero['order'] ?? null) === 1, 'Billing order changed');
+        $check(($zero['relationship']['coding'][0]['code'] ?? null) === 'self', 'Relationship changed');
+        $check(($zero['class'][0]['value'] ?? null) === 'GROUP-228', 'Group changed');
+        $check(($zero['class'][1]['value'] ?? null) === 'PLAN-228', 'Plan changed');
+        $check(($zero['costToBeneficiary'][0]['valueMoney']['currency'] ?? null) === 'USD', 'Copay currency changed');
+        $check(($zero['costToBeneficiary'][0]['valueMoney']['value'] ?? null) == 25.5, 'Copay changed');
+        $check(($zero['meta']['versionId'] ?? null) === '1', 'Meta version changed');
+        $check(($zero['meta']['profile'][0] ?? null) === FhirCoverageService::USCGI_PROFILE_URI, 'Meta profile changed');
+        $check(($zero['meta']['lastUpdated'] ?? null) === '2020-01-02T03:04:05+00:00', 'Meta timestamp changed');
+    });
+    $run('optional_policy_group_plan', static function () use ($row, $map, $check): void {
+        $record = ['policy_number' => '0', 'policy_type' => '', 'group_number' => '', 'plan_name' => ''] + $row;
+        [, $json] = $map($record);
+        $check(count($json['identifier'] ?? []) === 1, 'Empty policy type added an identifier');
+        $check(($json['identifier'][0]['value'] ?? null) === '0', 'Member identifier lost with empty optional fields');
+        $check(($json['subscriberId'] ?? null) === '0', 'SubscriberId lost with empty optional fields');
+        $check(!array_key_exists('class', $json), 'Empty group or plan added a class');
+    });
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    $emit($cases, $failed === 0 ? 0 : 1);
+}
