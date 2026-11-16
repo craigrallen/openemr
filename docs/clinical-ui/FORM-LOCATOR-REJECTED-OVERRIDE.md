@@ -1,6 +1,6 @@
 # FormLocator rejected override fixture
 
-This tests the bounded native `FormLocator` fallback correction for OPEMR-256. It is bound to the supplied repository HEAD `09b29da7771aea334ed5745e058751157af980d7` as controller-provided context. This document and the fixture do not independently attest to HEAD or runtime state.
+This tests the bounded native `FormLocator` fallback correction for OPEMR-256. The original source came from historical base HEAD `09b29da7771aea334ed5745e058751157af980d7`; that value is provenance, not the current candidate HEAD. The controller freezes the current candidate and its four artifact hashes separately. This document and the fixture do not independently attest to HEAD or runtime state.
 
 The product edit is one assignment in `locateFile`, immediately after the completed rejection logger call inside its `else` block, at the existing 16-space indentation: `$finalPath = $initialFilename;`. The rejected override is discarded, so the native fallback is returned, cached, and checked for existence. Every other product byte remains unchanged. The fixture requires one exact changed fragment, removes only that assignment, and compares the reconstructed source to the supplied original SHA256 `93939ac393ea92cb8f9e66ca6d596115c42a326fbd8659798d504522fc7f23b8`.
 
