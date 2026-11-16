@@ -1,8 +1,8 @@
 # OPEMR-260: insurance Organization narrative
 
-## Proposed change
+## Change and tests-first evidence
 
-The future product patch has one operand: in `src/Services/FHIR/Organization/FhirOrganizationInsuranceService.php`, replace `$narrativeText` in the narrative `div` concatenation with `htmlspecialchars($narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8')`. Keep the structured `name` assignment and every other mapper operation unchanged. The strict inverse case requires exactly one corrected full line and checks that restoring the original line yields SHA-256 `7f3ac4e813b0754545b706ecc99c9f43ba0e86f98d5dd1ffe3657b869670c2e5`. The original source intentionally fails that case and the escaping cases.
+The product patch changes one operand: in `src/Services/FHIR/Organization/FhirOrganizationInsuranceService.php`, `$narrativeText` in the narrative `div` concatenation is now `htmlspecialchars($narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8')`. Keep the structured `name` assignment and every other mapper operation unchanged. The strict inverse case requires exactly one corrected full line and checks that restoring the original line yields SHA-256 `7f3ac4e813b0754545b706ecc99c9f43ba0e86f98d5dd1ffe3657b869670c2e5`. The original source intentionally fails that case and the escaping cases.
 
 The native path is `ins_search` with `FILTER_UNSAFE_RAW` `form_name`, then `buildSaveDataFromForm`, then a bound `InsuranceCompanyService` insert or update. Search selects `i.name` and forwards the row unchanged to the FHIR mapper. This tests the mapper output contract; it does not write through that path.
 
@@ -14,7 +14,9 @@ The fixture checks literal XHTML strings and parses each present narrative with 
 
 The remaining cases check active and inactive state, identifiers, opaque telecom values, address fields, optional field omission, unchanged input, and unchanged non-name resource fields. The fixture emits exactly one JSON report line with `passed`, `failed`, and `cases`; it exits 0 only when all cases pass, 1 for case failures, and 2 for bootstrap failure. The Jest test invokes PHP directly with a 15-second timeout and checks the complete exact case-name set and report shape.
 
-Evidence remains pending controller materialization, syntax checks, and hosted execution. These tests are not a full 22-case suite, UI or demo evidence, Swedish clinical acceptance, authenticated exploit evidence, a security or persistence claim, or proof about SQL behavior. They do not exercise inbound `parseFhirResource`; its direct-name getter contract is unrelated here. XML control characters and malformed structured JSON remain limitations outside this proposed operand.
+Controller execution against the unchanged original source at tests-only commit `e518ca92` produced genuine RED: 12 passed, 8 failed (seven escaping assertions and the strict inverse), exit 1 and empty stderr. After the coding-CLI minimal product operand, all 20 cases passed, exit 0 and empty stderr. PHP syntax, JavaScript syntax and `git diff --check` passed. The controller tightened the tests-only adapter to start-anchored single-line JSON framing before RED; no local Jest or emulation ran. Independent frozen-content review and hosted exact-head acceptance are separate gates, not claimed here. Address values are synthetic mapper inputs, not evidence that SQL projects every address key; no writer/query or inbound parser was executed.
+
+These tests are not proof of all 22 original features, UI or demo evidence, Swedish clinical acceptance, authenticated exploit evidence, a security or persistence claim, or proof about SQL behavior. They do not exercise inbound `parseFhirResource`; its direct-name getter contract is unrelated here. XML control characters and malformed structured JSON remain limitations outside this proposed operand.
 
 ## Handoff limits
 
