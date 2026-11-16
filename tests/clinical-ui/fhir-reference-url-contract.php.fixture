@@ -40,6 +40,8 @@ $cases = [
         }
         $normalization = "        \$this->fhirBaseURL = rtrim((string) \$this->fhirBaseURL, '/') . '/';\n";
         $assignment = "        \$this->baseUrlLength = strlen((string) \$this->fhirBaseURL);";
+        $typedProperty = '    private int $baseUrlLength;';
+        $originalProperty = '    private $baseUrlLength;';
         $newCondition = 'if (!str_starts_with((string) $url, (string) $this->fhirBaseURL))';
         $oldCondition = 'if (!str_contains((string) $url, (string) $this->fhirBaseURL))';
         $newExtraction = '$relativeUrl = substr((string) $url, $this->baseUrlLength);';
@@ -47,10 +49,12 @@ $cases = [
         foreach ([$normalization, $newCondition, $newExtraction] as $fragment) {
             checkSame(substr_count($source, $fragment), 1);
         }
+        checkSame(substr_count($source, $typedProperty), 1);
         checkSame(str_contains($source, $normalization . $assignment), true);
         $inverse = str_replace($normalization, '', $source);
         $inverse = str_replace($newCondition, $oldCondition, $inverse);
         $inverse = str_replace($newExtraction, $oldExtraction, $inverse);
+        $inverse = str_replace($typedProperty, $originalProperty, $inverse);
         checkSame(hash('sha256', $inverse), '3669ffddef677c453ededb00eeb43190beec02d2a53d9bedd14586b8ed2f1efd');
     },
     'base_no_slash_patient_suffix' => static fn() => checkSame((new FhirUrlResolver($base))->getRelativeUrl($base . '/Patient/opaque-id'), 'Patient/opaque-id'),
