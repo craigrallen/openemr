@@ -84,7 +84,7 @@ class FhirAllergyIntoleranceServiceQueryTest extends TestCase
         }
     }
 
-    private static function getReferenceURL($reference): string
+    private static function getReferenceURL(string $reference): string
     {
         $url = self::getFhirUrl() . "/" . $reference;
         return $url;
