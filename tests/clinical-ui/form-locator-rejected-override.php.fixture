@@ -1,0 +1,357 @@
+<?php
+
+namespace Symfony\Contracts\EventDispatcher {
+    class Event
+    {
+    }
+}
+
+namespace Psr\Log {
+    interface LoggerInterface
+    {
+        public function error($message, array $context = []): void;
+    }
+}
+
+namespace OpenEMR\Core {
+    class OEGlobalsBag
+    {
+        private static ?self $instance = null;
+
+        public function __construct(private object $kernel)
+        {
+        }
+
+        public static function setInstance(self $instance): void
+        {
+            self::$instance = $instance;
+        }
+
+        public static function getInstance(): self
+        {
+            if (self::$instance === null) {
+                throw new \LogicException('Synthetic globals were not configured');
+            }
+            return self::$instance;
+        }
+
+        public function getProjectDir(): string
+        {
+            return '/synthetic-root';
+        }
+
+        public function getKernel(): object
+        {
+            return $this->kernel;
+        }
+    }
+
+    class ModulesApplication
+    {
+        public static bool $approved = false;
+        public static array $calls = [];
+
+        public static function isSafeModuleFileForInclude(string $path): bool
+        {
+            self::$calls[] = $path;
+            return self::$approved;
+        }
+    }
+}
+
+namespace OpenEMR\Common\Forms {
+    function file_exists(string $path): bool
+    {
+        \FixtureState::$probes[] = $path;
+        return \FixtureState::$existing[$path] ?? \FixtureState::$defaultExists;
+    }
+}
+
+namespace {
+    use OpenEMR\Common\Forms\FormLocator;
+    use OpenEMR\Core\ModulesApplication;
+    use OpenEMR\Core\OEGlobalsBag;
+    use OpenEMR\Events\Encounter\LoadEncounterFormFilterEvent;
+    use Psr\Log\LoggerInterface;
+
+    function check_file_dir_name(string $name): void
+    {
+        if (!preg_match('/\A[A-Za-z0-9_]+\z/D', $name)) {
+            throw new InvalidArgumentException('Invalid synthetic form name');
+        }
+    }
+
+    final class FixtureState
+    {
+        public static array $probes = [];
+        public static array $existing = [];
+        public static bool $defaultExists = true;
+
+        public static function reset(): void
+        {
+            self::$probes = [];
+            self::$existing = [];
+            self::$defaultExists = true;
+            ModulesApplication::$approved = false;
+            ModulesApplication::$calls = [];
+        }
+    }
+
+    final class RecordingLogger implements LoggerInterface
+    {
+        public array $errors = [];
+
+        public function error($message, array $context = []): void
+        {
+            $this->errors[] = [$message, $context];
+        }
+    }
+
+    final class SyntheticDispatcher
+    {
+        public array $dispatches = [];
+        public ?string $replacementPage = null;
+
+        public function dispatch(object $event, ?string $eventName = null): object
+        {
+            $this->dispatches[] = [
+                'name' => $eventName,
+                'form' => $event->getFormName(),
+                'dir' => $event->getDir(),
+                'page' => $event->getPageName(),
+                'layout' => $event->isLayoutBasedForm(),
+            ];
+            if ($this->replacementPage !== null) {
+                $event->setPageName($this->replacementPage);
+            }
+            return $event;
+        }
+    }
+
+    final class SyntheticKernel
+    {
+        public function __construct(private SyntheticDispatcher $dispatcher)
+        {
+        }
+
+        public function getEventDispatcher(): SyntheticDispatcher
+        {
+            return $this->dispatcher;
+        }
+    }
+
+    $root = dirname(__DIR__, 2);
+    require $root . '/src/Events/Encounter/LoadEncounterFormFilterEvent.php';
+    require $root . '/src/Common/Forms/FormLocator.php';
+
+    function setupLocator(?string $replacementPage = null, bool $approved = false): array
+    {
+        FixtureState::reset();
+        ModulesApplication::$approved = $approved;
+        $dispatcher = new SyntheticDispatcher();
+        $dispatcher->replacementPage = $replacementPage;
+        OEGlobalsBag::setInstance(new OEGlobalsBag(new SyntheticKernel($dispatcher)));
+        $logger = new RecordingLogger();
+        return [new FormLocator($logger), $dispatcher, $logger];
+    }
+
+    function same(mixed $expected, mixed $actual): void
+    {
+        if ($expected !== $actual) {
+            throw new RuntimeException('Expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function nativePath(string $form, string $file): string
+    {
+        $dir = str_starts_with($form, 'LBF') || str_starts_with($form, 'LBT') ? 'LBF' : $form;
+        return '/synthetic-root/interface/forms/' . $dir . '/' . $file;
+    }
+
+    function rejectionError(string $file, string $form): array
+    {
+        return [
+            'Module attempted to load a file outside of its directory: {file} for form {formdir}',
+            ['file' => $file, 'formdir' => $form],
+        ];
+    }
+
+    function missingError(string $file, string $form): array
+    {
+        return [
+            'Form {formdir} is missing report.php file at {file}',
+            ['file' => $file, 'formdir' => $form],
+        ];
+    }
+
+    $cases = [];
+    $run = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true];
+        } catch (Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false];
+        }
+    };
+
+    $run('native view path', static function (): void {
+        [$locator, $dispatcher, $logger] = setupLocator();
+        same(nativePath('vitals', 'view.php'), $locator->findFile('vitals', 'view.php', 'view'));
+        same([], ModulesApplication::$calls);
+        same([], $logger->errors);
+    });
+
+    $run('native new path', static function (): void {
+        [$locator] = setupLocator();
+        same(nativePath('vitals', 'new.php'), $locator->findFile('vitals', 'new.php', 'new'));
+        same([nativePath('vitals', 'new.php')], FixtureState::$probes);
+    });
+
+    $run('native report path', static function (): void {
+        [$locator] = setupLocator();
+        same(nativePath('vitals', 'report.php'), $locator->findFile('vitals', 'report.php', 'report'));
+        same([nativePath('vitals', 'report.php')], FixtureState::$probes);
+    });
+
+    $run('LBF native root and flag', static function (): void {
+        [$locator, $dispatcher] = setupLocator();
+        same(nativePath('LBF_intake', 'view.php'), $locator->findFile('LBF_intake', 'view.php', 'view'));
+        same('/synthetic-root/interface/forms/LBF/', $dispatcher->dispatches[0]['dir']);
+        same(true, $dispatcher->dispatches[0]['layout']);
+    });
+
+    $run('LBT native root and flag', static function (): void {
+        [$locator, $dispatcher] = setupLocator();
+        same(nativePath('LBT_panel', 'new.php'), $locator->findFile('LBT_panel', 'new.php', 'new'));
+        same('/synthetic-root/interface/forms/LBF/', $dispatcher->dispatches[0]['dir']);
+        same(true, $dispatcher->dispatches[0]['layout']);
+    });
+
+    $run('dispatch name payload and ordinary flag', static function (): void {
+        [$locator, $dispatcher] = setupLocator();
+        $locator->findFile('vitals', 'view.php', 'view');
+        same([[
+            'name' => LoadEncounterFormFilterEvent::EVENT_NAME,
+            'form' => 'vitals',
+            'dir' => '/synthetic-root/interface/forms/vitals/',
+            'page' => 'view.php',
+            'layout' => false,
+        ]], $dispatcher->dispatches);
+    });
+
+    $run('approved override returned', static function (): void {
+        [$locator, $dispatcher, $logger] = setupLocator('approved.php', true);
+        $approved = nativePath('vitals', 'approved.php');
+        same($approved, $locator->findFile('vitals', 'view.php', 'view'));
+        same([$approved], ModulesApplication::$calls);
+        same([], FixtureState::$probes);
+        same([], $logger->errors);
+    });
+
+    $run('approved override cached', static function (): void {
+        [$locator, $dispatcher] = setupLocator('approved.php', true);
+        $approved = nativePath('vitals', 'approved.php');
+        same($approved, $locator->findFile('vitals', 'view.php', 'view'));
+        $dispatcher->replacementPage = 'later.php';
+        same($approved, $locator->findFile('vitals', 'view.php', 'view'));
+        same(1, count($dispatcher->dispatches));
+        same([$approved], ModulesApplication::$calls);
+    });
+
+    $run('rejected override falls back', static function (): void {
+        [$locator] = setupLocator('../escape.php');
+        same(nativePath('vitals', 'view.php'), $locator->findFile('vitals', 'view.php', 'view'));
+        same([nativePath('vitals', '../escape.php')], ModulesApplication::$calls);
+    });
+
+    $run('rejected fallback cached', static function (): void {
+        [$locator, $dispatcher] = setupLocator('../escape.php');
+        $fallback = nativePath('vitals', 'view.php');
+        same($fallback, $locator->findFile('vitals', 'view.php', 'view'));
+        $dispatcher->replacementPage = 'later.php';
+        same($fallback, $locator->findFile('vitals', 'view.php', 'view'));
+        same(1, count($dispatcher->dispatches));
+        same(1, count(ModulesApplication::$calls));
+    });
+
+    $run('rejected path never probed', static function (): void {
+        [$locator] = setupLocator('../escape.php');
+        $locator->findFile('vitals', 'view.php', 'view');
+        same([nativePath('vitals', 'view.php')], FixtureState::$probes);
+    });
+
+    $run('rejection log exact path and form', static function (): void {
+        [$locator, $dispatcher, $logger] = setupLocator('../escape.php');
+        $locator->findFile('vitals', 'view.php', 'view');
+        same([rejectionError(nativePath('vitals', '../escape.php'), 'vitals')], $logger->errors);
+    });
+
+    $run('missing fallback logs native path', static function (): void {
+        [$locator, $dispatcher, $logger] = setupLocator('../escape.php');
+        FixtureState::$defaultExists = false;
+        $locator->findFile('vitals', 'view.php', 'view');
+        same([
+            rejectionError(nativePath('vitals', '../escape.php'), 'vitals'),
+            missingError(nativePath('vitals', 'view.php'), 'vitals'),
+        ], $logger->errors);
+        same([nativePath('vitals', 'view.php')], FixtureState::$probes);
+    });
+
+    $run('missing unchanged native logs', static function (): void {
+        [$locator, $dispatcher, $logger] = setupLocator();
+        FixtureState::$defaultExists = false;
+        same(nativePath('vitals', 'report.php'), $locator->findFile('vitals', 'report.php', 'report'));
+        same([missingError(nativePath('vitals', 'report.php'), 'vitals')], $logger->errors);
+    });
+
+    $run('cache separates forms', static function (): void {
+        [$locator, $dispatcher] = setupLocator();
+        same(nativePath('vitals', 'view.php'), $locator->findFile('vitals', 'view.php', 'view'));
+        same(nativePath('history', 'view.php'), $locator->findFile('history', 'view.php', 'view'));
+        same(2, count($dispatcher->dispatches));
+    });
+
+    $run('cache separates pages', static function (): void {
+        [$locator, $dispatcher] = setupLocator('first.php', true);
+        same(nativePath('vitals', 'first.php'), $locator->findFile('vitals', 'view.php', 'view'));
+        $dispatcher->replacementPage = 'second.php';
+        same(nativePath('vitals', 'second.php'), $locator->findFile('vitals', 'view.php', 'new'));
+        same(2, count($dispatcher->dispatches));
+    });
+
+    $run('cache separates files', static function (): void {
+        [$locator, $dispatcher] = setupLocator();
+        same(nativePath('vitals', 'view.php'), $locator->findFile('vitals', 'view.php', 'view'));
+        same(nativePath('vitals', 'new.php'), $locator->findFile('vitals', 'new.php', 'view'));
+        same(2, count($dispatcher->dispatches));
+    });
+
+    $run('single fragment and original source SHA256', static function () use ($root): void {
+        $source = file_get_contents($root . '/src/Common/Forms/FormLocator.php');
+        if ($source === false) {
+            throw new RuntimeException('Cannot read native source');
+        }
+        $changed = <<<'FRAGMENT'
+        if ($finalPath != $initialFilename) {
+            if (ModulesApplication::isSafeModuleFileForInclude($finalPath)) {
+                return $finalPath;
+            } else {
+                $this->logger->error(
+                    "Module attempted to load a file outside of its directory: {file} for form {formdir}",
+                    ['file' => $event->getFormIncludePath(), 'formdir' => $event->getFormName()]
+                );
+                $finalPath = $initialFilename;
+            }
+        }
+        if (!file_exists($finalPath)) {
+FRAGMENT;
+        $original = str_replace("                \$finalPath = \$initialFilename;\n", '', $changed);
+        same(1, substr_count($source, $changed));
+        $restored = str_replace($changed, $original, $source);
+        same('93939ac393ea92cb8f9e66ca6d596115c42a326fbd8659798d504522fc7f23b8', hash('sha256', $restored));
+    });
+
+    $failed = count(array_filter($cases, static fn (array $case): bool => !$case['ok']));
+    echo json_encode(['passed' => count($cases) - $failed, 'failed' => $failed, 'cases' => $cases], JSON_THROW_ON_ERROR), "\n";
+    exit($failed === 0 ? 0 : 1);
+}
