@@ -164,7 +164,7 @@ class FhirClinicalNotesService extends FhirServiceBase implements IPatientCompar
             }
         }
 
-        if (!empty($dataRecord['activity'])) {
+        if (isset($dataRecord['activity'])) {
             if ($dataRecord['activity'] == ClinicalNotesService::ACTIVITY_ACTIVE) {
                 $docReference->setStatus("current");
             } else {
