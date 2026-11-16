@@ -137,7 +137,7 @@ class FhirProcedureSurgeryService extends FhirServiceBase implements IPatientCom
                 $description = $codesService->lookup_code_description($code);
                 $description = !empty($description) ? $description : null; // we can get an "" string back from lookup
                 $system = $codesService->getSystemForCode($code);
-                $diagnosisCode->addCoding(UtilsService::createCoding($code, $description, $system));
+                $diagnosisCode->addCoding(UtilsService::createCoding($codesService->parseCode($code)['code'], $description, $system));
             }
             $procedureResource->setCode($diagnosisCode);
         }
