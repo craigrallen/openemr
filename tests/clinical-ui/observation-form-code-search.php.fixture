@@ -1,0 +1,310 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Psr\Log {
+    // No logging is exercised; the absent vendor trait is a declaration-only seam.
+    trait LoggerAwareTrait
+    {
+    }
+}
+
+namespace OpenEMR\Services {
+    // Native BaseService includes SQL-backed code_types at file load. Not exercised.
+    class BaseService
+    {
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    // The native parent needs application bootstrap. No parent methods are exercised here.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\Services\CodeTypesService;
+    use OpenEMR\Services\FHIR\FhirCodeSystemConstants;
+    use OpenEMR\Services\FHIR\Observation\FhirObservationObservationFormService;
+    use OpenEMR\Services\ObservationService;
+    use OpenEMR\Services\Search\BasicSearchField;
+    use OpenEMR\Services\Search\CompositeSearchField;
+    use OpenEMR\Services\Search\SearchFieldType;
+    use OpenEMR\Services\Search\TokenSearchField;
+    use OpenEMR\Services\Search\TokenSearchValue;
+    use OpenEMR\Validators\ProcessingResult;
+
+    function report(array $cases, int $exit): never
+    {
+        $passed = count(array_filter($cases, static fn (array $case): bool => $case['ok']));
+        echo json_encode(['passed' => $passed, 'failed' => count($cases) - $passed, 'cases' => array_values($cases)], JSON_THROW_ON_ERROR), "\n";
+        exit($exit);
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    $root = dirname(__DIR__, 2);
+    try {
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new \ErrorException($message, 0, $severity);
+        });
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (str_starts_with($class, $prefix)) {
+                $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+                if (is_file($file)) {
+                    require_once $file;
+                }
+            }
+        });
+        check(class_exists(FhirObservationObservationFormService::class), 'Native observation form service unavailable');
+        check(class_exists(ObservationService::class), 'Native observation service unavailable');
+        check(class_exists(CodeTypesService::class), 'Native code type service unavailable');
+        check(class_exists(TokenSearchField::class) && class_exists(TokenSearchValue::class), 'Native token fields unavailable');
+        check(class_exists(CompositeSearchField::class) && class_exists(ProcessingResult::class), 'Native composite or result unavailable');
+    } catch (\Throwable $error) {
+        report([['name' => 'bootstrap', 'ok' => false, 'error' => $error->getMessage()]], 2);
+    }
+
+    class ProbeObservationFormService extends FhirObservationObservationFormService
+    {
+        public function probe(array $parameters): ProcessingResult
+        {
+            return parent::searchForOpenEMRRecords($parameters);
+        }
+    }
+
+    class RecordingObservationService extends ObservationService
+    {
+        public array $calls = [];
+        public ProcessingResult $answer;
+
+        public function searchAndPopulateChildObservations($search, $isAndCondition = true): ProcessingResult
+        {
+            $this->calls[] = $search;
+            return $this->answer;
+        }
+    }
+
+    class CountingCodeTypesService extends CodeTypesService
+    {
+        public array $lookups = [];
+
+        public function getCodeTypeListForSystem(?string $system): array
+        {
+            $this->lookups[] = $system;
+            return parent::getCodeTypeListForSystem($system);
+        }
+    }
+
+    function setup(): array
+    {
+        $service = (new \ReflectionClass(ProbeObservationFormService::class))->newInstanceWithoutConstructor();
+        $backend = (new \ReflectionClass(RecordingObservationService::class))->newInstanceWithoutConstructor();
+        $codes = (new \ReflectionClass(CountingCodeTypesService::class))->newInstanceWithoutConstructor();
+        $backend->answer = new ProcessingResult();
+        (new \ReflectionProperty(FhirObservationObservationFormService::class, 'observationService'))->setValue($service, $backend);
+        $service->setCodeTypesService($codes);
+        return [$service, $backend, $codes];
+    }
+
+    function token(string $code, ?string $system = null): TokenSearchValue
+    {
+        return new TokenSearchValue($code, $system);
+    }
+
+    function searchValues(array $values): array
+    {
+        [$service, $backend, $codes] = setup();
+        $field = new TokenSearchField('ob_code', $values);
+        $result = $service->probe(['ob_code' => $field]);
+        return [$result, $backend, $codes, $field];
+    }
+
+    function outer(RecordingObservationService $backend, int $count): array
+    {
+        check(count($backend->calls) === 1, 'Expected exactly one backend call');
+        $field = $backend->calls[0]['ob_code'] ?? null;
+        check($field instanceof CompositeSearchField, 'ob_code must be a native composite');
+        check($field->getName() === 'ob_code' && $field->getField() === 'ob_code', 'Wrong outer field');
+        check($field->isAnd() === false, 'Outer alternatives must be OR');
+        check(count($field->getChildren()) === $count, 'Wrong alternative count');
+        return $field->getChildren();
+    }
+
+    function values(TokenSearchField $field, array $expected): void
+    {
+        $actual = array_map(static fn (TokenSearchValue $value): array => [$value->getSystem(), $value->getCode()], $field->getValues());
+        check($actual === $expected, 'Token system/code values differ: ' . json_encode($actual));
+    }
+
+    function pair($child, string $code, array $types): void
+    {
+        check($child instanceof CompositeSearchField, 'Expected code and code_type composite');
+        check($child->getName() === 'ob_code_code_type' && $child->isAnd() === true, 'Pair must be AND');
+        $parts = $child->getChildren();
+        check(count($parts) === 2, 'Pair must have two fields');
+        check($parts[0] instanceof TokenSearchField && $parts[0]->getField() === 'ob_code', 'Wrong code field');
+        check($parts[1] instanceof TokenSearchField && $parts[1]->getField() === 'code_type', 'Wrong code type field');
+        values($parts[0], [[null, $code]]);
+        values($parts[1], array_map(static fn (string $type): array => [null, $type], $types));
+    }
+
+    function bare($child, string $code): void
+    {
+        check($child instanceof TokenSearchField && $child->getField() === 'ob_code', 'Expected bare code field');
+        values($child, [[null, $code]]);
+    }
+
+    $unknown = 'https://example.invalid/unknown-observation-system';
+    $loinc = FhirCodeSystemConstants::LOINC;
+    $snomed = FhirCodeSystemConstants::SNOMED_CT;
+    $cpt = FhirCodeSystemConstants::AMA_CPT;
+    $rxnorm = FhirCodeSystemConstants::RXNORM;
+    $cases = [
+        'source_inverse' => static function () use ($root): void {
+            $source = file_get_contents($root . '/src/Services/FHIR/Observation/FhirObservationObservationFormService.php');
+            check(is_string($source), 'Cannot read production source');
+            $first = "                if (\$codeTypes === [] && \$system !== null && \$system !== '') {\n                    continue;\n                }\n";
+            $second = "            if (\$codeSearchField->getValues() !== [] && \$compoundObCode->getChildren() === []) {\n                return new ProcessingResult();\n            }\n";
+            $source = str_replace($first, '', $source, $firstCount);
+            $source = str_replace($second, '', $source, $secondCount);
+            check($firstCount === 1 && $secondCount === 1, 'Expected each production addition exactly once');
+            check(hash('sha256', $source) === '70d163fe4461dded632d2762f1d00992ec5802bc7ec89b777e12e67db82fa6fc', 'Inverse source differs from supplied original');
+        },
+        'native_pipe_and_builder_boundary' => static function () use ($root, $loinc): void {
+            $parsed = TokenSearchValue::buildFromFHIRString($loinc . '|007');
+            check($parsed->getSystem() === $loinc && $parsed->getCode() === '007', 'Native pipe parsing changed');
+            $tokenSource = file_get_contents($root . '/src/Services/Search/TokenSearchValue.php');
+            $backendSource = file_get_contents($root . '/src/Services/ObservationService.php');
+            check(str_contains($tokenSource, 'explode("|", (string) $codeSystemValue)'), 'Native token parser connection absent');
+            check(str_contains($backendSource, 'FhirSearchWhereClauseBuilder::build($search, $isAndCondition)'), 'Native SQL builder connection absent');
+        },
+        'unknown_only' => static function () use ($unknown): void {
+            [$result, $backend, $codes] = searchValues([token('A', $unknown)]);
+            check($result instanceof ProcessingResult && $result->getData() === [] && !$result->hasErrors(), 'Unknown-only result must be empty success');
+            check($backend->calls === [] && $codes->lookups === [$unknown], 'Unknown-only lookup or backend count differs');
+        },
+        'zero_system' => static function (): void {
+            [$result, $backend, $codes] = searchValues([token('A', '0')]);
+            check($result->getData() === [] && $backend->calls === [] && $codes->lookups === ['0'], 'Explicit system 0 must be excluded');
+        },
+        'repeated_unknown_cached_once' => static function () use ($unknown): void {
+            [$result, $backend, $codes] = searchValues([token('A', $unknown), token('B', $unknown)]);
+            check($result->getData() === [] && $backend->calls === [] && $codes->lookups === [$unknown], 'Repeated unknown system must be cached and excluded');
+        },
+        'loinc_pair' => static function () use ($loinc): void {
+            [, $backend, $codes] = searchValues([token('72133-2', $loinc)]);
+            pair(outer($backend, 1)[0], '72133-2', ['LOINC']);
+            check($codes->lookups === [$loinc], 'LOINC lookup differs');
+        },
+        'snomed_three_aliases' => static function () use ($snomed): void {
+            [, $backend] = searchValues([token('123', $snomed)]);
+            pair(outer($backend, 1)[0], '123', ['SNOMED-CT', 'SNOMED', 'SNOMED-PR']);
+        },
+        'cpt_pair' => static function () use ($cpt): void {
+            [, $backend] = searchValues([token('99213', $cpt)]);
+            pair(outer($backend, 1)[0], '99213', ['CPT4']);
+        },
+        'rxnorm_rxcui_pair' => static function () use ($rxnorm): void {
+            [, $backend] = searchValues([token('1234', $rxnorm)]);
+            pair(outer($backend, 1)[0], '1234', ['RXCUI']);
+        },
+        'unknown_then_known' => static function () use ($unknown, $loinc): void {
+            [, $backend] = searchValues([token('X', $unknown), token('L', $loinc)]);
+            pair(outer($backend, 1)[0], 'L', ['LOINC']);
+        },
+        'known_then_unknown' => static function () use ($unknown, $loinc): void {
+            [, $backend] = searchValues([token('L', $loinc), token('X', $unknown)]);
+            pair(outer($backend, 1)[0], 'L', ['LOINC']);
+        },
+        'bare_then_unknown' => static function () use ($unknown): void {
+            [, $backend] = searchValues([token('B'), token('X', $unknown)]);
+            bare(outer($backend, 1)[0], 'B');
+        },
+        'unknown_then_bare' => static function () use ($unknown): void {
+            [, $backend] = searchValues([token('X', $unknown), token('B')]);
+            bare(outer($backend, 1)[0], 'B');
+        },
+        'same_code_different_systems' => static function () use ($loinc, $snomed): void {
+            [, $backend] = searchValues([token('123', $loinc), token('123', $snomed)]);
+            $children = outer($backend, 2);
+            pair($children[0], '123', ['LOINC']);
+            pair($children[1], '123', ['SNOMED-CT', 'SNOMED', 'SNOMED-PR']);
+        },
+        'leading_zero_code' => static function () use ($loinc): void {
+            [, $backend] = searchValues([token('0007', $loinc)]);
+            pair(outer($backend, 1)[0], '0007', ['LOINC']);
+        },
+        'literal_zero_code' => static function () use ($loinc): void {
+            [, $backend] = searchValues([token('0', $loinc)]);
+            pair(outer($backend, 1)[0], '0', ['LOINC']);
+        },
+        'no_code_forwarding' => static function (): void {
+            [$service, $backend, $codes] = setup();
+            $answer = $service->probe([]);
+            check($answer === $backend->answer && $backend->calls === [[]] && $codes->lookups === [], 'No-code request must forward unchanged');
+        },
+        'backend_error_identity' => static function () use ($loinc): void {
+            [$service, $backend] = setup();
+            $backend->answer->setInternalErrors(['backend error']);
+            $backend->answer->setValidationMessages(['validation error']);
+            $result = $service->probe(['ob_code' => new TokenSearchField('ob_code', [token('A', $loinc)])]);
+            check($result === $backend->answer && $result->getInternalErrors() === ['backend error'] && $result->getValidationMessages() === ['validation error'], 'Backend errors must retain result identity');
+        },
+        'backend_pagination_identity' => static function () use ($loinc): void {
+            [$service, $backend] = setup();
+            $pagination = $backend->answer->getPagination();
+            $pagination->setLimit(17);
+            $pagination->setTotalCount(42);
+            $result = $service->probe(['ob_code' => new TokenSearchField('ob_code', [token('A', $loinc)])]);
+            check($result === $backend->answer && $result->getPagination() === $pagination && $pagination->getLimit() === 17 && $pagination->getTotalCount() === 42, 'Backend pagination must retain identity');
+        },
+        'missing_system_bare' => static function (): void {
+            [, $backend] = searchValues(['B']);
+            bare(outer($backend, 1)[0], 'B');
+        },
+        'null_system_bare' => static function (): void {
+            [, $backend] = searchValues([token('B', null)]);
+            bare(outer($backend, 1)[0], 'B');
+        },
+        'empty_system_bare' => static function (): void {
+            [, $backend] = searchValues(['|B']);
+            bare(outer($backend, 1)[0], 'B');
+        },
+        'empty_token_values_forwarded' => static function (): void {
+            [$result, $backend, $codes, $field] = searchValues([]);
+            check($result === $backend->answer && $field->getValues() === [] && $codes->lookups === [], 'Empty token values must preserve backend result');
+            outer($backend, 0);
+        },
+        'caller_input_and_reference_unchanged' => static function () use ($unknown, $loinc): void {
+            [$service, $backend] = setup();
+            $first = token('X', $unknown);
+            $second = token('L', $loinc);
+            $field = new TokenSearchField('ob_code', [$first, $second]);
+            $patient = new BasicSearchField('patient', SearchFieldType::REFERENCE, 'puuid', ['patient-1']);
+            $parameters = ['ob_code' => $field, 'patient' => $patient];
+            $service->probe($parameters);
+            check($parameters['ob_code'] === $field && $field->getValues() === [$first, $second], 'Caller code field was mutated');
+            check($parameters['patient'] === $patient && $backend->calls[0]['patient'] === $patient, 'Patient reference was mutated');
+            pair(outer($backend, 1)[0], 'L', ['LOINC']);
+        },
+    ];
+
+    $results = [];
+    foreach ($cases as $name => $case) {
+        try {
+            $case();
+            $results[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $results[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+    report($results, count(array_filter($results, static fn (array $case): bool => !$case['ok'])) === 0 ? 0 : 1);
+}
