@@ -1,0 +1,274 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    // Declaration only. Reflection bypasses the native service constructor.
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIROrganization;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRExtension;
+    use OpenEMR\Services\FHIR\FhirCodeSystemConstants;
+    use OpenEMR\Services\FHIR\Organization\FhirOrganizationProcedureProviderService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $cases = [];
+    $bootstrapFailed = false;
+    $root = dirname(__DIR__, 2);
+    $source = $root . '/src/Services/FHIR/Organization/FhirOrganizationProcedureProviderService.php';
+
+    $check = static function (bool $condition, string $message): void {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    };
+    $run = static function (string $name, callable $body) use (&$cases): void {
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    };
+
+    try {
+        date_default_timezone_set('UTC');
+        $GLOBALS['gbl_time_zone'] = 'UTC';
+        $check(is_file($source), 'Native service source is unavailable');
+        $check(class_exists(\DOMDocument::class), 'DOM extension is unavailable');
+
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $file = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        });
+
+        // These are the native interface and trait, not substitutes for them.
+        $check(interface_exists(\OpenEMR\Services\FHIR\INonPatientCompartmentResourceService::class), 'Native marker interface is unavailable');
+        $check(trait_exists(\OpenEMR\Services\FHIR\Traits\FhirServiceBaseEmptyTrait::class), 'Native empty trait is unavailable');
+        $reflection = new \ReflectionClass(FhirOrganizationProcedureProviderService::class);
+        $method = $reflection->getMethod('parseOpenEMRRecord');
+        $check(realpath($method->getFileName()) === realpath($source), 'Mapper method is not from the native service source');
+        $service = $reflection->newInstanceWithoutConstructor();
+
+        $base = [
+            'uuid' => 'synthetic-provider',
+            'last_updated' => '2020-01-02 03:04:05',
+            'active' => '1',
+            'npi' => 'synthetic-npi',
+        ];
+
+        $assertCommon = static function (array $json, bool $active = true, bool $hasNpi = true) use ($check, $base): void {
+            $check(($json['resourceType'] ?? null) === 'Organization', 'Resource type changed');
+            $check(($json['id'] ?? null) === $base['uuid'], 'UUID changed');
+            $check(($json['active'] ?? null) === $active, 'Active state changed');
+            $check(($json['meta']['versionId'] ?? null) === '1', 'Meta version changed');
+            $check(($json['meta']['lastUpdated'] ?? null) === '2020-01-02T03:04:05+00:00', 'Meta timestamp changed');
+            $check(($json['type'][0]['coding'][0]['code'] ?? null) === 'prov', 'Provider type code changed');
+            $check(($json['type'][0]['coding'][0]['display'] ?? null) === 'Healthcare Provider', 'Provider type display changed');
+            $check(($json['type'][0]['coding'][0]['system'] ?? null) === FhirCodeSystemConstants::HL7_ORGANIZATION_TYPE, 'Provider type system changed');
+            $check(count($json['type'] ?? []) === 1, 'Provider type count changed');
+            if ($hasNpi) {
+                $check(count($json['identifier'] ?? []) === 1, 'NPI identifier count changed');
+                $check(($json['identifier'][0]['system'] ?? null) === FhirCodeSystemConstants::PROVIDER_NPI, 'NPI system changed');
+                $check(($json['identifier'][0]['value'] ?? null) === $base['npi'], 'NPI value changed');
+            } else {
+                $check(!array_key_exists('identifier', $json), 'Optional NPI identifier should be absent');
+            }
+            foreach (['alias', 'telecom', 'address', 'partOf', 'contact', 'endpoint'] as $field) {
+                $check(!array_key_exists($field, $json), 'Unexpected resource field: ' . $field);
+            }
+        };
+
+        $assertDiv = static function (string $actual, string $fragment, string $paragraphText) use ($check): void {
+            $expected = '<div xmlns="http://www.w3.org/1999/xhtml"> <p>' . $fragment . '</p></div>';
+            $check($actual === $expected, 'Narrative differs from literal expected XHTML');
+            $dom = new \DOMDocument();
+            $check($dom->loadXML($actual, LIBXML_NONET) === true, 'Narrative is not XML');
+            $div = $dom->documentElement;
+            $check($div !== null && $div->localName === 'div' && $div->namespaceURI === 'http://www.w3.org/1999/xhtml', 'Narrative root is not one XHTML div');
+            $check($div->attributes->length === 0, 'Narrative div has unexpected attributes');
+            $elements = $dom->getElementsByTagName('*');
+            $check($elements->length === 2, 'Narrative has extra elements');
+            $p = $elements->item(1);
+            $check($p !== null && $p->parentNode === $div && $p->localName === 'p' && $p->namespaceURI === 'http://www.w3.org/1999/xhtml', 'Narrative does not have exactly one XHTML paragraph');
+            $check($p->attributes->length === 0 && $p->childNodes->length === 1 && $p->firstChild instanceof \DOMText, 'Paragraph contains unexpected nodes');
+            $check($p->textContent === $paragraphText, 'Paragraph literal text changed');
+            $check($div->firstChild instanceof \DOMText && $div->firstChild->textContent === ' ', 'Div prefix text changed');
+            $check($div->lastChild === $p, 'Div has text after its paragraph');
+        };
+
+        // Each expected fragment is literal test data, independent of htmlspecialchars().
+        $examples = [
+            ['ordinary', 'Ordinary Provider', 'Ordinary Provider', 'Ordinary Provider', true],
+            ['ampersand', 'A & B Provider', 'A &amp; B Provider', 'A & B Provider', true],
+            ['brackets', 'North <tag> Provider', 'North &lt;tag&gt; Provider', 'North <tag> Provider', true],
+            ['closingparagraph/script', 'Provider</p><script>alert(1)</script><p>West', 'Provider&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;p&gt;West', 'Provider</p><script>alert(1)</script><p>West', true],
+            ['quotes', 'The "Doctor\'s" Provider', 'The &quot;Doctor&apos;s&quot; Provider', 'The "Doctor\'s" Provider', true],
+            ['SwedishUnicode', 'Södermalms vårdcentral – ÅÄÖ', 'Södermalms vårdcentral – ÅÄÖ', 'Södermalms vårdcentral – ÅÄÖ', true],
+            ['entitylookingtext', 'A &amp; B', 'A &amp;amp; B', 'A &amp; B', true],
+            ['paddedname', "  Padded Provider \t", 'Padded Provider', 'Padded Provider', true],
+            ['absent', null, null, null, false],
+            ['null', null, null, null, true],
+            ['empty', '', null, null, true],
+            ['whitespace', " \t \n ", null, null, true],
+            ['stringzero', '0', null, null, true],
+        ];
+        $baselineNonName = null;
+        foreach ($examples as [$caseName, $name, $fragment, $paragraphText, $includeName]) {
+            $run($caseName, static function () use ($check, $service, $base, $name, $fragment, $paragraphText, $includeName, $assertCommon, $assertDiv, &$baselineNonName): void {
+                $record = $base;
+                if ($includeName) {
+                    $record['name'] = $name;
+                }
+                $before = $record;
+                $resource = $service->parseOpenEMRRecord($record, false);
+                $check($record === $before, 'Input record changed');
+                $check($resource instanceof FHIROrganization, 'Native Organization object was not returned');
+                $json = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+                $encoded = $service->parseOpenEMRRecord($record, true);
+                $check(is_string($encoded), 'Encoded mode did not return JSON');
+                $check(json_decode($encoded, true, 512, JSON_THROW_ON_ERROR) === $json, 'Encoded mode differs from object serialization');
+                $assertCommon($json);
+
+                $nonName = $json;
+                unset($nonName['name'], $nonName['_name'], $nonName['text']);
+                if ($baselineNonName === null) {
+                    $baselineNonName = $nonName;
+                } else {
+                    $check($nonName === $baselineNonName, 'Non-name resource fields changed');
+                }
+
+                if (!$includeName || $name === null) {
+                    $nativeName = $resource->getName();
+                    $check($nativeName instanceof FHIRExtension, 'Missing name lacks native extension');
+                    $inner = $nativeName->getExtension();
+                    $check(is_array($inner) && count($inner) === 1 && $inner[0] instanceof FHIRExtension, 'Missing-name extension wrapper changed');
+                    $check((string) $inner[0]->getUrl() === FhirCodeSystemConstants::DATA_ABSENT_REASON_EXTENSION, 'Missing-name extension URL changed');
+                    $check((string) $inner[0]->getValueCode() === 'unknown', 'Missing-name reason changed');
+                    $check(array_key_exists('name', $json) && is_array($json['name']), 'Serialized missing-name extension changed');
+                } else {
+                    $check($resource->getName() === $name, 'Native structured name changed');
+                    $check(array_key_exists('name', $json) && $json['name'] === $name, 'JSON structured name changed');
+                }
+
+                $nativeText = $resource->getText();
+                if ($fragment === null) {
+                    $check($nativeText === null, 'Native narrative should be absent');
+                    $check(!array_key_exists('text', $json), 'JSON narrative should be absent');
+                } else {
+                    $check(is_array($nativeText), 'Native narrative shape changed');
+                    $check(($nativeText['status'] ?? null) === 'generated', 'Native narrative status changed');
+                    $check(($json['text']['status'] ?? null) === 'generated', 'JSON narrative status changed');
+                    $check(is_string($nativeText['div'] ?? null), 'Native narrative div is not a string');
+                    $check(($json['text']['div'] ?? null) === $nativeText['div'], 'JSON narrative div differs from native getter');
+                    $assertDiv($nativeText['div'], $fragment, $paragraphText);
+                }
+            });
+        }
+
+        $run('inactive', static function () use ($check, $service, $base, $assertCommon, $assertDiv): void {
+            $record = $base;
+            $record['active'] = '0';
+            $record['name'] = 'Inactive Provider';
+            $before = $record;
+            $resource = $service->parseOpenEMRRecord($record, false);
+            $json = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check($record === $before && $resource->getActive() === false, 'Inactive record or native active state changed');
+            $assertCommon($json, false);
+            $check($resource->getName() === 'Inactive Provider' && ($json['name'] ?? null) === 'Inactive Provider', 'Inactive structured name changed');
+            $check(is_array($resource->getText()), 'Inactive native narrative is absent');
+            $assertDiv($resource->getText()['div'], 'Inactive Provider', 'Inactive Provider');
+            $check(($json['text']['div'] ?? null) === $resource->getText()['div'], 'Inactive JSON narrative changed');
+            $check(json_decode($service->parseOpenEMRRecord($record, true), true, 512, JSON_THROW_ON_ERROR) === $json, 'Inactive encoded mode differs');
+        });
+
+        $run('npiomitted', static function () use ($check, $service, $base, $assertCommon, $assertDiv): void {
+            $record = $base;
+            unset($record['npi']);
+            $record['name'] = 'No NPI Provider';
+            $before = $record;
+            $resource = $service->parseOpenEMRRecord($record, false);
+            $json = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check($record === $before && $resource->getIdentifier() === [], 'Optional NPI changed in input or native getter');
+            $assertCommon($json, true, false);
+            $check($resource->getName() === 'No NPI Provider' && ($json['name'] ?? null) === 'No NPI Provider', 'No-NPI structured name changed');
+            $check(is_array($resource->getText()), 'No-NPI native narrative is absent');
+            $assertDiv($resource->getText()['div'], 'No NPI Provider', 'No NPI Provider');
+            $check(($json['text']['div'] ?? null) === $resource->getText()['div'], 'No-NPI JSON narrative changed');
+            $check(json_decode($service->parseOpenEMRRecord($record, true), true, 512, JSON_THROW_ON_ERROR) === $json, 'No-NPI encoded mode differs');
+        });
+
+        $run('nonnamefields/provenance', static function () use ($check, $service, $base, $assertCommon, $baselineNonName): void {
+            $record = $base;
+            $record['name'] = 'A & B Provider';
+            $record['unmapped_marker'] = 'synthetic-only';
+            $before = $record;
+            $resource = $service->parseOpenEMRRecord($record, false);
+            $json = json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+            $check($record === $before, 'Mapper changed the supplied record');
+            $assertCommon($json);
+            $check(!array_key_exists('unmapped_marker', $json), 'Unmapped input leaked into resource');
+            $nonName = $json;
+            unset($nonName['name'], $nonName['_name'], $nonName['text']);
+            $check($nonName === $baselineNonName, 'Fields outside name and narrative changed');
+            $check($resource->getName() === $record['name'] && ($json['name'] ?? null) === $record['name'], 'Structured name lost its input provenance');
+            $check(json_decode($service->parseOpenEMRRecord($record, true), true, 512, JSON_THROW_ON_ERROR) === $json, 'Encoded mode changed non-name fields');
+        });
+
+        $run('invalidUTF8', static function () use ($check, $service, $base, $assertDiv): void {
+            $record = $base;
+            $record['name'] = "Bad\xC3(";
+            $before = $record;
+            $resource = $service->parseOpenEMRRecord($record, false);
+            $check($record === $before, 'Invalid UTF-8 input record changed');
+            $check($resource instanceof FHIROrganization, 'Native Organization object was not returned');
+            $check($resource->getName() === "Bad\xC3(", 'Structured name bytes changed');
+            $text = $resource->getText();
+            $check(is_array($text) && ($text['status'] ?? null) === 'generated', 'Native invalid UTF-8 narrative changed');
+            $assertDiv($text['div'], 'Bad�(', 'Bad�(');
+            $check(json_encode($resource) === false, 'Invalid structured UTF-8 unexpectedly serialized as JSON');
+            $check($service->parseOpenEMRRecord($record, true) === false, 'Encoded mode should report JSON failure for invalid structured UTF-8');
+        });
+
+        $run('strictinverse', static function () use ($check, $source): void {
+            $originalHash = 'd5deeb29a85f8f10fee98515eed8802533a224e4b29e3bcd7e6b35a3bfcba1ba';
+            $originalLine = "                'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . \$narrativeText . '</p></div>'";
+            $correctedLine = "                'div' => '<div xmlns=\"http://www.w3.org/1999/xhtml\"> <p>' . htmlspecialchars(\$narrativeText, ENT_QUOTES | ENT_SUBSTITUTE | ENT_XML1, 'UTF-8') . '</p></div>'";
+            $contents = file_get_contents($source);
+            $check(is_string($contents), 'Cannot read native mapper source');
+            $lines = explode("\n", $contents);
+            $check(count(array_filter($lines, static fn(string $line): bool => $line === $correctedLine)) === 1, 'Exactly one approved corrected full line is required');
+            $check(count(array_filter($lines, static fn(string $line): bool => $line === $originalLine)) === 0, 'Original narrative line remains');
+            $restored = str_replace($correctedLine, $originalLine, $contents, $replacements);
+            $check($replacements === 1, 'Approved operand was not reversed exactly once');
+            $check(hash('sha256', $restored) === $originalHash, 'Source differs beyond the approved narrative operand');
+        });
+    } catch (\Throwable $error) {
+        $bootstrapFailed = true;
+        $cases[] = ['name' => 'bootstrap', 'ok' => false, 'error' => $error->getMessage()];
+    }
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    $passed = count($cases) - $failed;
+    echo json_encode(['passed' => $passed, 'failed' => $failed, 'cases' => $cases], JSON_THROW_ON_ERROR) . "\n";
+    exit($bootstrapFailed ? 2 : ($failed === 0 ? 0 : 1));
+}
