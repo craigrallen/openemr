@@ -186,6 +186,36 @@ $urlOut = $newRxUrl . urlencode((string) $provider_info['email']) . "&data=" . u
             });
         });
     </script>
+    <style id="oe-weno-debug-layout">
+    @media screen {
+      html.oe-workbench-context #debugModal .modal-title {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context #debugModal .modal-header > .close {
+        flex-shrink: 0;
+      }
+
+      html.oe-workbench-context #debugModal .modal-body {
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context #debugModal #downloadLink {
+        min-width: 0;
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      html.oe-workbench-context #debugModal .modal-footer > .btn {
+        min-width: 0;
+        max-width: calc(100% - 0.5rem);
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+    }
+    </style>
 </head>
 <body>
     <div id="trigger-debug" class="container-xl">
