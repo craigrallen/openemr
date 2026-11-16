@@ -1,0 +1,284 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase
+    {
+    }
+
+    class FhirProcedureService
+    {
+        public const FHIR_PROCEDURE_STATUS_COMPLETED = 'completed';
+        public const FHIR_PROCEDURE_STATUS_IN_PROGRESS = 'in-progress';
+        public const FHIR_PROCEDURE_STATUS_UNKNOWN = 'unknown';
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRProcedure;
+    use OpenEMR\Services\CodeTypesService;
+    use OpenEMR\Services\FHIR\Procedure\FhirProcedureSurgeryService;
+    use OpenEMR\Services\FHIR\UtilsService;
+
+    error_reporting(E_ALL);
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '0');
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    $GLOBALS['code_types'] = [];
+    $GLOBALS['lookup_tokens'] = [];
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'OpenEMR\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+        $relative = str_replace('\\', '/', substr($class, strlen($prefix)));
+        $file = $root . '/src/' . $relative . '.php';
+        if (is_file($file)) {
+            require $file;
+        }
+    });
+
+    function lookup_code_descriptions($codes, $desc_detail = 'code_text'): string
+    {
+        $GLOBALS['lookup_tokens'][] = [$codes, $desc_detail];
+        return 'Synthetic ' . $codes;
+    }
+
+    function same($expected, $actual, string $label): void
+    {
+        if ($expected !== $actual) {
+            throw new RuntimeException($label . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function truth(bool $actual, string $label): void
+    {
+        same(true, $actual, $label);
+    }
+
+    function value($item)
+    {
+        return is_object($item) && method_exists($item, 'getValue') ? $item->getValue() : $item;
+    }
+
+    function record($diagnosis = 'SNOMED-CT:123'): array
+    {
+        return [
+            'uuid' => 'synthetic-procedure-uuid',
+            'puuid' => 'synthetic-patient-uuid',
+            'euuid' => 'synthetic-encounter-uuid',
+            'recorder_uuid' => 'synthetic-recorder-uuid',
+            'recorder_npi' => 'synthetic-npi',
+            'status' => 'active',
+            'comments' => 'Synthetic surgery',
+            'date_modified' => '2026-01-02 03:04:05',
+            'begdate' => '2026-01-02 03:04:05',
+            'diagnosis' => $diagnosis,
+        ];
+    }
+
+    function mapper(): FhirProcedureSurgeryService
+    {
+        return (new ReflectionClass(FhirProcedureSurgeryService::class))->newInstanceWithoutConstructor();
+    }
+
+    function render(array $source): FHIRProcedure
+    {
+        $resource = mapper()->parseOpenEMRRecord($source, false);
+        truth($resource instanceof FHIRProcedure, 'native Procedure object');
+        return $resource;
+    }
+
+    function serialized(FHIRProcedure $resource): array
+    {
+        return json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    function codings(FHIRProcedure $resource, array $expected): void
+    {
+        $concept = $resource->getCode();
+        truth($concept !== null, 'primary code exists');
+        $actual = $concept->getCoding();
+        same(count($expected), count($actual), 'getter coding count');
+        $json = serialized($resource);
+        same(count($expected), count($json['code']['coding'] ?? []), 'JSON coding count');
+        same([], $resource->getReasonCode(), 'reasonCode getter remains empty');
+        truth(!array_key_exists('reasonCode', $json), 'reasonCode JSON omitted');
+        foreach ($expected as $index => [$code, $system, $original]) {
+            same($code, value($actual[$index]->getCode()), 'getter code ' . $index);
+            same($system, value($actual[$index]->getSystem()), 'getter system ' . $index);
+            same('Synthetic ' . $original, value($actual[$index]->getDisplay()), 'getter display ' . $index);
+            same($code, $json['code']['coding'][$index]['code'], 'JSON code ' . $index);
+            same('Synthetic ' . $original, $json['code']['coding'][$index]['display'], 'JSON display ' . $index);
+            if ($system === null) {
+                truth(!array_key_exists('system', $json['code']['coding'][$index]), 'JSON system omitted ' . $index);
+            } else {
+                same($system, $json['code']['coding'][$index]['system'], 'JSON system ' . $index);
+            }
+        }
+    }
+
+    function noCode(array $source): void
+    {
+        $resource = render($source);
+        same(null, $resource->getCode(), 'code getter omitted');
+        truth(!array_key_exists('code', serialized($resource)), 'code JSON omitted');
+        same([], $GLOBALS['lookup_tokens'], 'no description lookups');
+    }
+
+    function inverseValid(string $source): bool
+    {
+        $corrected = "UtilsService::createCoding(\$codesService->parseCode(\$code)['code'], \$description, \$system)";
+        $original = 'UtilsService::createCoding($code, $description, $system)';
+        return substr_count($source, $corrected) === 1
+            && hash('sha256', str_replace($corrected, $original, $source)) === 'ef0ee5358bc2cc4d31017f192645e00fb8da483d2c234ad9a5b797cce8da16a2';
+    }
+
+    $cases = [
+        'typed_snomed_getter_and_json' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('SNOMED-CT:123')), [['123', $service->getSystemForCode('SNOMED-CT:123'), 'SNOMED-CT:123']]);
+        },
+        'typed_cpt4' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('CPT4:00123')), [['00123', $service->getSystemForCode('CPT4:00123'), 'CPT4:00123']]);
+        },
+        'multiple_ordered_systems' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('SNOMED-CT:123;CPT4:456;LOINC:789')), [
+                ['123', $service->getSystemForCode('SNOMED-CT:123'), 'SNOMED-CT:123'],
+                ['456', $service->getSystemForCode('CPT4:456'), 'CPT4:456'],
+                ['789', $service->getSystemForCode('LOINC:789'), 'LOINC:789'],
+            ]);
+        },
+        'leading_zero_code' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('CPT4:00042')), [['00042', $service->getSystemForCode('CPT4:00042'), 'CPT4:00042']]);
+        },
+        'bare_code' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('00042')), [['00042', $service->getSystemForCode('00042'), '00042']]);
+        },
+        'typed_zero_suffix' => static function (): void {
+            $service = new CodeTypesService();
+            codings(render(record('SNOMED-CT:0')), [['0', $service->getSystemForCode('SNOMED-CT:0'), 'SNOMED-CT:0']]);
+        },
+        'same_suffix_distinct_systems' => static function (): void {
+            $service = new CodeTypesService();
+            $snomed = $service->getSystemForCode('SNOMED-CT:123');
+            $cpt = $service->getSystemForCode('CPT4:123');
+            truth($snomed !== $cpt, 'native systems differ');
+            codings(render(record('SNOMED-CT:123;CPT4:123')), [
+                ['123', $snomed, 'SNOMED-CT:123'],
+                ['123', $cpt, 'CPT4:123'],
+            ]);
+        },
+        'typed_original_lookup' => static function (): void {
+            render(record('SNOMED-CT:123;CPT4:456'));
+            same([['SNOMED-CT:123', 'code_text'], ['CPT4:456', 'code_text']], $GLOBALS['lookup_tokens'], 'native lookup receives typed tokens');
+        },
+        'missing_diagnosis' => static function (): void {
+            $source = record();
+            unset($source['diagnosis']);
+            noCode($source);
+        },
+        'null_diagnosis' => static function (): void {
+            noCode(record(null));
+        },
+        'empty_diagnosis' => static function (): void {
+            noCode(record(''));
+        },
+        'input_unchanged' => static function (): void {
+            $source = record('SNOMED-CT:123;CPT4:456');
+            $before = $source;
+            render($source);
+            same($before, $source, 'source record unchanged');
+        },
+        'native_source_provenance' => static function () use ($root): void {
+            $paths = [
+                FhirProcedureSurgeryService::class => 'src/Services/FHIR/Procedure/FhirProcedureSurgeryService.php',
+                FHIRProcedure::class => 'src/FHIR/R4/FHIRDomainResource/FHIRProcedure.php',
+                UtilsService::class => 'src/Services/FHIR/UtilsService.php',
+                CodeTypesService::class => 'src/Services/CodeTypesService.php',
+            ];
+            foreach ($paths as $class => $relative) {
+                same(realpath($root . '/' . $relative), realpath((new ReflectionClass($class))->getFileName()), 'native source ' . $class);
+            }
+        },
+        'preserves_other_fields' => static function (): void {
+            $resource = render(record());
+            $json = serialized($resource);
+            same('Procedure', $json['resourceType'], 'resource type');
+            same('synthetic-procedure-uuid', value($resource->getId()), 'id getter');
+            same('synthetic-procedure-uuid', $json['id'], 'id JSON');
+            same('completed', value($resource->getStatus()), 'status getter');
+            same('completed', $json['status'], 'status JSON');
+            same('Patient/synthetic-patient-uuid', value($resource->getSubject()->getReference()), 'subject getter');
+            same('Patient/synthetic-patient-uuid', $json['subject']['reference'], 'subject JSON');
+            same('Encounter/synthetic-encounter-uuid', value($resource->getEncounter()->getReference()), 'encounter getter');
+            same('Encounter/synthetic-encounter-uuid', $json['encounter']['reference'], 'encounter JSON');
+            same('Practitioner/synthetic-recorder-uuid', value($resource->getRecorder()->getReference()), 'recorder getter');
+            same('Practitioner/synthetic-recorder-uuid', $json['recorder']['reference'], 'recorder JSON');
+            same('Synthetic surgery', $json['note'][0]['text'], 'note JSON');
+            same(UtilsService::getLocalDateAsUTC('2026-01-02 03:04:05'), $json['performedDateTime'], 'performed JSON');
+            same(UtilsService::getLocalDateAsUTC('2026-01-02 03:04:05'), $json['meta']['lastUpdated'], 'modified JSON');
+        },
+        'encoded_mode_matches_object' => static function (): void {
+            $source = record('SNOMED-CT:123;CPT4:456');
+            $object = render($source);
+            $encoded = mapper()->parseOpenEMRRecord($source, true);
+            truth(is_string($encoded), 'encoded mode returns string');
+            same(serialized($object), json_decode($encoded, true, 512, JSON_THROW_ON_ERROR), 'encoded mode equals native object');
+        },
+        'inverse_source_binding' => static function () use ($root): void {
+            $source = file_get_contents($root . '/src/Services/FHIR/Procedure/FhirProcedureSurgeryService.php');
+            truth(is_string($source), 'mapper source readable');
+            truth(inverseValid($source), 'single corrected operand reverses to supplied original SHA256');
+        },
+        'original_source_rejected_by_inverse' => static function () use ($root): void {
+            $source = file_get_contents($root . '/src/Services/FHIR/Procedure/FhirProcedureSurgeryService.php');
+            truth(is_string($source), 'mapper source readable');
+            $corrected = "UtilsService::createCoding(\$codesService->parseCode(\$code)['code'], \$description, \$system)";
+            $original = 'UtilsService::createCoding($code, $description, $system)';
+            same(1, substr_count($source, $corrected), 'one corrected operand');
+            $unpatched = str_replace($corrected, $original, $source);
+            same('ef0ee5358bc2cc4d31017f192645e00fb8da483d2c234ad9a5b797cce8da16a2', hash('sha256', $unpatched), 'original source digest');
+            same(false, inverseValid($unpatched), 'original source fails corrected inverse check');
+        },
+        'native_parser_contract' => static function (): void {
+            $service = new CodeTypesService();
+            same(['code' => '00042', 'code_type' => null], $service->parseCode('00042'), 'bare token');
+            same(['code' => '0', 'code_type' => 'SNOMED-CT'], $service->parseCode('SNOMED-CT:0'), 'zero suffix');
+            same(['code' => 'a', 'code_type' => 'UNKNOWN'], $service->parseCode('UNKNOWN:a:b'), 'unknown prefix and multicolon truncation');
+        },
+    ];
+
+    $results = [];
+    $passed = 0;
+    foreach ($cases as $name => $case) {
+        $GLOBALS['lookup_tokens'] = [];
+        try {
+            $case();
+            $results[] = ['name' => $name, 'ok' => true, 'error' => ''];
+            ++$passed;
+        } catch (Throwable $error) {
+            $results[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+    $failed = count($cases) - $passed;
+    echo json_encode(['passed' => $passed, 'failed' => $failed, 'cases' => $results], JSON_THROW_ON_ERROR) . "\n";
+    exit($failed === 0 ? 0 : 1);
+}
