@@ -1,0 +1,205 @@
+<?php
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        exit(1);
+    }
+}
+
+namespace OpenEMR\Services {
+    class ClinicalNotesService
+    {
+        public const ACTIVITY_ACTIVE = 1;
+        public const ACTIVITY_INACTIVE = 0;
+    }
+}
+
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase
+    {
+    }
+
+    class FhirOrganizationService
+    {
+        public function getPrimaryBusinessEntityReference(): \OpenEMR\FHIR\R4\FHIRElement\FHIRReference
+        {
+            return new \OpenEMR\FHIR\R4\FHIRElement\FHIRReference(['reference' => 'Organization/synthetic-org']);
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRDocumentReference;
+    use OpenEMR\Services\FHIR\DocumentReference\FhirClinicalNotesService;
+    use OpenEMR\Services\FHIR\UtilsService;
+
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/DocumentReference/FhirClinicalNotesService.php';
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        if (!str_starts_with($class, 'OpenEMR\\')) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
+        if (is_file($path)) {
+            require $path;
+        }
+    });
+
+    class IsolatedClinicalNotesMapper extends FhirClinicalNotesService
+    {
+        public function populateMetaData(FHIRDocumentReference $docReference, array $dataRecord)
+        {
+        }
+
+        public function populateAuthor(FHIRDocumentReference $docReference, array $dataRecord): void
+        {
+        }
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function row(): array
+    {
+        return [
+            'uuid' => 'synthetic-note-uuid',
+            'puuid' => 'synthetic-patient-uuid',
+            'euuid' => 'synthetic-encounter-uuid',
+            'date' => '2026-01-02 03:04:05',
+            'encounter_date' => '2026-01-02 03:04:05',
+            'description' => 'Synthetic note',
+        ];
+    }
+
+    function mapper(): IsolatedClinicalNotesMapper
+    {
+        return (new \ReflectionClass(IsolatedClinicalNotesMapper::class))->newInstanceWithoutConstructor();
+    }
+
+    function mapped(array $record): FHIRDocumentReference
+    {
+        return mapper()->parseOpenEMRRecord($record);
+    }
+
+    function statusValue(FHIRDocumentReference $document): string
+    {
+        $status = $document->getStatus();
+        if (is_object($status) && method_exists($status, 'getValue')) {
+            $status = $status->getValue();
+        }
+        check(is_string($status), 'Native status getter did not yield a string');
+        return $status;
+    }
+
+    function encoded(FHIRDocumentReference $document): array
+    {
+        $decoded = json_decode(json_encode($document, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        check(is_array($decoded), 'Native serialization did not yield an object');
+        return $decoded;
+    }
+
+    function expectStatus(array $record, string $expected, bool $serialized = false): void
+    {
+        $document = mapped($record);
+        $actual = $serialized ? (encoded($document)['status'] ?? null) : statusValue($document);
+        check($actual === $expected, 'Expected ' . $expected . ', got ' . var_export($actual, true));
+    }
+
+    $cases = [
+        'integer_zero_getter' => static function (): void {
+            expectStatus(row() + ['activity' => 0], 'entered-in-error');
+        },
+        'integer_zero_serialized' => static function (): void {
+            expectStatus(row() + ['activity' => 0], 'entered-in-error', true);
+        },
+        'string_zero_getter' => static function (): void {
+            expectStatus(row() + ['activity' => '0'], 'entered-in-error');
+        },
+        'string_zero_serialized' => static function (): void {
+            expectStatus(row() + ['activity' => '0'], 'entered-in-error', true);
+        },
+        'integer_one_current' => static function (): void {
+            expectStatus(row() + ['activity' => 1], 'current');
+        },
+        'string_one_current' => static function (): void {
+            expectStatus(row() + ['activity' => '1'], 'current');
+        },
+        'missing_activity_current' => static function (): void {
+            expectStatus(row(), 'current');
+        },
+        'null_activity_current' => static function (): void {
+            expectStatus(row() + ['activity' => null], 'current');
+        },
+        'positive_two_entered_error' => static function (): void {
+            expectStatus(row() + ['activity' => 2], 'entered-in-error');
+        },
+        'negative_one_entered_error' => static function (): void {
+            expectStatus(row() + ['activity' => -1], 'entered-in-error');
+        },
+        'cross_record_order_fresh_objects' => static function (): void {
+            $service = mapper();
+            $inactive = $service->parseOpenEMRRecord(row() + ['activity' => 0]);
+            $active = $service->parseOpenEMRRecord(row() + ['activity' => 1]);
+            $inactiveAgain = $service->parseOpenEMRRecord(row() + ['activity' => '0']);
+            check($inactive !== $active && $active !== $inactiveAgain && $inactive !== $inactiveAgain, 'Records reused an object');
+            check([statusValue($inactive), statusValue($active), statusValue($inactiveAgain)] === ['entered-in-error', 'current', 'entered-in-error'], 'Record order changed status');
+        },
+        'native_source_provenance' => static function () use ($root, $sourcePath): void {
+            $expected = [
+                FhirClinicalNotesService::class => $sourcePath,
+                FHIRDocumentReference::class => $root . '/src/FHIR/R4/FHIRDomainResource/FHIRDocumentReference.php',
+                UtilsService::class => $root . '/src/Services/FHIR/UtilsService.php',
+            ];
+            foreach ($expected as $class => $path) {
+                check((new \ReflectionClass($class))->getFileName() === realpath($path), 'Unexpected native source for ' . $class);
+            }
+            check((new \ReflectionMethod(FhirClinicalNotesService::class, 'parseOpenEMRRecord'))->getDeclaringClass()->getName() === FhirClinicalNotesService::class, 'Parser was inherited or replaced');
+        },
+        'nonstatus_serialization_equal' => static function (): void {
+            $inactive = encoded(mapped(row() + ['activity' => 0]));
+            $active = encoded(mapped(row() + ['activity' => 1]));
+            check(($inactive['status'] ?? null) === 'entered-in-error', 'Inactive status incorrect');
+            check(($active['status'] ?? null) === 'current', 'Active status incorrect');
+            unset($inactive['status'], $active['status']);
+            check($inactive === $active, 'Nonstatus serialization differed');
+        },
+        'incoming_row_untouched' => static function (): void {
+            $record = row() + ['activity' => 0];
+            $before = $record;
+            mapped($record);
+            check($record === $before, 'Incoming row changed');
+        },
+        'complete_source_inverse' => static function () use ($sourcePath): void {
+            $source = file_get_contents($sourcePath);
+            check(is_string($source), 'Native mapper source unavailable');
+            $new = "        if (isset(\$dataRecord['activity'])) {";
+            $old = "        if (!empty(\$dataRecord['activity'])) {";
+            check(substr_count($source, $new) === 1, 'Expected exactly one replacement guard');
+            $inverse = str_replace($new, $old, $source);
+            check(hash('sha256', $inverse) === '936682d607790d3a4b7ad6e96c7f0aaffa5d97e15c009ffefead07ee116190c9', 'Inverse does not match complete original source');
+        },
+    ];
+
+    $report = ['passed' => 0, 'failed' => 0, 'cases' => []];
+    foreach ($cases as $name => $run) {
+        try {
+            $run();
+            $report['passed']++;
+            $report['cases'][] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $report['failed']++;
+            $report['cases'][] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), "\n";
+    exit($report['failed'] === 0 ? 0 : 1);
+}
