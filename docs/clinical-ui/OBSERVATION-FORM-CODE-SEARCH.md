@@ -1,6 +1,6 @@
 # Observation form code search: OPEMR-262
 
-This tests-only handoff is bound to repository `/Users/craig/.hermes/workspaces/openemr-observation-form-code-search` at supplied HEAD `09b29da7771aea334ed5745e058751157af980d7`. The binding is supplied context, not independent attestation. The original service source SHA-256 supplied for the inverse check is `70d163fe4461dded632d2762f1d00992ec5802bc7ec89b777e12e67db82fa6fc`.
+The historical tests-only author handoff used repository `/Users/craig/.hermes/workspaces/openemr-observation-form-code-search` at base HEAD `09b29da7771aea334ed5745e058751157af980d7`. That SHA identifies the unchanged source used for RED, not the later production/review HEAD; the controller records the exact current review HEAD and four artifact hashes separately in its frozen review manifest. These bindings are supplied context, not reviewer-independent attestation. The original service source SHA-256 supplied for the inverse check is `70d163fe4461dded632d2762f1d00992ec5802bc7ec89b777e12e67db82fa6fc`.
 
 ## Bounded production change
 
@@ -9,7 +9,7 @@ The controller owns materialization, Git, and execution. After the tests-only co
 1. Immediately after the system lookup/cache and before the existing `if (!empty($codeTypes))`, add `if ($codeTypes === [] && $system !== null && $system !== '') { continue; }`.
 2. Immediately after the `foreach` and before assignment to `$openEMRSearchParameters['ob_code']`, add `if ($codeSearchField->getValues() !== [] && $compoundObCode->getChildren() === []) { return new ProcessingResult(); }`.
 
-The fixture removes only those exact additions and compares the remaining whole source with the supplied original hash. It therefore rejects changes to original statements, placement, or unrelated source. Both checks use strict native array comparisons. An explicit nonempty system with no mapped code types contributes no bare-code alternative. When every supplied token has such a system, search returns a successful empty `ProcessingResult` before the backend. Mixed OR input retains known or bare alternatives in either order. Missing, null, and empty systems retain historical bare-code behavior; this does not claim that an empty system is FHIR compliant. An empty token value list retains the historical empty composite forwarded to the backend.
+The fixture requires each exact added block once, removes only those additions, and compares the remaining whole source with the supplied original hash. This pins every original byte after removal, not the placement of the new blocks; named behavioral cases and the reviewed actual diff separately exercise their control-flow placement. Both checks use strict native array comparisons. An explicit nonempty system with no mapped code types contributes no bare-code alternative. When every supplied token has such a system, search returns a successful empty `ProcessingResult` before the backend. Mixed OR input retains known or bare alternatives in either order. Missing, null, and empty systems retain historical bare-code behavior; this does not claim that an empty system is FHIR compliant. An empty token value list retains the historical empty composite forwarded to the backend.
 
 ## Fixture boundary
 
