@@ -75,6 +75,7 @@ try {
         }
 
 GUARD;
+        $guard .= "\n";
         $needle = $guard . '        return $parsed;';
         $same(1, substr_count($source, $guard));
         $same(1, substr_count($source, '        return $parsed;'));
