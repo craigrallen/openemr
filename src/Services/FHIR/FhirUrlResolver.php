@@ -18,6 +18,7 @@ class FhirUrlResolver
 
     public function __construct(private $fhirBaseURL)
     {
+        $this->fhirBaseURL = rtrim((string) $this->fhirBaseURL, '/') . '/';
         $this->baseUrlLength = strlen((string) $this->fhirBaseURL);
     }
 
@@ -25,11 +26,11 @@ class FhirUrlResolver
     {
         // extracts everything but the resource/:id portion of a URL from the base url.
         // if the URI passed in does not match the base fhir URI we do nothing with it
-        if (!str_contains((string) $url, (string) $this->fhirBaseURL)) {
+        if (!str_starts_with((string) $url, (string) $this->fhirBaseURL)) {
             return null;
         } else {
             // grab everything from our string onwards...
-            $relativeUrl = substr((string) $url, $this->baseUrlLength - 1);
+            $relativeUrl = substr((string) $url, $this->baseUrlLength);
             return $relativeUrl !== false ? $relativeUrl : null;
         }
     }
