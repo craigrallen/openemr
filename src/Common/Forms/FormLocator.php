@@ -77,6 +77,7 @@ class FormLocator
                     "Module attempted to load a file outside of its directory: {file} for form {formdir}",
                     ['file' => $event->getFormIncludePath(), 'formdir' => $event->getFormName()]
                 );
+                $finalPath = $initialFilename;
             }
         }
         if (!file_exists($finalPath)) {

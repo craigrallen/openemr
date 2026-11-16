@@ -68,6 +68,11 @@ namespace OpenEMR\Common\Forms {
 }
 
 namespace {
+    if (PHP_SAPI !== 'cli') {
+        http_response_code(404);
+        exit;
+    }
+
     use OpenEMR\Common\Forms\FormLocator;
     use OpenEMR\Core\ModulesApplication;
     use OpenEMR\Core\OEGlobalsBag;
