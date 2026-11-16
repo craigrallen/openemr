@@ -137,7 +137,7 @@ class FormSOAP extends ORDataObject
     }
     public function set_subjective($data)
     {
-        if (!empty($data)) {
+        if (!empty($data) || is_string($data)) {
             $this->subjective = $data;
         }
     }
@@ -147,7 +147,7 @@ class FormSOAP extends ORDataObject
     }
     public function set_objective($data)
     {
-        if (!empty($data)) {
+        if (!empty($data) || is_string($data)) {
             $this->objective = $data;
         }
     }
@@ -157,7 +157,7 @@ class FormSOAP extends ORDataObject
     }
     public function set_assessment($data)
     {
-        if (!empty($data)) {
+        if (!empty($data) || is_string($data)) {
             $this->assessment = $data;
         }
     }
@@ -167,7 +167,7 @@ class FormSOAP extends ORDataObject
     }
     public function set_plan($data)
     {
-        if (!empty($data)) {
+        if (!empty($data) || is_string($data)) {
             $this->plan = $data;
         }
     }
