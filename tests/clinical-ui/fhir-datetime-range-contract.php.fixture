@@ -1,0 +1,139 @@
+<?php
+
+declare(strict_types=1);
+
+use OpenEMR\Services\FHIR\FhirDateTimeParser as Parser;
+
+require_once dirname(__DIR__, 2) . '/src/Services/FHIR/FhirDateTimeParser.php';
+
+$originalTimezone = date_default_timezone_get();
+$cases = [];
+$passed = 0;
+$failed = 0;
+
+$run = static function (string $name, string $timezone, callable $test) use (&$cases, &$passed, &$failed): void {
+    $previousTimezone = date_default_timezone_get();
+    $ok = false;
+    try {
+        if (!date_default_timezone_set($timezone)) {
+            throw new RuntimeException('Cannot set timezone: ' . $timezone);
+        }
+        $test();
+        $ok = true;
+    } catch (Throwable $error) {
+        $ok = false;
+    } finally {
+        date_default_timezone_set($previousTimezone);
+    }
+    $cases[] = ['name' => $name, 'ok' => $ok];
+    if ($ok) {
+        ++$passed;
+    } else {
+        ++$failed;
+    }
+};
+
+$same = static function (mixed $expected, mixed $actual): void {
+    if ($expected !== $actual) {
+        throw new RuntimeException('Unexpected value');
+    }
+};
+
+$reject = static function (callable $call, string $elementPath): void {
+    try {
+        $call();
+    } catch (InvalidArgumentException $error) {
+        if (!str_contains($error->getMessage(), $elementPath)) {
+            throw new RuntimeException('Missing element path');
+        }
+        return;
+    }
+    throw new RuntimeException('Expected InvalidArgumentException');
+};
+
+$object = static function (mixed $value, string $elementPath, string $expected, string $timezone) use ($same): void {
+    $parsed = Parser::toDateTimeImmutable($value, $elementPath);
+    if (!$parsed instanceof DateTimeImmutable) {
+        throw new RuntimeException('Expected DateTimeImmutable');
+    }
+    $same($expected, $parsed->format('Y-m-d H:i:s'));
+    $same($timezone, $parsed->getTimezone()->getName());
+};
+
+try {
+    $run('source_exact_guard_inverse_sha256', 'UTC', static function () use ($same): void {
+        $source = file_get_contents(dirname(__DIR__, 2) . '/src/Services/FHIR/FhirDateTimeParser.php');
+        if (!is_string($source)) {
+            throw new RuntimeException('Cannot read parser source');
+        }
+        $guard = <<<'GUARD'
+        $normalizedYear = (int) $parsed->format('Y');
+        if ($normalizedYear < self::MIN_YEAR || $normalizedYear > 9999) {
+            throw new \InvalidArgumentException(
+                $elementPath . ': normalized date/dateTime is outside the supported database year range ("' . $value . '")'
+            );
+        }
+
+GUARD;
+        $guard .= "\n";
+        $needle = $guard . '        return $parsed;';
+        $same(1, substr_count($source, $guard));
+        $same(1, substr_count($source, '        return $parsed;'));
+        $same(1, substr_count($source, $needle));
+        $same('8569fc69b07a983dbcb32292486b46dcbf7bc051480ae2ad517d5c261c3e1817', hash('sha256', str_replace($guard, '', $source)));
+    });
+
+    $low = '1000-01-01T00:00:00+14:00';
+    $high = '9999-12-31T23:59:59-14:00';
+    $path = 'ServiceRequest.authoredOn';
+    $run('utc_lower_datetime_rejected', 'UTC', static function () use ($reject, $low, $path): void { $reject(static fn () => Parser::toDbDateTime($low, $path), $path); });
+    $run('utc_lower_date_rejected', 'UTC', static function () use ($reject, $low, $path): void { $reject(static fn () => Parser::toDbDate($low, $path), $path); });
+    $run('utc_lower_object_rejected', 'UTC', static function () use ($reject, $low, $path): void { $reject(static fn () => Parser::toDateTimeImmutable($low, $path), $path); });
+    $run('utc_upper_datetime_rejected', 'UTC', static function () use ($reject, $high, $path): void { $reject(static fn () => Parser::toDbDateTime($high, $path), $path); });
+    $run('utc_upper_date_rejected', 'UTC', static function () use ($reject, $high, $path): void { $reject(static fn () => Parser::toDbDate($high, $path), $path); });
+    $run('utc_upper_object_rejected', 'UTC', static function () use ($reject, $high, $path): void { $reject(static fn () => Parser::toDateTimeImmutable($high, $path), $path); });
+
+    $serverHigh = '9999-12-31T23:59:59Z';
+    $serverLow = '1000-01-01T00:00:00Z';
+    $run('server_upper_datetime_rejected', 'Etc/GMT-14', static function () use ($reject, $serverHigh, $path): void { $reject(static fn () => Parser::toDbDateTime($serverHigh, $path), $path); });
+    $run('server_upper_date_rejected', 'Etc/GMT-14', static function () use ($reject, $serverHigh, $path): void { $reject(static fn () => Parser::toDbDate($serverHigh, $path), $path); });
+    $run('server_upper_object_rejected', 'Etc/GMT-14', static function () use ($reject, $serverHigh, $path): void { $reject(static fn () => Parser::toDateTimeImmutable($serverHigh, $path), $path); });
+    $run('server_lower_datetime_rejected', 'Etc/GMT+12', static function () use ($reject, $serverLow, $path): void { $reject(static fn () => Parser::toDbDateTime($serverLow, $path), $path); });
+    $run('server_lower_date_rejected', 'Etc/GMT+12', static function () use ($reject, $serverLow, $path): void { $reject(static fn () => Parser::toDbDate($serverLow, $path), $path); });
+    $run('server_lower_object_rejected', 'Etc/GMT+12', static function () use ($reject, $serverLow, $path): void { $reject(static fn () => Parser::toDateTimeImmutable($serverLow, $path), $path); });
+
+    $safeLow = '1000-01-01T14:00:00+14:00';
+    $safeHigh = '9999-12-31T09:59:59-14:00';
+    $run('utc_lower_datetime_valid', 'UTC', static function () use ($same, $safeLow, $path): void { $same('1000-01-01 00:00:00', Parser::toDbDateTime($safeLow, $path)); });
+    $run('utc_lower_date_valid', 'UTC', static function () use ($same, $safeLow, $path): void { $same('1000-01-01', Parser::toDbDate($safeLow, $path)); });
+    $run('utc_lower_object_valid', 'UTC', static function () use ($object, $safeLow, $path): void { $object($safeLow, $path, '1000-01-01 00:00:00', 'UTC'); });
+    $run('utc_upper_datetime_valid', 'UTC', static function () use ($same, $safeHigh, $path): void { $same('9999-12-31 23:59:59', Parser::toDbDateTime($safeHigh, $path)); });
+    $run('utc_upper_date_valid', 'UTC', static function () use ($same, $safeHigh, $path): void { $same('9999-12-31', Parser::toDbDate($safeHigh, $path)); });
+    $run('utc_upper_object_valid', 'UTC', static function () use ($object, $safeHigh, $path): void { $object($safeHigh, $path, '9999-12-31 23:59:59', 'UTC'); });
+    $run('same_offset_lower_valid', 'Etc/GMT-14', static function () use ($same, $low, $path): void { $same('1000-01-01 00:00:00', Parser::toDbDateTime($low, $path)); });
+    $run('same_offset_upper_valid', 'Etc/GMT+12', static function () use ($same, $path): void { $same('9999-12-31 23:59:59', Parser::toDbDateTime('9999-12-31T23:59:59-12:00', $path)); });
+    $run('full_date_lower_valid', 'UTC', static function () use ($same, $path): void { $same('1000-01-01', Parser::toDbDate('1000-01-01', $path)); });
+    $run('full_date_upper_valid', 'UTC', static function () use ($same, $path): void { $same('9999-12-31', Parser::toDbDate('9999-12-31', $path)); });
+    $run('partial_year_allowed', 'UTC', static function () use ($same, $path): void { $same('2024-01-01', Parser::toDbDate('2024', $path, true)); });
+    $run('partial_month_allowed', 'UTC', static function () use ($same, $path): void { $same('2024-03-01 00:00:00', Parser::toDbDateTime('2024-03', $path, true)); });
+    $run('partial_year_forbidden', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDbDate('2024', $path), $path); });
+    $run('partial_month_forbidden', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDbDateTime('2024-03', $path), $path); });
+    $run('null_absent', 'UTC', static function () use ($same, $path): void { $same(null, Parser::toDbDateTime(null, $path)); });
+    $run('empty_absent', 'UTC', static function () use ($same, $path): void { $same(null, Parser::toDbDate('', $path)); });
+    $run('whitespace_absent', 'UTC', static function () use ($same, $path): void { $same(null, Parser::toDateTimeImmutable('  ', $path)); });
+    $run('malformed_rejected', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDbDateTime('2024-03-15T10:30:00', $path), $path); });
+    $run('invalid_calendar_rejected', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDbDate('2024-02-30', $path), $path); });
+    $run('nonstring_rejected', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDateTimeImmutable(2024, $path), $path); });
+    $run('input_0999_rejected', 'UTC', static function () use ($reject, $path): void { $reject(static fn () => Parser::toDbDate('0999-12-31', $path), $path); });
+    $run('dst_winter_conversion', 'Europe/Stockholm', static function () use ($same, $path): void { $same('2024-01-15 13:00:00', Parser::toDbDateTime('2024-01-15T12:00:00Z', $path)); });
+    $run('dst_summer_conversion', 'Europe/Stockholm', static function () use ($same, $path): void { $same('2024-07-15 14:00:00', Parser::toDbDateTime('2024-07-15T12:00:00Z', $path)); });
+    $run('fraction_dropped_from_db_format', 'UTC', static function () use ($same, $path): void { $same('2024-03-15 10:30:00', Parser::toDbDateTime('2024-03-15T10:30:00.123Z', $path)); });
+    $run('object_server_timezone', 'Europe/Stockholm', static function () use ($object, $path): void { $object('2024-07-15T12:00:00Z', $path, '2024-07-15 14:00:00', 'Europe/Stockholm'); });
+    $run('overflow_input_precision_unchanged', 'UTC', static function () use ($same, $low): void { $same(Parser::PRECISION_TIME, Parser::precision($low)); });
+    $run('overflow_input_isvalid_unchanged', 'UTC', static function () use ($same, $low, $high): void { $same(true, Parser::isValid($low)); $same(true, Parser::isValid($high)); });
+} finally {
+    date_default_timezone_set($originalTimezone);
+}
+
+echo json_encode(['passed' => $passed, 'failed' => $failed, 'cases' => $cases], JSON_THROW_ON_ERROR) . "\n";
+exit($failed === 0 ? 0 : 1);

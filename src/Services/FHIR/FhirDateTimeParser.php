@@ -203,6 +203,13 @@ final class FhirDateTimeParser
             $parsed = $parsed->setTimezone(new \DateTimeZone(date_default_timezone_get()));
         }
 
+        $normalizedYear = (int) $parsed->format('Y');
+        if ($normalizedYear < self::MIN_YEAR || $normalizedYear > 9999) {
+            throw new \InvalidArgumentException(
+                $elementPath . ': normalized date/dateTime is outside the supported database year range ("' . $value . '")'
+            );
+        }
+
         return $parsed;
     }
 

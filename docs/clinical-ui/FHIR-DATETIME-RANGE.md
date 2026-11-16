@@ -1,0 +1,19 @@
+# FHIR dateTime database year range contract
+
+OPEMR-253, owner Hermes controller, allocation 1/max2 consecutive scheduled delivery runs INCLUDING implementation AND QA; independently rotated from OPEMR-252/PR309. The fixture executes the complete native `FhirDateTimeParser` class directly, with no application bootstrap, database, HTTP service, or PHPUnit dependency. Tests-only commit `62f0892d` preceded the product change: original source produced 27 passing and 13 failing cases. The final fixture passes all 40 cases locally, with empty stderr. These are native parser/source-contract results, not authenticated integration acceptance.
+
+## Intended product change
+
+The implementation inserts one exact guard immediately before the unique `return $parsed;` in `src/Services/FHIR/FhirDateTimeParser.php`, after offset-bearing values are converted to the server timezone. It rejects a normalized year below 1000 or above 9999 with `InvalidArgumentException` containing the FHIR element path. All other original source bytes remain unchanged. The fixture checks this placement and verifies that removing only the guard restores original SHA-256 `8569fc69b07a983dbcb32292486b46dcbf7bc051480ae2ad517d5c261c3e1817`. This is a supplied repository/HEAD binding, not an independent attestation.
+
+The range is for MySQL `DATE` and `DATETIME`, documented as years 1000 through 9999 in the [MySQL 8.4 date and time type documentation](https://dev.mysql.com/doc/refman/8.4/en/datetime.html). `ServiceRequest.authoredOn` maps to `date_ordered`, a `DATETIME` in `sql/database.sql`. The contract does not introduce a `TIMESTAMP` range policy. It does not execute native callers, SQL, or Encounter205.
+
+A FHIR timestamp whose input year is 1000 can convert to local year 0999; input year 9999 can convert to 10000. The fixture checks both directions for `toDbDateTime`, `toDbDate`, and `toDateTimeImmutable` in UTC and fixed server zones. It also checks exact safe boundaries, same-offset values, full dates, allowed and forbidden partial precision, absent and invalid inputs, winter and summer server conversion, fraction formatting, and the returned object's timezone. `precision()` and `isValid()` retain their historical input-policy behavior even when later conversion would overflow. Existing fraction dropping and leap-second policy remain unchanged apart from the normalized-year guard.
+
+## Delivery and scope
+
+The controller owns Git operations, materialization, syntax checks, hosted execution, and results. Schedule implementation and QA within one delivery run, or at most two consecutive scheduled delivery runs. This document and the test files do not establish native HTTP, SQL, persistence, or clinical acceptance.
+
+The researched UI, all 22 features, demo coverage, Swedish programme and ordinary approval remain open. Specific historical denials, including the Swedish checkout/publication/installation and root checkpoint write restrictions, remain in force. The coding workers have no external-write authority; the controller owns authorized tracker/PR publication. No merge, deployment, master write, real-patient, live national integration, vendor contact or cron changes are included.
+
+The controller corrected two test-only proposal defects: the Jest report framing now rejects extra trailing output absolutely, and the PHP nowdoc source-inverse string explicitly restores its second trailing LF. The initial post-product native run was 39/40, failing only that nowdoc inverse harness case; it was not GREEN. After the test-only correction, original source was re-exercised (27/40 pass, 13 fail) before restoring the unchanged product candidate and obtaining 40/40. No source hash was rebased and no assertion was weakened. Local Jest/emulation, PHPUnit and PHPStan were not run; hosted gates and independent review are reported separately in controller evidence.
