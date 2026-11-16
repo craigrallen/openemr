@@ -40,7 +40,7 @@ $cases = [
         }
         $normalization = "        \$this->fhirBaseURL = rtrim((string) \$this->fhirBaseURL, '/') . '/';\n";
         $assignment = "        \$this->baseUrlLength = strlen((string) \$this->fhirBaseURL);";
-        $typedProperty = '    private int $baseUrlLength;';
+        $typedProperty = '    private readonly int $baseUrlLength;';
         $originalProperty = '    private $baseUrlLength;';
         $newCondition = 'if (!str_starts_with((string) $url, (string) $this->fhirBaseURL))';
         $oldCondition = 'if (!str_contains((string) $url, (string) $this->fhirBaseURL))';
