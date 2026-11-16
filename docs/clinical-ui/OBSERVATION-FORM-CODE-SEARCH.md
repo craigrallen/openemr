@@ -2,9 +2,9 @@
 
 This tests-only handoff is bound to repository `/Users/craig/.hermes/workspaces/openemr-observation-form-code-search` at supplied HEAD `09b29da7771aea334ed5745e058751157af980d7`. The binding is supplied context, not independent attestation. The original service source SHA-256 supplied for the inverse check is `70d163fe4461dded632d2762f1d00992ec5802bc7ec89b777e12e67db82fa6fc`.
 
-## Intended production change
+## Bounded production change
 
-The controller owns materialization, Git, and execution. Production is not changed by these artifacts. A later production patch has exactly two additions in `src/Services/FHIR/Observation/FhirObservationObservationFormService.php`:
+The controller owns materialization, Git, and execution. After the tests-only commit and genuine RED, the wrapped coding CLI proposed exactly two additions in `src/Services/FHIR/Observation/FhirObservationObservationFormService.php`; the controller applied them and the native fixture passed all 24 cases with empty stderr. No unrelated production bytes changed:
 
 1. Immediately after the system lookup/cache and before the existing `if (!empty($codeTypes))`, add `if ($codeTypes === [] && $system !== null && $system !== '') { continue; }`.
 2. Immediately after the `foreach` and before assignment to `$openEMRSearchParameters['ob_code']`, add `if ($codeSearchField->getValues() !== [] && $compoundObCode->getChildren() === []) { return new ProcessingResult(); }`.

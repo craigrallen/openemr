@@ -129,6 +129,9 @@ class FhirObservationObservationFormService extends FhirServiceBase implements I
                     $codeTypes = $this->getCodeTypesService()->getCodeTypeListForSystem($system);
                     $systemLookupHash[$systemKey] = $codeTypes;
                 }
+                if ($codeTypes === [] && $system !== null && $system !== '') {
+                    continue;
+                }
                 if (!empty($codeTypes)) {
                     $compoundObCodeWithCodeType = new CompositeSearchField('ob_code_code_type', [], true);
                     $compoundObCodeWithCodeType->addChild(new TokenSearchField('ob_code', [$codeSearchFieldValue->getCode()]));
@@ -137,6 +140,9 @@ class FhirObservationObservationFormService extends FhirServiceBase implements I
                 } else {
                     $compoundObCode->addChild(new TokenSearchField('ob_code', [$codeSearchFieldValue->getCode()]));
                 }
+            }
+            if ($codeSearchField->getValues() !== [] && $compoundObCode->getChildren() === []) {
+                return new ProcessingResult();
             }
             $openEMRSearchParameters['ob_code'] = $compoundObCode;
         }
