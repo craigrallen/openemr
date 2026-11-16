@@ -144,7 +144,7 @@ class FhirCoverageService extends FhirServiceBase implements IPatientCompartment
         $coverageResource->setId($id);
 
         // Identifier (Must Support) - Policy Number with Member type
-        if (!empty($dataRecord['policy_number'])) {
+        if (!empty($dataRecord['policy_number']) || ($dataRecord['policy_number'] ?? null) === '0') {
             $identifier = new FHIRIdentifier();
             $identifierType = new FHIRCodeableConcept();
             $identifierTypeCoding = new FHIRCoding();
@@ -176,7 +176,7 @@ class FhirCoverageService extends FhirServiceBase implements IPatientCompartment
         $coverageResource->setType($coverageType);
 
         // SubscriberId (Must Support) - policy number
-        if (!empty($dataRecord['policy_number'])) {
+        if (!empty($dataRecord['policy_number']) || ($dataRecord['policy_number'] ?? null) === '0') {
             $subscriberId = new FHIRString();
             $subscriberId->setValue($dataRecord['policy_number']);
             $coverageResource->setSubscriberId($subscriberId);
