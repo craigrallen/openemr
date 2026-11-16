@@ -14,7 +14,7 @@ namespace OpenEMR\Services\FHIR;
 
 class FhirUrlResolver
 {
-    private $baseUrlLength;
+    private int $baseUrlLength;
 
     public function __construct(private $fhirBaseURL)
     {
