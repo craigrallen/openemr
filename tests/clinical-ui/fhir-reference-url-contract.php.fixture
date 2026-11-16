@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__, 2);
+require $root . '/src/Services/FHIR/FhirUrlResolver.php';
+require $root . '/src/Services/Search/ReferenceSearchValue.php';
+
+use OpenEMR\Services\FHIR\FhirUrlResolver;
+use OpenEMR\Services\Search\ReferenceSearchValue;
+
+function checkSame($actual, $expected): void
+{
+    if ($actual !== $expected) {
+        throw new RuntimeException('Expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+    }
+}
+
+function checkUrl($base, $url, ?string $suffix, ?string $resource = null, ?string $id = null): void
+{
+    $actual = (new FhirUrlResolver($base))->getRelativeUrl($url);
+    checkSame($actual, $suffix);
+    if ($suffix !== null && $suffix !== '') {
+        $reference = ReferenceSearchValue::createFromRelativeUri($actual, false);
+        checkSame($reference->getResource(), $resource);
+        checkSame($reference->getId(), $id);
+    }
+}
+
+$base = 'https://local.example/fhir';
+$cases = [
+    'source_inverse_sha256' => static function () use ($root): void {
+        $path = $root . '/src/Services/FHIR/FhirUrlResolver.php';
+        if (!is_file($path)) {
+            throw new RuntimeException('Resolver source is missing');
+        }
+        $source = file_get_contents($path);
+        if ($source === false) {
+            throw new RuntimeException('Resolver source could not be read');
+        }
+        $normalization = "        \$this->fhirBaseURL = rtrim((string) \$this->fhirBaseURL, '/') . '/';\n";
+        $assignment = "        \$this->baseUrlLength = strlen((string) \$this->fhirBaseURL);";
+        $newCondition = 'if (!str_starts_with((string) $url, (string) $this->fhirBaseURL))';
+        $oldCondition = 'if (!str_contains((string) $url, (string) $this->fhirBaseURL))';
+        $newExtraction = '$relativeUrl = substr((string) $url, $this->baseUrlLength);';
+        $oldExtraction = '$relativeUrl = substr((string) $url, $this->baseUrlLength - 1);';
+        foreach ([$normalization, $newCondition, $newExtraction] as $fragment) {
+            checkSame(substr_count($source, $fragment), 1);
+        }
+        checkSame(str_contains($source, $normalization . $assignment), true);
+        $inverse = str_replace($normalization, '', $source);
+        $inverse = str_replace($newCondition, $oldCondition, $inverse);
+        $inverse = str_replace($newExtraction, $oldExtraction, $inverse);
+        checkSame(hash('sha256', $inverse), '3669ffddef677c453ededb00eeb43190beec02d2a53d9bedd14586b8ed2f1efd');
+    },
+    'base_no_slash_patient_suffix' => static fn() => checkSame((new FhirUrlResolver($base))->getRelativeUrl($base . '/Patient/opaque-id'), 'Patient/opaque-id'),
+    'base_no_slash_patient_reference' => static fn() => checkUrl($base, $base . '/Patient/opaque-id', 'Patient/opaque-id', 'Patient', 'opaque-id'),
+    'base_with_slash_patient_suffix' => static fn() => checkSame((new FhirUrlResolver($base . '/'))->getRelativeUrl($base . '/Patient/opaque-id'), 'Patient/opaque-id'),
+    'base_with_slash_patient_reference' => static fn() => checkUrl($base . '/', $base . '/Patient/opaque-id', 'Patient/opaque-id', 'Patient', 'opaque-id'),
+    'nested_base_path' => static fn() => checkUrl('https://local.example/api/v1/fhir', 'https://local.example/api/v1/fhir/Patient/nested', 'Patient/nested', 'Patient', 'nested'),
+    'http_base' => static fn() => checkUrl('http://local.example/fhir', 'http://local.example/fhir/Patient/http-id', 'Patient/http-id', 'Patient', 'http-id'),
+    'https_base' => static fn() => checkUrl($base, $base . '/Patient/https-id', 'Patient/https-id', 'Patient', 'https-id'),
+    'encounter_reference' => static fn() => checkUrl($base, $base . '/Encounter/visit-1', 'Encounter/visit-1', 'Encounter', 'visit-1'),
+    'opaque_zero_id' => static fn() => checkUrl($base, $base . '/Patient/0', 'Patient/0', 'Patient', '0'),
+    'case_sensitive_resource' => static fn() => checkUrl($base, $base . '/patient/ID', 'patient/ID', 'patient', 'ID'),
+    'same_host_wrong_path' => static fn() => checkUrl($base, 'https://local.example/other/Patient/id', null),
+    'sibling_fhir_extra' => static fn() => checkUrl($base, $base . '-extra/Patient/id', null),
+    'foreign_base_in_path' => static fn() => checkUrl($base, 'https://foreign.example/path/' . $base . '/Patient/id', null),
+    'foreign_base_in_query' => static fn() => checkUrl($base, 'https://foreign.example/path?next=' . $base . '/Patient/id', null),
+    'foreign_base_in_fragment' => static fn() => checkUrl($base, 'https://foreign.example/path#' . $base . '/Patient/id', null),
+    'bare_base_no_slash' => static fn() => checkUrl($base, $base, null),
+    'base_with_slash_empty_suffix' => static fn() => checkUrl($base, $base . '/', ''),
+    'different_scheme' => static fn() => checkUrl($base, 'http://local.example/fhir/Patient/id', null),
+    'different_port' => static fn() => checkUrl($base, 'https://local.example:8443/fhir/Patient/id', null),
+    'unrelated_remote' => static fn() => checkUrl($base, 'https://remote.example/fhir/Patient/id', null),
+    'null_url' => static fn() => checkUrl($base, null, null),
+    'false_url' => static fn() => checkUrl($base, false, null),
+    'original_bytes' => static fn() => checkUrl($base, $base . '/Patient/%2Fid?x=a%2Fb#frag', 'Patient/%2Fid?x=a%2Fb#frag', 'Patient', '%2Fid?x=a%2Fb#frag'),
+];
+
+ksort($cases, SORT_STRING);
+$results = [];
+foreach ($cases as $name => $run) {
+    try {
+        $run();
+        $results[] = ['name' => $name, 'ok' => true];
+    } catch (Throwable $error) {
+        $results[] = ['name' => $name, 'ok' => false];
+    }
+}
+$passed = count(array_filter($results, static fn(array $case): bool => $case['ok']));
+$failed = count($results) - $passed;
+echo json_encode(['passed' => $passed, 'failed' => $failed, 'cases' => $results], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) . "\n";
+exit($failed === 0 ? 0 : 1);
