@@ -6,7 +6,7 @@ const SOURCE = path.resolve(__dirname, '../../interface/patient_file/transaction
 const ORIGINAL_SHA256 = '1b3f48c7c7a5d87af1ba71aba43fd051084a0a26be43b8f7d5c7c80c6311c776';
 const OLD_BODY = '<body onload="<?php echo $body_onload_code; ?>" >';
 const NEW_BODY = '<body class="oe-transaction-editor" onload="<?php echo $body_onload_code; ?>" >';
-const BASE = "body.oe-transaction-editor.oe-clinical-workspace #container_div > form[name='new_transaction']";
+const BASE = "html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction']";
 const START = '/* OPEMR-270 transaction editor document start */';
 const END = '/* OPEMR-270 transaction editor document end */';
 const CSS = [
@@ -53,9 +53,9 @@ const CSS = [
     '}',
     END,
     ''
-].map(line => {
+].map((line, index, lines) => {
     const formatted = line.replace(/^ +/, spaces => ' '.repeat(spaces.length / 2));
-    return line === '    }' || line === '}' ? formatted + '\n' : formatted;
+    return (line === '    }' && lines[index + 1] !== '}') || line === '}' ? formatted + '\n' : formatted;
 }).join('\n');
 
 function count(haystack, needle) {
@@ -158,6 +158,19 @@ function focus(source) {
 }
 
 const CASES = [
+    ['native Header context source linkage', source => {
+        const root = path.resolve(__dirname, '../..');
+        const config = fs.readFileSync(path.join(root, 'config/config.yaml'), 'utf8');
+        const header = fs.readFileSync(path.join(root, 'src/Core/Header.php'), 'utf8');
+        const popup = fs.readFileSync(path.join(root, 'interface/clinical-workspace/popup.js'), 'utf8');
+        return source.includes("Header::setupHeader(['common','datetime-picker','select2'])") &&
+            /workbench-popup:[\s\S]*?script: popup\.js\s+link: popup\.css\s+autoload: true/.test(config) &&
+            header.includes('self::setupAssets(is_array($assets) ? $assets : [$assets], true)') &&
+            popup.includes("const CONTEXT_CLASS = 'oe-workbench-context'") &&
+            popup.includes('const html = doc.documentElement') && popup.includes('html.classList.add(name)') &&
+            popup.includes('set(CONTEXT_CLASS, active)') &&
+            BASE.startsWith('html.oe-workbench-context body.oe-transaction-editor ');
+    }],
     ['original source preservation', source => originalFrom(source) !== null],
     ['screen scoped theme preserving sheet', sheet],
     ['floated tab content clearfix', clearfix],
