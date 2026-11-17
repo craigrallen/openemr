@@ -1,0 +1,13 @@
+# OPEMR-264: health concern creation dates
+
+Owner: Hermes. Allocation: 1, maximum 2. Issue OPEMR-264 was To Do before work. Supplied repository: `/Users/craig/.hermes/workspaces/openemr-health-concern-dates`; supplied HEAD: `09b29da7771aea334ed5745e058751157af980d7`. These bindings were supplied by the controller and are not independently attested here.
+
+The native editor `add_edit_issue.php` supplies the creation `date`, and `PatientIssuesService::createIssue` binds it into the insert. The health concern search currently selects `l.date AS condition_date`; the shared native Condition mapper reads `date` for `recordedDate` and the asserted date extension, then falls back to `begdate` for `recordedDate` when `date` is absent or null. The source backed mismatch is in the search projection. It is not a live patient incident finding.
+
+The intended product change is one LF terminated line, `            l.date AS date,`, immediately after the existing `            l.date AS condition_date,` line. The old alias and every other product byte remain. The fixture checks that removing this single addition yields the supplied original SHA-256 `bb87b37d1daf2653c7968cf1081759f2f68ea6da7efed7674b757037e43439ed`.
+
+`tests/clinical-ui/health-concern-dates.php.fixture` is intentionally outside static PHP test discovery. Its CLI runner loads the complete native service, composed traits, interfaces, utility, and R4 models through a root relative, exact case autoloader. A declaration only `FhirServiceBase` parent and reflection construction avoid service construction and SQL bootstrap. It performs no SQL query. It emulates a synthetic row according to the source projection, then exercises the native `parseOpenEMRRecord` object and encoded branches. Direct row cases cover creation, onset fallback, null and empty dates, asserted extension, abatement, and input preservation. These results prove the mapper behavior and the source contract; they do not establish SQL runtime acceptance or authenticated FHIR readback.
+
+The Jest wrapper requires one JSON line, an empty stderr, all 17 named cases, and a zero exit status. Before the product insertion, the source backed regression cases are expected to fail. Actual RED and GREEN executions have not yet been run or claimed. Controller materialization, Git operations, and execution remain with the controller.
+
+The original 22 support tests remain supporting evidence only. Ordinary approval, full hosted coverage, native authenticated FHIR and SQL validation, roles, security, persistence, and clinical QA remain open. This work makes no timezone or DST policy change and does not authorize clinical go live, Swedish rollout, cron changes, or master deployment.
