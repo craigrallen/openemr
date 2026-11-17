@@ -380,6 +380,56 @@ div.tab {
     height: auto;
     width: auto;
 }
+/* OPEMR-270 transaction editor document start */
+@media screen {
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] {
+    max-width: 78rem;
+    margin-inline: auto;
+    padding: 1rem;
+    border: 1px solid var(--gray300);
+    border-radius: 0.5rem;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction']::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] .btn-group {
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 0.25rem;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] .btn-group > .btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] .btn-group > .btn:focus {
+    outline: 2px solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] .btn-group > .btn:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] ul.tabNav a:focus {
+    outline: 2px solid currentcolor;
+    outline-offset: -2px;
+  }
+
+  html.oe-workbench-context body.oe-transaction-editor #container_div > form[name='new_transaction'] ul.tabNav a:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: -2px;
+  }
+}
+
+/* OPEMR-270 transaction editor document end */
 </style>
 <?php
 $arrOeUiSettings = [
@@ -397,7 +447,7 @@ $oemr_ui = new OemrUI($arrOeUiSettings);
 ?>
 
 </head>
-<body onload="<?php echo $body_onload_code; ?>" >
+<body class="oe-transaction-editor" onload="<?php echo $body_onload_code; ?>" >
     <div id="container_div" class="<?php echo $oemr_ui->oeContainer();?> mt-3">
         <form name='new_transaction' method='post' action='add_transaction.php?transid=<?php echo attr_url((string) $transid); ?>' onsubmit='return validate(this)'>
             <input type="hidden" name="csrf_token_form" value="<?php echo CsrfUtils::collectCsrfToken(session: $session); ?>" />
