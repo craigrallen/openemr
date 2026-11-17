@@ -1,0 +1,11 @@
+# OPEMR-268 appointment patient scope
+
+The standard patient detail route `GET /api/patient/:pid/appointment/:eid` must return an appointment only when the first service row's `pc_pid` matches the requested decimal patient ID. Both values must be complete ASCII decimal digit strings or integers. Comparison strips leading zeroes and does not cast large IDs to integers. Missing or malformed rows and mismatches return the helper's `404` record-not-found payload. A match returns the complete original service result through the helper.
+
+The standard global detail route `GET /api/appointment/:eid` keeps its existing unscoped response, including an empty result. This change does not establish an unauthorized-access or ACL exploit. The patient detail route retains its existing `patients/appt` authorization call. The portal UUID method and all other controller and route source remain unchanged.
+
+`tests/clinical-ui/appointment-patient-scope.php.fixture` loads the complete native controller and route include with synthetic service, request, authorization recorder, helper, and typed response seams. Each named case invokes a native route closure. The source inverse case requires one exact new method fragment and one exact route operand change, then hashes the reconstructed original files against the supplied SHA-256 values. The supplied repository path and HEAD are controller handoff context, not an independent attestation by these tests.
+
+Run the Jest adapter at `tests/js/appointment-patient-scope.test.js` through the controller's scheduled execution. It invokes PHP directly and requires one JSON line, all named cases, empty stderr, and exit zero. The fixture excludes real authorization behavior, the real helper, SQL, HTTP, persistence, and application bootstrap. It is a targeted native controller and native closure regression check, not acceptance coverage for those systems.
+
+The controller schedule permits run 1 and at most run 2 across implementation and QA together; it is not a separate retry budget for these tests. Ordinary approval, coverage, and native QA remain separate. Prior denials, Swedish work, and root writes remain parked. No merge or deployment is requested by this document.

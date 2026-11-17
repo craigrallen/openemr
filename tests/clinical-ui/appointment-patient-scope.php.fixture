@@ -1,0 +1,229 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Symfony\Component\HttpFoundation {
+    class Response
+    {
+        public function __construct(public array $data, public int $status)
+        {
+        }
+    }
+}
+
+namespace OpenEMR\Common\Http {
+    class HttpRestRequest
+    {
+    }
+}
+
+namespace OpenEMR\Services {
+    class AppointmentService
+    {
+        public static array $records = [];
+        public static array $calls = [];
+
+        public function getAppointment($eid): array
+        {
+            self::$calls[] = $eid;
+            return self::$records;
+        }
+    }
+}
+
+namespace OpenEMR\RestControllers\Config {
+    class RestConfig
+    {
+        public static array $calls = [];
+
+        public static function request_authorization_check($request, $section, $permission): void
+        {
+            self::$calls[] = [$request, $section, $permission];
+        }
+    }
+}
+
+namespace OpenEMR\RestControllers {
+    use Symfony\Component\HttpFoundation\Response;
+
+    class RestControllerHelper
+    {
+        public static array $calls = [];
+
+        public static function responseHandler($data, $unused, $status): Response
+        {
+            self::$calls[] = [$data, $unused, $status];
+            return new Response($data, $status);
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\Common\Http\HttpRestRequest;
+    use OpenEMR\RestControllers\AppointmentRestController;
+    use OpenEMR\RestControllers\Config\RestConfig;
+    use OpenEMR\RestControllers\RestControllerHelper;
+    use OpenEMR\Services\AppointmentService;
+    use Symfony\Component\HttpFoundation\Response;
+
+    if (PHP_SAPI !== 'cli') {
+        throw new RuntimeException('CLI required');
+    }
+    set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+
+    $root = dirname(__DIR__, 2);
+    $controllerPath = $root . '/src/RestControllers/AppointmentRestController.php';
+    $routesPath = $root . '/apis/routes/_rest_routes_standard.inc.php';
+    require $controllerPath;
+    $routes = require $routesPath;
+    if (!is_array($routes)) {
+        throw new RuntimeException('Native route include did not return a map');
+    }
+    $reflection = new ReflectionClass(AppointmentRestController::class);
+    if (realpath((string) $reflection->getFileName()) !== realpath($controllerPath)) {
+        throw new RuntimeException('Loaded controller is not the native file');
+    }
+    foreach (['GET /api/patient/:pid/appointment/:eid', 'GET /api/appointment/:eid'] as $routeKey) {
+        if (!isset($routes[$routeKey]) || !$routes[$routeKey] instanceof Closure) {
+            throw new RuntimeException('Missing native route: ' . $routeKey);
+        }
+        $routeReflection = new ReflectionFunction($routes[$routeKey]);
+        if (realpath((string) $routeReflection->getFileName()) !== realpath($routesPath)) {
+            throw new RuntimeException('Route closure is not from the native file: ' . $routeKey);
+        }
+    }
+
+    function checkScope(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new RuntimeException($message);
+        }
+    }
+
+    function runRoute(Closure $route, array $arguments, array $records, string $eid, int $status, array $data): void
+    {
+        AppointmentService::$records = $records;
+        AppointmentService::$calls = [];
+        RestConfig::$calls = [];
+        RestControllerHelper::$calls = [];
+        $request = new HttpRestRequest();
+        $response = $route(...[...$arguments, $request]);
+        checkScope($response instanceof Response, 'Expected synthetic Response');
+        checkScope($response->status === $status, 'Status: expected ' . $status . ', got ' . $response->status);
+        checkScope($response->data === $data, 'Response data differs from complete expected payload');
+        checkScope(RestConfig::$calls === [[$request, 'patients', 'appt']], 'Authorization call must use exact request and patients/appt once');
+        checkScope(AppointmentService::$calls === [$eid], 'Service must receive exact eid once');
+        checkScope(RestControllerHelper::$calls === [[$data, null, $status]], 'Helper must receive exact payload and status once');
+    }
+
+    $cases = [];
+    $runCase = static function (string $name, Closure $test) use (&$cases): void {
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'ok' => true];
+        } catch (Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error::class . ': ' . $error->getMessage()];
+        }
+    };
+
+    $defaultRow = ['pc_pid' => 42, 'pid' => 999, 'title' => 'Office visit', 'details' => ['duration' => 900, 'status' => '-']];
+    $scenarios = [
+        ['mismatched_patient', '43', [$defaultRow], 404],
+        ['matching_integer_pid', '42', [$defaultRow], 200],
+        ['matching_string_pid', '42', [[...$defaultRow, 'pc_pid' => '42']], 200],
+        ['leading_zero_pid', '00042', [[...$defaultRow, 'pc_pid' => '000042']], 200],
+        ['very_large_pid', '000900719925474099312345678901234567890', [[...$defaultRow, 'pc_pid' => '900719925474099312345678901234567890']], 200],
+        ['zero_pid', '000', [[...$defaultRow, 'pc_pid' => 0]], 200],
+        ['negative_requested_pid', '-42', [$defaultRow], 404],
+        ['signed_requested_pid', '+42', [$defaultRow], 404],
+        ['whitespace_requested_pid', ' 42', [$defaultRow], 404],
+        ['newline_requested_pid', "42\n", [$defaultRow], 404],
+        ['stored_float_pid', '42', [[...$defaultRow, 'pc_pid' => 42.0]], 404],
+        ['stored_exponent_pid', '42', [[...$defaultRow, 'pc_pid' => '4.2e1']], 404],
+        ['stored_negative_pid', '42', [[...$defaultRow, 'pc_pid' => '-42']], 404],
+        ['stored_signed_pid', '42', [[...$defaultRow, 'pc_pid' => '+42']], 404],
+        ['stored_whitespace_pid', '42', [[...$defaultRow, 'pc_pid' => '42 ']], 404],
+        ['stored_newline_pid', '42', [[...$defaultRow, 'pc_pid' => "42\n"]], 404],
+        ['missing_pc_pid', '42', [['pid' => 42, 'title' => 'Office visit']], 404],
+        ['missing_record', '42', [], 404],
+        ['non_array_first_row', '42', ['not a row'], 404],
+        ['joined_pid_distractor', '42', [[...$defaultRow, 'pc_pid' => 43, 'pid' => 42]], 404],
+    ];
+    foreach ($scenarios as [$name, $pid, $records, $status]) {
+        $runCase($name, static function () use ($routes, $name, $pid, $records, $status): void {
+            $eid = 'eid-' . $name;
+            $data = $status === 200 ? $records : ['message' => 'record not found'];
+            runRoute($routes['GET /api/patient/:pid/appointment/:eid'], [$pid, $eid], $records, $eid, $status, $data);
+        });
+    }
+
+    $runCase('global_route_unscoped', static function () use ($routes, $defaultRow): void {
+        $records = [$defaultRow];
+        runRoute($routes['GET /api/appointment/:eid'], ['global-eid'], $records, 'global-eid', 200, $records);
+    });
+    $runCase('global_empty_result', static function () use ($routes): void {
+        runRoute($routes['GET /api/appointment/:eid'], ['missing-global-eid'], [], 'missing-global-eid', 200, []);
+    });
+
+    $runCase('source_inverse', static function () use ($controllerPath, $routesPath, $reflection): void {
+        $controller = file_get_contents($controllerPath);
+        $routeSource = file_get_contents($routesPath);
+        checkScope(is_string($controller) && is_string($routeSource), 'Cannot read native source');
+        $fragment = <<<'PHP'
+    /**
+     * Fetches a single appointment resource for a patient by numeric IDs.
+     */
+    public function getOneForPatientById(string $pid, string $eid): Response
+    {
+        $service = $this->appointmentService;
+        assert($service instanceof AppointmentService);
+        $serviceResult = $service->getAppointment($eid);
+        $appointmentPid = (isset($serviceResult[0]) && is_array($serviceResult[0]))
+            ? ($serviceResult[0]['pc_pid'] ?? null)
+            : null;
+        if (
+            !preg_match('/\A[0-9]+\z/D', $pid)
+            || !(is_int($appointmentPid) || is_string($appointmentPid))
+            || !preg_match('/\A[0-9]+\z/D', (string) $appointmentPid)
+            || ltrim($pid, '0') !== ltrim((string) $appointmentPid, '0')
+        ) {
+            return RestControllerHelper::responseHandler(['message' => 'record not found'], null, 404);
+        }
+        return RestControllerHelper::responseHandler($serviceResult, null, 200);
+    }
+PHP;
+        $fragment = rtrim($fragment, "\n") . "\n\n";
+        $anchor = "    /**\n     * Fetches a single appointment resource by eid.";
+        checkScope(substr_count($controller, $fragment) === 1, 'Expected exactly one anticipated new method fragment');
+        checkScope(substr_count($controller, $fragment . $anchor) === 1, 'New method must be immediately before getOne docblock');
+        checkScope($reflection->hasMethod('getOneForPatientById'), 'Native controller lacks new method');
+        $method = $reflection->getMethod('getOneForPatientById');
+        checkScope($method->isPublic() && $method->getNumberOfParameters() === 2 && (string) $method->getReturnType() === Response::class, 'New method signature differs');
+        checkScope(hash('sha256', str_replace($fragment, '', $controller)) === '98b87e73156177517692b6c9a36ece28bad81d79e4efa69ad452ad2452a54b2a', 'Controller has changes outside the one new method');
+        $old = <<<'PHP'
+    "GET /api/patient/:pid/appointment/:eid" => function ($pid, $eid, HttpRestRequest $request) {
+        RestConfig::request_authorization_check($request, "patients", "appt");
+        $return = (new AppointmentRestController())->getOne($eid);
+
+        return $return;
+    },
+PHP;
+        $new = <<<'PHP'
+    "GET /api/patient/:pid/appointment/:eid" => function ($pid, $eid, HttpRestRequest $request) {
+        RestConfig::request_authorization_check($request, "patients", "appt");
+        $return = (new AppointmentRestController())->getOneForPatientById($pid, $eid);
+
+        return $return;
+    },
+PHP;
+        checkScope(substr_count($routeSource, $new) === 1, 'Expected exactly one changed patient detail route');
+        checkScope(hash('sha256', str_replace($new, $old, $routeSource)) === '7e53531583604f9d6f1d550f55e0c53e1259bd71cbcc97d696415dd65bd54e22', 'Routes have changes outside the patient detail operand');
+    });
+
+    $failed = count(array_filter($cases, static fn (array $case): bool => !$case['ok']));
+    $result = ['tests' => count($cases), 'passed' => count($cases) - $failed, 'failed' => $failed, 'cases' => $cases];
+    echo json_encode($result, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+    exit($failed === 0 ? 0 : 1);
+}
