@@ -346,7 +346,7 @@ class FhirConditionEncounterDiagnosisService extends FhirServiceBase implements 
      */
     private function populateNote($dataRecord, FHIRCondition $conditionResource): void
     {
-        if (!empty($dataRecord['comments'])) {
+        if (!empty($dataRecord['comments']) || ($dataRecord['comments'] ?? null) === '0') {
             $note = new FHIRAnnotation();
             $note->setText($dataRecord['comments']);
             $conditionResource->addNote($note);
