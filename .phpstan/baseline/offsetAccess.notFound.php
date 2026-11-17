@@ -762,11 +762,6 @@ $ignoreErrors[] = [
     'path' => __DIR__ . '/../../src/Common/Auth/AuthHash.php',
 ];
 $ignoreErrors[] = [
-    'message' => '#^Offset 0 might not exist on array\\{\\}\\|array\\{non\\-empty\\-string\\}\\.$#',
-    'count' => 1,
-    'path' => __DIR__ . '/../../src/Services/InsuranceCompanyService.php',
-];
-$ignoreErrors[] = [
     'message' => '#^Offset \'display\' might not exist on array\\{\\}\\|array\\{type\\: \'boolean\'\\|\'date\'\\|\'datetime\'\\|\'decimal\'\\|\'integer\'\\|\'quantity\'\\|\'string\'\\|\'time\'\\|\'uri\', display\\: mixed\\}\\|array\\{type\\: \'coding\', system\\: mixed, code\\: mixed, display\\: mixed\\}\\.$#',
     'count' => 1,
     'path' => __DIR__ . '/../../src/Services/QuestionnaireResponseService.php',

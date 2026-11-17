@@ -106,7 +106,7 @@ class InsuranceCompanyService extends BaseService
             case '7':
                 preg_match("/\d+/", (string) $insuranceCompany['line1'], $matches);
                 $returnval = $insuranceCompany['name'] . " (" . $insuranceCompany['zip'] .
-                    "," . $matches[0] . ")";
+                    "," . ($matches[0] ?? '') . ")";
                 break;
             case '0':
             default:
