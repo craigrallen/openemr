@@ -35,25 +35,28 @@ const CSS = [
     '        overflow-wrap: anywhere;',
     '    }',
     `    ${BASE} .btn-group > .btn:focus {`,
-    '        outline: 2px solid currentColor;',
+    '        outline: 2px solid currentcolor;',
     '        outline-offset: 2px;',
     '    }',
     `    ${BASE} .btn-group > .btn:focus-visible {`,
-    '        outline: 2px solid currentColor;',
+    '        outline: 2px solid currentcolor;',
     '        outline-offset: 2px;',
     '    }',
     `    ${BASE} ul.tabNav a:focus {`,
-    '        outline: 2px solid currentColor;',
+    '        outline: 2px solid currentcolor;',
     '        outline-offset: -2px;',
     '    }',
     `    ${BASE} ul.tabNav a:focus-visible {`,
-    '        outline: 2px solid currentColor;',
+    '        outline: 2px solid currentcolor;',
     '        outline-offset: -2px;',
     '    }',
     '}',
     END,
     ''
-].join('\n');
+].map(line => {
+    const formatted = line.replace(/^ +/, spaces => ' '.repeat(spaces.length / 2));
+    return line === '    }' || line === '}' ? formatted + '\n' : formatted;
+}).join('\n');
 
 function count(haystack, needle) {
     return haystack.split(needle).length - 1;
@@ -147,9 +150,9 @@ function focus(source) {
     const rules = rulesFrom(source);
     return [':focus', ':focus-visible'].every(state =>
         has(rules, BASE + ' .btn-group > .btn' + state, {
-            outline: '2px solid currentColor', 'outline-offset': '2px'
+            outline: '2px solid currentcolor', 'outline-offset': '2px'
         }) && has(rules, BASE + ' ul.tabNav a' + state, {
-            outline: '2px solid currentColor', 'outline-offset': '-2px'
+            outline: '2px solid currentcolor', 'outline-offset': '-2px'
         })
     );
 }
@@ -168,9 +171,9 @@ const CASES = [
         if (!predicates.every(predicate => predicate(candidate) && !predicate(original))) return false;
         const mutations = [
             [sheet, candidate.replace('@media screen {', '@media print {')],
-            [sheet, candidate.replace('        border-radius: 0.5rem;', '        background: red;')],
-            [clearfix, candidate.replace('        clear: both;', '        clear: none;')],
-            [actions, candidate.replace('        overflow-wrap: anywhere;', '        overflow-wrap: normal;')],
+            [sheet, candidate.replace('    border-radius: 0.5rem;', '    background: red;')],
+            [clearfix, candidate.replace('    clear: both;', '    clear: none;')],
+            [actions, candidate.replace('    overflow-wrap: anywhere;', '    overflow-wrap: normal;')],
             [focus, candidate.replace(`${BASE} ul.tabNav a:focus-visible {`, `${BASE} ul.tabNav a:hover {`)]
         ];
         return mutations.every(([predicate, mutation]) => !predicate(mutation));
@@ -183,7 +186,7 @@ const CASES = [
         return [
             candidate.replace('add_transaction.php?transid=', 'changed_transaction.php?transid='),
             candidate.replace(NEW_BODY, NEW_BODY.replace('oe-transaction-editor', 'oe-transaction-editor changed')),
-            candidate.replace('        padding: 1rem;', '        padding: 2rem;'),
+            candidate.replace('    padding: 1rem;', '    padding: 2rem;'),
             candidate.replace('</style>', 'body { color: red; }\n</style>')
         ].every(mutation => originalFrom(mutation) === null);
     }]
