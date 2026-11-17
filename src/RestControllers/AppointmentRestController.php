@@ -30,6 +30,28 @@ class AppointmentRestController
     }
 
     /**
+     * Fetches a single appointment resource for a patient by numeric IDs.
+     */
+    public function getOneForPatientById(string $pid, string $eid): Response
+    {
+        $service = $this->appointmentService;
+        assert($service instanceof AppointmentService);
+        $serviceResult = $service->getAppointment($eid);
+        $appointmentPid = (isset($serviceResult[0]) && is_array($serviceResult[0]))
+            ? ($serviceResult[0]['pc_pid'] ?? null)
+            : null;
+        if (
+            !preg_match('/\A[0-9]+\z/D', $pid)
+            || !(is_int($appointmentPid) || is_string($appointmentPid))
+            || !preg_match('/\A[0-9]+\z/D', (string) $appointmentPid)
+            || ltrim($pid, '0') !== ltrim((string) $appointmentPid, '0')
+        ) {
+            return RestControllerHelper::responseHandler(['message' => 'record not found'], null, 404);
+        }
+        return RestControllerHelper::responseHandler($serviceResult, null, 200);
+    }
+
+    /**
      * Fetches a single appointment resource by eid.
      * @param $eid - The appointment event id.
      */
