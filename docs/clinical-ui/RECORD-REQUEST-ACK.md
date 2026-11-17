@@ -1,6 +1,6 @@
 # Patient Records Request acknowledgement contract
 
-Status: RED/GREEN pending. These files are authored only; no test execution or product change is claimed.
+Status: OPEMR-269 bounded source implementation. Controller executed the complete native inline script in a mocked-boundary Node VM: original source RED 9 cases, 3 passed / 6 failed; tests-only commit `ea650a8853f4fdd52194795abf2b410731fd9024` preceded product edits; candidate GREEN 9/9, empty stderr. PHP syntax, Node syntax and diff whitespace checks passed. Controller narrowed test discovery to the exact native source path before recapturing the same RED; this test-only harness correction does not change assertions. Hosted genuine Jest, full CI/coverage, independent review, ordinary approval and native authenticated acceptance are separate gates.
 
 The portable Node contract runs the complete native inline script in a small jQuery and deferred-POST harness. It accepts the supplied original source or one exact anticipated source change. For the anticipated change, it removes only the specified inline-script replacement and hidden error container, then checks that the original SHA-256 is `453d6e9bd38462f4371e31568303da367acbd7e173f2fd2b54cdee5daa354532`. This checks the supplied source binding; it is not an independent HEAD, runtime, or repository attestation. A source or synthetic-boot mismatch exits 2 with a diagnostic, separately from behavioral failures, which produce one JSON report line and exit 1.
 
