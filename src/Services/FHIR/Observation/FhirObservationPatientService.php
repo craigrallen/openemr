@@ -173,7 +173,7 @@ class FhirObservationPatientService extends FhirServiceBase implements IPatientC
                     throw new SearchFieldException('code', "Invalid code");
                 }
                 foreach ($code->getValues() as $value) {
-                    $system = $value->getSystem();
+                    $system = $value instanceof TokenSearchValue ? $value->getSystem() : null;
                     if ($system !== null && $system !== '' && $system !== FhirCodeSystemConstants::LOINC) {
                         continue;
                     }
