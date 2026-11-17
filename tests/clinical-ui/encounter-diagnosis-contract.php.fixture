@@ -1,0 +1,155 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCondition;
+    use OpenEMR\FHIR\R4\FHIRElement\FHIRAnnotation;
+    use OpenEMR\Services\FHIR\Condition\FhirConditionEncounterDiagnosisService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message, string $file, int $line): void {
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+
+    function assertSameValue(mixed $expected, mixed $actual, string $label): void
+    {
+        if ($expected !== $actual) {
+            throw new RuntimeException($label . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    function emitReport(array $cases, int $status): void
+    {
+        usort($cases, static fn (array $a, array $b): int => strcmp($a['name'], $b['name']));
+        $passed = count(array_filter($cases, static fn (array $case): bool => $case['ok']));
+        $report = ['cases' => $cases, 'failed' => count($cases) - $passed, 'passed' => $passed];
+        echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        exit($status);
+    }
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Condition/FhirConditionEncounterDiagnosisService.php';
+
+    spl_autoload_register(static function (string $class) use ($root): void {
+        if (!str_starts_with($class, 'OpenEMR\\')) {
+            return;
+        }
+        $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen('OpenEMR\\'))) . '.php';
+        if (is_file($path)) {
+            require_once $path;
+        }
+    });
+
+    try {
+        $serviceClass = new ReflectionClass(FhirConditionEncounterDiagnosisService::class);
+        $service = $serviceClass->newInstanceWithoutConstructor();
+        $noteMethod = new ReflectionMethod(FhirConditionEncounterDiagnosisService::class, 'populateNote');
+        $conditionClass = new ReflectionClass(FHIRCondition::class);
+        $annotationClass = new ReflectionClass(FHIRAnnotation::class);
+    } catch (Throwable $error) {
+        emitReport([['error' => $error->getMessage(), 'name' => 'bootstrap', 'ok' => false]], 2);
+    }
+
+    $checks = [];
+    $checks['native_binding'] = static function () use ($root, $sourcePath, $serviceClass, $noteMethod, $conditionClass, $annotationClass): void {
+        assertSameValue(realpath($sourcePath), realpath((string) $serviceClass->getFileName()), 'native service file');
+        assertSameValue($root . '/src/FHIR/R4/FHIRDomainResource/FHIRCondition.php', (string) $conditionClass->getFileName(), 'native condition file');
+        assertSameValue($root . '/src/FHIR/R4/FHIRElement/FHIRAnnotation.php', (string) $annotationClass->getFileName(), 'native annotation file');
+        assertSameValue(FhirConditionEncounterDiagnosisService::class, $noteMethod->getDeclaringClass()->getName(), 'method owner');
+        assertSameValue(true, $noteMethod->isPrivate(), 'method visibility');
+    };
+
+    $checks['source_inverse'] = static function () use ($sourcePath): void {
+        $source = file_get_contents($sourcePath);
+        if ($source === false) {
+            throw new RuntimeException('Cannot read native source');
+        }
+        $approved = "if (!empty(\$dataRecord['comments']) || (is_array(\$dataRecord) && (\$dataRecord['comments'] ?? null) === '0')) {";
+        $original = "if (!empty(\$dataRecord['comments'])) {";
+        assertSameValue(1, substr_count($source, $approved), 'approved guard count');
+        $restored = str_replace($approved, $original, $source, $replacements);
+        assertSameValue(1, $replacements, 'inverse replacement count');
+        assertSameValue('282ac4215d2b9ae5fa0c29fe038dbaa3e97efc5288e66ffbb8878cb033286f24', hash('sha256', $restored), 'complete original source SHA256');
+    };
+
+    $checkNote = static function (array $input, array $expectedTexts, bool $seed = false) use ($service, $noteMethod): void {
+        $originalInput = $input;
+        $condition = new FHIRCondition();
+        $existing = null;
+        if ($seed) {
+            $existing = new FHIRAnnotation();
+            $existing->setText('existing note');
+            $condition->addNote($existing);
+        }
+
+        $noteMethod->invoke($service, $input, $condition);
+        assertSameValue($originalInput, $input, 'input row immutability');
+
+        $notes = $condition->getNote() ?? [];
+        assertSameValue(count($expectedTexts), count($notes), 'native getter note count');
+        foreach ($expectedTexts as $index => $expectedText) {
+            assertSameValue($expectedText, $notes[$index]->getText(), 'native getter note text ' . $index);
+        }
+        if ($seed) {
+            assertSameValue(true, $notes[0] === $existing, 'preexisting annotation identity and order');
+        }
+
+        $decoded = json_decode(json_encode($condition, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+        $jsonNotes = $decoded['note'] ?? [];
+        assertSameValue(count($expectedTexts), count($jsonNotes), 'decoded JSON note count');
+        foreach ($expectedTexts as $index => $expectedText) {
+            if (!array_key_exists('text', $jsonNotes[$index])) {
+                throw new RuntimeException('decoded JSON note text missing at ' . $index);
+            }
+            assertSameValue($expectedText, $jsonNotes[$index]['text'], 'decoded JSON note text ' . $index);
+        }
+    };
+
+    $examples = [
+        'ascii' => [['comments' => 'Encounter diagnosis note'], ['Encounter diagnosis note'], false],
+        'empty_string' => [['comments' => ''], [], false],
+        'existing_append_string_zero' => [['comments' => '0'], ['existing note', '0'], true],
+        'existing_preserved_empty' => [[], ['existing note'], true],
+        'false' => [['comments' => false], [], false],
+        'integer_42' => [['comments' => 42], [42], false],
+        'integer_zero' => [['comments' => 0], [], false],
+        'leading_zero' => [['comments' => '007'], ['007'], false],
+        'markdown' => [['comments' => '**Bold** _text_'], ['**Bold** _text_'], false],
+        'missing' => [[], [], false],
+        'newline' => [['comments' => "first\nsecond"], ["first\nsecond"], false],
+        'null' => [['comments' => null], [], false],
+        'numeric_string_42' => [['comments' => '42'], ['42'], false],
+        'string_zero' => [['comments' => '0'], ['0'], false],
+        'swedish' => [['comments' => 'Smärta i vänster knä'], ['Smärta i vänster knä'], false],
+        'whitespace' => [['comments' => " \t "], [" \t "], false],
+    ];
+    foreach ($examples as $name => [$input, $expectedTexts, $seed]) {
+        $checks[$name] = static function () use ($checkNote, $input, $expectedTexts, $seed): void {
+            $checkNote($input, $expectedTexts, $seed);
+        };
+    }
+
+    ksort($checks, SORT_STRING);
+    $cases = [];
+    foreach ($checks as $name => $check) {
+        try {
+            $check();
+            $cases[] = ['error' => null, 'name' => $name, 'ok' => true];
+        } catch (Throwable $error) {
+            $cases[] = ['error' => $error->getMessage(), 'name' => $name, 'ok' => false];
+        }
+    }
+    $failed = count(array_filter($cases, static fn (array $case): bool => !$case['ok']));
+    emitReport($cases, $failed === 0 ? 0 : 1);
+}
