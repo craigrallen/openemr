@@ -167,7 +167,9 @@ namespace {
         runRoute($routes['GET /api/appointment/:eid'], ['missing-global-eid'], [], 'missing-global-eid', 404, [], 200);
     });
 
-    $runCase('source_inverse', static function () use ($controllerPath, $routesPath, $reflection): void {
+    $runCase('source_inverse', static function () use ($controllerPath, $routesPath, $reflection, $routes): void {
+        $parameters = (new ReflectionFunction($routes['GET /api/patient/:pid/appointment/:eid']))->getParameters();
+        checkScope((string) $parameters[0]->getType() === 'string' && (string) $parameters[1]->getType() === 'string', 'Native patient detail route must declare string pid and eid parameters');
         $controller = file_get_contents($controllerPath);
         $routeSource = file_get_contents($routesPath);
         checkScope(is_string($controller) && is_string($routeSource), 'Cannot read native source');
@@ -211,7 +213,7 @@ PHP;
     },
 PHP;
         $new = <<<'PHP'
-    "GET /api/patient/:pid/appointment/:eid" => function ($pid, $eid, HttpRestRequest $request) {
+    "GET /api/patient/:pid/appointment/:eid" => function (string $pid, string $eid, HttpRestRequest $request) {
         RestConfig::request_authorization_check($request, "patients", "appt");
         $return = (new AppointmentRestController())->getOneForPatientById($pid, $eid);
 
