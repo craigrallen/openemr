@@ -31,10 +31,14 @@ if (!AclMain::aclCheckCore('patients', 'med')) {
 
     <script>
         $(function () {
+            let requestPending = false;
             $("#req_button").click(function() {
-                // hide the button, show the message, and send the ajax call
+                if (requestPending) {
+                    return;
+                }
+                requestPending = true;
                 $('#req_button').hide();
-                $('#openreq').show();
+                $('#openreq').hide();
                 top.restoreSession();
                 $.post( "../../../library/ajax/amc_misc_data.php",
                 {
@@ -43,7 +47,16 @@ if (!AclMain::aclCheckCore('patients', 'med')) {
                     mode: "add_force",
                     patient_id: <?php echo js_escape($pid); ?>,
                     csrf_token_form: <?php echo js_escape(CsrfUtils::collectCsrfToken(session: $session)); ?>
+                }).done(function() {
+                    top.restoreSession();
+                    window.location.reload();
+                }).fail(function() {
+                    $('#req_error').show();
                 });
+            });
+            $('#req_check').click(function() {
+                top.restoreSession();
+                window.location.reload();
             });
         });
     </script>
@@ -71,6 +84,10 @@ $recordRequest = sqlQuery("SELECT * FROM `amc_misc_data` WHERE `pid`=? AND `amc_
                     <a href="javascript:void(0)" id="req_button" class="btn btn-primary btn-save" style="display:none"><?php echo xlt('Patient Record Request'); ?></a>
                     <span class="lead" id="openreq"><?php echo xlt('There is already an open patient record request.'); ?></span>
                 <?php } ?>
+                <div id="req_error" role="alert" style="display:none">
+                    <?php echo xlt('Unable to confirm the request. Check its status before trying again.'); ?>
+                    <button type="button" id="req_check" class="btn btn-secondary"><?php echo xlt('Check request status'); ?></button>
+                </div>
             </div>
         </div>
     </div>
