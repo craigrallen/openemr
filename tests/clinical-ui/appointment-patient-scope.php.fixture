@@ -53,7 +53,7 @@ namespace OpenEMR\RestControllers {
         public static function responseHandler($data, $unused, $status): Response
         {
             self::$calls[] = [$data, $unused, $status];
-            return new Response($data, $status);
+            return new Response($data, $data ? $status : 404);
         }
     }
 }
@@ -102,7 +102,7 @@ namespace {
         }
     }
 
-    function runRoute(Closure $route, array $arguments, array $records, string $eid, int $status, array $data): void
+    function runRoute(Closure $route, array $arguments, array $records, string $eid, int $status, array $data, ?int $helperStatus = null): void
     {
         AppointmentService::$records = $records;
         AppointmentService::$calls = [];
@@ -115,7 +115,7 @@ namespace {
         checkScope($response->data === $data, 'Response data differs from complete expected payload');
         checkScope(RestConfig::$calls === [[$request, 'patients', 'appt']], 'Authorization call must use exact request and patients/appt once');
         checkScope(AppointmentService::$calls === [$eid], 'Service must receive exact eid once');
-        checkScope(RestControllerHelper::$calls === [[$data, null, $status]], 'Helper must receive exact payload and status once');
+        checkScope(RestControllerHelper::$calls === [[$data, null, $helperStatus ?? $status]], 'Helper must receive exact payload and requested status once');
     }
 
     $cases = [];
@@ -164,7 +164,7 @@ namespace {
         runRoute($routes['GET /api/appointment/:eid'], ['global-eid'], $records, 'global-eid', 200, $records);
     });
     $runCase('global_empty_result', static function () use ($routes): void {
-        runRoute($routes['GET /api/appointment/:eid'], ['missing-global-eid'], [], 'missing-global-eid', 200, []);
+        runRoute($routes['GET /api/appointment/:eid'], ['missing-global-eid'], [], 'missing-global-eid', 404, [], 200);
     });
 
     $runCase('source_inverse', static function () use ($controllerPath, $routesPath, $reflection): void {
