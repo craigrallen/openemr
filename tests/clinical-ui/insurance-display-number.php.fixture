@@ -1,0 +1,167 @@
+<?php
+
+namespace OpenEMR\Services {
+    class BaseService
+    {
+    }
+}
+
+namespace OpenEMR\Core {
+    final class OEGlobalsBag
+    {
+        private static ?self $instance = null;
+        private string $mode = '0';
+
+        public static function getInstance(): self
+        {
+            return self::$instance ??= new self();
+        }
+
+        public function setMode(string $mode): void
+        {
+            $this->mode = $mode;
+        }
+
+        public function get(string $key): string
+        {
+            if ($key !== 'insurance_information') {
+                throw new \LogicException('Unexpected configuration key');
+            }
+            return $this->mode;
+        }
+    }
+}
+
+namespace {
+    use OpenEMR\Core\OEGlobalsBag;
+    use OpenEMR\Services\InsuranceCompanyService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    function emitReport(array $cases, int $exitCode): never
+    {
+        $passed = count(array_filter($cases, static fn (array $case): bool => $case['ok']));
+        $report = ['passed' => $passed, 'failed' => count($cases) - $passed, 'cases' => $cases];
+        echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), "\n";
+        exit($exitCode);
+    }
+
+    function runCase(array &$cases, string $name, callable $check): void
+    {
+        try {
+            $check();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => get_class($error) . ': ' . $error->getMessage()];
+        }
+    }
+
+    function assertSameValue(mixed $expected, mixed $actual, string $subject): void
+    {
+        if ($expected !== $actual) {
+            throw new \RuntimeException($subject . ': expected ' . var_export($expected, true) . ', got ' . var_export($actual, true));
+        }
+    }
+
+    $serviceFile = dirname(__DIR__, 2) . '/src/Services/InsuranceCompanyService.php';
+    try {
+        if (!is_file($serviceFile)) {
+            throw new \RuntimeException('Native service file is missing');
+        }
+        require_once $serviceFile;
+        $reflection = new \ReflectionClass(InsuranceCompanyService::class);
+        assertSameValue(realpath($serviceFile), $reflection->getFileName(), 'Native class source');
+        $method = $reflection->getMethod('getDisplayNameForInsuranceRecord');
+        if (!$method->isPublic() || !$method->isStatic()) {
+            throw new \RuntimeException('Native display method is not public static');
+        }
+        $source = file_get_contents($serviceFile);
+        if ($source === false) {
+            throw new \RuntimeException('Native service source could not be read');
+        }
+    } catch (\Throwable $error) {
+        emitReport([['name' => 'bootstrap', 'ok' => false, 'error' => get_class($error) . ': ' . $error->getMessage()]], 2);
+    }
+
+    $baseRow = [
+        'name' => 'Synthetic insurer',
+        'line1' => '42 Main St',
+        'line2' => 'Unit A',
+        'city' => 'Synthetic city',
+        'state' => 'ST',
+        'zip' => '12345',
+        'cms_id' => 'synthetic-cms',
+    ];
+    $cases = [];
+    $displayCase = static function (string $mode, mixed $line1, string $expected) use ($baseRow): void {
+        $row = $baseRow;
+        $row['line1'] = $line1;
+        $before = $row;
+        OEGlobalsBag::getInstance()->setMode($mode);
+        $actual = InsuranceCompanyService::getDisplayNameForInsuranceRecord($row);
+        assertSameValue($expected, $actual, 'Display label');
+        assertSameValue($before, $row, 'Complete input row');
+    };
+
+    $examples = [
+        ['option7_empty', '7', '', 'Synthetic insurer (12345,)'],
+        ['option7_stringzero', '7', '0', 'Synthetic insurer (12345,0)'],
+        ['option7_zero_int', '7', 0, 'Synthetic insurer (12345,0)'],
+        ['option7_null', '7', null, 'Synthetic insurer (12345,)'],
+        ['option7_digitless', '7', 'Main Street', 'Synthetic insurer (12345,)'],
+        ['option7_swedish_digitless', '7', 'Ångströmvägen', 'Synthetic insurer (12345,)'],
+        ['option7_pobox', '7', 'PO Box 678', 'Synthetic insurer (12345,678)'],
+        ['option7_leadingzeros', '7', '007 Main St', 'Synthetic insurer (12345,007)'],
+        ['option7_negative', '7', '-12 Main St', 'Synthetic insurer (12345,12)'],
+        ['option7_firsttoken', '7', 'Unit 34 block 567', 'Synthetic insurer (12345,34)'],
+        ['option7_unicode_non_ascii_digits', '7', '１２３ Main St', 'Synthetic insurer (12345,)'],
+        ['mode0', '0', '42 Main St', 'Synthetic insurer'],
+        ['mode1', '1', '42 Main St', 'Synthetic insurer (42 Main St, Unit A)'],
+        ['mode2', '2', '42 Main St', 'Synthetic insurer (42 Main St, Unit A, 12345)'],
+        ['mode3', '3', '42 Main St', 'Synthetic insurer (42 Main St, Unit A, ST)'],
+        ['mode4', '4', '42 Main St', 'Synthetic insurer (42 Main St, Unit A, ST, 12345)'],
+        ['mode5', '5', '42 Main St', 'Synthetic insurer (42 Main St, Unit A, Synthetic city, ST, 12345)'],
+        ['mode6', '6', '42 Main St', 'Synthetic insurer (42 Main St, Unit A, Synthetic city, ST, 12345, synthetic-cms)'],
+        ['unknown_default', 'unknown', '42 Main St', 'Synthetic insurer'],
+    ];
+    foreach ($examples as [$name, $mode, $line1, $expected]) {
+        runCase($cases, $name, static function () use ($displayCase, $mode, $line1, $expected): void {
+            $displayCase($mode, $line1, $expected);
+        });
+    }
+
+    runCase($cases, 'immutability', static function () use ($baseRow): void {
+        $row = $baseRow;
+        $before = $row;
+        OEGlobalsBag::getInstance()->setMode('7');
+        assertSameValue('Synthetic insurer (12345,42)', InsuranceCompanyService::getDisplayNameForInsuranceRecord($row), 'Display label');
+        assertSameValue($before, $row, 'Complete input row');
+    });
+
+    runCase($cases, 'strictinverse', static function () use ($source): void {
+        $original = <<<'FRAGMENT'
+                preg_match("/\d+/", (string) $insuranceCompany['line1'], $matches);
+                $returnval = $insuranceCompany['name'] . " (" . $insuranceCompany['zip'] .
+                    "," . $matches[0] . ")";
+FRAGMENT;
+        $corrected = <<<'FRAGMENT'
+                preg_match("/\d+/", (string) $insuranceCompany['line1'], $matches);
+                $returnval = $insuranceCompany['name'] . " (" . $insuranceCompany['zip'] .
+                    "," . ($matches[0] ?? '') . ")";
+FRAGMENT;
+        assertSameValue(1, substr_count($source, $corrected), 'Corrected fragment count');
+        assertSameValue(0, substr_count($source, $original), 'Original fragment count');
+        $restored = str_replace($corrected, $original, $source);
+        assertSameValue('94ea0669a3ef57e80d1f95159889f261243486857bcd40f035ffb7bf2fc28d21', hash('sha256', $restored), 'Inverse original SHA-256');
+    });
+
+    $failed = count(array_filter($cases, static fn (array $case): bool => !$case['ok']));
+    emitReport($cases, $failed === 0 ? 0 : 1);
+}

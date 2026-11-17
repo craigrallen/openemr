@@ -1,0 +1,9 @@
+# Insurance display number test handoff
+
+OPEMR-266 concerns option `7` of `InsuranceCompanyService::getDisplayNameForInsuranceRecord()`. With an empty or digitless `line1`, `preg_match('/\d+/', ...)` returns zero and the original `$matches[0]` access emits a diagnostic. The proposed future production change wraps only that operand as `($matches[0] ?? '')`. It preserves the visible trailing comma label, such as `Synthetic insurer (12345,)`, and the first ASCII digit token when present.
+
+The PHP CLI fixture loads the complete native `InsuranceCompanyService` class from the root-relative source path, with a synthetic `BaseService` parent and a synthetic `OEGlobalsBag` configuration seam. It does not construct the service. Its cases call the native static method, require exact labels, and check the complete input row remains unchanged. Strict `E_ALL` diagnostics become exceptions. The strict inverse case requires one exact corrected fragment, rejects the original fragment, and checks that reverting that fragment alone restores the supplied original SHA-256. The separate `getInsuranceProviders()` pattern is outside this change.
+
+The Jest adapter requires one JSON line, empty standard error, exit zero, the complete exact case set, and all cases passing. Original source should fail the diagnostic cases and strict inverse. A bootstrap failure exits two and is separate from a semantic red result.
+
+Controller materialization, Git operations, and execution are pending. No local test result or production edit is claimed here. The fixture uses synthetic configuration and row data; it does not authenticate a UI flow or exercise SQL, persistence, security, or clinical acceptance. The native caller path through `getInsuranceProvidersExtra`, `insurance_edit`, and `InsuranceCompany::get_display_name` is not executed. This handoff does not claim a full original 22-case suite, UI demo, or Swedish language acceptance.
