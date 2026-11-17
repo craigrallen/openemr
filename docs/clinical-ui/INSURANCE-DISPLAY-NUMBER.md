@@ -6,6 +6,7 @@ OPEMR-266 covers option `7` of `InsuranceCompanyService::getDisplayNameForInsura
 
 - Tests-only commit `eccde4d7` preceded the product edit. Direct native fixture RED: 21 cases, 15 passed and 6 failed. Five failures were native undefined-key diagnostics; the sixth required the not-yet-applied exact source inverse.
 - After the minimal CLI-authored fix, the same fixture passed all 21 cases with exit zero and empty stderr. PHP source/fixture syntax, JavaScript syntax and `git diff --check` passed.
+- The initial hosted PHPStan run `44053886103` passed analysis but failed baseline stability: the fix resolves one historical missing-offset diagnostic. All 170 official regenerated baseline files were compared; only the obsolete five-line InsuranceCompanyService suppression in `.phpstan/baseline/offsetAccess.notFound.php` is removed. Fresh exact-path PR and sibling ownership clearance preceded this fifth-file scope extension. This suppression reduction is a reviewed nonproduction CI-repair exception, not a new suppression or weakened gate. Fresh independent five-file review and exact-head hosted gates are required after that change.
 - Wrapped Codex Sol authored the tests and the subsequent minimal production replacement in separate phases; the controller materialized the exact proposed artifacts and executed tests. Claude was unauthenticated. Independent frozen-content review and actual hosted Jest/static/coverage gates are separate evidence, not implied by the local result.
 
 ## Test scope and limits
