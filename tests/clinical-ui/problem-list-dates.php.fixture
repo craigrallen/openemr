@@ -1,0 +1,272 @@
+<?php
+
+declare(strict_types=1);
+
+// Declaration only: the production parent initializes services and SQL state.
+namespace OpenEMR\Services\FHIR {
+    abstract class FhirServiceBase
+    {
+    }
+}
+
+namespace {
+    use OpenEMR\FHIR\R4\FHIRDomainResource\FHIRCondition;
+    use OpenEMR\Services\FHIR\Condition\FhirConditionProblemListItemService;
+
+    if (PHP_SAPI !== 'cli') {
+        exit(2);
+    }
+
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL);
+    date_default_timezone_set('UTC');
+    set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
+        throw new \ErrorException($message, 0, $severity, $file, $line);
+    });
+
+    function report(array $cases, int $exitCode): never
+    {
+        $passed = count(array_filter($cases, static fn(array $case): bool => $case['ok']));
+        echo json_encode([
+            'passed' => $passed,
+            'failed' => count($cases) - $passed,
+            'cases' => $cases,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), "\n";
+        exit($exitCode);
+    }
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function same(mixed $expected, mixed $actual, string $message): void
+    {
+        check($expected === $actual, $message . ': expected ' . var_export($expected, true) . ', received ' . var_export($actual, true));
+    }
+
+    function missing(array $document, string $key): void
+    {
+        check(!array_key_exists($key, $document), $key . ' must be absent');
+    }
+
+    function assertedDate(array $document): ?array
+    {
+        $matches = array_values(array_filter(
+            $document['extension'] ?? [],
+            static fn(array $extension): bool => ($extension['url'] ?? null) === 'http://hl7.org/fhir/StructureDefinition/condition-assertedDate'
+        ));
+        check(count($matches) <= 1, 'duplicate assertedDate extension');
+        return $matches[0] ?? null;
+    }
+
+    function mapped(FhirConditionProblemListItemService $service, array $row, bool $encode = false): array
+    {
+        $resource = $service->parseOpenEMRRecord($row, $encode);
+        if ($encode) {
+            check(is_string($resource), 'encoded mapper result must be JSON text');
+            return json_decode($resource, true, 512, JSON_THROW_ON_ERROR);
+        }
+        check($resource instanceof FHIRCondition, 'mapper must return the native FHIRCondition');
+        return json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    function projectionParts(string $searchSource): array
+    {
+        $from = strpos($searchSource, "        FROM (\n");
+        check($from !== false, 'outer SELECT boundary is missing');
+        $innerStart = $from + strlen("        FROM (\n");
+        $innerEnd = strpos($searchSource, "        ) l\n", $innerStart);
+        check($innerEnd !== false, 'inner SELECT boundary is missing');
+        return [substr($searchSource, 0, $from), substr($searchSource, $innerStart, $innerEnd - $innerStart)];
+    }
+
+    function hasBothProjections(string $searchSource): bool
+    {
+        [$outer, $inner] = projectionParts($searchSource);
+        $outerPair = "            l.condition_date,\n            l.date,\n";
+        $innerPair = "                date AS condition_date,\n                date,\n";
+        return substr_count($outer, $outerPair) === 1
+            && substr_count($outer, "            l.date,\n") === 1
+            && substr_count($inner, $innerPair) === 1
+            && substr_count($inner, "                date,\n") === 1;
+    }
+
+    $cases = [];
+    $run = static function (string $name, callable $test) use (&$cases): void {
+        try {
+            $test();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    };
+
+    try {
+        $root = dirname(__DIR__, 2);
+        $servicePath = $root . '/src/Services/FHIR/Condition/FhirConditionProblemListItemService.php';
+        $source = file_get_contents($servicePath);
+        check(is_string($source), 'native service source is unreadable');
+
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $relative = str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            foreach ([$root . '/src/' . $relative, $root . '/library/' . $relative] as $candidate) {
+                if (is_file($candidate)) {
+                    require_once $candidate;
+                    return;
+                }
+            }
+        });
+
+        $reflection = new \ReflectionClass(FhirConditionProblemListItemService::class);
+        check($reflection->getFileName() === $servicePath, 'service must load from the native source path');
+        $service = $reflection->newInstanceWithoutConstructor();
+        $methodStart = strpos($source, 'protected function searchForOpenEMRRecords(');
+        check($methodStart !== false, 'native search method is missing');
+        $methodEnd = strpos($source, 'private function computeVerificationStatus(', $methodStart);
+        check($methodEnd !== false, 'native search method boundary is missing');
+        $searchSource = substr($source, $methodStart, $methodEnd - $methodStart);
+        [$outer, $inner] = projectionParts($searchSource);
+
+        $outerLegacy = "            l.condition_date,\n";
+        $outerAdded = "            l.date,\n";
+        $innerLegacy = "                date AS condition_date,\n";
+        $innerAdded = "                date,\n";
+
+        $row = [
+            'condition_date' => '2025-03-14 10:11:12',
+            'last_updated_time' => '2025-03-15 12:13:14',
+            'begdate' => '2025-02-01 08:09:10',
+            'enddate' => '',
+            'comments' => '',
+            'diagnosis' => '',
+            'title' => 'Synthetic problem list item',
+            'puuid' => 'synthetic-patient-reference',
+            'occurrence' => 0,
+            'outcome' => 0,
+        ];
+        // EMULATION of projected columns, not executed SQL or a search result.
+        if (hasBothProjections($searchSource)) {
+            $row['date'] = $row['condition_date'];
+        }
+        $explicit = $row;
+        $explicit['date'] = '2025-03-14 10:11:12';
+        $withoutDate = $explicit;
+        unset($withoutDate['date']);
+    } catch (\Throwable $error) {
+        report([['name' => 'bootstrap', 'ok' => false, 'error' => $error->getMessage()]], 2);
+    }
+
+    $run('native_service_provenance', static function () use ($reflection, $service, $explicit): void {
+        check($reflection->hasMethod('parseOpenEMRRecord'), 'native parser is missing');
+        same(FhirConditionProblemListItemService::class, $reflection->getMethod('parseOpenEMRRecord')->getDeclaringClass()->getName(), 'native parser declaration');
+        check($service->parseOpenEMRRecord($explicit) instanceof FHIRCondition, 'native FHIRCondition is required');
+    });
+    $run('approved_two_line_inverse', static function () use ($source, $outerLegacy, $outerAdded, $innerLegacy, $innerAdded): void {
+        same(1, substr_count($source, $outerLegacy . $outerAdded), 'complete outer insertion');
+        same(1, substr_count($source, $innerLegacy . $innerAdded), 'complete inner insertion');
+        $inverse = str_replace($outerLegacy . $outerAdded, $outerLegacy, $source);
+        $inverse = str_replace($innerLegacy . $innerAdded, $innerLegacy, $inverse);
+        same('0918519aecb0ffaf6df3b2755f546d9b5d8aaa53839ebdac5fcaf35479cead12', hash('sha256', $inverse), 'source after removal of exactly the two approved lines');
+    });
+    $run('outer_legacy_alias_retained_once', static function () use ($outer, $outerLegacy): void {
+        same(1, substr_count($outer, $outerLegacy), 'outer condition_date alias');
+    });
+    $run('inner_legacy_alias_retained_once', static function () use ($inner, $innerLegacy): void {
+        same(1, substr_count($inner, $innerLegacy), 'inner condition_date alias');
+    });
+    $run('outer_date_once_immediately_after_alias', static function () use ($outer, $outerLegacy, $outerAdded): void {
+        same(1, substr_count($outer, $outerAdded), 'outer date projection');
+        same(1, substr_count($outer, $outerLegacy . $outerAdded), 'outer projection order');
+    });
+    $run('inner_date_once_immediately_after_alias', static function () use ($inner, $innerLegacy, $innerAdded): void {
+        same(1, substr_count($inner, $innerAdded), 'inner date projection');
+        same(1, substr_count($inner, $innerLegacy . $innerAdded), 'inner projection order');
+    });
+    $run('both_scoped_projections_recognized', static function () use ($searchSource): void {
+        check(hasBothProjections($searchSource), 'both SELECT boundaries must project date');
+    });
+    $run('removing_outer_projection_defeats_recognition', static function () use ($searchSource, $outerLegacy, $outerAdded): void {
+        $mutated = str_replace($outerLegacy . $outerAdded, $outerLegacy, $searchSource);
+        check($mutated !== $searchSource, 'outer mutation must apply');
+        check(!hasBothProjections($mutated), 'outer projection removal must fail recognition');
+    });
+    $run('removing_inner_projection_defeats_recognition', static function () use ($searchSource, $innerLegacy, $innerAdded): void {
+        $mutated = str_replace($innerLegacy . $innerAdded, $innerLegacy, $searchSource);
+        check($mutated !== $searchSource, 'inner mutation must apply');
+        check(!hasBothProjections($mutated), 'inner projection removal must fail recognition');
+    });
+    $run('projected_creation_is_recorded_date', static function () use ($service, $row): void {
+        same('2025-03-14T10:11:12+00:00', mapped($service, $row)['recordedDate'] ?? null, 'projected creation date');
+    });
+    $run('projected_creation_is_asserted_date', static function () use ($service, $row): void {
+        same('2025-03-14T10:11:12+00:00', assertedDate(mapped($service, $row))['valueDateTime'] ?? null, 'projected asserted date');
+    });
+    $run('projected_onset_stays_distinct', static function () use ($service, $row): void {
+        $document = mapped($service, $row);
+        same('2025-02-01T08:09:10+00:00', $document['onsetDateTime'] ?? null, 'onset date');
+        check(($document['recordedDate'] ?? null) !== ($document['onsetDateTime'] ?? null), 'creation and onset must differ');
+    });
+    $run('projected_json_matches_object', static function () use ($service, $row): void {
+        same(mapped($service, $row), mapped($service, $row, true), 'native object and encoded branches');
+    });
+    $run('explicit_creation_recorded_date', static function () use ($service, $explicit): void {
+        same('2025-03-14T10:11:12+00:00', mapped($service, $explicit)['recordedDate'] ?? null, 'direct row creation date');
+    });
+    $run('explicit_creation_asserted_extension', static function () use ($service, $explicit): void {
+        same([
+            'valueDateTime' => '2025-03-14T10:11:12+00:00',
+            'url' => 'http://hl7.org/fhir/StructureDefinition/condition-assertedDate',
+        ], assertedDate(mapped($service, $explicit)), 'direct row asserted extension');
+    });
+    $run('missing_date_uses_onset', static function () use ($service, $withoutDate): void {
+        $document = mapped($service, $withoutDate);
+        same('2025-02-01T08:09:10+00:00', $document['recordedDate'] ?? null, 'missing date fallback');
+        same(null, assertedDate($document), 'missing date must have no asserted extension');
+    });
+    $run('null_date_uses_onset', static function () use ($service, $withoutDate): void {
+        $row = $withoutDate;
+        $row['date'] = null;
+        $document = mapped($service, $row);
+        same('2025-02-01T08:09:10+00:00', $document['recordedDate'] ?? null, 'null date fallback');
+        same(null, assertedDate($document), 'null date must have no asserted extension');
+    });
+    $run('empty_date_omits_recorded_and_asserted', static function () use ($service, $explicit): void {
+        $row = $explicit;
+        $row['date'] = '';
+        $document = mapped($service, $row);
+        missing($document, 'recordedDate');
+        same(null, assertedDate($document), 'empty date must have no asserted extension');
+        same('2025-02-01T08:09:10+00:00', $document['onsetDateTime'] ?? null, 'onset remains present');
+    });
+    $run('no_creation_no_onset_omits_dates', static function () use ($service, $withoutDate): void {
+        $row = $withoutDate;
+        $row['begdate'] = null;
+        $document = mapped($service, $row);
+        missing($document, 'recordedDate');
+        missing($document, 'onsetDateTime');
+        same(null, assertedDate($document), 'no creation must have no asserted extension');
+    });
+    $run('input_row_is_not_mutated', static function () use ($service, $explicit): void {
+        $before = $explicit;
+        mapped($service, $explicit);
+        same($before, $explicit, 'parser input');
+    });
+    $run('abatement_remains_independent', static function () use ($service, $explicit): void {
+        $row = $explicit;
+        $row['enddate'] = '2025-04-20 16:17:18';
+        $document = mapped($service, $row);
+        same('2025-04-20T16:17:18+00:00', $document['abatementDateTime'] ?? null, 'abatement');
+        same('2025-02-01T08:09:10+00:00', $document['onsetDateTime'] ?? null, 'onset');
+        same('2025-03-14T10:11:12+00:00', $document['recordedDate'] ?? null, 'creation');
+    });
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    report($cases, $failed === 0 ? 0 : 1);
+}
