@@ -153,6 +153,7 @@ class FhirConditionHealthConcernService extends FhirServiceBase implements IPati
             l.uuid,
             l.pid,
             l.date AS condition_date,
+            l.date AS date,
             l.modifydate,
             l.type,
             l.title,
