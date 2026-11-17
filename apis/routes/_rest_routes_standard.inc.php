@@ -425,7 +425,7 @@ return [
 
         return $return;
     },
-    "GET /api/patient/:pid/appointment/:eid" => function ($pid, $eid, HttpRestRequest $request) {
+    "GET /api/patient/:pid/appointment/:eid" => function (string $pid, string $eid, HttpRestRequest $request) {
         RestConfig::request_authorization_check($request, "patients", "appt");
         $return = (new AppointmentRestController())->getOneForPatientById($pid, $eid);
 
