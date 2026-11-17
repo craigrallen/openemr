@@ -173,8 +173,15 @@ class FhirObservationPatientService extends FhirServiceBase implements IPatientC
                     throw new SearchFieldException('code', "Invalid code");
                 }
                 foreach ($code->getValues() as $value) {
+                    $system = $value instanceof TokenSearchValue ? $value->getSystem() : null;
+                    if ($system !== null && $system !== '' && $system !== FhirCodeSystemConstants::LOINC) {
+                        continue;
+                    }
                     $code = $value->getCode();
                     $observationCodesToReturn[$code] = $code;
+                }
+                if ($openEMRSearchParameters['code']->getValues() !== [] && $observationCodesToReturn === []) {
+                    return $processingResult;
                 }
                 unset($openEMRSearchParameters['code']);
             }
