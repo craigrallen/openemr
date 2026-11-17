@@ -75,7 +75,7 @@ namespace {
         if ($source === false) {
             throw new RuntimeException('Cannot read native source');
         }
-        $approved = "if (!empty(\$dataRecord['comments']) || (\$dataRecord['comments'] ?? null) === '0') {";
+        $approved = "if (!empty(\$dataRecord['comments']) || (is_array(\$dataRecord) && (\$dataRecord['comments'] ?? null) === '0')) {";
         $original = "if (!empty(\$dataRecord['comments'])) {";
         assertSameValue(1, substr_count($source, $approved), 'approved guard count');
         $restored = str_replace($approved, $original, $source, $replacements);
