@@ -272,7 +272,7 @@ namespace {
     runCase('source_exact_two_insertion_inverse_sha256', static function () use ($sourcePath): void {
         $source = file_get_contents($sourcePath);
         check(is_string($source), 'source read failed');
-        $first = "                    \$system = \$value->getSystem();\n                    if (\$system !== null && \$system !== '' && \$system !== FhirCodeSystemConstants::LOINC) {\n                        continue;\n                    }\n";
+        $first = "                    \$system = \$value instanceof TokenSearchValue ? \$value->getSystem() : null;\n                    if (\$system !== null && \$system !== '' && \$system !== FhirCodeSystemConstants::LOINC) {\n                        continue;\n                    }\n";
         $second = "                if (\$openEMRSearchParameters['code']->getValues() !== [] && \$observationCodesToReturn === []) {\n                    return \$processingResult;\n                }\n";
         check(substr_count($source, $first) === 1, 'first approved insertion missing or repeated');
         check(substr_count($source, $second) === 1, 'second approved insertion missing or repeated');
