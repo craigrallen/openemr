@@ -1,0 +1,285 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenEMR\Services\FHIR {
+    class FhirServiceBase
+    {
+    }
+}
+
+namespace Psr\Log {
+    trait LoggerAwareTrait
+    {
+    }
+}
+
+namespace OpenEMR\Services {
+    class PatientService
+    {
+        public static array $calls = [];
+
+        public function search($parameters, $includeDeleted): \OpenEMR\Validators\ProcessingResult
+        {
+            self::$calls[] = [$parameters, $includeDeleted];
+            return new \OpenEMR\Validators\ProcessingResult();
+        }
+    }
+}
+
+namespace {
+    if (PHP_SAPI !== 'cli') {
+        http_response_code(404);
+        exit;
+    }
+
+    use OpenEMR\Services\FHIR\FhirCodeSystemConstants;
+    use OpenEMR\Services\FHIR\Observation\FhirObservationPatientService;
+    use OpenEMR\Services\PatientService;
+    use OpenEMR\Services\Search\CompositeSearchField;
+    use OpenEMR\Services\Search\SearchModifier;
+    use OpenEMR\Services\Search\TokenSearchField;
+    use OpenEMR\Services\Search\TokenSearchValue;
+    use OpenEMR\Validators\ProcessingResult;
+
+    error_reporting(E_ALL);
+    set_error_handler(static function (int $severity, string $message): never {
+        throw new \ErrorException($message, 0, $severity);
+    });
+
+    $root = dirname(__DIR__, 2);
+    $sourcePath = $root . '/src/Services/FHIR/Observation/FhirObservationPatientService.php';
+    $cases = [];
+
+    function check(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new \RuntimeException($message);
+        }
+    }
+
+    function runCase(string $name, callable $body): void
+    {
+        global $cases;
+        try {
+            $body();
+            $cases[] = ['name' => $name, 'ok' => true, 'error' => null];
+        } catch (\Throwable $error) {
+            $cases[] = ['name' => $name, 'ok' => false, 'error' => $error->getMessage()];
+        }
+    }
+
+    function search(array $parameters): ProcessingResult
+    {
+        PatientService::$calls = [];
+        $reflection = new \ReflectionClass(FhirObservationPatientService::class);
+        $service = $reflection->newInstanceWithoutConstructor();
+        $probe = new class extends FhirObservationPatientService {
+            public function probe(array $parameters): ProcessingResult
+            {
+                return $this->searchForOpenEMRRecords($parameters);
+            }
+        };
+        $probeReflection = new \ReflectionClass($probe);
+        $probe = $probeReflection->newInstanceWithoutConstructor();
+        return $probe->probe($parameters);
+    }
+
+    function token(string|array $values): TokenSearchField
+    {
+        return new TokenSearchField('code', $values);
+    }
+
+    function clean(ProcessingResult $result): void
+    {
+        check($result->getData() === [], 'expected empty native result data');
+        check($result->getValidationMessages() === [], 'unexpected validation messages');
+        check($result->getInternalErrors() === [], 'unexpected internal errors');
+        check($result->isValid() && !$result->hasErrors(), 'expected valid nonerror result');
+    }
+
+    function backendCount(int $expected): void
+    {
+        check(count(PatientService::$calls) === $expected, 'unexpected backend call count');
+        if ($expected === 1) {
+            check(PatientService::$calls[0][1] === true, 'backend second argument changed');
+        }
+    }
+
+    function compositeExpected(bool $expected): void
+    {
+        backendCount(1);
+        $parameters = PatientService::$calls[0][0];
+        check(!array_key_exists('code', $parameters), 'code forwarded to backend');
+        check(!array_key_exists('category', $parameters), 'category forwarded to backend');
+        if (!$expected) {
+            check(!array_key_exists('observation-fields', $parameters), 'unexpected observation composite');
+            return;
+        }
+        check(isset($parameters['observation-fields']), 'missing observation composite');
+        $composite = $parameters['observation-fields'];
+        check($composite instanceof CompositeSearchField, 'wrong composite type');
+        check($composite->getName() === 'observation-fields', 'wrong composite name');
+        check($composite->isAnd() === false, 'composite must use OR');
+        $children = $composite->getChildren();
+        check(count($children) === 1, 'expected one observation child');
+        $child = $children[0];
+        check($child instanceof TokenSearchField, 'wrong child type');
+        check($child->getField() === 'sexual_orientation', 'wrong mapped column');
+        check($child->getModifier() === SearchModifier::MISSING, 'missing modifier changed');
+        $values = $child->getValues();
+        check(count($values) === 1 && $values[0] instanceof TokenSearchValue, 'wrong child values');
+        check($values[0]->getCode() === false && $values[0]->getSystem() === null, 'wrong nonmissing child token');
+    }
+
+    function output(int $status): never
+    {
+        global $cases;
+        $passed = count(array_filter($cases, static fn(array $case): bool => $case['ok']));
+        $result = ['passed' => $passed, 'failed' => count($cases) - $passed, 'cases' => $cases];
+        echo json_encode($result, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE), "\n";
+        exit($status);
+    }
+
+    try {
+        spl_autoload_register(static function (string $class) use ($root): void {
+            $prefix = 'OpenEMR\\';
+            if (!str_starts_with($class, $prefix)) {
+                return;
+            }
+            $path = $root . '/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        });
+        check(is_file($sourcePath), 'native service source missing');
+        check(class_exists(FhirObservationPatientService::class), 'native service failed to load');
+        check(class_exists(ProcessingResult::class), 'native ProcessingResult failed to load');
+        check(class_exists(TokenSearchField::class), 'native TokenSearchField failed to load');
+        check(class_exists(CompositeSearchField::class), 'native CompositeSearchField failed to load');
+    } catch (\Throwable $error) {
+        $cases[] = ['name' => 'bootstrap', 'ok' => false, 'error' => $error->getMessage()];
+        output(2);
+    }
+
+    runCase('wrong_system_same_code_short_circuit', static function (): void {
+        clean(search(['code' => token('http://snomed.info/sct|76690-7')]));
+        backendCount(0);
+    });
+    runCase('unknown_system_same_code_short_circuit', static function (): void {
+        clean(search(['code' => token('https://example.org/unknown|76690-7')]));
+        backendCount(0);
+    });
+    runCase('system_string_zero_short_circuit', static function (): void {
+        clean(search(['code' => token('0|76690-7')]));
+        backendCount(0);
+    });
+    runCase('loinc_system_case_sensitive', static function (): void {
+        clean(search(['code' => token('http://LOINC.org|76690-7')]));
+        backendCount(0);
+    });
+    runCase('mixed_wrong_then_loinc', static function (): void {
+        clean(search(['code' => token(['http://snomed.info/sct|76690-7', FhirCodeSystemConstants::LOINC . '|76690-7'])]));
+        compositeExpected(true);
+    });
+    runCase('mixed_loinc_then_wrong', static function (): void {
+        clean(search(['code' => token([FhirCodeSystemConstants::LOINC . '|76690-7', 'http://snomed.info/sct|76690-7'])]));
+        compositeExpected(true);
+    });
+    runCase('mixed_bare_then_wrong', static function (): void {
+        clean(search(['code' => token(['76690-7', 'http://snomed.info/sct|76690-7'])]));
+        compositeExpected(true);
+    });
+    runCase('mixed_wrong_then_bare', static function (): void {
+        clean(search(['code' => token(['http://snomed.info/sct|76690-7', '76690-7'])]));
+        compositeExpected(true);
+    });
+    runCase('wrong_supported_then_eligible_unknown_filters_wrong', static function (): void {
+        clean(search(['code' => token(['http://snomed.info/sct|76690-7', FhirCodeSystemConstants::LOINC . '|99999-9'])]));
+        compositeExpected(false);
+    });
+    runCase('eligible_unknown_then_wrong_supported_filters_wrong', static function (): void {
+        clean(search(['code' => token([FhirCodeSystemConstants::LOINC . '|99999-9', 'http://snomed.info/sct|76690-7'])]));
+        compositeExpected(false);
+    });
+    runCase('loinc_composite_path', static function (): void {
+        clean(search(['code' => token(FhirCodeSystemConstants::LOINC . '|76690-7')]));
+        compositeExpected(true);
+    });
+    runCase('bare_null_system_composite_path', static function (): void {
+        $field = token('76690-7');
+        check($field->getValues()[0]->getSystem() === null, 'bare token must have null system');
+        clean(search(['code' => $field]));
+        compositeExpected(true);
+    });
+    runCase('empty_system_legacy_composite_path', static function (): void {
+        $field = token('|76690-7');
+        check($field->getValues()[0]->getSystem() === '', 'explicit empty system was lost');
+        clean(search(['code' => $field]));
+        compositeExpected(true);
+    });
+    runCase('empty_token_legacy_fallback', static function (): void {
+        clean(search(['code' => new TokenSearchField('code', [])]));
+        compositeExpected(true);
+    });
+    runCase('absent_code_legacy_fallback', static function (): void {
+        clean(search([]));
+        compositeExpected(true);
+    });
+    runCase('unrelated_parameters_forwarded_by_identity', static function (): void {
+        $patient = new TokenSearchField('uuid', 'patient-1');
+        $date = new TokenSearchField('date', '2025-01-01');
+        $parameters = ['patient' => $patient, 'date' => $date, 'code' => token('76690-7')];
+        $originalCode = $parameters['code'];
+        clean(search($parameters));
+        compositeExpected(true);
+        $forwarded = PatientService::$calls[0][0];
+        check($forwarded['patient'] === $patient && $forwarded['date'] === $date, 'unrelated fields lost object identity');
+        check($parameters['patient'] === $patient && $parameters['date'] === $date && $parameters['code'] === $originalCode, 'input array changed');
+        check(!isset($parameters['observation-fields']), 'input array gained composite');
+    });
+    runCase('category_invalid_validation_unchanged', static function (): void {
+        $result = search(['category' => new TokenSearchField('category', 'vital-signs')]);
+        backendCount(0);
+        check($result->getValidationMessages() === ['category' => 'invalid value'], 'category validation changed');
+        check($result->getData() === [] && $result->getInternalErrors() === [], 'unexpected category result data or errors');
+    });
+    runCase('code_wrong_type_validation_unchanged', static function (): void {
+        $result = search(['code' => new CompositeSearchField('code', [])]);
+        backendCount(0);
+        check($result->getValidationMessages() === ['code' => 'Invalid code'], 'code validation changed');
+        check($result->getData() === [] && $result->getInternalErrors() === [], 'unexpected code result data or errors');
+    });
+    runCase('unknown_code_accepted_system_historical_path', static function (): void {
+        clean(search(['code' => token(FhirCodeSystemConstants::LOINC . '|99999-9')]));
+        compositeExpected(false);
+    });
+    runCase('source_mapping_and_supports_code', static function () use ($sourcePath): void {
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'source read failed');
+        check(str_contains($source, "'column' => 'sexual_orientation'"), 'native mapping column changed');
+        check(str_contains($source, "'fullcode' => 'LOINC:' . self::SEXUAL_ORIENTATION_LOINC_CODE"), 'native LOINC mapping changed');
+        check(str_contains($source, 'return isset(self::COLUMN_MAPPINGS[$code]);'), 'native supportsCode behavior changed');
+    });
+    runCase('source_aggregator_ignores_system', static function () use ($root): void {
+        $path = $root . '/src/Services/FHIR/Traits/MappedServiceCodeTrait.php';
+        $source = file_get_contents($path);
+        check(is_string($source), 'native aggregator trait missing');
+        check(str_contains($source, '$searchCode = $value->getCode();'), 'aggregator code extraction changed');
+        check(str_contains($source, 'if ($service->supportsCode($searchCode)) {'), 'aggregator routing changed');
+        check(!str_contains($source, '$value->getSystem()'), 'aggregator system handling changed');
+    });
+    runCase('source_exact_two_insertion_inverse_sha256', static function () use ($sourcePath): void {
+        $source = file_get_contents($sourcePath);
+        check(is_string($source), 'source read failed');
+        $first = "                    \$system = \$value->getSystem();\n                    if (\$system !== null && \$system !== '' && \$system !== FhirCodeSystemConstants::LOINC) {\n                        continue;\n                    }\n";
+        $second = "                if (\$openEMRSearchParameters['code']->getValues() !== [] && \$observationCodesToReturn === []) {\n                    return \$processingResult;\n                }\n";
+        check(substr_count($source, $first) === 1, 'first approved insertion missing or repeated');
+        check(substr_count($source, $second) === 1, 'second approved insertion missing or repeated');
+        $original = str_replace([$first, $second], '', $source);
+        check(hash('sha256', $original) === 'd61148c3694820e0d12caea799a7d79da9a2cad140efbce662f73a93d2adf534', 'inverse source SHA256 differs from supplied original');
+    });
+
+    $failed = count(array_filter($cases, static fn(array $case): bool => !$case['ok']));
+    output($failed === 0 ? 0 : 1);
+}
