@@ -1,6 +1,6 @@
 # OPEMR-264: health concern creation dates
 
-Owner: Hermes. Allocation: 1, maximum 2. Issue OPEMR-264 was To Do before work. Supplied repository: `/Users/craig/.hermes/workspaces/openemr-health-concern-dates`; supplied HEAD: `09b29da7771aea334ed5745e058751157af980d7`. These bindings were supplied by the controller and are not independently attested here.
+Owner: Hermes. Allocation: 1, maximum 2. Issue OPEMR-264 was To Do before work. Historical authoring repository: `/Users/craig/.hermes/workspaces/openemr-health-concern-dates`; historical unmodified baseline HEAD: `09b29da7771aea334ed5745e058751157af980d7`. The current frozen-review HEAD and four artifact hashes are recorded separately in controller evidence `verification/health-concern-dates-20261117/frozen-review.json`; the historical baseline is not the current review binding. These bindings are controller-supplied and are not independently attested by the no-tool reviewer.
 
 The native editor `add_edit_issue.php` supplies the creation `date`, and `PatientIssuesService::createIssue` binds it into the insert. The health concern search currently selects `l.date AS condition_date`; the shared native Condition mapper reads `date` for `recordedDate` and the asserted date extension, then falls back to `begdate` for `recordedDate` when `date` is absent or null. The source backed mismatch is in the search projection. It is not a live patient incident finding.
 
